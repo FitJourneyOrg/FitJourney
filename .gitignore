@@ -1,0 +1,44 @@
+# ===== IntelliJ / Android Studio (IDE) =====
+# Arquivos de módulo e config da IDE — específicos da sua máquina, não do projeto
+*.iml
+.idea
+
+# ===== Gradle / Kotlin (build tooling) =====
+# Caches e estado do Gradle e do compilador Kotlin — sempre regerados
+.kotlin
+.gradle
+
+# ===== Saídas de build =====
+# Tudo que é compilado/gerado; o `!` reabre exceção pra builds dentro de src (raro, KMP)
+**/build/
+!src/**/build/
+
+# ===== Config local da máquina =====
+# Caminho do SDK e segredos locais — NUNCA versionar
+local.properties
+
+# ===== Arquivos do sistema operacional =====
+# Lixo do Finder no macOS
+.DS_Store
+
+# ===== Android nativo (NDK / C++) =====
+# Capturas de profiling e artefatos de build nativo
+captures
+.externalNativeBuild
+.cxx
+
+# ===== Xcode / iOS =====
+# Ignora o projeto Xcode por padrão, mas mantém (com `!`) os arquivos
+# que DEVEM ser versionados: a definição do projeto e configs compartilhadas.
+# O que é por-usuário (xcuserdata) fica de fora.
+xcuserdata
+*.xcodeproj/*
+!*.xcodeproj/project.pbxproj
+!*.xcodeproj/xcshareddata/
+!*.xcodeproj/project.xcworkspace/
+!*.xcworkspace/contents.xcworkspacedata
+**/xcshareddata/WorkspaceSettings.xcsettings
+
+# ===== Node (caso use JS/ferramentas web no futuro) =====
+# Dependências instaladas — sempre reinstaláveis via package manager
+node_modules/
