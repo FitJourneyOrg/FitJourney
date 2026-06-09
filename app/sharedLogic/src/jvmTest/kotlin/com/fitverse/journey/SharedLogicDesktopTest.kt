@@ -1,4 +1,4 @@
-package com.example.fitjourney
+package com.fitverse.journey
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

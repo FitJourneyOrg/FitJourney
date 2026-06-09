@@ -21,11 +21,11 @@ dependencies {
 }
 
 android {
-    namespace = "com.example.fitjourney"
+    namespace = "com.fitverse.journey"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.example.fitjourney"
+        applicationId = "com.fitverse.journey"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
