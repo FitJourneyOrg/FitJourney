@@ -1,4 +1,4 @@
-package com.example.fitjourney
+package com.fitverse.journey
 
 import io.ktor.server.application.*
 import io.ktor.server.engine.*

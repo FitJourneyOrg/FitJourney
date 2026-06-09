@@ -12,7 +12,7 @@ kotlin {
     jvm()
     
     androidLibrary {
-       namespace = "com.example.fitjourney.core"
+       namespace = "com.fitverse.journey.core"
        compileSdk = libs.versions.android.compileSdk.get().toInt()
        minSdk = libs.versions.android.minSdk.get().toInt()
     
