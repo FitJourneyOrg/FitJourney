@@ -3,10 +3,10 @@ plugins {
     alias(libs.plugins.ktor)
 }
 
-group = "com.example.fitjourney"
+group = "com.fitverse.journey"
 version = "1.0.0"
 application {
-    mainClass = "com.example.fitjourney.ApplicationKt"
+    mainClass = "com.fitverse.journey.ApplicationKt"
 }
 
 dependencies {

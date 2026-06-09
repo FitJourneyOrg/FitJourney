@@ -17,7 +17,7 @@ kotlin {
     }
     
     androidLibrary {
-       namespace = "com.example.fitjourney.sharedLogic"
+       namespace = "com.fitverse.journey.sharedLogic"
        compileSdk = libs.versions.android.compileSdk.get().toInt()
        minSdk = libs.versions.android.minSdk.get().toInt()
     

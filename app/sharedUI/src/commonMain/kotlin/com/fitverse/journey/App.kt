@@ -1,4 +1,4 @@
-package com.example.fitjourney
+package com.fitverse.journey
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.Image

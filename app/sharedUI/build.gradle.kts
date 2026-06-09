@@ -10,7 +10,7 @@ plugins {
 kotlin {
     
     androidLibrary {
-       namespace = "com.example.fitjourney.app.sharedUI"
+       namespace = "com.fitverse.journey.app.sharedUI"
        compileSdk = libs.versions.android.compileSdk.get().toInt()
        minSdk = libs.versions.android.minSdk.get().toInt()
     

@@ -1,4 +1,4 @@
-package com.example.fitjourney
+package com.fitverse.journey
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
