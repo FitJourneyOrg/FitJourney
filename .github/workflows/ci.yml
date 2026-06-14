@@ -8,29 +8,33 @@ on:
   push:
     branches: [ develop, main ]
 
-# Se você empurrar um commit novo numa branch que já tem CI rodando,
-# cancela o anterior pra não gastar minutos à toa.
+# Cancela builds antigos da MESMA ref para não gastar minutos à toa.
+# Só cancela em PR — em push na main, deixa terminar para não mascarar
+# um build quebrado que entrou na branch principal.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  build-android-common:
-    name: Build Android + testes (common, server)
+  build-and-test:
+    name: Build Android + testes (KMP, server)
     runs-on: ubuntu-latest   # runner Linux = grátis/barato; cobre Android + JVM
+
     steps:
-      # 1. Baixa o código do PR
+      # 1. Baixa o código do PR / push
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 2. Instala o JDK (AGP 9 / Kotlin 2.4 exigem JDK 17+)
-      - name: Set up JDK 17
+      # 2. Instala o JDK. JDK 21 cobre AGP/Kotlin atuais com folga
+      #    (toolchain dos módulos é 17; o runner pode usar 21 sem problema).
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '21'
 
-      # 3. Configura o Gradle com cache (acelera builds seguintes)
+      # 3. Configura o Gradle com cache (acelera builds seguintes) e
+      #    valida o gradle-wrapper.jar (proteção supply-chain, por padrão).
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
@@ -38,19 +42,28 @@ jobs:
       - name: Tornar gradlew executável
         run: chmod +x ./gradlew
 
-      # 5. Compila o app Android — isso arrasta TODOS os módulos
-      #    compartilhados (sharedUI, sharedLogic, features, core, data,
-      #    shared-contract) pro alvo Android, validando que tudo compila.
+      # 5. Compila o app Android. Isso arrasta TODOS os módulos compartilhados
+      #    para o alvo Android, validando que a árvore inteira compila:
+      #      :shared-contract                       (DTOs + rotas)
+      #      :shared:core:network                   (cliente Ktor)
+      #      :shared:core:database                  (SQLDelight)
+      #      :shared:core:designsystem              (tema FitJourney)
+      #      :shared:core:domain                    (entidades transversais)
+      #      :shared:core:result                    (AppResult / AppError)
+      #      :shared:core:util                      (utilitários)
+      #      :shared:features:auth:domain|data|presentation
       - name: Build do app Android
         run: ./gradlew :app:androidApp:assembleDebug --stacktrace
 
-      # 6. Roda os testes: unidade do Android (inclui commonTest) + servidor
-      - name: Rodar testes
-        run: ./gradlew testDebugUnitTest :server:test --stacktrace
+      # 6. check = testes (commonTest dos módulos KMP + :server:test JVM) + lint,
+      #    de TODOS os módulos numa tacada. Idiomático e cobre cada tipo de módulo
+      #    sem depender do nome da task de cada um.
+      - name: Verificar (testes + lint)
+        run: ./gradlew check --stacktrace
 
   # ──────────────────────────────────────────────────────────────────
   # Job opcional de iOS. Só roda em runner macOS, que consome ~10x mais
-  # minutos. Descomente quando quiser validar o lado iOS no CI também.
+  # minutos. Descomente quando o módulo umbrella do iOS existir.
   #
   # build-ios:
   #   name: Build do framework iOS
@@ -60,8 +73,10 @@ jobs:
   #     - uses: actions/setup-java@v4
   #       with:
   #         distribution: temurin
-  #         java-version: '17'
+  #         java-version: '21'
   #     - uses: gradle/actions/setup-gradle@v4
   #     - run: chmod +x ./gradlew
-  #     - run: ./gradlew :app:sharedLogic:linkDebugFrameworkIosSimulatorArm64 --stacktrace
+  #     # Alvo = módulo umbrella que exporta o framework (a criar).
+  #     # Ex.: :shared:umbrella:linkDebugFrameworkIosSimulatorArm64
+  #     - run: ./gradlew :shared:umbrella:linkDebugFrameworkIosSimulatorArm64 --stacktrace
   # ──────────────────────────────────────────────────────────────────
