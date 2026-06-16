@@ -1,44 +1,62 @@
-# ===== IntelliJ / Android Studio (IDE) =====
-# Arquivos de módulo e config da IDE — específicos da sua máquina, não do projeto
-*.iml
-.idea
-
-# ===== Gradle / Kotlin (build tooling) =====
-# Caches e estado do Gradle e do compilador Kotlin — sempre regerados
-.kotlin
-.gradle
-
-# ===== Saídas de build =====
-# Tudo que é compilado/gerado; o `!` reabre exceção pra builds dentro de src (raro, KMP)
+# ===== Gradle =====
+.gradle/
 **/build/
 !src/**/build/
+!gradle/wrapper/gradle-wrapper.jar
+gradle-app.setting
 
-# ===== Config local da máquina =====
-# Caminho do SDK e segredos locais — NUNCA versionar
+# ===== IntelliJ / Android Studio =====
+*.iml
+.idea/
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+.idea/caches/
+.idea/libraries/
+.idea/modules.xml
+.idea/*.iml
+.idea/modules
+*.ipr
+
+# ===== Android =====
 local.properties
+*.apk
+*.aab
+*.ap_
+*.dex
+captures/
+.cxx/
+release/
 
-# ===== Arquivos do sistema operacional =====
-# Lixo do Finder no macOS
+# ===== Kotlin / KMP =====
+kotlin-js-store/
+.kotlin/
+
+# ===== iOS / Xcode (Fase 11) =====
+**/iosApp/build/
+**/*.xcodeproj/xcuserdata/
+**/*.xcworkspace/xcuserdata/
+**/Pods/
+**/.swiftpm/
+xcuserdata/
+
+# ===== Segredos / ambiente =====
+.env
+.env.*
+!.env.example
+*.keystore
+*.jks
+google-services.json
+GoogleService-Info.plist
+firebase-service-account*.json
+*-service-account*.json
+
+# ===== Logs / OS =====
+*.log
 .DS_Store
+Thumbs.db
 
-# ===== Android nativo (NDK / C++) =====
-# Capturas de profiling e artefatos de build nativo
-captures
-.externalNativeBuild
-.cxx
-
-# ===== Xcode / iOS =====
-# Ignora o projeto Xcode por padrão, mas mantém (com `!`) os arquivos
-# que DEVEM ser versionados: a definição do projeto e configs compartilhadas.
-# O que é por-usuário (xcuserdata) fica de fora.
-xcuserdata
-*.xcodeproj/*
-!*.xcodeproj/project.pbxproj
-!*.xcodeproj/xcshareddata/
-!*.xcodeproj/project.xcworkspace/
-!*.xcworkspace/contents.xcworkspacedata
-**/xcshareddata/WorkspaceSettings.xcsettings
-
-# ===== Node (caso use JS/ferramentas web no futuro) =====
-# Dependências instaladas — sempre reinstaláveis via package manager
-node_modules/
+# ===== Docker (volumes locais, se algum dia montados em ./) =====
+/pgdata/
