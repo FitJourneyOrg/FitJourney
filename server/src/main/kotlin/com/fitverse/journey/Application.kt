@@ -1,4 +1,4 @@
-package com.fitverse.journey
+package dev.rafael.server
 
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
