@@ -80,8 +80,8 @@ kotlin {
 
         getByName("androidDeviceTest") {
             dependencies {
-                implementation(libs.androidx.runner)
-                implementation(libs.androidx.core)
+                implementation(libs.androidx.testRunner)
+                implementation(libs.androidx.testCore)
                 implementation(libs.androidx.testExt.junit)
             }
         }
