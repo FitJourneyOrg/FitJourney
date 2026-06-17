@@ -7,6 +7,7 @@ import dev.rafael.server.auth.FirebaseAdmin
 import dev.rafael.server.db.DatabaseFactory
 import dev.rafael.server.error.toHttp
 import io.ktor.serialization.kotlinx.json.json
+import androidx.annotation.Nullable
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.netty.EngineMain
