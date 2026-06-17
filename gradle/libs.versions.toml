@@ -2,35 +2,45 @@
 # FitJourney — Version Catalog (fonte única de versões)
 # Convenções:
 #   - Aliases no estilo do wizard KMP (camelCase) são canônicos.
-#   - TODO[fase]: versão a confirmar na fase que de fato usa a lib.
+#   - Organização por camada: Build · Backend · Shared (client+server) · Client · Test
+#   - TODO[fase]: versão/coordenada a confirmar na fase que de fato usa a lib.
 # =============================================================================
 
 [versions]
-# --- Build / toolchain ---
+# ---------------------------------------------------------------------------
+# Build / toolchain
+# ---------------------------------------------------------------------------
 kotlin = "2.4.0"
 agp = "9.0.1"                       # exige Gradle 9.x no wrapper
 jvmTarget = "17"
 
-# --- Android SDK ---
+# Android SDK
 android-compileSdk = "36"
 android-minSdk = "24"
 android-targetSdk = "36"
 
-# --- Server (Fase 1) ---
+# ---------------------------------------------------------------------------
+# Backend (server — Fase 1+)
+# ---------------------------------------------------------------------------
 ktor = "3.5.0"
-exposed = "1.0.0"                   # TODO: conferir patch mais recente da linha 1.0.x
+exposed = "1.0.0"                   # TODO[1.4]: conferir último patch 1.0.x E coordenadas de artefato (a 1.0 renomeou pacote p/ org.jetbrains.exposed.v1.*)
 hikari = "6.2.1"                    # TODO[1.4]: confirmar versão estável
 postgres = "42.7.5"                 # TODO[1.4]: driver JDBC — confirmar
-firebaseAdmin = "9.4.3"             # TODO[1.7]: confirmar versão estável
+firebaseAdmin = "9.4.3"             # TODO[1.5]: confirmar versão estável
 logback = "1.5.18"                  # TODO[1.1]: confirmar
 h2 = "2.3.232"                      # banco em memória p/ testes do servidor
-
-# --- Multiplataforma comum ---
+flyway = "11.8.0"   # TODO[1.4]: há release mais novo (jun/2026) — bumpar dentro do 11.x é seguro
+konsist = "0.17.3"
+# ---------------------------------------------------------------------------
+# Shared (client + server)
+# ---------------------------------------------------------------------------
 coroutines = "1.11.0"
 serialization = "1.9.0"             # TODO[1.3]: NÃO pin-verificado — confirmar nos DTOs
 datetime = "0.8.0"
 
-# --- Cliente (Fase 2+) ---
+# ---------------------------------------------------------------------------
+# Client (KMP — Fase 2+)
+# ---------------------------------------------------------------------------
 composeMultiplatform = "1.11.1"
 material3 = "1.11.0-alpha07"        # trilha M3 Expressive (alpha — esperado p/ os componentes novos)
 koin = "4.2.1"
@@ -41,7 +51,9 @@ androidx-core = "1.19.0"            # androidx.core (core-ktx)
 androidx-lifecycle = "2.11.0-beta01"
 material = "1.14.0"                 # com.google.android.material (Android)
 
-# --- Testes ---
+# ---------------------------------------------------------------------------
+# Test
+# ---------------------------------------------------------------------------
 junit = "4.13.2"
 androidx-espresso = "3.7.0"
 androidx-testExt = "1.3.0"
@@ -50,89 +62,140 @@ androidx-test-runner = "1.7.0"      # androidx.test:runner
 
 
 [libraries]
-# --- build-logic (plugins consumidos como dependência) ---
+# ---------------------------------------------------------------------------
+# build-logic (plugins consumidos como dependência)
+# ---------------------------------------------------------------------------
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
 android-gradle-plugin = { module = "com.android.tools.build:gradle", version.ref = "agp" }
 
-# --- Server (Fase 1) ---
-ktor-serverCore = { module = "io.ktor:ktor-server-core-jvm", version.ref = "ktor" }
-ktor-serverNetty = { module = "io.ktor:ktor-server-netty-jvm", version.ref = "ktor" }
-ktor-serverContentNegotiation = { module = "io.ktor:ktor-server-content-negotiation-jvm", version.ref = "ktor" }
-ktor-serverStatusPages = { module = "io.ktor:ktor-server-status-pages-jvm", version.ref = "ktor" }
-ktor-serverConfigYaml = { module = "io.ktor:ktor-server-config-yaml-jvm", version.ref = "ktor" }
-ktor-serverTestHost = { module = "io.ktor:ktor-server-test-host-jvm", version.ref = "ktor" }
+# ===========================================================================
+# BACKEND (server)
+# ===========================================================================
+# --- Ktor server ---
+ktor-serverCore               = { module = "io.ktor:ktor-server-core-jvm",                 version.ref = "ktor" }
+ktor-serverNetty              = { module = "io.ktor:ktor-server-netty-jvm",                version.ref = "ktor" }
+ktor-serverConfigYaml         = { module = "io.ktor:ktor-server-config-yaml-jvm",          version.ref = "ktor" }
+ktor-serverContentNegotiation = { module = "io.ktor:ktor-server-content-negotiation-jvm",  version.ref = "ktor" }
+ktor-serverStatusPages        = { module = "io.ktor:ktor-server-status-pages-jvm",         version.ref = "ktor" }
+ktor-serverCallLogging        = { module = "io.ktor:ktor-server-call-logging-jvm",         version.ref = "ktor" }
+ktor-serverDefaultHeaders     = { module = "io.ktor:ktor-server-default-headers-jvm",      version.ref = "ktor" }
+ktor-serverAuthJwt            = { module = "io.ktor:ktor-server-auth-jwt-jvm",             version.ref = "ktor" } # alt ao Firebase (doc §6)
+ktor-serverWebsockets         = { module = "io.ktor:ktor-server-websockets-jvm",           version.ref = "ktor" } # Fase 6+
+flyway-core                   = { module = "org.flywaydb:flyway-core",                     version.ref = "flyway" }
+flyway-databasePostgresql     = { module = "org.flywaydb:flyway-database-postgresql",      version.ref = "flyway" }
+
+# --- Persistência ---
+exposed-core            = { module = "org.jetbrains.exposed:exposed-core",            version.ref = "exposed" }
+exposed-jdbc            = { module = "org.jetbrains.exposed:exposed-jdbc",            version.ref = "exposed" }
+exposed-kotlinDatetime  = { module = "org.jetbrains.exposed:exposed-kotlin-datetime", version.ref = "exposed" }
+exposed-migration       = { module = "org.jetbrains.exposed:exposed-migration",      version.ref = "exposed" } # TODO[1.4]: gera diff p/ Flyway
+hikari                  = { module = "com.zaxxer:HikariCP",                           version.ref = "hikari" }
+postgres                = { module = "org.postgresql:postgresql",                     version.ref = "postgres" }
+
+# --- Auth / infra server ---
+firebase-admin = { module = "com.google.firebase:firebase-admin", version.ref = "firebaseAdmin" }
+
+# --- Log (runtime) ---
 logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
 
-exposed-core = { module = "org.jetbrains.exposed:exposed-core", version.ref = "exposed" }
-exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc", version.ref = "exposed" }
-exposed-kotlin-datetime = { module = "org.jetbrains.exposed:exposed-kotlin-datetime", version.ref = "exposed" }
-hikari = { module = "com.zaxxer:HikariCP", version.ref = "hikari" }
-postgres = { module = "org.postgresql:postgresql", version.ref = "postgres" }
-firebase-admin = { module = "com.google.firebase:firebase-admin", version.ref = "firebaseAdmin" }
-h2 = { module = "com.h2database:h2", version.ref = "h2" }
-
-ktor-serverAuthJwt = { module = "io.ktor:ktor-server-auth-jwt-jvm", version.ref = "ktor" }      # alt ao Firebase (doc §6)
-ktor-serverWebsockets = { module = "io.ktor:ktor-server-websockets-jvm", version.ref = "ktor" } # Fase 6+
-
-# --- Compartilhado client + server ---
-ktor-serialization-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
-kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+# ===========================================================================
+# SHARED (client + server)
+# ===========================================================================
+ktor-serialization-json    = { module = "io.ktor:ktor-serialization-kotlinx-json",         version.ref = "ktor" }
+kotlinx-coroutines-core    = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core",    version.ref = "coroutines" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
-kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
+kotlinx-datetime           = { module = "org.jetbrains.kotlinx:kotlinx-datetime",           version.ref = "datetime" }
+kotlin-stdlib              = { module = "org.jetbrains.kotlin:kotlin-stdlib",                version.ref = "kotlin" }
 
-# --- Ktor Client (Fase 2) ---
-ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
-ktor-client-contentNegotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
-ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }   # androidMain
-ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }   # iosMain
+# ===========================================================================
+# CLIENT (KMP — Fase 2+)
+# ===========================================================================
+# --- Ktor client ---
+ktor-client-core               = { module = "io.ktor:ktor-client-core",                 version.ref = "ktor" }
+ktor-client-contentNegotiation = { module = "io.ktor:ktor-client-content-negotiation",  version.ref = "ktor" }
+ktor-client-okhttp             = { module = "io.ktor:ktor-client-okhttp",               version.ref = "ktor" } # androidMain
+ktor-client-darwin             = { module = "io.ktor:ktor-client-darwin",               version.ref = "ktor" } # iosMain
 
 # --- SQLDelight (Fase 2/4) ---
-sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+sqldelight-runtime       = { module = "app.cash.sqldelight:runtime",        version.ref = "sqldelight" }
 sqldelight-androidDriver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
-sqldelight-nativeDriver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+sqldelight-nativeDriver  = { module = "app.cash.sqldelight:native-driver",  version.ref = "sqldelight" }
 
 # --- Koin (Fase 2) ---
-koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-core    = { module = "io.insert-koin:koin-core",    version.ref = "koin" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 
-# --- Compose / UI (Fase 2) ---
-compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "composeMultiplatform" }
-compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "composeMultiplatform" }
-compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
-compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "composeMultiplatform" }
-compose-uiTooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "composeMultiplatform" }
-compose-uiToolingPreview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "composeMultiplatform" }
-compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "composeMultiplatform" }
-androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "androidx-activity" }
-androidx-lifecycle-viewmodel = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel", version.ref = "androidx-lifecycle" }
-androidx-lifecycle-viewmodelCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "androidx-lifecycle" }
-androidx-lifecycle-runtimeCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose", version.ref = "androidx-lifecycle" }
-androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidx-core" }
-androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "androidx-appcompat" }
-material = { module = "com.google.android.material:material", version.ref = "material" }
+# --- Compose / UI (Fase 2) — sem bundle: deps se dividem por sourceSet ---
+compose-runtime                     = { module = "org.jetbrains.compose.runtime:runtime",                              version.ref = "composeMultiplatform" }
+compose-foundation                  = { module = "org.jetbrains.compose.foundation:foundation",                        version.ref = "composeMultiplatform" }
+compose-material3                   = { module = "org.jetbrains.compose.material3:material3",                          version.ref = "material3" }
+compose-ui                          = { module = "org.jetbrains.compose.ui:ui",                                        version.ref = "composeMultiplatform" }
+compose-uiTooling                   = { module = "org.jetbrains.compose.ui:ui-tooling",                                version.ref = "composeMultiplatform" }
+compose-uiToolingPreview            = { module = "org.jetbrains.compose.ui:ui-tooling-preview",                        version.ref = "composeMultiplatform" }
+compose-components-resources        = { module = "org.jetbrains.compose.components:components-resources",              version.ref = "composeMultiplatform" }
+androidx-activity-compose           = { module = "androidx.activity:activity-compose",                                 version.ref = "androidx-activity" }
+androidx-lifecycle-viewmodel        = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel",               version.ref = "androidx-lifecycle" }
+androidx-lifecycle-viewmodelCompose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose",       version.ref = "androidx-lifecycle" }
+androidx-lifecycle-runtimeCompose   = { module = "org.jetbrains.androidx.lifecycle:lifecycle-runtime-compose",         version.ref = "androidx-lifecycle" }
+androidx-core-ktx                   = { module = "androidx.core:core-ktx",                                             version.ref = "androidx-core" }
+androidx-appcompat                  = { module = "androidx.appcompat:appcompat",                                       version.ref = "androidx-appcompat" }
+material                            = { module = "com.google.android.material:material",                               version.ref = "material" }
 
-# --- Kotlin stdlib ---
-kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+# ===========================================================================
+# TEST
+# ===========================================================================
+ktor-serverTestHost     = { module = "io.ktor:ktor-server-test-host-jvm",   version.ref = "ktor" }
+h2                      = { module = "com.h2database:h2",                   version.ref = "h2" }
+kotlin-test             = { module = "org.jetbrains.kotlin:kotlin-test",       version.ref = "kotlin" }
+kotlin-testJunit        = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
+junit                   = { module = "junit:junit",                           version.ref = "junit" }
+androidx-testExt-junit  = { module = "androidx.test.ext:junit",               version.ref = "androidx-testExt" }
+androidx-espresso-core  = { module = "androidx.test.espresso:espresso-core",  version.ref = "androidx-espresso" }
+androidx-testCore       = { module = "androidx.test:core",                    version.ref = "androidx-test-core" }
+androidx-testRunner     = { module = "androidx.test:runner",                  version.ref = "androidx-test-runner" }
 
-# --- Testes ---
-kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
-kotlin-testJunit = { module = "org.jetbrains.kotlin:kotlin-test-junit", version.ref = "kotlin" }
-junit = { module = "junit:junit", version.ref = "junit" }
-androidx-testExt-junit = { module = "androidx.test.ext:junit", version.ref = "androidx-testExt" }
-androidx-espresso-core = { module = "androidx.test.espresso:espresso-core", version.ref = "androidx-espresso" }
-androidx-testCore = { module = "androidx.test:core", version.ref = "androidx-test-core" }       # ex-"androidx-core" (test)
-androidx-testRunner = { module = "androidx.test:runner", version.ref = "androidx-test-runner" } # ex-"androidx-runner"
+# ===========================================================================
+# konsist
+# ===========================================================================
+konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
+
+
+[bundles]
+# Backend
+ktor-server = [
+    "ktor-serverCore",
+    "ktor-serverNetty",
+    "ktor-serverConfigYaml",
+    "ktor-serverContentNegotiation",
+    "ktor-serialization-json",
+    "ktor-serverStatusPages",
+    "ktor-serverCallLogging",
+    "ktor-serverDefaultHeaders",
+]
+exposed = [
+    "exposed-core",
+    "exposed-jdbc",
+    "exposed-kotlinDatetime",
+]
+# Client (Fase 2)
+ktor-client = [
+    "ktor-client-core",
+    "ktor-client-contentNegotiation",
+    "ktor-serialization-json",
+]
 
 
 [plugins]
+# Build / KMP
 kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlinJvm           = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
-composeMultiplatform = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
-composeCompiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+# Backend
 ktor = { id = "io.ktor.plugin", version.ref = "ktor" }
-sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
-androidApplication = { id = "com.android.application", version.ref = "agp" }
+# Client
+composeMultiplatform        = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
+composeCompiler             = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+sqldelight                  = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+androidApplication          = { id = "com.android.application", version.ref = "agp" }
 androidMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
-androidLint = { id = "com.android.lint", version.ref = "agp" }
-androidLibrary = { id = "com.android.library", version.ref = "agp" }   # provável que NÃO seja usado (preferir androidMultiplatformLibrary)
+androidLint                 = { id = "com.android.lint", version.ref = "agp" }

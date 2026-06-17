@@ -28,10 +28,10 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-
 include(":app:androidApp")
 include(":server")
 include(":shared-contract")
+include(":konsist")
 
 include(":shared:core:network")
 include(":shared:core:database")
@@ -43,3 +43,4 @@ include(":shared:core:util")
 include(":shared:features:auth:domain")
 include(":shared:features:auth:data")
 include(":shared:features:auth:presentation")
+
