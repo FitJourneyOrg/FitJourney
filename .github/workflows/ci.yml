@@ -1,82 +1,42 @@
 name: CI
 
-# Quando rodar: a cada PR aberto/atualizado para develop ou main,
-# e também quando algo entra (push) nessas branches.
 on:
-  pull_request:
-    branches: [ develop, main ]
   push:
-    branches: [ develop, main ]
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
 
-# Cancela builds antigos da MESMA ref para não gastar minutos à toa.
-# Só cancela em PR — em push na main, deixa terminar para não mascarar
-# um build quebrado que entrou na branch principal.
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  build-and-test:
-    name: Build Android + testes (KMP, server)
-    runs-on: ubuntu-latest   # runner Linux = grátis/barato; cobre Android + JVM
-
+  verify:
+    runs-on: ubuntu-latest
     steps:
-      # 1. Baixa o código do PR / push
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2. Instala o JDK. JDK 21 cobre AGP/Kotlin atuais com folga
-      #    (toolchain dos módulos é 17; o runner pode usar 21 sem problema).
-      - name: Set up JDK
+      # Valida o checksum do gradle-wrapper.jar (evita wrapper adulterado).
+      - uses: gradle/actions/wrapper-validation@v4
+
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: '17'   # = toolchain do projeto; Gradle roda e compila no mesmo JDK
 
-      # 3. Configura o Gradle com cache (acelera builds seguintes) e
-      #    valida o gradle-wrapper.jar (proteção supply-chain, por padrão).
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v4   # cache do Gradle user home + daemon entre steps
 
-      # 4. Garante que o wrapper é executável no Linux
-      - name: Tornar gradlew executável
+      # Repo criado no Windows costuma perder o bit de exec do gradlew.
+      - name: Make gradlew executable
         run: chmod +x ./gradlew
 
-      # 5. Compila o app Android. Isso arrasta TODOS os módulos compartilhados
-      #    para o alvo Android, validando que a árvore inteira compila:
-      #      :shared-contract                       (DTOs + rotas)
-      #      :shared:core:network                   (cliente Ktor)
-      #      :shared:core:database                  (SQLDelight)
-      #      :shared:core:designsystem              (tema FitJourney)
-      #      :shared:core:domain                    (entidades transversais)
-      #      :shared:core:result                    (AppResult / AppError)
-      #      :shared:core:util                      (utilitários)
-      #      :shared:features:auth:domain|data|presentation
-      - name: Build do app Android
-        run: ./gradlew :app:androidApp:assembleDebug --stacktrace
+      - name: Architecture lint (Konsist)
+        run: ./gradlew :konsist:test
 
-      # 6. check = testes (commonTest dos módulos KMP + :server:test JVM) + lint,
-      #    de TODOS os módulos numa tacada. Idiomático e cobre cada tipo de módulo
-      #    sem depender do nome da task de cada um.
-      - name: Verificar (testes + lint)
-        run: ./gradlew check --stacktrace
-
-  # ──────────────────────────────────────────────────────────────────
-  # Job opcional de iOS. Só roda em runner macOS, que consome ~10x mais
-  # minutos. Descomente quando o módulo umbrella do iOS existir.
-  #
-  # build-ios:
-  #   name: Build do framework iOS
-  #   runs-on: macos-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-java@v4
-  #       with:
-  #         distribution: temurin
-  #         java-version: '21'
-  #     - uses: gradle/actions/setup-gradle@v4
-  #     - run: chmod +x ./gradlew
-  #     # Alvo = módulo umbrella que exporta o framework (a criar).
-  #     # Ex.: :shared:umbrella:linkDebugFrameworkIosSimulatorArm64
-  #     - run: ./gradlew :shared:umbrella:linkDebugFrameworkIosSimulatorArm64 --stacktrace
-  # ──────────────────────────────────────────────────────────────────
+      - name: Build & test server
+        run: ./gradlew :server:build
