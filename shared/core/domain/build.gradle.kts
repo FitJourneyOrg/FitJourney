@@ -1,20 +1,4 @@
-// shared:core:domain — entidades transversais (User, Session). Kotlin puro.
-// Pode depender de core:result (AppResult/AppError nas assinaturas). Nada além.
+// :shared:core:domain — entidades transversais (User, Session na Fase 2). Kotlin puro.
 plugins {
     id("fitjourney.kmp-library")
-}
-
-kotlin {
-    sourceSets {
-        commonMain {
-            dependencies {
-                implementation(projects.shared.core.result)
-            }
-        }
-        commonTest {
-            dependencies {
-                implementation(libs.kotlin.test)
-            }
-        }
-    }
 }
