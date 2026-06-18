@@ -160,6 +160,11 @@ androidx-testRunner     = { module = "androidx.test:runner",                  ve
 konsist = { module = "com.lemonappdev:konsist", version.ref = "konsist" }
 
 
+# Plugins expostos como artefato p/ o build-logic aplicar em convention plugins
+androidKmp-gradle-plugin       = { module = "com.android.kotlin.multiplatform.library:com.android.kotlin.multiplatform.library.gradle.plugin", version.ref = "agp" }
+composeMultiplatform-gradle-plugin = { module = "org.jetbrains.compose:org.jetbrains.compose.gradle.plugin", version.ref = "composeMultiplatform" }
+composeCompiler-gradle-plugin  = { module = "org.jetbrains.kotlin.plugin.compose:org.jetbrains.kotlin.plugin.compose.gradle.plugin", version.ref = "kotlin" }
+
 [bundles]
 # Backend
 ktor-server = [
