@@ -31,7 +31,12 @@ dependencies {
     implementation(libs.ktor.serialization.json)
     implementation(libs.ktor.serverCallLogging)
     implementation(libs.ktor.serverDefaultHeaders)
+    implementation(libs.ktor.serverAuth)
     implementation(libs.logback)
+
+    // koin
+    implementation(libs.koin.ktor)
+    implementation(libs.koin.loggerSlf4j)
 
     // Testes
     testImplementation(libs.ktor.serverTestHost)

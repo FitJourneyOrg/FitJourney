@@ -1,4 +1,4 @@
-package dev.rafael.server.user
+package dev.rafael.server.features.user.db
 
 import org.jetbrains.exposed.v1.core.Table
 
