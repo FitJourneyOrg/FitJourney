@@ -50,7 +50,7 @@ androidx-appcompat = "1.7.1"
 androidx-core = "1.19.0"            # androidx.core (core-ktx)
 androidx-lifecycle = "2.11.0-beta01"
 material = "1.14.0"                 # com.google.android.material (Android)
-
+googleServices = "4.5.0"
 # ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
@@ -212,3 +212,4 @@ sqldelight                  = { id = "app.cash.sqldelight", version.ref = "sqlde
 androidApplication          = { id = "com.android.application", version.ref = "agp" }
 androidMultiplatformLibrary = { id = "com.android.kotlin.multiplatform.library", version.ref = "agp" }
 androidLint                 = { id = "com.android.lint", version.ref = "agp" }
+googleServices = { id = "com.google.gms.google-services", version.ref = "googleServices" }
