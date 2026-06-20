@@ -6,6 +6,8 @@ import dev.rafael.core.result.AppError
 import dev.rafael.server.auth.FirebaseAdmin
 import dev.rafael.server.db.DatabaseFactory
 import dev.rafael.server.error.toHttp
+import dev.rafael.server.plugins.configureAuthentication
+import dev.rafael.server.plugins.configureKoin
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
@@ -14,7 +16,6 @@ import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.defaultheaders.DefaultHeaders
 import io.ktor.server.plugins.statuspages.StatusPages
-import io.ktor.server.response.respondText
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.log
@@ -24,15 +25,15 @@ import org.slf4j.event.Level
 fun main(args: Array<String>) = EngineMain.main(args)
 
 fun Application.module() {
-
     DatabaseFactory.init(environment.config)
     FirebaseAdmin.init(environment.config)
     monitor.subscribe(ApplicationStopped) { DatabaseFactory.close() }
-
+    configureKoin()              // <- novo, cedo
     configureSerialization()
     configureMonitoring()
+    configureAuthentication()    // <- novo, antes do routing
     configureStatusPages()
-    configureRouting()
+    configureRouting()           // já existe (HealthRoutes) — vou adicionar /me aqui
 }
 
 private fun Application.configureSerialization() {

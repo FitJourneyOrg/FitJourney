@@ -102,4 +102,15 @@ class ArchitectureKonsistTest {
         }
         assertTrue("feature NUNCA depende de feature (o comum sobe p/ core).\n${v.joinToString("\n")}",v.isEmpty())
     }
+
+    @Test
+    fun `todo arquivo de producao reside sob dev rafael`() {
+        val v = production.files
+            .filterNot { it.pkg().startsWith("dev.rafael") }
+            .map { "${it.path} (pacote: '${it.pkg().ifEmpty { "<sem package>" }}')" }
+        assertTrue(
+            "Todo arquivo de producao deve residir sob dev.rafael (cores com .core).\n${v.joinToString("\n")}",
+            v.isEmpty(),
+        )
+    }
 }
