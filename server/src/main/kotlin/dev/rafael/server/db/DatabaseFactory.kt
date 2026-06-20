@@ -5,7 +5,6 @@ import com.zaxxer.hikari.HikariDataSource
 import io.ktor.server.config.ApplicationConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.flywaydb.core.Flyway
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import javax.sql.DataSource
@@ -30,13 +29,8 @@ object DatabaseFactory {
         Database.connect(ds)     // 2) só então conecta o Exposed
     }
 
-    private fun migrate(ds: DataSource) {
-        Flyway.configure()
-            .dataSource(ds)
-            .locations("classpath:db/migration")
-            .load()
-            .migrate()
-    }
+    private fun migrate(ds: DataSource) = Migrations.run(ds)
+
 
     /** Ping leve p/ o /health. Transação é bloqueante -> IO. */
     suspend fun isHealthy(): Boolean = withContext(Dispatchers.IO) {
