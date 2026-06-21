@@ -13,6 +13,7 @@ application {
     mainClass = "dev.rafael.server.ApplicationKt"
 }
 
+
 dependencies {
     // Módulos do projeto (typesafe accessors)
     implementation(projects.sharedContract)
@@ -50,4 +51,28 @@ dependencies {
     implementation(libs.hikari)
     runtimeOnly(libs.postgres)             // driver JDBC: só runtime, código não referencia
     testRuntimeOnly(libs.h2)               // testes (decisão Fase 0)
+}
+
+
+testing {
+    suites {
+        // suite de integração: Postgres real via Testcontainers (precisa de Docker)
+        val integrationTest by registering(JvmTestSuite::class) {
+            useJUnitJupiter()
+            dependencies {
+                implementation(project())
+                implementation(libs.testcontainers.postgresql)
+                implementation(libs.testcontainers.junitJupiter)
+                implementation(libs.flyway.core)
+                implementation(libs.hikari)
+                runtimeOnly(libs.postgres)
+                implementation(libs.kotlin.testJunit)
+            }
+        }
+    }
+}
+
+// integração roda depois dos unitários quando ambos rodam juntos (ex.: no check)
+tasks.named("integrationTest") {
+    shouldRunAfter(tasks.named("test"))
 }
