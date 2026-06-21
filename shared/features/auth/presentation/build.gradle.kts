@@ -13,6 +13,9 @@ kotlin {
             implementation(projects.shared.core.result)
             implementation(libs.androidx.lifecycle.viewmodel)
             implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.koin.core)
+            implementation(libs.koin.core.viewmodel)
+
         }
     }
 }

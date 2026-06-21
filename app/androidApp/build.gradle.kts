@@ -14,9 +14,20 @@ kotlin {
 }
 dependencies {
     implementation(libs.androidx.activity.compose)
-
+    implementation(libs.compose.material3)
+    implementation(libs.compose.foundation)
+    implementation(libs.compose.ui)
     implementation(libs.compose.uiToolingPreview)
     debugImplementation(libs.compose.uiTooling)
+
+    // Koin (DI no cliente)
+    implementation(libs.koin.android)
+    implementation(libs.koin.androidx.compose)
+
+    implementation(projects.shared.core.network)
+    // Features (o app agrega os módulos Koin e usa o ViewModel)
+    implementation(projects.shared.features.auth.presentation)
+    implementation(projects.shared.features.auth.data)
 }
 
 android {
