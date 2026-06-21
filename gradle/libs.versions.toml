@@ -90,6 +90,7 @@ ktor-serverCallLogging        = { module = "io.ktor:ktor-server-call-logging-jvm
 ktor-serverDefaultHeaders     = { module = "io.ktor:ktor-server-default-headers-jvm",      version.ref = "ktor" }
 ktor-serverAuthJwt            = { module = "io.ktor:ktor-server-auth-jwt-jvm",             version.ref = "ktor" } # alt ao Firebase (doc §6)
 ktor-serverWebsockets         = { module = "io.ktor:ktor-server-websockets-jvm",           version.ref = "ktor" } # Fase 6+
+ktor-client-auth              = { module = "io.ktor:ktor-client-auth",                     version.ref = "ktor" }
 flyway-core                   = { module = "org.flywaydb:flyway-core",                     version.ref = "flyway" }
 flyway-databasePostgresql     = { module = "org.flywaydb:flyway-database-postgresql",      version.ref = "flyway" }
 
@@ -97,13 +98,14 @@ flyway-databasePostgresql     = { module = "org.flywaydb:flyway-database-postgre
 exposed-core            = { module = "org.jetbrains.exposed:exposed-core",            version.ref = "exposed" }
 exposed-jdbc            = { module = "org.jetbrains.exposed:exposed-jdbc",            version.ref = "exposed" }
 exposed-kotlinDatetime  = { module = "org.jetbrains.exposed:exposed-kotlin-datetime", version.ref = "exposed" }
-exposed-migration       = { module = "org.jetbrains.exposed:exposed-migration",      version.ref = "exposed" } # TODO[1.4]: gera diff p/ Flyway
+exposed-migration       = { module = "org.jetbrains.exposed:exposed-migration",       version.ref = "exposed" } # TODO[1.4]: gera diff p/ Flyway
 hikari                  = { module = "com.zaxxer:HikariCP",                           version.ref = "hikari" }
 postgres                = { module = "org.postgresql:postgresql",                     version.ref = "postgres" }
 
 # --- Firebase ---
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-auth = { module = "com.google.firebase:firebase-auth" }
+
 gitlive-firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "gitliveFirebase" }
 # --- Auth / infra server ---
 firebase-admin = { module = "com.google.firebase:firebase-admin", version.ref = "firebaseAdmin" }
