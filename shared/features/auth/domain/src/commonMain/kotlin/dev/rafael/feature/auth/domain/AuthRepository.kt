@@ -13,6 +13,9 @@ interface AuthRepository {
     suspend fun signIn(email: String, password: String): AppResult<AuthUser>
     suspend fun signUp(email: String, password: String): AppResult<AuthUser>
     suspend fun signOut(): AppResult<Unit>
+
     /** ID Token (JWT) pro header Authorization: Bearer; null se não logado. */
     suspend fun currentIdToken(): String?
+    /** Valida a sessão no backend: GET /me com o Bearer. Confirma que o login é reconhecido pelo servidor. */
+    suspend fun fetchMe(): AppResult<AuthUser>
 }
