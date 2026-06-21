@@ -10,7 +10,9 @@ import dev.rafael.core.result.asSuccess
 import dev.rafael.feature.auth.domain.AuthRepository
 import dev.rafael.feature.auth.domain.AuthUser
 
-class FirebaseAuthRepository : AuthRepository {
+class FirebaseAuthRepository(
+    private val meDataSource: MeDataSource,
+) : AuthRepository {
 
     private val auth = Firebase.auth
 
@@ -40,6 +42,12 @@ class FirebaseAuthRepository : AuthRepository {
 
     override suspend fun currentIdToken(): String? =
         auth.currentUser?.getIdToken(false)
+
+    override suspend fun fetchMe(): AppResult<AuthUser> =
+        runCatching { meDataSource.getMe() }.fold(
+            onSuccess = { AuthUser(uid = it.id, email = it.email).asSuccess() },
+            onFailure = { AppError.Unexpected("Falha ao validar sessão no servidor", it).asFailure() },
+        )
 
     private fun mapAuthError(e: Throwable): AppResult<AuthUser> = when (e) {
         is FirebaseAuthException -> AppError.Unauthorized("Credenciais inválidas").asFailure()
