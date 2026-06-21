@@ -10,6 +10,7 @@ kotlin {
     sourceSets {
         commonMain.dependencies {
             implementation(projects.sharedContract)
+            implementation(projects.shared.core.result)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.auth)
             implementation(libs.ktor.client.contentNegotiation)
