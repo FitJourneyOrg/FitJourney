@@ -12,6 +12,10 @@ kotlin {
             implementation(projects.shared.core.result)
             implementation(libs.gitlive.firebase.auth)
             implementation(libs.kotlinx.coroutines.core)
+            implementation(projects.shared.core.network)
+            implementation(projects.sharedContract)
+            implementation(libs.ktor.client.core)            // <- novo: HttpClient, get, body
+            implementation(libs.ktor.client.contentNegotiation) // <- pra .body() desserializar
         }
         androidMain.dependencies {
             // GitLive Android delega ao SDK Firebase nativo — BoM fixa as versões
