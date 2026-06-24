@@ -10,6 +10,7 @@ kotlin {
         commonMain.dependencies {
             implementation(projects.shared.features.auth.domain)
             implementation(projects.shared.core.result)
+            implementation(libs.koin.core)
             implementation(libs.gitlive.firebase.auth)
             implementation(libs.kotlinx.coroutines.core)
             implementation(projects.shared.core.network)

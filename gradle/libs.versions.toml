@@ -140,6 +140,9 @@ sqldelight-nativeDriver  = { module = "app.cash.sqldelight:native-driver",  vers
 koin-core    = { module = "io.insert-koin:koin-core",    version.ref = "koin" }
 koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
 ktor-serverAuth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
+koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
+koin-core-viewmodel = { module = "io.insert-koin:koin-core-viewmodel", version.ref = "koin" }
+
 
 # --- Koin Ktor server
 koin-ktor = { module = "io.insert-koin:koin-ktor", version.ref = "koin" }
