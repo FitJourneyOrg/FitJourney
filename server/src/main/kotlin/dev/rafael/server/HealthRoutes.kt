@@ -1,6 +1,8 @@
 package dev.rafael.server
 
 import dev.rafael.server.db.DatabaseFactory
+import dev.rafael.server.features.profile.routes.profileRoutes
+import dev.rafael.server.features.profile.services.ProfileService
 import dev.rafael.server.features.user.routes.userRoutes
 import dev.rafael.server.features.user.services.UserService
 import io.ktor.http.HttpStatusCode
@@ -23,8 +25,10 @@ data class HealthResponse(
 
 fun Application.configureRouting() {
     val userService = get<UserService>()
+    val profileService = get<ProfileService>()
     routing {
         userRoutes(userService)
+        profileRoutes(profileService)
         get("/health") {
             val dbOk = DatabaseFactory.isHealthy()
             call.respond(

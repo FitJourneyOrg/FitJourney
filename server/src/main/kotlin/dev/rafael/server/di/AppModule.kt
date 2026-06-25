@@ -3,6 +3,9 @@ package dev.rafael.server.di
 import com.google.firebase.auth.FirebaseAuth
 import dev.rafael.server.auth.FirebaseTokenDecoder
 import dev.rafael.server.auth.TokenDecoder
+import dev.rafael.server.features.profile.db.ProfileRepository
+import dev.rafael.server.features.profile.db.ProfileRepositoryImpl
+import dev.rafael.server.features.profile.services.ProfileService
 import dev.rafael.server.auth.TokenVerifier
 import dev.rafael.server.features.user.db.UserRepository
 import dev.rafael.server.features.user.db.UserRepositoryImpl
@@ -17,4 +20,8 @@ val appModule = module {
     single { FirebaseAuth.getInstance() }
     single<TokenDecoder> { FirebaseTokenDecoder(get()) }
     single { TokenVerifier(get()) }
+
+    // Profile (Fase 3)
+    single<ProfileRepository> { ProfileRepositoryImpl() }
+    single { ProfileService(get(), get()) }
 }
