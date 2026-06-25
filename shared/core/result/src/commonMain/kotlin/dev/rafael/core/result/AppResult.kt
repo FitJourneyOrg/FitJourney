@@ -20,5 +20,10 @@ inline fun <T, R> AppResult<T>.fold(
 
 fun <T> AppResult<T>.getOrNull(): T? = (this as? AppResult.Success)?.value
 
+inline fun <T, R> AppResult<T>.flatMap(transform: (T) -> AppResult<R>): AppResult<R> = when (this) {
+    is AppResult.Success -> transform(value)
+    is AppResult.Failure -> this
+}
+
 fun <T> T.asSuccess(): AppResult<T> = AppResult.Success(this)
 fun AppError.asFailure(): AppResult<Nothing> = AppResult.Failure(this)
