@@ -10,6 +10,7 @@ kotlin {
     sourceSets {
         commonMain {
             dependencies {
+                implementation(libs.kotlin.stdlib)
                 implementation(libs.kotlinx.serialization.json)
                 // Sem mais nada: contrato não depende de ninguém.
             }
