@@ -4,7 +4,7 @@ plugins {
 }
 kotlin {
     androidLibrary {
-        namespace = "dev.rafael.data"
+        namespace = "dev.rafael.features.profile.data"
     }
     sourceSets {
         commonMain.dependencies {
