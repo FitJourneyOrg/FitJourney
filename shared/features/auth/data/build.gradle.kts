@@ -4,7 +4,7 @@ plugins {
 }
 kotlin {
     androidLibrary {
-        namespace = "dev.rafael.feature.auth.data"
+        namespace = "dev.rafael.features.auth.data"
     }
     sourceSets {
         commonMain.dependencies {
