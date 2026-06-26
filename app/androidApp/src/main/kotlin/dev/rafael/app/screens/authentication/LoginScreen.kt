@@ -6,8 +6,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dev.rafael.feature.auth.presentation.state.LoginEvent
-import dev.rafael.feature.auth.presentation.viewmodel.LoginViewModel
+import dev.rafael.features.auth.presentation.state.LoginEvent
+import dev.rafael.features.auth.presentation.viewmodel.LoginViewModel
 import org.koin.androidx.compose.koinViewModel
 
 @Composable

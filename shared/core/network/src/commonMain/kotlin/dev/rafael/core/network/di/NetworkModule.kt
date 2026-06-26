@@ -1,7 +1,7 @@
-package dev.rafael.network.core.di
+package dev.rafael.core.network.di
 
+import dev.rafael.core.network.httpEngine
 import io.ktor.client.engine.HttpClientEngine
-import dev.rafael.network.core.httpEngine
 import org.koin.core.module.Module
 import org.koin.dsl.module
 

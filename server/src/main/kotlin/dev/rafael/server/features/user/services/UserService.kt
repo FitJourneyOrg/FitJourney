@@ -1,7 +1,6 @@
 package dev.rafael.server.features.user.services
 
 import dev.rafael.core.result.AppResult
-import dev.rafael.core.result.AppError
 import dev.rafael.server.features.user.db.UserRepository
 import dev.rafael.server.features.user.models.User
 

@@ -4,7 +4,6 @@ import dev.rafael.core.result.AppResult
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.response.respond
-import dev.rafael.server.error.toHttp
 
 suspend inline fun <reified T : Any> ApplicationCall.respondResult(
     result: AppResult<T>,
