@@ -11,8 +11,16 @@ import dev.rafael.features.auth.presentation.viewmodel.LoginViewModel
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun LoginScreen(viewModel: LoginViewModel = koinViewModel()) {
+fun LoginScreen(
+    onLoggedIn: () -> Unit,
+    viewModel: LoginViewModel = koinViewModel(),
+) {
     val state by viewModel.state.collectAsState()
+
+    // login concluído -> avisa o host (vai pro quiz)
+    LaunchedEffect(state.loggedInUserId) {
+        if (state.loggedInUserId != null) onLoggedIn()
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
@@ -21,7 +29,6 @@ fun LoginScreen(viewModel: LoginViewModel = koinViewModel()) {
     ) {
         Text("FitJourney — Login", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(24.dp))
-
         OutlinedTextField(
             value = state.email,
             onValueChange = { viewModel.onEvent(LoginEvent.EmailChanged(it)) },
@@ -30,7 +37,6 @@ fun LoginScreen(viewModel: LoginViewModel = koinViewModel()) {
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(12.dp))
-
         OutlinedTextField(
             value = state.password,
             onValueChange = { viewModel.onEvent(LoginEvent.PasswordChanged(it)) },
@@ -39,7 +45,6 @@ fun LoginScreen(viewModel: LoginViewModel = koinViewModel()) {
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(20.dp))
-
         if (state.isLoading) {
             CircularProgressIndicator()
         } else {
@@ -54,15 +59,9 @@ fun LoginScreen(viewModel: LoginViewModel = koinViewModel()) {
                 ) { Text("Cadastrar") }
             }
         }
-
         state.error?.let {
             Spacer(Modifier.height(16.dp))
             Text(it, color = MaterialTheme.colorScheme.error)
-        }
-
-        state.loggedInUserId?.let {
-            Spacer(Modifier.height(16.dp))
-            Text("Logado! uid: $it", color = MaterialTheme.colorScheme.primary)
         }
     }
 }

@@ -13,6 +13,7 @@ kotlin {
     }
 }
 dependencies {
+    implementation(projects.sharedContract)
     implementation(libs.androidx.activity.compose)
     implementation(libs.compose.material3)
     implementation(libs.compose.foundation)
@@ -28,6 +29,9 @@ dependencies {
     // Features (o app agrega os módulos Koin e usa o ViewModel)
     implementation(projects.shared.features.auth.presentation)
     implementation(projects.shared.features.auth.data)
+
+    implementation(projects.shared.features.profile.presentation)
+    implementation(projects.shared.features.profile.data)
 }
 
 android {

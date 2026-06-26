@@ -1,6 +1,7 @@
 package dev.rafael.server.features.profile.db
 
 import dev.rafael.contract.profile.MuscleGroup
+import kotlinx.serialization.json.Json
 
 private val json = Json
 
