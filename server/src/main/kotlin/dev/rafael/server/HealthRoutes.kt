@@ -1,6 +1,8 @@
 package dev.rafael.server
 
 import dev.rafael.server.db.DatabaseFactory
+import dev.rafael.server.features.exercise.routes.exerciseRoutes
+import dev.rafael.server.features.exercise.services.ExerciseService
 import dev.rafael.server.features.profile.routes.profileRoutes
 import dev.rafael.server.features.profile.services.ProfileService
 import dev.rafael.server.features.user.routes.userRoutes
@@ -26,9 +28,13 @@ data class HealthResponse(
 fun Application.configureRouting() {
     val userService = get<UserService>()
     val profileService = get<ProfileService>()
+    val exerciseService = get<ExerciseService>()
+
+
     routing {
         userRoutes(userService)
         profileRoutes(profileService)
+        exerciseRoutes(exerciseService)
         get("/health") {
             val dbOk = DatabaseFactory.isHealthy()
             call.respond(
