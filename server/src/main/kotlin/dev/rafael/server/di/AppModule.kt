@@ -10,6 +10,9 @@ import dev.rafael.server.auth.TokenVerifier
 import dev.rafael.server.features.user.db.UserRepository
 import dev.rafael.server.features.user.db.UserRepositoryImpl
 import dev.rafael.server.features.user.services.UserService
+import dev.rafael.server.features.exercise.db.ExerciseRepository
+import dev.rafael.server.features.exercise.db.ExerciseRepositoryImpl
+import dev.rafael.server.features.exercise.services.ExerciseService
 import org.koin.dsl.module
 
 val appModule = module {
@@ -24,4 +27,8 @@ val appModule = module {
     // Profile (Fase 3)
     single<ProfileRepository> { ProfileRepositoryImpl() }
     single { ProfileService(get(), get()) }
+
+
+    single<ExerciseRepository> { ExerciseRepositoryImpl() }
+    single { ExerciseService(get()) }
 }
