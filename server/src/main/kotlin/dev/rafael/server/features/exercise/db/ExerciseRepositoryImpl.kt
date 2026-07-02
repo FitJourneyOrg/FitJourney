@@ -10,8 +10,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import kotlin.uuid.Uuid
 
 class ExerciseRepositoryImpl : ExerciseRepository {
 
@@ -25,6 +27,15 @@ class ExerciseRepositoryImpl : ExerciseRepository {
             ExercisesTable.selectAll()
                 .where { ExercisesTable.category eq category.name }
                 .map { it.toExercise() }
+        }
+
+    override suspend fun existsByIds(ids: List<Uuid>): AppResult<Boolean> =
+        dbQuery {
+            if (ids.isEmpty()) return@dbQuery true
+            val found = ExercisesTable.selectAll()
+                .where { ExercisesTable.id inList ids }
+                .count().toInt()
+            found == ids.distinct().size
         }
 
     private suspend fun <T> dbQuery(block: () -> T): AppResult<T> =
