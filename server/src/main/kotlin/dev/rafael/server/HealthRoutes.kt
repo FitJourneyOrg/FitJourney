@@ -7,6 +7,8 @@ import dev.rafael.server.features.profile.routes.profileRoutes
 import dev.rafael.server.features.profile.services.ProfileService
 import dev.rafael.server.features.user.routes.userRoutes
 import dev.rafael.server.features.user.services.UserService
+import dev.rafael.server.features.workout.routes.workoutRoutes
+import dev.rafael.server.features.workout.services.WorkoutService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.response.respond
@@ -29,12 +31,14 @@ fun Application.configureRouting() {
     val userService = get<UserService>()
     val profileService = get<ProfileService>()
     val exerciseService = get<ExerciseService>()
+    val workoutService = get<WorkoutService>()
 
 
     routing {
         userRoutes(userService)
         profileRoutes(profileService)
         exerciseRoutes(exerciseService)
+        workoutRoutes(workoutService)
         get("/health") {
             val dbOk = DatabaseFactory.isHealthy()
             call.respond(
