@@ -13,6 +13,9 @@ import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.exercise.db.ExerciseRepository
 import dev.rafael.server.features.exercise.db.ExerciseRepositoryImpl
 import dev.rafael.server.features.exercise.services.ExerciseService
+import dev.rafael.server.features.workout.db.WorkoutRepository
+import dev.rafael.server.features.workout.db.WorkoutRepositoryImpl
+import dev.rafael.server.features.workout.services.WorkoutService
 import org.koin.dsl.module
 
 val appModule = module {
@@ -31,4 +34,8 @@ val appModule = module {
 
     single<ExerciseRepository> { ExerciseRepositoryImpl() }
     single { ExerciseService(get()) }
+
+
+    single<WorkoutRepository> { WorkoutRepositoryImpl() }
+    single { WorkoutService(get(), get(), get()) }   // UserService, WorkoutRepository, ExerciseRepository
 }
