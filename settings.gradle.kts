@@ -47,3 +47,8 @@ include(":shared:features:auth:presentation")
 include(":shared:features:profile:domain")
 include(":shared:features:profile:data")
 include(":shared:features:profile:presentation")
+
+
+include(":shared:features:exercise:data")
+include(":shared:features:exercise:domain")
+include(":shared:features:exercise:presentation")

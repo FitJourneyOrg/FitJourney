@@ -2,6 +2,7 @@ package dev.rafael.features.profile.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.profile.domain.model.Profile
 import dev.rafael.features.profile.domain.repository.ProfileRepository
@@ -35,7 +36,7 @@ class QuizViewModel(
     }
 
     /** Toggle manual com trava em 2: contém -> remove; senão se <2 -> adiciona; senão ignora. */
-    private fun toggleFocus(muscle: dev.rafael.contract.profile.MuscleGroup) {
+    private fun toggleFocus(muscle: MuscleGroup) {
         _state.update { s ->
             val current = s.focusAreas
             val next = when {

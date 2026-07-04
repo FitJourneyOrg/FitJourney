@@ -1,11 +1,31 @@
-// :shared:core:database — SQLDelight offline-first; driver expect/actual por plataforma (Fase 4).
-// android + iOS, sem UI.
 plugins {
     id("fitjourney.kmp-client")
+    alias(libs.plugins.sqldelight)
+}
+
+sqldelight {
+    databases {
+        create("FitJourneyDatabase") {
+            packageName.set("dev.rafael.core.database")
+        }
+    }
 }
 
 kotlin {
     androidLibrary {
         namespace = "dev.rafael.core.database"
+    }
+    sourceSets {
+        commonMain.dependencies {
+            implementation(libs.sqldelight.runtime)
+            implementation(libs.koin.core)
+        }
+        androidMain.dependencies {
+            implementation(libs.sqldelight.androidDriver)
+            implementation(libs.koin.android)
+        }
+        iosMain.dependencies {
+            implementation(libs.sqldelight.nativeDriver)
+        }
     }
 }
