@@ -1,0 +1,25 @@
+CREATE TABLE exercise (
+    id          TEXT NOT NULL PRIMARY KEY,
+    name        TEXT NOT NULL,
+    category    TEXT NOT NULL,
+    description TEXT,               -- nullable (espelha ExerciseDto.description: String?)
+    videoRef    TEXT NOT NULL,      -- non-null no contrato
+    thumbRef    TEXT NOT NULL       -- non-null no contrato
+);
+CREATE INDEX exercise_category ON exercise(category);
+
+selectAll:
+SELECT * FROM exercise;
+
+selectByCategory:
+SELECT * FROM exercise WHERE category = ?;
+
+insertOrReplace:
+INSERT OR REPLACE INTO exercise(id, name, category, description, videoRef, thumbRef)
+VALUES (?, ?, ?, ?, ?, ?);
+
+deleteAll:
+DELETE FROM exercise;
+
+countAll:
+SELECT count(*) FROM exercise;
