@@ -26,12 +26,17 @@ dependencies {
     implementation(libs.koin.androidx.compose)
 
     implementation(projects.shared.core.network)
+    implementation(projects.shared.core.database)
     // Features (o app agrega os módulos Koin e usa o ViewModel)
     implementation(projects.shared.features.auth.presentation)
     implementation(projects.shared.features.auth.data)
 
     implementation(projects.shared.features.profile.presentation)
     implementation(projects.shared.features.profile.data)
+
+    implementation(projects.shared.features.exercise.presentation)
+    implementation(projects.shared.features.exercise.data)
+    implementation(projects.shared.features.exercise.domain)
 }
 
 android {

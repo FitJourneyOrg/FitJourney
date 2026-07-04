@@ -1,10 +1,13 @@
 package dev.rafael.app
 
 import android.app.Application
+import dev.rafael.core.database.di.databaseModule
 import dev.rafael.core.network.di.networkModule
 import dev.rafael.features.auth.data.di.authDataModule
 import dev.rafael.features.auth.presentation.di.authPresentationModule
 import dev.rafael.features.profile.data.di.profileDataModule
+import dev.rafael.features.exercise.data.repository.di.exerciseDataModule
+import dev.rafael.features.exercise.presentation.di.exercisePresentationModule
 import dev.rafael.features.profile.presentation.di.profilePresentationModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -19,9 +22,12 @@ class FitJourneyApp : Application() {
             modules(
                 networkModule,
                 authDataModule,
+                databaseModule,
                 authPresentationModule,
-                profileDataModule,           // <- novo
-                profilePresentationModule,   // <- novo
+                profileDataModule,
+                profilePresentationModule,
+                exerciseDataModule,
+                exercisePresentationModule
             )
         }
     }
