@@ -1,6 +1,7 @@
 package dev.rafael.app
 
 import android.app.Application
+import dev.rafael.app.di.appModule
 import dev.rafael.core.database.di.databaseModule
 import dev.rafael.core.network.di.networkModule
 import dev.rafael.features.auth.data.di.authDataModule
@@ -27,7 +28,8 @@ class FitJourneyApp : Application() {
                 profileDataModule,
                 profilePresentationModule,
                 exerciseDataModule,
-                exercisePresentationModule
+                exercisePresentationModule,
+                appModule
             )
         }
     }

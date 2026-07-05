@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.composeMultiplatform)
     alias(libs.plugins.composeCompiler)
     alias(libs.plugins.googleServices)
+    alias(libs.plugins.kotlinSerialization)
 }
 
 kotlin {
@@ -21,17 +22,23 @@ dependencies {
     implementation(libs.compose.uiToolingPreview)
     debugImplementation(libs.compose.uiTooling)
 
+    // navigation compose
+    implementation(libs.androidx.navigation.compose)
+
     // Koin (DI no cliente)
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
 
     implementation(projects.shared.core.network)
     implementation(projects.shared.core.database)
+    implementation(projects.shared.core.result)
     // Features (o app agrega os módulos Koin e usa o ViewModel)
+    implementation(projects.shared.features.auth.domain)
     implementation(projects.shared.features.auth.presentation)
     implementation(projects.shared.features.auth.data)
 
     implementation(projects.shared.features.profile.presentation)
+    implementation(projects.shared.features.profile.domain)
     implementation(projects.shared.features.profile.data)
 
     implementation(projects.shared.features.exercise.presentation)
