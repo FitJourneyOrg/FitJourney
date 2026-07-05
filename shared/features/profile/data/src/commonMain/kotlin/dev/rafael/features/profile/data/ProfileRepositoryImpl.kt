@@ -6,6 +6,8 @@ import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.features.profile.domain.model.Profile
 import dev.rafael.features.profile.domain.repository.ProfileRepository
+import io.ktor.client.plugins.ClientRequestException
+import io.ktor.http.HttpStatusCode
 
 class ProfileRepositoryImpl(
     private val dataSource: ProfileDataSource,
@@ -14,7 +16,14 @@ class ProfileRepositoryImpl(
     override suspend fun getProfile(): AppResult<Profile> =
         runCatching { dataSource.getProfile().toDomain() }.fold(
             onSuccess = { it.asSuccess() },
-            onFailure = { AppError.Unexpected("Falha ao buscar perfil", it).asFailure() },
+            onFailure = { e ->
+                when {
+                    e is ClientRequestException && e.response.status == HttpStatusCode.NotFound ->
+                        AppError.NotFound("Perfil não encontrado").asFailure()
+                    else ->
+                        AppError.Unexpected("Falha ao buscar perfil", e).asFailure()
+                }
+            },
         )
 
     override suspend fun saveProfile(profile: Profile): AppResult<Profile> =

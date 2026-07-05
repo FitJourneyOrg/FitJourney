@@ -15,12 +15,18 @@ import androidx.compose.ui.unit.dp
 import dev.rafael.app.screens.authentication.LoginScreen
 import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
 import dev.rafael.app.screens.onboarding.QuizScreen
+import dev.rafael.app.navigation.AppNavHost
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
-        setContent { App() }
+        setContent {
+            MaterialTheme {
+                AppNavHost()
+            }
+        }
     }
 }
 

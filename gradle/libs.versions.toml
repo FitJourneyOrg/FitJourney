@@ -58,7 +58,7 @@ androidx-lifecycle = "2.10.0"
 material = "1.14.0"                 # com.google.android.material (Android)
 googleServices = "4.5.0"
 gitliveFirebase = "2.4.0"
-
+androidx-navigation = "2.8.4"   # Android-only (ARCH #8/#13); type-safe routes
 # ---------------------------------------------------------------------------
 # Test
 # ---------------------------------------------------------------------------
@@ -164,6 +164,10 @@ androidx-lifecycle-runtimeCompose   = { module = "org.jetbrains.androidx.lifecyc
 androidx-core-ktx                   = { module = "androidx.core:core-ktx",                                             version.ref = "androidx-core" }
 androidx-appcompat                  = { module = "androidx.appcompat:appcompat",                                       version.ref = "androidx-appcompat" }
 material                            = { module = "com.google.android.material:material",                               version.ref = "material" }
+
+
+# --- Navigation compose - deps
+androidx-navigation-compose         = { module = "androidx.navigation:navigation-compose", version.ref = "androidx-navigation" }
 
 # ===========================================================================
 # TEST
