@@ -17,6 +17,7 @@ object HttpClientFactory {
 
     fun create(engine: HttpClientEngine, tokenProvider: TokenProvider): HttpClient =
         HttpClient(engine) {
+            expectSuccess = true
             install(ContentNegotiation) {
                 json(Json {
                     ignoreUnknownKeys = true
