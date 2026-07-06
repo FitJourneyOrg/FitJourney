@@ -30,18 +30,23 @@ class SplashViewModel(
                 _state.value = SplashState.Decided(AppRoute.Login)
                 return@launch
             }
-            // Opção 3: espera o server até 1.5s; timeout/erro → fallback conservador (Home)
             val result = withTimeoutOrNull(1500) { profile.getProfile() }
-            println(result)
             val dest = when (result) {
                 is AppResult.Success ->
                     if (result.value.onboardingCompleted) AppRoute.Home else AppRoute.Quiz
                 is AppResult.Failure ->
                     if (result.error is AppError.NotFound) AppRoute.Quiz
-                    else AppRoute.Home
-                null -> AppRoute.Home
+                    else fallbackFromCache()          // <- rede falhou: usa cache
+                null -> fallbackFromCache()            // <- timeout: usa cache
             }
             _state.value = SplashState.Decided(dest)
         }
     }
+
+    private suspend fun fallbackFromCache(): AppRoute =
+        when (profile.cachedOnboardingCompleted()) {
+            true  -> AppRoute.Home
+            false -> AppRoute.Quiz
+            null  -> AppRoute.Home   // device novo + offline + nunca cacheou: sem info, chuta Home
+        }
 }
