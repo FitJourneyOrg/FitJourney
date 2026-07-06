@@ -7,4 +7,5 @@ import dev.rafael.features.profile.domain.model.Profile
 interface ProfileRepository {
     suspend fun getProfile(): AppResult<Profile>
     suspend fun saveProfile(profile: Profile): AppResult<Profile>
+    suspend fun cachedOnboardingCompleted(): Boolean?
 }

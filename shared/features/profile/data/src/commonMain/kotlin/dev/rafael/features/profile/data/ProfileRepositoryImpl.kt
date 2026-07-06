@@ -10,12 +10,16 @@ import io.ktor.client.plugins.ClientRequestException
 import io.ktor.http.HttpStatusCode
 
 class ProfileRepositoryImpl(
-    private val dataSource: ProfileDataSource,
+    private val remote: ProfileDataSource,
+    private val local: ProfileLocalDataSource,   // <- novo
 ) : ProfileRepository {
 
     override suspend fun getProfile(): AppResult<Profile> =
-        runCatching { dataSource.getProfile().toDomain() }.fold(
-            onSuccess = { it.asSuccess() },
+        runCatching { remote.getProfile().toDomain() }.fold(
+            onSuccess = { profile ->
+                local.saveOnboarding(profile.onboardingCompleted)   // <- grava cache
+                profile.asSuccess()
+            },
             onFailure = { e ->
                 when {
                     e is ClientRequestException && e.response.status == HttpStatusCode.NotFound ->
@@ -27,8 +31,13 @@ class ProfileRepositoryImpl(
         )
 
     override suspend fun saveProfile(profile: Profile): AppResult<Profile> =
-        runCatching { dataSource.saveProfile(profile.toDto()).toDomain() }.fold(
-            onSuccess = { it.asSuccess() },
+        runCatching { remote.saveProfile(profile.toDto()).toDomain() }.fold(
+            onSuccess = { saved ->
+                local.saveOnboarding(saved.onboardingCompleted)     // <- grava cache (true pós-quiz)
+                saved.asSuccess()
+            },
             onFailure = { AppError.Unexpected("Falha ao salvar perfil", it).asFailure() },
         )
+
+    override suspend fun cachedOnboardingCompleted(): Boolean? = local.cachedOnboarding()
 }

@@ -8,6 +8,7 @@ kotlin {
     }
     sourceSets {
         commonMain.dependencies {
+            implementation(projects.shared.core.database)
             implementation(projects.shared.features.profile.domain)
             implementation(projects.shared.core.result)
             implementation(projects.shared.core.network)
