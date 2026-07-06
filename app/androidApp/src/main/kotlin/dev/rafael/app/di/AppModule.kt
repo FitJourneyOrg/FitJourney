@@ -6,4 +6,5 @@ import org.koin.dsl.module
 
 val appModule = module {
     viewModelOf(::SplashViewModel)   // injeta AuthRepository + ProfileRepository (já bindados)
+
 }
