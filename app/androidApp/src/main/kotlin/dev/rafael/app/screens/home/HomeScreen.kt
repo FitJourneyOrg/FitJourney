@@ -10,13 +10,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun HomeScreen(onOpenLibrary: () -> Unit) {
+fun HomeScreen(onOpenLibrary: () -> Unit, onOpenWorkouts: () -> Unit) {
     Column(
         Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text("Início", style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(16.dp))
+        Button(onClick = onOpenWorkouts) { Text("Meus treinos") }
         Spacer(Modifier.height(16.dp))
         Button(onClick = onOpenLibrary) { Text("Biblioteca de exercícios") }
     }

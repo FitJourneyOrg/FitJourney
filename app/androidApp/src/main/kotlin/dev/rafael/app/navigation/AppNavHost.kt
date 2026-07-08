@@ -10,6 +10,7 @@ import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
 import dev.rafael.app.screens.home.HomeScreen
 import dev.rafael.app.screens.onboarding.QuizScreen
 import dev.rafael.app.screens.splash.SplashScreen
+import dev.rafael.app.screens.workout.WorkoutLibraryScreen
 
 @Composable
 fun AppNavHost() {
@@ -43,11 +44,18 @@ fun AppNavHost() {
         }
 
         composable<AppRoute.Home> {
-            HomeScreen(onOpenLibrary = { nav.navigate(AppRoute.Library) })
+            HomeScreen(
+                onOpenLibrary = { nav.navigate(AppRoute.Library) },
+                onOpenWorkouts = { nav.navigate(AppRoute.Workout) },
+            )
         }
 
         composable<AppRoute.Library> {
             ExerciseLibraryScreen()
+        }
+
+        composable<AppRoute.Workout> {
+            WorkoutLibraryScreen()
         }
     }
 }
