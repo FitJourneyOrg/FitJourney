@@ -8,4 +8,7 @@ sealed interface AppRoute {
     @Serializable data object Quiz : AppRoute
     @Serializable data object Home : AppRoute
     @Serializable data object Library : AppRoute
+    @Serializable data object Workout : AppRoute
+
+
 }
