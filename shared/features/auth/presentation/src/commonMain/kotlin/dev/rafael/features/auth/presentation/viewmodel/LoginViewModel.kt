@@ -38,7 +38,7 @@ class LoginViewModel(
                 authRepository.signUp(current.email, current.password)
             else
                 authRepository.signIn(current.email, current.password)
-
+            println()
             when (authResult) {
                 is AppResult.Failure -> {
                     _state.update { it.copy(isLoading = false, error = authResult.error.toMessage()) }
