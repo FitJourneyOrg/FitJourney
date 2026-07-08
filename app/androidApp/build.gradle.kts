@@ -44,6 +44,10 @@ dependencies {
     implementation(projects.shared.features.exercise.presentation)
     implementation(projects.shared.features.exercise.data)
     implementation(projects.shared.features.exercise.domain)
+
+    implementation(projects.shared.features.workout.data)
+    implementation(projects.shared.features.workout.domain)
+    implementation(projects.shared.features.workout.presentation)
 }
 
 android {
