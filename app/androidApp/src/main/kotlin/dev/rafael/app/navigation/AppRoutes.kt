@@ -10,5 +10,5 @@ sealed interface AppRoute {
     @Serializable data object Library : AppRoute
     @Serializable data object Workout : AppRoute
 
-
+    @Serializable data class WorkoutDetail(val id: String) : AppRoute
 }

@@ -5,11 +5,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.NavController
+import androidx.navigation.toRoute
 import dev.rafael.app.screens.authentication.LoginScreen
 import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
 import dev.rafael.app.screens.home.HomeScreen
 import dev.rafael.app.screens.onboarding.QuizScreen
 import dev.rafael.app.screens.splash.SplashScreen
+import dev.rafael.app.screens.workout.WorkoutDetailScreen
 import dev.rafael.app.screens.workout.WorkoutLibraryScreen
 
 @Composable
@@ -55,7 +57,16 @@ fun AppNavHost() {
         }
 
         composable<AppRoute.Workout> {
-            WorkoutLibraryScreen()
+            WorkoutLibraryScreen(
+                onOpenWorkout = { id -> nav.navigate(AppRoute.WorkoutDetail(id)) },
+            )
+        }
+        composable<AppRoute.WorkoutDetail> { entry ->
+            val route: AppRoute.WorkoutDetail = entry.toRoute()
+            WorkoutDetailScreen(
+                workoutId = route.id,
+                onBack = { nav.popBackStack() },
+            )
         }
     }
 }
