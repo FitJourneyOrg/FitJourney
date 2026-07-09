@@ -1,5 +1,6 @@
 package dev.rafael.app.screens.workout
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -8,14 +9,22 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
+import dev.rafael.features.workout.presentation.state.WorkoutListEvent
 import dev.rafael.features.workout.presentation.viewmodel.WorkoutListViewModel
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
 fun WorkoutLibraryScreen(
+    onOpenWorkout: (String) -> Unit,
     viewModel: WorkoutListViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        viewModel.onEvent(WorkoutListEvent.Load)
+    }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Text("Meus treinos", style = MaterialTheme.typography.headlineSmall)
@@ -38,6 +47,7 @@ fun WorkoutLibraryScreen(
                             ListItem(
                                 headlineContent = { Text(w.name) },
                                 supportingContent = { Text("${w.exerciseCount} exercícios") },
+                                modifier = Modifier.clickable { onOpenWorkout(w.id) },   // <- novo
                             )
                         }
                     }
