@@ -8,6 +8,9 @@ CREATE TABLE exercise (
 );
 CREATE INDEX exercise_category ON exercise(category);
 
+selectByIds:
+SELECT id, name, thumbRef FROM exercise WHERE id IN ?;
+
 selectAll:
 SELECT * FROM exercise;
 
