@@ -17,6 +17,7 @@ kotlin {
     }
     sourceSets {
         commonMain.dependencies {
+            implementation(projects.shared.core.catalog)
             implementation(libs.sqldelight.runtime)
             implementation(libs.koin.core)
         }
