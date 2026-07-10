@@ -25,6 +25,10 @@ dependencies {
     // navigation compose
     implementation(libs.androidx.navigation.compose)
 
+    // icones
+    implementation("androidx.compose.material:material-icons-core")
+    implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
+
     // Koin (DI no cliente)
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
