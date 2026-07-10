@@ -7,7 +7,7 @@ import dev.rafael.core.network.di.networkModule
 import dev.rafael.features.auth.data.di.authDataModule
 import dev.rafael.features.auth.presentation.di.authPresentationModule
 import dev.rafael.features.profile.data.di.profileDataModule
-import dev.rafael.features.exercise.data.repository.di.exerciseDataModule
+import dev.rafael.features.exercise.data.di.exerciseDataModule
 import dev.rafael.features.exercise.presentation.di.exercisePresentationModule
 import dev.rafael.features.profile.presentation.di.profilePresentationModule
 import dev.rafael.features.workout.data.di.workoutDataModule
