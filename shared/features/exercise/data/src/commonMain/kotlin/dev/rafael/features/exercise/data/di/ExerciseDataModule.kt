@@ -1,8 +1,8 @@
-package dev.rafael.features.exercise.data.repository.di
+package dev.rafael.features.exercise.data.di
 
-import dev.rafael.features.exercise.data.repository.ExerciseRepositoryImpl
-import dev.rafael.features.exercise.data.repository.local.ExerciseLocalDataSource
-import dev.rafael.features.exercise.data.repository.remote.ExerciseRemoteDataSource
+import dev.rafael.features.exercise.data.ExerciseRepositoryImpl
+import dev.rafael.features.exercise.data.ExerciseLocalDataSource
+import dev.rafael.features.exercise.data.ExerciseRemoteDataSource
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
 import org.koin.dsl.module
 

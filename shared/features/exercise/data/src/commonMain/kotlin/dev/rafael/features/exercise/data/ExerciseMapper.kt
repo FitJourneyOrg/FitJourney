@@ -1,4 +1,4 @@
-package dev.rafael.features.exercise.data.repository.mapper
+package dev.rafael.features.exercise.data
 
 import dev.rafael.contract.exercise.ExerciseCategory
 import dev.rafael.features.exercise.domain.model.Exercise

@@ -1,4 +1,4 @@
-package dev.rafael.features.exercise.data.repository.remote
+package dev.rafael.features.exercise.data
 
 import dev.rafael.contract.exercise.ExerciseCategory
 import dev.rafael.contract.exercise.ExerciseDto
