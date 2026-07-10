@@ -18,6 +18,7 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun WorkoutLibraryScreen(
     onOpenWorkout: (String) -> Unit,
+    onCreateWorkout: () -> Unit,          // <- novo
     viewModel: WorkoutListViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -26,31 +27,37 @@ fun WorkoutLibraryScreen(
         viewModel.onEvent(WorkoutListEvent.Load)
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Meus treinos", style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(12.dp))
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(onClick = onCreateWorkout) { Text("+") }
+        },
+    ) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
+            Text("Meus treinos", style = MaterialTheme.typography.headlineSmall)
+            Spacer(Modifier.height(12.dp))
 
-        state.error?.let {
-            Text(it, color = MaterialTheme.colorScheme.error)
-            Spacer(Modifier.height(8.dp))
-        }
+            state.error?.let {
+                Text(it, color = MaterialTheme.colorScheme.error)
+                Spacer(Modifier.height(8.dp))
+            }
 
-        Box(Modifier.weight(1f)) {
-            when {
-                state.isLoading && state.workouts.isEmpty() ->
-                    CircularProgressIndicator(Modifier.align(Alignment.Center))
-                state.workouts.isEmpty() ->
-                    Text("Nenhum treino ainda.", Modifier.align(Alignment.Center))
-                else ->
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(state.workouts) { w ->
-                            ListItem(
-                                headlineContent = { Text(w.name) },
-                                supportingContent = { Text("${w.exerciseCount} exercícios") },
-                                modifier = Modifier.clickable { onOpenWorkout(w.id) },   // <- novo
-                            )
+            Box(Modifier.weight(1f)) {
+                when {
+                    state.isLoading && state.workouts.isEmpty() ->
+                        CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    state.workouts.isEmpty() ->
+                        Text("Nenhum treino ainda.", Modifier.align(Alignment.Center))
+                    else ->
+                        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            items(state.workouts) { w ->
+                                ListItem(
+                                    headlineContent = { Text(w.name) },
+                                    supportingContent = { Text("${w.exerciseCount} exercícios") },
+                                    modifier = Modifier.clickable { onOpenWorkout(w.id) },
+                                )
+                            }
                         }
-                    }
+                }
             }
         }
     }

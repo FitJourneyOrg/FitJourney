@@ -1,5 +1,6 @@
 package dev.rafael.features.workout.data
 
+import dev.rafael.contract.error.ErrorResponse
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
@@ -7,6 +8,7 @@ import dev.rafael.core.result.asSuccess
 import dev.rafael.features.workout.domain.model.Workout
 import dev.rafael.features.workout.domain.model.WorkoutSummary
 import dev.rafael.features.workout.domain.repository.WorkoutRepository
+import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
 import io.ktor.http.HttpStatusCode
 
@@ -29,16 +31,24 @@ class WorkoutRepositoryImpl(
     override suspend fun delete(id: String): AppResult<Unit> =
         call { remote.delete(id) }
 
-    private inline fun <T> call(block: () -> T): AppResult<T> =
+
+    private suspend fun <T> call(block: suspend () -> T): AppResult<T> =
         runCatching { block() }.fold(
             onSuccess = { it.asSuccess() },
             onFailure = { e ->
-                when {
-                    e is ClientRequestException && e.response.status == HttpStatusCode.NotFound ->
+                when (e) {
+                    is ClientRequestException if e.response.status == HttpStatusCode.NotFound ->
                         AppError.NotFound("Treino não encontrado").asFailure()
-                    else ->
-                        AppError.Unexpected("Falha na operação de treino", e).asFailure()
+
+                    is ClientRequestException if e.response.status == HttpStatusCode.BadRequest ->
+                        AppError.Validation(e.validationMessage()).asFailure()
+
+                    else -> AppError.Unexpected("Falha na operação de treino", e).asFailure()
                 }
             },
         )
+
+    private suspend fun ClientRequestException.validationMessage(): String =
+        runCatching { response.body<ErrorResponse>().message }
+            .getOrElse { "Dados inválidos" }   // corpo ilegível → mensagem genérica
 }

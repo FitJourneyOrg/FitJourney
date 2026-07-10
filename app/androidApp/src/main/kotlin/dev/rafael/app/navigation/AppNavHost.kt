@@ -12,7 +12,11 @@ import dev.rafael.app.screens.home.HomeScreen
 import dev.rafael.app.screens.onboarding.QuizScreen
 import dev.rafael.app.screens.splash.SplashScreen
 import dev.rafael.app.screens.workout.WorkoutDetailScreen
+import dev.rafael.app.screens.workout.WorkoutFormScreen
 import dev.rafael.app.screens.workout.WorkoutLibraryScreen
+import dev.rafael.features.workout.presentation.state.WorkoutDetailEvent
+import dev.rafael.features.workout.presentation.viewmodel.WorkoutDetailViewModel
+import org.koin.compose.koinInject
 
 @Composable
 fun AppNavHost() {
@@ -55,10 +59,10 @@ fun AppNavHost() {
         composable<AppRoute.Library> {
             ExerciseLibraryScreen()
         }
-
         composable<AppRoute.Workout> {
             WorkoutLibraryScreen(
                 onOpenWorkout = { id -> nav.navigate(AppRoute.WorkoutDetail(id)) },
+                onCreateWorkout = { nav.navigate(AppRoute.WorkoutCreate) },
             )
         }
         composable<AppRoute.WorkoutDetail> { entry ->
@@ -66,7 +70,15 @@ fun AppNavHost() {
             WorkoutDetailScreen(
                 workoutId = route.id,
                 onBack = { nav.popBackStack() },
+                onEdit = { nav.navigate(AppRoute.WorkoutEdit(route.id)) },
             )
+        }
+        composable<AppRoute.WorkoutCreate> {
+            WorkoutFormScreen(workoutId = null, onBack = { nav.popBackStack() }, onSaved = { nav.popBackStack() })
+        }
+        composable<AppRoute.WorkoutEdit> { entry ->
+            val route: AppRoute.WorkoutEdit = entry.toRoute()
+            WorkoutFormScreen(workoutId = route.id, onBack = { nav.popBackStack() }, onSaved = { nav.popBackStack() })
         }
     }
 }
