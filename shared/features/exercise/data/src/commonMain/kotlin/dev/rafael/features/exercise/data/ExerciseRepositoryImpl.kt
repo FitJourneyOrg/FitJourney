@@ -1,13 +1,10 @@
-package dev.rafael.features.exercise.data.repository
+package dev.rafael.features.exercise.data
 
 import dev.rafael.contract.exercise.ExerciseCategory
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
-import dev.rafael.features.exercise.data.repository.local.ExerciseLocalDataSource
-import dev.rafael.features.exercise.data.repository.mapper.toDomainOrNull
-import dev.rafael.features.exercise.data.repository.remote.ExerciseRemoteDataSource
 import dev.rafael.features.exercise.domain.model.Exercise
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
 import kotlinx.coroutines.flow.Flow
