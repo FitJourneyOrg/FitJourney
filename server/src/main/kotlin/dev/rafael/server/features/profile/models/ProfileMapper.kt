@@ -10,5 +10,7 @@ fun Profile.toDto(): ProfileDto = ProfileDto(
     focusAreas = focusAreas,
     weightKg = weightKg,
     heightCm = heightCm,
+    environment = environment,
+    health = health,
     onboardingCompleted = onboardingCompleted,
 )

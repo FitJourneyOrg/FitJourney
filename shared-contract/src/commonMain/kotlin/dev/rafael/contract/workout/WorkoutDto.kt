@@ -10,6 +10,7 @@ import kotlinx.serialization.Serializable
 data class WorkoutDto(
     val id: String? = null,
     val name: String,
+    val origin: WorkoutOrigin = WorkoutOrigin.MANUAL,
     val exercises: List<WorkoutExerciseDto> = emptyList(),
     val createdAt: String? = null,   // ISO-8601; servidor preenche
     val updatedAt: String? = null,
