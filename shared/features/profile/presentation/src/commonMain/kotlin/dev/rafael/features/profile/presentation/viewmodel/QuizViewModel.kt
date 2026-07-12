@@ -30,8 +30,24 @@ class QuizViewModel(
             is QuizEvent.FocusToggled -> toggleFocus(event.muscle)
             is QuizEvent.WeightChanged -> _state.update { it.copy(weightKg = event.value) }
             is QuizEvent.HeightChanged -> _state.update { it.copy(heightCm = event.value) }
+            is QuizEvent.EnvironmentSelected -> _state.update { it.copy(environment = event.env, error = null) }
+            is QuizEvent.HealthToggled -> toggleHealth(event.field)
+            QuizEvent.AcknowledgedRiskToggled ->
+                _state.update { it.copy(health = it.health.copy(acknowledgedRisk = !it.health.acknowledgedRisk)) }
             QuizEvent.Next -> next()
             QuizEvent.Back -> back()
+        }
+    }
+    private fun toggleHealth(field: QuizEvent.HealthField) {
+        _state.update { s ->
+            val h = s.health
+            val next = when (field) {
+                QuizEvent.HealthField.CARDIAC -> h.copy(hasCardiacCondition = !h.hasCardiacCondition)
+                QuizEvent.HealthField.CHEST_PAIN -> h.copy(hasChestPainDuringActivity = !h.hasChestPainDuringActivity)
+                QuizEvent.HealthField.JOINT -> h.copy(hasJointOrBoneIssue = !h.hasJointOrBoneIssue)
+                QuizEvent.HealthField.MEDICATION -> h.copy(takesContinuousMedication = !h.takesContinuousMedication)
+            }
+            s.copy(health = if (!next.hasAnyRisk) next.copy(acknowledgedRisk = false) else next)
         }
     }
 
@@ -83,6 +99,8 @@ class QuizViewModel(
                 focusAreas = s.focusAreas,
                 weightKg = s.weightKg,
                 heightCm = s.heightCm,
+                environment = s.environment,   // <- novo
+                health = s.health,             // <- novo
                 onboardingCompleted = false,   // server deriva
             )
             when (val result = repository.saveProfile(profile)) {

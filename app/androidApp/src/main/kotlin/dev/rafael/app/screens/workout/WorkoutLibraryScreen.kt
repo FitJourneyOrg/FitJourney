@@ -18,7 +18,8 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun WorkoutLibraryScreen(
     onOpenWorkout: (String) -> Unit,
-    onCreateWorkout: () -> Unit,          // <- novo
+    onCreateWorkout: () -> Unit,
+    onGenerateWithAI: () -> Unit,
     viewModel: WorkoutListViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -29,7 +30,14 @@ fun WorkoutLibraryScreen(
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(onClick = onCreateWorkout) { Text("+") }
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                ExtendedFloatingActionButton(
+                    onClick = onGenerateWithAI,
+                    text = { Text("Criar com IA") },
+                    icon = { Text("✨") },
+                )
+                FloatingActionButton(onClick = onCreateWorkout) { Text("+") }
+            }
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().padding(16.dp)) {

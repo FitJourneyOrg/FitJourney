@@ -7,6 +7,6 @@ object UsersTable : Table("users") {
     val id = uuid("id")
     val firebaseUid = varchar("firebase_uid", 128).uniqueIndex()
     val email = varchar("email", 320).nullable()
-
+    val isPremium = bool("is_premium").default(false)   // <- novo
     override val primaryKey = PrimaryKey(id)
 }

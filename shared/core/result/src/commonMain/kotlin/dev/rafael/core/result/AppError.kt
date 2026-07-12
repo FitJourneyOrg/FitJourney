@@ -10,7 +10,10 @@ sealed interface AppError {
     ) : AppError
 
     data class Unauthorized(override val message: String = "Não autenticado") : AppError
-    data class Forbidden(override val message: String = "Sem permissão") : AppError
+    data class Forbidden(
+        override val message: String = "Sem permissão",
+        val code: String? = null,
+    ) : AppError
     data class NotFound(override val message: String = "Não encontrado") : AppError
     data class Conflict(override val message: String = "Conflito de estado") : AppError
 

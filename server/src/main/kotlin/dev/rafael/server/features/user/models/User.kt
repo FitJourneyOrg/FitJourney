@@ -8,4 +8,5 @@ data class User(
     val id: Uuid,
     val firebaseUid: String,
     val email: String?,
+    val isPremium: Boolean,   // <- novo
 )

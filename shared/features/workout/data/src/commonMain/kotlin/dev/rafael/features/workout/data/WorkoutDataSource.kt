@@ -1,5 +1,6 @@
 package dev.rafael.features.workout.data
 
+import dev.rafael.contract.workout.GenerateWorkoutRequest
 import dev.rafael.contract.workout.WorkoutDto
 import dev.rafael.contract.workout.WorkoutSummaryDto
 import dev.rafael.core.network.HttpClientFactory
@@ -31,4 +32,10 @@ class WorkoutDataSource(private val client: HttpClient) {
     suspend fun delete(id: String) {
         client.delete("$base/$id")   // 204/Unit; expectSuccess lança em 4xx
     }
+
+    suspend fun generate(request: GenerateWorkoutRequest): WorkoutDto =
+        client.post("$base/generate") {
+            contentType(ContentType.Application.Json)
+            setBody(request)
+        }.body()
 }

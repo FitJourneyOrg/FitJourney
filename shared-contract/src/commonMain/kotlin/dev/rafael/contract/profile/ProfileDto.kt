@@ -15,5 +15,7 @@ data class ProfileDto(
     val focusAreas: List<MuscleGroup> = emptyList(),
     val weightKg: Double? = null,
     val heightCm: Double? = null,
+    val environment: TrainingEnvironment? = null,
+    val health: HealthScreening? = null,
     val onboardingCompleted: Boolean = false,
 )

@@ -31,8 +31,9 @@ class UserRepositoryImpl : UserRepository {
                 it[UsersTable.id] = newId
                 it[UsersTable.firebaseUid] = firebaseUid
                 it[UsersTable.email] = email
+                it[UsersTable.isPremium] = false
             }
-            User(id = newId, firebaseUid = firebaseUid, email = email)
+            User(id = newId, firebaseUid = firebaseUid, email = email, false)
         }
 
     /** Exposed é bloqueante -> IO. Qualquer exceção do banco vira AppError.Unexpected (não vaza). */
@@ -49,4 +50,5 @@ private fun ResultRow.toUser(): User = User(
     id = this[UsersTable.id],
     firebaseUid = this[UsersTable.firebaseUid],
     email = this[UsersTable.email],
+    isPremium = this[UsersTable.isPremium],   // <- novo
 )

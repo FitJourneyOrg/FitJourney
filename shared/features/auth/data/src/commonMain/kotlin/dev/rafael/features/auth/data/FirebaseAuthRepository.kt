@@ -41,8 +41,10 @@ class FirebaseAuthRepository(
             onFailure = { AppError.Unexpected("Falha ao sair", it).asFailure() },
         )
 
-    override suspend fun currentIdToken(): String? =
-        auth.currentUser?.getIdToken(false)
+    override suspend fun currentIdToken(): String? {
+        println("token: ${auth.currentUser?.getIdToken(false)}")
+        return auth.currentUser?.getIdToken(false)
+    }
 
     override suspend fun fetchMe(): AppResult<AuthUser> =
         runCatching { meDataSource.getMe() }.fold(
