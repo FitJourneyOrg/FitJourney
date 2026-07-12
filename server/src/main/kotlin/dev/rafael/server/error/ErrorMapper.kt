@@ -11,7 +11,7 @@ fun AppError.toHttp(): Pair<HttpStatusCode, ErrorResponse> = when (this) {
     is AppError.Unauthorized ->
         HttpStatusCode.Unauthorized to ErrorResponse(ErrorCodes.UNAUTHORIZED, message)
     is AppError.Forbidden ->
-        HttpStatusCode.Forbidden to ErrorResponse(ErrorCodes.FORBIDDEN, message)
+        HttpStatusCode.Forbidden to ErrorResponse(code ?: ErrorCodes.FORBIDDEN, message)
     is AppError.NotFound ->
         HttpStatusCode.NotFound to ErrorResponse(ErrorCodes.NOT_FOUND, message)
     is AppError.Conflict ->

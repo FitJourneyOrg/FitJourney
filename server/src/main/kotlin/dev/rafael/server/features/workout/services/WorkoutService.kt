@@ -1,5 +1,8 @@
 package dev.rafael.server.features.workout.services
 
+import dev.rafael.contract.error.ErrorCodes
+import dev.rafael.contract.profile.ProfileDto
+import dev.rafael.contract.workout.GenerateWorkoutRequest
 import dev.rafael.contract.workout.WorkoutDto
 import dev.rafael.contract.workout.WorkoutSummaryDto
 import dev.rafael.core.result.AppError
@@ -9,7 +12,9 @@ import dev.rafael.core.result.flatMap
 import dev.rafael.core.result.getOrNull
 import dev.rafael.core.result.map
 import dev.rafael.server.features.exercise.db.ExerciseRepository
+import dev.rafael.server.features.profile.db.ProfileRepository
 import dev.rafael.server.features.user.services.UserService
+import dev.rafael.server.features.workout.ai.WorkoutGenerator
 import dev.rafael.server.features.workout.db.WorkoutRepository
 import dev.rafael.server.features.workout.models.toDomain
 import dev.rafael.server.features.workout.models.toDto
@@ -19,6 +24,7 @@ class WorkoutService(
     private val userService: UserService,
     private val repository: WorkoutRepository,
     private val exerciseRepository: ExerciseRepository,
+    private val generator: WorkoutGenerator,          // <- única dep nova
 ) {
 
     suspend fun create(firebaseUid: String, email: String?, dto: WorkoutDto): AppResult<WorkoutDto> {
@@ -74,4 +80,14 @@ class WorkoutService(
         return if (allExist) null
         else AppError.Validation("Um ou mais exercícios não existem no catálogo")
     }
+
+    suspend fun generate(
+        firebaseUid: String, email: String?, profile: ProfileDto, prompt: String?,
+    ): AppResult<WorkoutDto> =
+        userService.findOrCreate(firebaseUid, email).flatMap { user ->
+            val generated = generator.generate(profile, prompt)
+            validate(generated)?.let { return@flatMap it.asFailure() }
+            validateExercisesExist(generated)?.let { return@flatMap it.asFailure() }
+            repository.create(user.id, generated.toDomain()).map { it.toDto() }
+        }
 }

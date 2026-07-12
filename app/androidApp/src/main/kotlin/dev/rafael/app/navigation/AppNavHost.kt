@@ -13,6 +13,7 @@ import dev.rafael.app.screens.onboarding.QuizScreen
 import dev.rafael.app.screens.splash.SplashScreen
 import dev.rafael.app.screens.workout.WorkoutDetailScreen
 import dev.rafael.app.screens.workout.WorkoutFormScreen
+import dev.rafael.app.screens.workout.WorkoutGenerateScreen
 import dev.rafael.app.screens.workout.WorkoutLibraryScreen
 import dev.rafael.features.workout.presentation.state.WorkoutDetailEvent
 import dev.rafael.features.workout.presentation.viewmodel.WorkoutDetailViewModel
@@ -63,6 +64,7 @@ fun AppNavHost() {
             WorkoutLibraryScreen(
                 onOpenWorkout = { id -> nav.navigate(AppRoute.WorkoutDetail(id)) },
                 onCreateWorkout = { nav.navigate(AppRoute.WorkoutCreate) },
+                onGenerateWithAI = { nav.navigate(AppRoute.WorkoutGenerate) },
             )
         }
         composable<AppRoute.WorkoutDetail> { entry ->
@@ -79,6 +81,17 @@ fun AppNavHost() {
         composable<AppRoute.WorkoutEdit> { entry ->
             val route: AppRoute.WorkoutEdit = entry.toRoute()
             WorkoutFormScreen(workoutId = route.id, onBack = { nav.popBackStack() }, onSaved = { nav.popBackStack() })
+        }
+        composable<AppRoute.WorkoutGenerate> {
+            WorkoutGenerateScreen(
+                onBack = { nav.popBackStack() },
+                onGenerated = { id ->
+                    // volta e abre o detalhe do treino gerado
+                    nav.popBackStack()
+                    nav.navigate(AppRoute.WorkoutDetail(id))
+                },
+                onOpenPaywall = { /* placeholder: dialog já trata dentro da tela */ },
+            )
         }
     }
 }

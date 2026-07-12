@@ -6,6 +6,7 @@ import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
+import dev.rafael.contract.profile.TrainingEnvironment
 import dev.rafael.server.features.profile.models.Profile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,6 +42,8 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[focusAreas] = profile.focusAreas.toJson()
                     it[weightKg] = profile.weightKg
                     it[heightCm] = profile.heightCm
+                    it[environment] = profile.environment?.name
+                    it[healthScreening] = profile.health?.toJson()
                     it[onboardingCompleted] = profile.onboardingCompleted
                 }
             } else {
@@ -52,6 +55,8 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[focusAreas] = profile.focusAreas.toJson()
                     it[weightKg] = profile.weightKg
                     it[heightCm] = profile.heightCm
+                    it[environment] = profile.environment?.name
+                    it[healthScreening] = profile.health?.toJson()
                     it[onboardingCompleted] = profile.onboardingCompleted
                 }
             }
@@ -75,5 +80,7 @@ private fun ResultRow.toProfile(): Profile = Profile(
     focusAreas = this[ProfilesTable.focusAreas].toMuscleGroups(),
     weightKg = this[ProfilesTable.weightKg],
     heightCm = this[ProfilesTable.heightCm],
+    environment = this[ProfilesTable.environment]?.let { TrainingEnvironment.valueOf(it) },
+    health = this[ProfilesTable.healthScreening]?.toHealthScreening(),
     onboardingCompleted = this[ProfilesTable.onboardingCompleted],
 )

@@ -9,5 +9,6 @@ interface WorkoutRepository {
     suspend fun get(id: String): AppResult<Workout>             // GET /workouts/{id}
     suspend fun create(workout: Workout): AppResult<Workout>    // POST /workouts
     suspend fun update(id: String, workout: Workout): AppResult<Workout>  // PUT /workouts/{id}
-    suspend fun delete(id: String): AppResult<Unit>             // DELETE /workouts/{id}
+    suspend fun delete(id: String): AppResult<Unit>
+    suspend fun generate(prompt: String?): AppResult<Workout>  // DELETE /workouts/{id}
 }

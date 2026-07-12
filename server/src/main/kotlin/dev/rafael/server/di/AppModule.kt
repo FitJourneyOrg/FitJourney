@@ -13,6 +13,8 @@ import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.exercise.db.ExerciseRepository
 import dev.rafael.server.features.exercise.db.ExerciseRepositoryImpl
 import dev.rafael.server.features.exercise.services.ExerciseService
+import dev.rafael.server.features.workout.ai.StubWorkoutGenerator
+import dev.rafael.server.features.workout.ai.WorkoutGenerator
 import dev.rafael.server.features.workout.db.WorkoutRepository
 import dev.rafael.server.features.workout.db.WorkoutRepositoryImpl
 import dev.rafael.server.features.workout.services.WorkoutService
@@ -36,6 +38,7 @@ val appModule = module {
     single { ExerciseService(get()) }
 
 
-    single<WorkoutRepository> { WorkoutRepositoryImpl() }
-    single { WorkoutService(get(), get(), get()) }   // UserService, WorkoutRepository, ExerciseRepository
+    single<WorkoutRepository> { WorkoutRepositoryImpl() }        // <- ESTA linha sumiu
+    single<WorkoutGenerator> { StubWorkoutGenerator(get()) }
+    single { WorkoutService(get(), get(), get(), get()) }
 }

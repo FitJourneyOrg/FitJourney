@@ -1,6 +1,8 @@
 package dev.rafael.features.workout.data
 
 import dev.rafael.contract.error.ErrorResponse
+import dev.rafael.contract.workout.GenerateWorkoutRequest
+import dev.rafael.contract.workout.WorkoutDto
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
@@ -31,17 +33,29 @@ class WorkoutRepositoryImpl(
     override suspend fun delete(id: String): AppResult<Unit> =
         call { remote.delete(id) }
 
+    override suspend fun generate(prompt: String?): AppResult<Workout> =
+        call { remote.generate(GenerateWorkoutRequest(prompt)).toDomain() }
+
 
     private suspend fun <T> call(block: suspend () -> T): AppResult<T> =
         runCatching { block() }.fold(
             onSuccess = { it.asSuccess() },
             onFailure = { e ->
                 when (e) {
-                    is ClientRequestException if e.response.status == HttpStatusCode.NotFound ->
-                        AppError.NotFound("Treino não encontrado").asFailure()
+                    is ClientRequestException if e.response.status == HttpStatusCode.Unauthorized ->
+                        AppError.Unauthorized("Sessão expirada. Faça login novamente.").asFailure()
 
+                    is ClientRequestException if e.response.status == HttpStatusCode.Forbidden -> {
+                        val error = runCatching { e.response.body<ErrorResponse>() }.getOrNull()
+                        AppError.Forbidden(
+                            message = error?.message ?: "Sem permissão",
+                            code = error?.code,
+                        ).asFailure()
+                    }
                     is ClientRequestException if e.response.status == HttpStatusCode.BadRequest ->
                         AppError.Validation(e.validationMessage()).asFailure()
+
+
 
                     else -> AppError.Unexpected("Falha na operação de treino", e).asFailure()
                 }
