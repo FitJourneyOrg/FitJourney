@@ -38,7 +38,7 @@ fun Application.configureRouting() {
         userRoutes(userService)
         profileRoutes(profileService)
         exerciseRoutes(exerciseService)
-        workoutRoutes(workoutService)
+        workoutRoutes(workoutService, userService, profileService)
         get("/health") {
             val dbOk = DatabaseFactory.isHealthy()
             call.respond(

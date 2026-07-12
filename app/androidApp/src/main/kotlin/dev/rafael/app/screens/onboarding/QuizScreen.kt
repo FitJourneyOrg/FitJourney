@@ -44,6 +44,8 @@ fun QuizScreen(
                 QuizStep.LEVEL -> LevelStep(state.level) { viewModel.onEvent(QuizEvent.LevelSelected(it)) }
                 QuizStep.DAYS -> DaysStep(state.daysPerWeek) { viewModel.onEvent(QuizEvent.DaysSelected(it)) }
                 QuizStep.FOCUS -> FocusStep(state.focusAreas) { viewModel.onEvent(QuizEvent.FocusToggled(it)) }
+                QuizStep.ENVIRONMENT -> EnvironmentStep(state.environment) { viewModel.onEvent(QuizEvent.EnvironmentSelected(it)) }
+                QuizStep.HEALTH -> HealthStep(state.health, onToggle = { viewModel.onEvent(QuizEvent.HealthToggled(it)) }, onAck = { viewModel.onEvent(QuizEvent.AcknowledgedRiskToggled) })
                 QuizStep.BODY -> BodyStep(
                     weight = state.weightKg,
                     height = state.heightCm,

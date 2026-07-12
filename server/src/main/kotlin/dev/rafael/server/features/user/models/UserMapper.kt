@@ -6,4 +6,5 @@ import dev.rafael.contract.user.UserDto
 fun User.toDto(): UserDto = UserDto(
     id = id.toString(),
     email = email,
+    isPremium = isPremium
 )

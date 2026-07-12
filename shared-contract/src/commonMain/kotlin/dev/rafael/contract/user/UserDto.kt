@@ -11,4 +11,5 @@ import kotlinx.serialization.Serializable
 data class UserDto(
     val id: String,
     val email: String?,
+    val isPremium: Boolean = false,   // <- novo, default false (não quebra clientes antigos)
 )

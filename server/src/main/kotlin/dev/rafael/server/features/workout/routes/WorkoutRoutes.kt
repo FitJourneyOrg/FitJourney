@@ -1,5 +1,7 @@
 package dev.rafael.server.features.workout.routes
 
+import dev.rafael.contract.error.ErrorCodes
+import dev.rafael.contract.workout.GenerateWorkoutRequest
 import dev.rafael.contract.workout.WorkoutDto
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -8,8 +10,12 @@ import dev.rafael.core.result.asSuccess
 import dev.rafael.core.result.flatMap
 import dev.rafael.server.auth.FirebaseUser
 import dev.rafael.server.error.respondResult
+import dev.rafael.server.features.profile.db.ProfileRepository
+import dev.rafael.server.features.profile.services.ProfileService
+import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.workout.services.WorkoutService
 import dev.rafael.server.plugins.FIREBASE_AUTH
+import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
@@ -21,7 +27,11 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import kotlin.uuid.Uuid
 
-fun Route.workoutRoutes(service: WorkoutService) {
+fun Route.workoutRoutes(
+    service: WorkoutService,
+    userService: UserService,
+    profileService: ProfileService
+) {
     authenticate(FIREBASE_AUTH) {
 
         post("/workouts") {
@@ -39,6 +49,46 @@ fun Route.workoutRoutes(service: WorkoutService) {
             val p = call.principal<FirebaseUser>()!!
             val id = call.workoutIdParam() ?: return@get call.respondResult(notFound<WorkoutDto>())
             call.respondResult(service.get(p.uid, p.email, id).notFoundIfNull())
+        }
+
+        post("/workouts/generate") {
+            val principal = call.principal<FirebaseUser>()!!
+            val request = call.receive<GenerateWorkoutRequest>()
+
+            val result = userService.findOrCreate(principal.uid, principal.email).flatMap { user ->
+                // 1. ENTITLEMENT (§8.2) — premium primeiro
+                if (!user.isPremium) {
+                    AppError.Forbidden(
+                        "Geração por IA é um recurso premium.",
+                        ErrorCodes.ENTITLEMENT_REQUIRED,
+                    ).asFailure()
+                } else {
+                    // 2. GATE DE SAÚDE (§3.2 [INV]) — via profileService
+                    when (val pr = profileService.getProfile(principal.uid, principal.email)) {
+                        is AppResult.Failure ->
+                            // sem perfil (NotFound) = sem gate → bloqueia; erro real propaga
+                            if (pr.error is AppError.NotFound)
+                                AppError.Forbidden(
+                                    "Complete a avaliação de saúde antes de gerar treinos.",
+                                    ErrorCodes.HEALTH_GATE_REQUIRED,
+                                ).asFailure()
+                            else pr
+                        is AppResult.Success -> {
+                            val profile = pr.value
+                            if (profile.health?.gateSatisfied != true) {
+                                AppError.Forbidden(
+                                    "Complete a avaliação de saúde antes de gerar treinos.",
+                                    ErrorCodes.HEALTH_GATE_REQUIRED,
+                                ).asFailure()
+                            } else {
+                                // 3-5. gera + valida + persiste (WorkoutService)
+                                service.generate(principal.uid, principal.email, profile, request.prompt)
+                            }
+                        }
+                    }
+                }
+            }
+            call.respondResult(result)   // 200 OK — consistente com POST /workouts
         }
 
         put("/workouts/{id}") {
