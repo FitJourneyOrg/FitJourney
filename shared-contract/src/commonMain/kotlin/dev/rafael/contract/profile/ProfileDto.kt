@@ -17,5 +17,6 @@ data class ProfileDto(
     val heightCm: Double? = null,
     val environment: TrainingEnvironment? = null,
     val health: HealthScreening? = null,
+    val limitations: List<BodyLimitation> = emptyList(),
     val onboardingCompleted: Boolean = false,
 )

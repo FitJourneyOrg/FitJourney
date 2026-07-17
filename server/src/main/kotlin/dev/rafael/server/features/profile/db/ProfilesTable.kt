@@ -13,6 +13,7 @@ object ProfilesTable : Table("profiles") {
     val heightCm = double("height_cm").nullable()
     val environment = varchar("environment", 32).nullable()   // <- novo
     val healthScreening = text("health_screening").nullable()  // <- novo (JSON)
+    val limitations = text("limitations").nullable()
     val onboardingCompleted = bool("onboarding_completed")
     override val primaryKey = PrimaryKey(userId)
 }

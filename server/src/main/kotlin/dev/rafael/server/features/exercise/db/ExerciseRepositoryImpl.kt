@@ -1,11 +1,17 @@
 package dev.rafael.server.features.exercise.db
 
 import dev.rafael.contract.exercise.ExerciseCategory
+import dev.rafael.contract.profile.BodyLimitation
+import dev.rafael.contract.profile.Level
+import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.server.features.exercise.models.Exercise
+import dev.rafael.server.features.exercise.models.Modality
+import dev.rafael.server.features.exercise.models.MovementPattern
+import dev.rafael.server.features.exercise.models.PrescriptionType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -50,8 +56,19 @@ class ExerciseRepositoryImpl : ExerciseRepository {
 private fun ResultRow.toExercise(): Exercise = Exercise(
     id = this[ExercisesTable.id],
     name = this[ExercisesTable.name],
-    category = dev.rafael.contract.exercise.ExerciseCategory.valueOf(this[ExercisesTable.category]),
+    category = ExerciseCategory.valueOf(this[ExercisesTable.category]),
     description = this[ExercisesTable.description],
     videoRef = this[ExercisesTable.videoRef],
     thumbRef = this[ExercisesTable.thumbRef],
+    modality = this[ExercisesTable.modality]?.let { runCatching { Modality.valueOf(it) }.getOrNull() },
+    movementPattern = this[ExercisesTable.movementPattern]?.let { runCatching { MovementPattern.valueOf(it) }.getOrNull() },
+    secondaryPattern = this[ExercisesTable.secondaryPattern]?.let { runCatching { MovementPattern.valueOf(it) }.getOrNull() },
+    isCompound = this[ExercisesTable.isCompound],
+    equipment = this[ExercisesTable.equipment],
+    primaryMuscles = this[ExercisesTable.primaryMuscles].orEmpty().mapNotNull { runCatching { MuscleGroup.valueOf(it) }.getOrNull() },
+    secondaryMuscles = this[ExercisesTable.secondaryMuscles].orEmpty().mapNotNull { runCatching { MuscleGroup.valueOf(it) }.getOrNull() },
+    unilateral = this[ExercisesTable.unilateral],
+    prescriptionType = this[ExercisesTable.prescriptionType]?.let { runCatching { PrescriptionType.valueOf(it) }.getOrNull() },
+    level = this[ExercisesTable.level]?.let { runCatching { Level.valueOf(it) }.getOrNull() },
+    contraindications = this[ExercisesTable.contraindications].orEmpty().mapNotNull { runCatching { BodyLimitation.valueOf(it) }.getOrNull() },
 )
