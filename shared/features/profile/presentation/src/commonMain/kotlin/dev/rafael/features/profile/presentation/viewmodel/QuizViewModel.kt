@@ -32,6 +32,10 @@ class QuizViewModel(
             is QuizEvent.HeightChanged -> _state.update { it.copy(heightCm = event.value) }
             is QuizEvent.EnvironmentSelected -> _state.update { it.copy(environment = event.env, error = null) }
             is QuizEvent.HealthToggled -> toggleHealth(event.field)
+            is QuizEvent.LimitationToggled -> _state.update { s ->
+                val cur = s.limitations
+                s.copy(limitations = if (event.limitation in cur) cur - event.limitation else cur + event.limitation)
+            }
             QuizEvent.AcknowledgedRiskToggled ->
                 _state.update { it.copy(health = it.health.copy(acknowledgedRisk = !it.health.acknowledgedRisk)) }
             QuizEvent.Next -> next()
@@ -90,6 +94,7 @@ class QuizViewModel(
             _state.update { it.copy(error = "Responda as perguntas obrigatórias.") }
             return
         }
+        println("QUIZ SUBMIT: limitations=${s.limitations}")
         _state.update { it.copy(isSubmitting = true, error = null) }
         viewModelScope.launch {
             val profile = Profile(
@@ -100,6 +105,7 @@ class QuizViewModel(
                 weightKg = s.weightKg,
                 heightCm = s.heightCm,
                 environment = s.environment,   // <- novo
+                limitations = s.limitations,
                 health = s.health,             // <- novo
                 onboardingCompleted = false,   // server deriva
             )

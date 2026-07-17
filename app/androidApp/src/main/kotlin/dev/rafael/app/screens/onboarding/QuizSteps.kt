@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.HealthScreening
 import dev.rafael.contract.profile.Level
@@ -173,6 +174,36 @@ fun HealthStep(
         }
     }
 }
+
+@Composable
+fun LimitationsStep(selected: List<BodyLimitation>, onToggle: (BodyLimitation) -> Unit) {
+    Column {
+        Text("Alguma limitação?", style = MaterialTheme.typography.titleLarge)
+        Text(
+            "Vamos evitar exercícios que forcem essas regiões. Pode deixar em branco.",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(Modifier.height(16.dp))
+        val labels = mapOf(
+            BodyLimitation.SHOULDER to "Ombro",
+            BodyLimitation.KNEE to "Joelho",
+            BodyLimitation.LUMBAR to "Lombar / coluna",
+            BodyLimitation.WRIST to "Punho",
+            BodyLimitation.IMPACT to "Não posso fazer impacto (saltos)",
+        )
+        BodyLimitation.entries.forEach { lim ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onToggle(lim) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(checked = lim in selected, onCheckedChange = { onToggle(lim) })
+                Spacer(Modifier.width(8.dp))
+                Text(labels[lim] ?: lim.name)
+            }
+        }
+    }
+}
+
 
 @Composable
 private fun HealthSwitch(label: String, checked: Boolean, onToggle: () -> Unit) {

@@ -1,5 +1,6 @@
 package dev.rafael.features.profile.presentation.state
 
+import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
@@ -15,6 +16,7 @@ sealed interface QuizEvent {
     data class EnvironmentSelected(val env: TrainingEnvironment) : QuizEvent
     data class HealthToggled(val field: HealthField) : QuizEvent   // qual pergunta mudou
     data object AcknowledgedRiskToggled : QuizEvent
+    data class LimitationToggled(val limitation: BodyLimitation) : QuizEvent
 
     enum class HealthField { CARDIAC, CHEST_PAIN, JOINT, MEDICATION }
     data object Next : QuizEvent       // avança o passo (ou submete, se for o último)

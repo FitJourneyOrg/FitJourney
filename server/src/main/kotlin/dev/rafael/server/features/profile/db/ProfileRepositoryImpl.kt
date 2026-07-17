@@ -44,6 +44,7 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[heightCm] = profile.heightCm
                     it[environment] = profile.environment?.name
                     it[healthScreening] = profile.health?.toJson()
+                    it[limitations] = profile.limitations.limitationsToJson()
                     it[onboardingCompleted] = profile.onboardingCompleted
                 }
             } else {
@@ -57,6 +58,7 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[heightCm] = profile.heightCm
                     it[environment] = profile.environment?.name
                     it[healthScreening] = profile.health?.toJson()
+                    it[limitations] = profile.limitations.limitationsToJson()
                     it[onboardingCompleted] = profile.onboardingCompleted
                 }
             }
@@ -82,5 +84,6 @@ private fun ResultRow.toProfile(): Profile = Profile(
     heightCm = this[ProfilesTable.heightCm],
     environment = this[ProfilesTable.environment]?.let { TrainingEnvironment.valueOf(it) },
     health = this[ProfilesTable.healthScreening]?.toHealthScreening(),
+    limitations = this[ProfilesTable.limitations]?.toLimitations() ?: emptyList(),
     onboardingCompleted = this[ProfilesTable.onboardingCompleted],
 )

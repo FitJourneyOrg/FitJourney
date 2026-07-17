@@ -46,6 +46,7 @@ class ProfileService(
                 heightCm = dto.heightCm,
                 environment = dto.environment,
                 health = dto.health,
+                limitations = dto.limitations,
                 onboardingCompleted = true,
             )
             repository.upsert(profile).map { it.toDto() }
