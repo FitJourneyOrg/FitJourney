@@ -13,6 +13,7 @@ fun ProfileDto.toDomain(): Profile = Profile(
     heightCm = heightCm,
     environment = environment,
     health = health,
+    limitations = limitations,          // <- FIX
     onboardingCompleted = onboardingCompleted,
 )
 
@@ -24,7 +25,8 @@ fun Profile.toDto(): ProfileDto = ProfileDto(
     focusAreas = focusAreas,
     weightKg = weightKg,
     heightCm = heightCm,
-    environment = environment,   // <- novo
-    health = health,             // <- novo
+    environment = environment,
+    health = health,
+    limitations = limitations,          // <- FIX
     onboardingCompleted = onboardingCompleted,
 )

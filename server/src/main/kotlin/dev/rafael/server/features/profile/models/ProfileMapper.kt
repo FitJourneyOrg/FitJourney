@@ -12,5 +12,6 @@ fun Profile.toDto(): ProfileDto = ProfileDto(
     heightCm = heightCm,
     environment = environment,
     health = health,
+    limitations = limitations,
     onboardingCompleted = onboardingCompleted,
 )

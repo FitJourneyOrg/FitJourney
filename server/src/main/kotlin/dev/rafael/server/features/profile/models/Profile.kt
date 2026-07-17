@@ -1,5 +1,6 @@
 package dev.rafael.server.features.profile.models
 
+import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.HealthScreening
 import dev.rafael.contract.profile.Level
@@ -18,5 +19,6 @@ data class Profile(
     val heightCm: Double?,
     val environment: TrainingEnvironment?,   // <- novo
     val health: HealthScreening?,            // <- novo
+    val limitations: List<BodyLimitation> = emptyList(),
     val onboardingCompleted: Boolean,
 )
