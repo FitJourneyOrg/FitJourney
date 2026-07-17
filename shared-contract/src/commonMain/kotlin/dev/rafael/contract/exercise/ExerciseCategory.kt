@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 /** As 16 categorias do catálogo de exercícios (taxonomia própria, distinta do MuscleGroup do quiz). */
 @Serializable
 enum class ExerciseCategory {
+    @SerialName("CORE") CORE,
     @SerialName("FUNCTIONAL_HIT") FUNCTIONAL_HIT,
     @SerialName("MOBILITY") MOBILITY,
     @SerialName("CALISTHENICS") CALISTHENICS,

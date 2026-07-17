@@ -46,6 +46,9 @@ fun QuizScreen(
                 QuizStep.FOCUS -> FocusStep(state.focusAreas) { viewModel.onEvent(QuizEvent.FocusToggled(it)) }
                 QuizStep.ENVIRONMENT -> EnvironmentStep(state.environment) { viewModel.onEvent(QuizEvent.EnvironmentSelected(it)) }
                 QuizStep.HEALTH -> HealthStep(state.health, onToggle = { viewModel.onEvent(QuizEvent.HealthToggled(it)) }, onAck = { viewModel.onEvent(QuizEvent.AcknowledgedRiskToggled) })
+                QuizStep.LIMITATIONS -> LimitationsStep(state.limitations) {
+                    viewModel.onEvent(QuizEvent.LimitationToggled(it))
+                }
                 QuizStep.BODY -> BodyStep(
                     weight = state.weightKg,
                     height = state.heightCm,
