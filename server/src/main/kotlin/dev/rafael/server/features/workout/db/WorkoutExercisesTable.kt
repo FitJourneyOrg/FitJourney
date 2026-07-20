@@ -7,5 +7,7 @@ object WorkoutExercisesTable : Table("workout_exercises") {
     val workoutId = uuid("workout_id")
     val exerciseId = uuid("exercise_id")
     val orderIndex = integer("order_index")
+    val restSeconds = integer("rest_seconds").default(90)
+
     override val primaryKey = PrimaryKey(id)
 }
