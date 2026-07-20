@@ -51,7 +51,7 @@ fun Route.workoutRoutes(
             call.respondResult(service.get(p.uid, p.email, id).notFoundIfNull())
         }
 
-        post("/workouts/generate") {
+        post("/programs/generate") {
             val principal = call.principal<FirebaseUser>()!!
             val request = call.receive<GenerateWorkoutRequest>()
 
