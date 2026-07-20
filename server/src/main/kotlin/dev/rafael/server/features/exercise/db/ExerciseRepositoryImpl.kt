@@ -53,7 +53,7 @@ class ExerciseRepositoryImpl : ExerciseRepository {
         }
 }
 
-private fun ResultRow.toExercise(): Exercise = Exercise(
+internal fun ResultRow.toExercise(): Exercise = Exercise(
     id = this[ExercisesTable.id],
     name = this[ExercisesTable.name],
     category = ExerciseCategory.valueOf(this[ExercisesTable.category]),

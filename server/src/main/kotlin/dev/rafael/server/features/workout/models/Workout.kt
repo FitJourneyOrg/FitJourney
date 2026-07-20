@@ -12,10 +12,13 @@ data class Workout(
     val updatedAt: LocalDateTime,
 )
 
+// --------- 1) MODEL INTERNO (server) — adicionar o campo ---------
+// No arquivo do model (dev.rafael.server.features.workout.models ou .domain):
 data class WorkoutExercise(
     val id: Uuid,
     val exerciseId: Uuid,
     val orderIndex: Int,
+    val restSeconds: Int,        // <- NOVO (sem default: força passar em todo ponto de construção)
     val sets: List<WorkoutSet>,
 )
 

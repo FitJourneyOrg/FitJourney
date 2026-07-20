@@ -5,6 +5,7 @@ import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.server.features.exercise.db.ExercisesTable
+import dev.rafael.server.features.workout.db.WorkoutExercisesTable.restSeconds
 import dev.rafael.server.features.workout.models.Workout
 import dev.rafael.server.features.workout.models.WorkoutExercise
 import dev.rafael.server.features.workout.models.WorkoutSet
@@ -103,6 +104,7 @@ class WorkoutRepositoryImpl : WorkoutRepository {
                 it[WorkoutExercisesTable.workoutId] = workoutId
                 it[exerciseId] = ex.exerciseId
                 it[orderIndex] = ex.orderIndex
+                it[restSeconds] = ex.restSeconds
             }
             ex.sets.forEach { s ->
                 WorkoutSetsTable.insert {
@@ -146,6 +148,7 @@ class WorkoutRepositoryImpl : WorkoutRepository {
             id = weId,
             exerciseId = this[WorkoutExercisesTable.exerciseId],
             orderIndex = this[WorkoutExercisesTable.orderIndex],
+            restSeconds = this[WorkoutExercisesTable.restSeconds],
             sets = sets,
         )
     }

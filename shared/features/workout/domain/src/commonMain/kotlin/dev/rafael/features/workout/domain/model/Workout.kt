@@ -9,8 +9,9 @@ data class Workout(
 )
 
 data class WorkoutExercise(
-    val exerciseId: String,               // FK catálogo (resolvido na C.3.2)
+    val exerciseId: String,
     val orderIndex: Int,
+    val restSeconds: Int,   // <- NOVO
     val sets: List<WorkoutSet>,
 )
 
