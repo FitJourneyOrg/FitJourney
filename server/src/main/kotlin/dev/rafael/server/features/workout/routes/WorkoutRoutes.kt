@@ -12,6 +12,7 @@ import dev.rafael.server.auth.FirebaseUser
 import dev.rafael.server.error.respondResult
 import dev.rafael.server.features.profile.db.ProfileRepository
 import dev.rafael.server.features.profile.services.ProfileService
+import dev.rafael.server.features.program.services.ProgramService
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.workout.services.WorkoutService
 import dev.rafael.server.plugins.FIREBASE_AUTH
@@ -30,14 +31,28 @@ import kotlin.uuid.Uuid
 fun Route.workoutRoutes(
     service: WorkoutService,
     userService: UserService,
-    profileService: ProfileService
+    profileService: ProfileService,
+    programService: ProgramService,
 ) {
     authenticate(FIREBASE_AUTH) {
 
         post("/workouts") {
             val p = call.principal<FirebaseUser>()!!
             val dto = call.receive<WorkoutDto>()
-            call.respondResult(service.create(p.uid, p.email, dto))
+            // ARCH #26: todo treino vive dentro de um programa — gate composto aqui
+            // (na rota), não no WorkoutService, pra não criar ciclo workout→program.
+            val programId = dto.programId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
+            val result = if (programId == null) {
+                AppError.Validation("Treino precisa pertencer a um programa (programId inválido ou ausente)").asFailure()
+            } else {
+                userService.findOrCreate(p.uid, p.email).flatMap { user ->
+                    programService.workoutCountForOwner(user.id, programId).flatMap { count ->
+                        if (count == null) AppError.NotFound("Programa não encontrado").asFailure()
+                        else service.create(p.uid, p.email, dto, programId, dayOfWeek = count + 1)
+                    }
+                }
+            }
+            call.respondResult(result)
         }
 
         get("/workouts") {
@@ -49,46 +64,6 @@ fun Route.workoutRoutes(
             val p = call.principal<FirebaseUser>()!!
             val id = call.workoutIdParam() ?: return@get call.respondResult(notFound<WorkoutDto>())
             call.respondResult(service.get(p.uid, p.email, id).notFoundIfNull())
-        }
-
-        post("/programs/generate") {
-            val principal = call.principal<FirebaseUser>()!!
-            val request = call.receive<GenerateWorkoutRequest>()
-
-            val result = userService.findOrCreate(principal.uid, principal.email).flatMap { user ->
-                // 1. ENTITLEMENT (§8.2) — premium primeiro
-                if (!user.isPremium) {
-                    AppError.Forbidden(
-                        "Geração por IA é um recurso premium.",
-                        ErrorCodes.ENTITLEMENT_REQUIRED,
-                    ).asFailure()
-                } else {
-                    // 2. GATE DE SAÚDE (§3.2 [INV]) — via profileService
-                    when (val pr = profileService.getProfile(principal.uid, principal.email)) {
-                        is AppResult.Failure ->
-                            // sem perfil (NotFound) = sem gate → bloqueia; erro real propaga
-                            if (pr.error is AppError.NotFound)
-                                AppError.Forbidden(
-                                    "Complete a avaliação de saúde antes de gerar treinos.",
-                                    ErrorCodes.HEALTH_GATE_REQUIRED,
-                                ).asFailure()
-                            else pr
-                        is AppResult.Success -> {
-                            val profile = pr.value
-                            if (profile.health?.gateSatisfied != true) {
-                                AppError.Forbidden(
-                                    "Complete a avaliação de saúde antes de gerar treinos.",
-                                    ErrorCodes.HEALTH_GATE_REQUIRED,
-                                ).asFailure()
-                            } else {
-                                // 3-5. gera + valida + persiste (WorkoutService)
-                                service.generate(principal.uid, principal.email, profile, request.prompt)
-                            }
-                        }
-                    }
-                }
-            }
-            call.respondResult(result)   // 200 OK — consistente com POST /workouts
         }
 
         put("/workouts/{id}") {

@@ -14,5 +14,6 @@ data class WorkoutExerciseDto(
     val exerciseId: String,          // FK → catálogo (o cliente cruza p/ nome/thumb)
     val orderIndex: Int,
     val restSeconds: Int = 90,       // NOVO — descanso entre séries (F.2)
+    val rir: Int? = null,            // ARCH #27 — RIR alvo (por papel); null = manual não prescreve
     val sets: List<WorkoutSetDto>,
 )

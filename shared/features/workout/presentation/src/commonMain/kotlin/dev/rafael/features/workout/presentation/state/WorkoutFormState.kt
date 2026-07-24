@@ -2,6 +2,7 @@ package dev.rafael.features.workout.presentation.state
 
 data class WorkoutFormState(
     val workoutId: String? = null,
+    val programId: String? = null,   // obrigatório na criação (ARCH #26); ignorado na edição
     val name: String = "",
     val exercises: List<FormExercise> = emptyList(),
     val isLoading: Boolean = false,
@@ -11,9 +12,10 @@ data class WorkoutFormState(
 ) {
     val isEditing: Boolean get() = workoutId != null
 
-    // espelha validate() do WorkoutService
+    // espelha validate() do WorkoutService — programId só é exigido ao criar
     val canSave: Boolean
         get() = !isSaving &&
+                (isEditing || programId != null) &&
                 name.isNotBlank() &&
                 exercises.isNotEmpty() &&
                 exercises.all { ex ->

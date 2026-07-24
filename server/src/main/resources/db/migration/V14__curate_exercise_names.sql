@@ -1,0 +1,53 @@
+-- V14: curadoria de nomes de exercícios (catálogo limpo).
+-- 27 correções manuais do Rafael (planilha curadoria_nomes) + sugestões auto + normalização de acento.
+-- Só atualiza NOME; id/categoria/taxonomia intocados.
+
+UPDATE exercises SET name = 'Barra fixa' WHERE id = '56ce0d81-1daa-5855-b0cb-cbc47728a515';
+UPDATE exercises SET name = 'Graviton' WHERE id = '1ff60154-1068-5bbd-81f3-77ed6482dd1f';
+UPDATE exercises SET name = 'Pulldown unilateral com corda' WHERE id = 'a28cf315-03c0-539f-b89e-07f8df3e00cd';
+UPDATE exercises SET name = 'Pullover na Máquina' WHERE id = '4f65f54b-82fc-54c5-bc9d-f258c3ab8304';
+UPDATE exercises SET name = 'Puxada Alta na Máquina' WHERE id = '9e7ad364-21e0-58ff-94bb-ebbe5014d321';
+UPDATE exercises SET name = 'RDL' WHERE id = 'fb3814e9-89fc-5f3e-876b-3077d13dbc72';
+UPDATE exercises SET name = 'Remada T na Máquina' WHERE id = '562041da-c75e-5354-983a-b49154b7682d';
+UPDATE exercises SET name = 'Remada frontal na máquina' WHERE id = '2f0fdf11-7367-5ba9-914b-c11d3096595e';
+UPDATE exercises SET name = 'Remada na Máquina' WHERE id = '72d6a804-e21e-5f50-a5e7-27839b5edcfe';
+UPDATE exercises SET name = 'levantamento terra' WHERE id = 'cf79231a-9077-5bfb-859e-582d83e30e5c';
+UPDATE exercises SET name = 'remada T invertida na máquina' WHERE id = '01e8367b-9816-5ba2-8fbf-f848cb7451d2';
+UPDATE exercises SET name = 'Rosca Direta na Máquina' WHERE id = 'bd21e33b-b34c-508d-98a6-71407bbd44ea';
+UPDATE exercises SET name = 'Rosca Scott na Máquina' WHERE id = '1e760fe9-132f-5a82-b493-25d386bb4e33';
+UPDATE exercises SET name = 'Rosca de bíceps na Máquina' WHERE id = 'c00739a0-dd76-533e-ae49-9bb6deea7dad';
+UPDATE exercises SET name = 'Elevação de panturrilha Sentado na Máquina' WHERE id = '37492785-d612-52be-a187-969e5c36587b';
+UPDATE exercises SET name = 'Levantamento de panturrilha na Máquina' WHERE id = 'f7eeca9e-8914-5ffd-a848-e571a07ca6f5';
+UPDATE exercises SET name = 'Crossover na Máquina' WHERE id = 'e283cb8f-be51-5a35-abd4-3df3da134b0c';
+UPDATE exercises SET name = 'Crucifixo Inclinado no Cross' WHERE id = 'a0cf8055-e0f6-500c-876c-47a2c56f2773';
+UPDATE exercises SET name = 'Supino Declinado na Máquina' WHERE id = '43e06a26-a9a8-5566-b147-d519b63656af';
+UPDATE exercises SET name = 'Supino com Anilha' WHERE id = 'e330f1f9-1486-59f5-a696-39e7dbb1dc1f';
+UPDATE exercises SET name = 'Supino declinada na Máquina' WHERE id = '6020539d-ce33-56a9-9fa4-f388d712f6cc';
+UPDATE exercises SET name = 'Supino inclinado na Máquina' WHERE id = 'ef49c17e-c771-55f8-b87f-332090431261';
+UPDATE exercises SET name = 'Supino na Máquina' WHERE id = 'be967d64-1d64-54c3-8668-8a8cc35f4e71';
+UPDATE exercises SET name = 'Supino unilateral na Máquina' WHERE id = 'ca5e42ed-31ae-5f96-993e-59f2a9aed9e2';
+UPDATE exercises SET name = 'Voador Inclinado na Máquina' WHERE id = 'e9a16a61-da4b-5bb0-b474-d48bb9b39c43';
+UPDATE exercises SET name = 'Voador na Máquina' WHERE id = '824e23e7-51b9-5396-b4d0-5218f48818d9';
+UPDATE exercises SET name = 'Abdução Lateral do Quadril na Máquina' WHERE id = '4afcf90e-91f8-588e-87e9-04e15c046250';
+UPDATE exercises SET name = 'Abdução de Quadril na Máquina' WHERE id = 'be8eb716-8316-5ea4-b383-f2850a903df9';
+UPDATE exercises SET name = 'Extensão de Quadril em Pé na Máquina' WHERE id = '105b3b17-2787-5525-9efd-3465abeb652b';
+UPDATE exercises SET name = 'Glúteo Coice na Máquina' WHERE id = '50be13bb-03bb-56d3-a8f1-4a8cf068de4a';
+UPDATE exercises SET name = 'Abdução do Quadril Lateral na Máquina' WHERE id = '772f6d66-ef9e-5d91-9f6e-d3a2f891fad9';
+UPDATE exercises SET name = 'Adução de Quadril na Máquina' WHERE id = '3c166c66-c366-5734-a231-2259fbc98d4e';
+UPDATE exercises SET name = 'Afundo com Cabo' WHERE id = 'cac02b24-5064-53d0-a6f4-69bff4a082f4';
+UPDATE exercises SET name = 'Bom dia' WHERE id = '77fcc02c-f1b8-554b-a0b7-bb0f803eb5e0';
+UPDATE exercises SET name = 'Cadeira / Mesa Flexora' WHERE id = 'db368be0-e767-500c-a865-2cb080e8cd87';
+UPDATE exercises SET name = 'Elevação de Perna em Pé na Máquina' WHERE id = 'c985f94c-cd96-57d3-8422-70d784bb8732';
+UPDATE exercises SET name = 'Flexão Nórdica' WHERE id = '29b1fd1f-c684-5f96-ad92-5871fb501f63';
+UPDATE exercises SET name = 'Flexão de Perna Unilateral na Máquina' WHERE id = '5b4df4af-90eb-55df-b89d-4ea9067d978e';
+UPDATE exercises SET name = 'Leg press unilateral Assistido' WHERE id = 'abb5628a-094d-5544-a677-714b65e185a3';
+UPDATE exercises SET name = 'levantamento terra na máquina' WHERE id = '3d3521df-770c-5b44-8ba3-7d3dad341775';
+UPDATE exercises SET name = 'Desenvolvimento Arnold' WHERE id = 'f3d6dc9d-e05a-53c2-a1f2-754aae32cac1';
+UPDATE exercises SET name = 'Elevação Lateral na Máquina' WHERE id = '9480d492-a678-5297-9675-088fc7614aed';
+UPDATE exercises SET name = 'Elevação de Halteres (4 posições)' WHERE id = '9ed0cdb8-bbdd-5e1d-be5c-eca202503d31';
+UPDATE exercises SET name = 'Remada Alta' WHERE id = 'bbf3aa8e-1f53-56ed-b3e7-1b246557672a';
+UPDATE exercises SET name = 'Elevação com Halteres' WHERE id = '6d3d0618-1578-5f00-9dde-6541eccbdcd0';
+UPDATE exercises SET name = 'Encolhimento na Máquina' WHERE id = '11d22f59-7aa8-56a1-8123-4011b49ca57b';
+UPDATE exercises SET name = 'Flexão de Tríceps na Máquina' WHERE id = '9bd84648-0d26-5f21-a324-9fe63c224c23';
+UPDATE exercises SET name = 'Mergulho de tríceps na Máquina' WHERE id = 'eb30a555-f57d-5a1d-bcd0-527e03fab772';
+UPDATE exercises SET name = 'Tríceps no Banco' WHERE id = '94c2c728-09da-51b9-838b-724d2020b90f';

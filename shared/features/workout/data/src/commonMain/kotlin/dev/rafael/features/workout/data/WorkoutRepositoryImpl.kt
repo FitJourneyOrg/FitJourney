@@ -1,7 +1,6 @@
 package dev.rafael.features.workout.data
 
 import dev.rafael.contract.error.ErrorResponse
-import dev.rafael.contract.workout.GenerateWorkoutRequest
 import dev.rafael.contract.workout.WorkoutDto
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -32,10 +31,6 @@ class WorkoutRepositoryImpl(
 
     override suspend fun delete(id: String): AppResult<Unit> =
         call { remote.delete(id) }
-
-    override suspend fun generate(prompt: String?): AppResult<Workout> =
-        call { remote.generate(GenerateWorkoutRequest(prompt)).toDomain() }
-
 
     private suspend fun <T> call(block: suspend () -> T): AppResult<T> =
         runCatching { block() }.fold(

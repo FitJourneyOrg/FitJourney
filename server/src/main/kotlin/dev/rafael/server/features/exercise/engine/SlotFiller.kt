@@ -1,18 +1,19 @@
 package dev.rafael.server.features.exercise.engine
 
+import dev.rafael.contract.exercise.ExerciseCategory
+import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.server.features.exercise.models.Exercise
+import dev.rafael.server.features.exercise.models.MovementPattern
 import kotlin.random.Random
 import kotlin.uuid.Uuid
 
 /**
- * Preenchedor de slots (Fatia F.4). Para cada Slot, escolhe UM exercício do pool (F.3)
- * por pontuação, sem repetir no programa.
+ * Preenchedor de slots (F.4, ajustado no ARCH #27). Para cada Slot, escolhe UM
+ * exercício do pool que casa com o músculo-alvo e o papel (composto vs isolamento),
+ * sem repetir no programa. Determinístico (mesma seed + perfil = mesmo treino).
  *
- * Pontuação: foco > fit ao nível > composto-âncora > equipamento. Rotação DESEMPATA
- * (não domina). DETERMINÍSTICO (ARCH #20): mesma seed + mesmo perfil = mesmo treino.
- *
- * Controle de não-repetição usa Uuid (tipo nativo do Exercise.id); a conversão p/
- * String acontece só na fronteira (montagem do DTO).
+ * Perna fina: QUADS/POSTERIOR casam por movement_pattern (dado confiável); os demais
+ * por primary_muscles; panturrilha por category CALVES.
  */
 class SlotFiller(seed: Long) {
 
@@ -35,12 +36,26 @@ class SlotFiller(seed: Long) {
         return out
     }
 
-    private fun candidatesFor(slot: Slot, pool: List<Exercise>): List<Exercise> = when (slot.kind) {
-        SlotKind.COMPOUND -> pool.filter { it.isCompound == true && it.movementPattern == slot.pattern }
-        SlotKind.ISOLATION -> pool.filter {
-            it.isCompound == false && slot.muscle != null && slot.muscle in it.primaryMuscles
+    private fun candidatesFor(slot: Slot, pool: List<Exercise>): List<Exercise> {
+        val byMuscle = pool.filter { matchesTarget(it, slot.target) }
+        return when (slot.role) {
+            SlotRole.COMPOSTO_PESADO, SlotRole.COMPOSTO_ACESSORIO -> byMuscle.filter { it.isCompound == true }
+            SlotRole.ISOLAMENTO -> byMuscle.filter { it.isCompound == false }
         }
-        SlotKind.CORE -> pool.filter { ex -> ex.primaryMuscles.any { it.name == "CORE" } }
+    }
+
+    private fun matchesTarget(ex: Exercise, target: TargetMuscle): Boolean = when (target) {
+        TargetMuscle.CHEST -> MuscleGroup.CHEST in ex.primaryMuscles
+        TargetMuscle.BACK -> MuscleGroup.BACK in ex.primaryMuscles
+        TargetMuscle.SHOULDERS -> MuscleGroup.SHOULDERS in ex.primaryMuscles
+        TargetMuscle.ARMS -> MuscleGroup.ARMS in ex.primaryMuscles
+        TargetMuscle.QUADS -> ex.movementPattern in QUAD_PATTERNS
+        // Posterior (isquios): padrão de perna E primário LEGS — exclui hip thrust (primário GLUTES).
+        TargetMuscle.POSTERIOR -> ex.movementPattern in POSTERIOR_PATTERNS && MuscleGroup.LEGS in ex.primaryMuscles
+        TargetMuscle.CALVES -> ex.category == ExerciseCategory.CALVES
+        // Glúteo: só primário GLUTES (removido o fallback HINGE que roubava o hip thrust do posterior).
+        TargetMuscle.GLUTES -> MuscleGroup.GLUTES in ex.primaryMuscles
+        TargetMuscle.CORE -> MuscleGroup.CORE in ex.primaryMuscles || ex.category == ExerciseCategory.CORE
     }
 
     private fun pickBest(
@@ -57,8 +72,8 @@ class SlotFiller(seed: Long) {
     private fun score(ex: Exercise, slot: Slot, focusMuscles: Set<String>, userLevel: String): Double {
         var s = 0.0
         if (ex.primaryMuscles.any { it.name in focusMuscles }) s += 4.0
-        if (ex.level?.name == userLevel) s += 2.0   // Exercise.level é nullable
-        if (slot.kind == SlotKind.COMPOUND && ex.isCompound == true) s += 2.0
+        if (ex.level?.name == userLevel) s += 2.0
+        if (slot.role != SlotRole.ISOLAMENTO && ex.isCompound == true) s += 2.0
         s += equipmentWeight(ex.equipment)
         return s
     }
@@ -71,7 +86,11 @@ class SlotFiller(seed: Long) {
         else -> 0.5
     }
 
-    private companion object { const val ROTATION_JITTER = 0.9 }
+    private companion object {
+        const val ROTATION_JITTER = 0.9
+        val QUAD_PATTERNS = setOf(MovementPattern.SQUAT, MovementPattern.LUNGE, MovementPattern.KNEE_EXTENSION)
+        val POSTERIOR_PATTERNS = setOf(MovementPattern.HINGE, MovementPattern.KNEE_FLEXION)
+    }
 }
 
 data class FilledExercise(val exercise: Exercise, val slot: Slot)

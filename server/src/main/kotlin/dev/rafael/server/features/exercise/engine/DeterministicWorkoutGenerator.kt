@@ -24,8 +24,8 @@ import kotlin.uuid.Uuid
  * IllegalArgumentException — a rota traduz em 400. O motor não adivinha ambiente.
  */
 class DeterministicWorkoutGenerator(
-    private val structureEngine: StructureEngine,
-    private val preFilter: ExercisePreFilter,
+    val structureEngine: StructureEngine,
+    val preFilter: ExercisePreFilter,
 ) : WorkoutGenerator {
 
     override suspend fun generate(profile: ProfileDto, prompt: String?): ProgramDto {
@@ -64,6 +64,9 @@ class DeterministicWorkoutGenerator(
         }
 
         return ProgramDto(
+            // Placeholder — ProgramService.generate() descarta e gera o nome de
+            // verdade (autoName) ao persistir. O motor não decide nome (ARCH #26).
+            name = skeleton.split,
             workouts = workouts,
             daysPerWeek = profile.daysPerWeek,
             split = skeleton.split,
@@ -99,6 +102,7 @@ private fun FilledExercise.toExerciseDto(orderIndex: Int): WorkoutExerciseDto {
         exerciseId = exercise.id.toString(),
         orderIndex = orderIndex,
         restSeconds = slot.restSeconds,
+        rir = slot.rir,
         sets = (0 until slot.sets).map { WorkoutSetDto(reps = reps, orderIndex = it) },
     )
 }
