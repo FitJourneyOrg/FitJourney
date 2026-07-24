@@ -36,8 +36,10 @@ class DeterministicWorkoutGenerator(
             "Ambiente de treino não definido — necessário para gerar o programa."
         }
 
-        // seed derivada do perfil → determinístico sem poluir a assinatura.
-        val seed = deriveSeed(profile)
+        // Seed ALEATÓRIA por geração (revisa o ARCH #20): "gerar de novo" com o mesmo
+        // perfil produz uma seleção de exercícios diferente. A ESTRUTURA (split/séries/
+        // reps) continua determinística pelo perfil; só a escolha dentro do pool varia.
+        val seed = kotlin.random.Random.nextLong()
 
         // 1. ESQUELETO (F.2) — foco só p/ INTER/ADVANCED (exceto GENERAL_HEALTH).
         val focus = effectiveFocus(profile)
@@ -80,18 +82,6 @@ class DeterministicWorkoutGenerator(
         val eligible = profile.level != Level.BEGINNER &&
                 profile.goal != dev.rafael.contract.profile.Goal.GENERAL_HEALTH
         return if (eligible) profile.focusAreas.take(2).toSet() else emptySet()
-    }
-
-    /** Seed reproduzível a partir do perfil (mesmo perfil = mesmo treino). */
-    private fun deriveSeed(profile: ProfileDto): Long {
-        // combina campos estáveis do perfil; determinístico e testável.
-        var h = 17L
-        h = 31 * h + profile.goal.ordinal
-        h = 31 * h + profile.level.ordinal
-        h = 31 * h + profile.daysPerWeek
-        h = 31 * h + profile.focusAreas.sumOf { it.ordinal + 1 }
-        h = 31 * h + (profile.environment?.ordinal ?: 0)
-        return h
     }
 }
 

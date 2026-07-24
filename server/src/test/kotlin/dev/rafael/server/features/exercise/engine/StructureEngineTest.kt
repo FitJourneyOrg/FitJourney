@@ -54,6 +54,17 @@ class StructureEngineTest {
     }
 
     @Test
+    fun `nenhuma sessao passa do teto de volume total`() {
+        // full body 2 dias no intermediário era o pior caso (chegava a ~30 séries).
+        listOf(2, 3, 4, 5, 6).forEach { days ->
+            engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.ADVANCED, days, setOf(MuscleGroup.CHEST, MuscleGroup.ARMS)).days.forEach { d ->
+                val total = d.slots.sumOf { it.sets }
+                assertTrue(total <= 20, "dia '${d.label}' ($days dias) tem $total séries > 20")
+            }
+        }
+    }
+
+    @Test
     fun `todo slot tem RIR valido`() {
         skeleton(days = 4).days.forEach { d ->
             d.slots.forEach { assertTrue(it.rir in 0..4, "RIR prescrito por papel") }
