@@ -7,6 +7,7 @@ data class WorkoutDetailState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val isDeleted: Boolean = false,      // sinaliza pra tela navegar de volta
+    val showPaywall: Boolean = false,    // 403 ao editar programa IA sem premium
 )
 
 data class ResolvedExercise(

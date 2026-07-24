@@ -24,6 +24,7 @@ private fun WorkoutExerciseDto.toDomain() = WorkoutExercise(
     exerciseId = exerciseId,
     orderIndex = orderIndex,
     restSeconds = restSeconds,   // lê o campo do DTO
+    rir = rir,
     sets = sets.map { it.toDomain() },
 )
 private fun WorkoutSetDto.toDomain() = WorkoutSet(reps, orderIndex)
@@ -39,6 +40,7 @@ private fun WorkoutExercise.toDto() = WorkoutExerciseDto(
     exerciseId = exerciseId,
     orderIndex = orderIndex,
     restSeconds = restSeconds,   // escreve o campo (era o vazio)
+    rir = rir,
     sets = sets.map { it.toDto() },
 )
 private fun WorkoutSet.toDto() = WorkoutSetDto(reps, orderIndex)

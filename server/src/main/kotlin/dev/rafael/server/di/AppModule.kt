@@ -40,7 +40,7 @@ val appModule = module {
 
 
     single<ExerciseRepository> { ExerciseRepositoryImpl() }
-    single { ExerciseService(get()) }
+    single { ExerciseService(get(), get()) }   // repo + ExercisePreFilter (registrado abaixo)
 
 
     single<WorkoutRepository> { WorkoutRepositoryImpl() }        // <- ESTA linha sumiu
