@@ -40,7 +40,7 @@ fun Application.configureRouting() {
     routing {
         userRoutes(userService)
         profileRoutes(profileService)
-        exerciseRoutes(exerciseService)
+        exerciseRoutes(exerciseService, profileService)
         workoutRoutes(workoutService, userService, profileService, programService)
         programRoutes(userService, profileService, programService)
 

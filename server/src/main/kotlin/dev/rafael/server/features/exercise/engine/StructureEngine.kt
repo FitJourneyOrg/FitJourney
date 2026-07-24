@@ -19,11 +19,12 @@ import kotlin.math.roundToInt
 class StructureEngine {
 
     private val FOCUS_BONUS = 3
-    private val SESSION_MIN_SETS = 3        // piso de 3 séries por exercício
-    private val MAX_SETS_PER_EXERCISE = 5   // teto de séries por exercício (densifica quando falta espaço)
-    private val SESSION_MAX_SETS = 8        // teto por músculo/sessão antes de junk volume
-    private val SESSION_MAX_EXERCISES = 6   // teto de exercícios por sessão (usabilidade)
-    private val SETS_PER_EXERCISE = 3       // divisor da contagem "natural" de exercícios
+    private val SESSION_MIN_SETS = 3          // piso de 3 séries por exercício
+    private val MAX_SETS_PER_EXERCISE = 5     // teto de séries por exercício (densifica quando falta espaço)
+    private val SESSION_MAX_SETS = 8          // teto por músculo/sessão antes de junk volume
+    private val SESSION_MAX_EXERCISES = 6     // teto de exercícios por sessão (usabilidade)
+    private val SESSION_MAX_SETS_TOTAL = 20   // teto de séries TOTAIS por sessão (evita junk volume)
+    private val SETS_PER_EXERCISE = 3         // divisor da contagem "natural" de exercícios
 
     fun buildSkeleton(
         goal: Goal,
@@ -58,15 +59,28 @@ class StructureEngine {
                     .roundToInt().coerceIn(SESSION_MIN_SETS, SESSION_MAX_SETS)
             }
             val exerciseCount = allocateExercises(trained, sessionSets)
-            val slots = trained.flatMap { m ->
-                val n = exerciseCount.getValue(m)
-                // menos exercícios → mais séries cada (3..5), preservando o volume do músculo.
-                val setsPer = (sessionSets.getValue(m).toDouble() / n)
+
+            // Séries por exercício de cada músculo (3..5). Menos exercícios → mais séries.
+            val setsPer = trained.associateWith { m ->
+                (sessionSets.getValue(m).toDouble() / exerciseCount.getValue(m))
                     .roundToInt().coerceIn(SESSION_MIN_SETS, MAX_SETS_PER_EXERCISE)
-                (0 until n).map { i ->
+            }.toMutableMap()
+
+            // TETO DE VOLUME TOTAL: reduz séries dos músculos com mais séries até a sessão
+            // caber no teto (piso de 3). Evita o "junk volume" (ex.: full body 2x com 30 séries).
+            fun total() = trained.sumOf { exerciseCount.getValue(it) * setsPer.getValue(it) }
+            while (total() > SESSION_MAX_SETS_TOTAL) {
+                val alvo = trained.filter { setsPer.getValue(it) > SESSION_MIN_SETS }
+                    .maxByOrNull { setsPer.getValue(it) } ?: break
+                setsPer[alvo] = setsPer.getValue(alvo) - 1
+            }
+
+            val slots = trained.flatMap { m ->
+                val sp = setsPer.getValue(m)
+                (0 until exerciseCount.getValue(m)).map { i ->
                     val role = roleFor(m, i)
                     val p = RoleParams.paramsFor(role, level, goal)
-                    Slot(m, role, setsPer, p.repRange, p.restSeconds, p.rir)
+                    Slot(m, role, sp, p.repRange, p.restSeconds, p.rir)
                 }
             }.sortedBy { it.role.ordinal }   // compostos pesados primeiro no dia
             DaySkeleton(label, slots)

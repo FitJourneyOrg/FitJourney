@@ -13,4 +13,7 @@ class ExerciseRemoteDataSource(private val client: HttpClient) {
         client.get("${HttpClientFactory.BASE_URL}/exercises") {
             category?.let { parameter("category", it.name) }
         }.body()
+
+    suspend fun getAlternatives(exerciseId: String): List<ExerciseDto> =
+        client.get("${HttpClientFactory.BASE_URL}/exercises/$exerciseId/alternatives").body()
 }
