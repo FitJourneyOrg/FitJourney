@@ -4,8 +4,6 @@ import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
-import dev.rafael.server.features.exercise.db.ExercisesTable
-import dev.rafael.server.features.workout.db.WorkoutExercisesTable.restSeconds
 import dev.rafael.server.features.workout.models.Workout
 import dev.rafael.server.features.workout.models.WorkoutExercise
 import dev.rafael.server.features.workout.models.WorkoutSet
@@ -19,7 +17,6 @@ import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
@@ -32,7 +29,7 @@ class WorkoutRepositoryImpl : WorkoutRepository {
     private fun now(): LocalDateTime =
         Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
 
-    override suspend fun create(userId: Uuid, workout: Workout): AppResult<Workout> =
+    override suspend fun create(userId: Uuid, workout: Workout, programId: Uuid, dayOfWeek: Int): AppResult<Workout> =
         dbQuery {
             val ts = now()
             val newWorkoutId = Uuid.random()
@@ -40,6 +37,8 @@ class WorkoutRepositoryImpl : WorkoutRepository {
                 it[id] = newWorkoutId
                 it[WorkoutsTable.userId] = userId
                 it[name] = workout.name
+                it[WorkoutsTable.programId] = programId
+                it[WorkoutsTable.dayOfWeek] = dayOfWeek
                 it[createdAt] = ts
                 it[updatedAt] = ts
             }
@@ -105,6 +104,7 @@ class WorkoutRepositoryImpl : WorkoutRepository {
                 it[exerciseId] = ex.exerciseId
                 it[orderIndex] = ex.orderIndex
                 it[restSeconds] = ex.restSeconds
+                it[rir] = ex.rir
             }
             ex.sets.forEach { s ->
                 WorkoutSetsTable.insert {
@@ -132,6 +132,7 @@ class WorkoutRepositoryImpl : WorkoutRepository {
             id = wRow[WorkoutsTable.id],
             userId = wRow[WorkoutsTable.userId],
             name = wRow[WorkoutsTable.name],
+            programId = wRow[WorkoutsTable.programId],
             exercises = exercises,
             createdAt = wRow[WorkoutsTable.createdAt],
             updatedAt = wRow[WorkoutsTable.updatedAt],
@@ -149,6 +150,7 @@ class WorkoutRepositoryImpl : WorkoutRepository {
             exerciseId = this[WorkoutExercisesTable.exerciseId],
             orderIndex = this[WorkoutExercisesTable.orderIndex],
             restSeconds = this[WorkoutExercisesTable.restSeconds],
+            rir = this[WorkoutExercisesTable.rir],
             sets = sets,
         )
     }

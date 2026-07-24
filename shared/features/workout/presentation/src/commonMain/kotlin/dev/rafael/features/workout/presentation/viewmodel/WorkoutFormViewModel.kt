@@ -21,11 +21,12 @@ private const val DEFAULT_REPS = "12"
 
 class WorkoutFormViewModel(
     private val workoutId: String?,          // null = criar
+    private val programId: String?,          // obrigatório se workoutId == null (ARCH #26)
     private val repository: WorkoutRepository,
     private val lookup: ExerciseLookup,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(WorkoutFormState(workoutId = workoutId))
+    private val _state = MutableStateFlow(WorkoutFormState(workoutId = workoutId, programId = programId))
     val state: StateFlow<WorkoutFormState> = _state.asStateFlow()
 
     init { if (workoutId != null) loadExisting(workoutId) }
@@ -111,6 +112,7 @@ class WorkoutFormViewModel(
         val workout = Workout(
             id = s.workoutId,
             name = s.name.trim(),
+            programId = s.programId,
             exercises = s.exercises.mapIndexed { i, ex ->
                 WorkoutExercise(
                     exerciseId = ex.exerciseId,

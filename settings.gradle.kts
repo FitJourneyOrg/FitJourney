@@ -59,3 +59,7 @@ include(":shared:features:workout:data")
 include(":shared:features:workout:domain")
 include(":shared:features:workout:presentation")
 include(":shared:core:catalog")
+
+include(":shared:features:program:data")
+include(":shared:features:program:domain")
+include(":shared:features:program:presentation")

@@ -1,8 +1,6 @@
 package dev.rafael.server.features.workout.services
 
-import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.profile.ProfileDto
-import dev.rafael.contract.workout.GenerateWorkoutRequest
 import dev.rafael.contract.workout.WorkoutDto
 import dev.rafael.contract.workout.WorkoutSummaryDto
 import dev.rafael.core.result.AppError
@@ -12,9 +10,8 @@ import dev.rafael.core.result.flatMap
 import dev.rafael.core.result.getOrNull
 import dev.rafael.core.result.map
 import dev.rafael.server.features.exercise.db.ExerciseRepository
-import dev.rafael.server.features.profile.db.ProfileRepository
+import dev.rafael.server.features.exercise.engine.WorkoutGenerator
 import dev.rafael.server.features.user.services.UserService
-import dev.rafael.server.features.workout.ai.WorkoutGenerator
 import dev.rafael.server.features.workout.db.WorkoutRepository
 import dev.rafael.server.features.workout.models.toDomain
 import dev.rafael.server.features.workout.models.toDto
@@ -27,11 +24,23 @@ class WorkoutService(
     private val generator: WorkoutGenerator,          // <- única dep nova
 ) {
 
-    suspend fun create(firebaseUid: String, email: String?, dto: WorkoutDto): AppResult<WorkoutDto> {
+    /**
+     * programId/dayOfWeek (ARCH #26): resolvidos e validados na ROTA (não aqui) —
+     * validar posse do programa exigiria WorkoutService conhecer ProgramRepository,
+     * o que criaria um ciclo workout→program (program já depende de workout).
+     * Gate composto na rota, como manda o ARCH #18.
+     */
+    suspend fun create(
+        firebaseUid: String,
+        email: String?,
+        dto: WorkoutDto,
+        programId: Uuid,
+        dayOfWeek: Int,
+    ): AppResult<WorkoutDto> {
         validate(dto)?.let { return it.asFailure() }
         validateExercisesExist(dto)?.let { return it.asFailure() }
         return userService.findOrCreate(firebaseUid, email).flatMap { user ->
-            repository.create(user.id, dto.toDomain()).map { it.toDto() }
+            repository.create(user.id, dto.toDomain(), programId, dayOfWeek).map { it.toDto() }
         }
     }
 
@@ -80,14 +89,4 @@ class WorkoutService(
         return if (allExist) null
         else AppError.Validation("Um ou mais exercícios não existem no catálogo")
     }
-
-    suspend fun generate(
-        firebaseUid: String, email: String?, profile: ProfileDto, prompt: String?,
-    ): AppResult<WorkoutDto> =
-        userService.findOrCreate(firebaseUid, email).flatMap { user ->
-            val generated = generator.generate(profile, prompt)
-            validate(generated)?.let { return@flatMap it.asFailure() }
-            validateExercisesExist(generated)?.let { return@flatMap it.asFailure() }
-            repository.create(user.id, generated.toDomain()).map { it.toDto() }
-        }
 }

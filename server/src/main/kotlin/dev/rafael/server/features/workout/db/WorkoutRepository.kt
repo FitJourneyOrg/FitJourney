@@ -6,7 +6,8 @@ import dev.rafael.server.features.workout.models.WorkoutSummary
 import kotlin.uuid.Uuid
 
 interface WorkoutRepository {
-    suspend fun create(userId: Uuid, workout: Workout): AppResult<Workout>
+    /** programId/dayOfWeek (ARCH #26): todo treino vive dentro de um programa. */
+    suspend fun create(userId: Uuid, workout: Workout, programId: Uuid, dayOfWeek: Int): AppResult<Workout>
     suspend fun findAllByUser(userId: Uuid): AppResult<List<WorkoutSummary>>
     suspend fun findById(userId: Uuid, workoutId: Uuid): AppResult<Workout?>
     suspend fun update(userId: Uuid, workoutId: Uuid, workout: Workout): AppResult<Workout?>
