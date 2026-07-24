@@ -29,4 +29,10 @@ class ExerciseRepositoryImpl(
             onSuccess = { Unit.asSuccess() },
             onFailure = { AppError.Unexpected("Falha ao atualizar catálogo de exercícios", it).asFailure() },
         )
+
+    override suspend fun alternatives(exerciseId: String): AppResult<List<Exercise>> =
+        runCatching { remote.getAlternatives(exerciseId).map { it.toDomain() } }.fold(
+            onSuccess = { it.asSuccess() },
+            onFailure = { AppError.Unexpected("Falha ao buscar alternativas", it).asFailure() },
+        )
 }

@@ -35,6 +35,11 @@ class ExerciseRepositoryImpl : ExerciseRepository {
                 .map { it.toExercise() }
         }
 
+    override suspend fun findById(id: Uuid): AppResult<Exercise?> =
+        dbQuery {
+            ExercisesTable.selectAll().where { ExercisesTable.id eq id }.map { it.toExercise() }.singleOrNull()
+        }
+
     override suspend fun existsByIds(ids: List<Uuid>): AppResult<Boolean> =
         dbQuery {
             if (ids.isEmpty()) return@dbQuery true

@@ -15,6 +15,7 @@ data class WorkoutExercise(
     val exerciseId: String,
     val orderIndex: Int,
     val restSeconds: Int = 90,   // <- NOVO
+    val rir: Int? = null,        // ARCH #27 — preservado no round-trip (senão editar apaga o RIR)
     val sets: List<WorkoutSet>,
 )
 
