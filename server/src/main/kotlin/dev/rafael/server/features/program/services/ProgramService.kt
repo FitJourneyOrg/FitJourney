@@ -86,6 +86,10 @@ class ProgramService(
     suspend fun workoutCountForOwner(userId: Uuid, programId: Uuid): AppResult<Int?> =
         repository.findByIdForUser(userId, programId).flatMap { it?.workouts?.size.asSuccess() }
 
+    /** Origem do programa (AI/MANUAL) — usado pelo gate premium de edição (ARCH #25). null = não é do usuário. */
+    suspend fun originOf(userId: Uuid, programId: Uuid): AppResult<WorkoutOrigin?> =
+        repository.findByIdForUser(userId, programId).flatMap { it?.origin.asSuccess() }
+
     private fun autoName(dto: ProgramDto): String = "Programa ${dto.daysPerWeek}x — ${dto.split}"
 }
 

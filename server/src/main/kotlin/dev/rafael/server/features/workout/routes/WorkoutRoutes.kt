@@ -1,8 +1,8 @@
 package dev.rafael.server.features.workout.routes
 
 import dev.rafael.contract.error.ErrorCodes
-import dev.rafael.contract.workout.GenerateWorkoutRequest
 import dev.rafael.contract.workout.WorkoutDto
+import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
@@ -10,13 +10,11 @@ import dev.rafael.core.result.asSuccess
 import dev.rafael.core.result.flatMap
 import dev.rafael.server.auth.FirebaseUser
 import dev.rafael.server.error.respondResult
-import dev.rafael.server.features.profile.db.ProfileRepository
 import dev.rafael.server.features.profile.services.ProfileService
 import dev.rafael.server.features.program.services.ProgramService
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.workout.services.WorkoutService
 import dev.rafael.server.plugins.FIREBASE_AUTH
-import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.principal
@@ -70,7 +68,28 @@ fun Route.workoutRoutes(
             val p = call.principal<FirebaseUser>()!!
             val id = call.workoutIdParam() ?: return@put call.respondResult(notFound<WorkoutDto>())
             val dto = call.receive<WorkoutDto>()
-            call.respondResult(service.update(p.uid, p.email, id, dto).notFoundIfNull())
+            // GATE PREMIUM (ARCH #25): editar workout de programa origin=AI exige premium.
+            // Programa manual (origin=MANUAL) é livre. Gate na rota (ARCH #18).
+            val result = userService.findOrCreate(p.uid, p.email).flatMap { user ->
+                service.get(p.uid, p.email, id).notFoundIfNull().flatMap { existing ->
+                    val pid = existing.programId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
+                    if (pid == null) {
+                        service.update(p.uid, p.email, id, dto).notFoundIfNull()
+                    } else {
+                        programService.originOf(user.id, pid).flatMap { origin ->
+                            if (origin == WorkoutOrigin.AI && !user.isPremium) {
+                                AppError.Forbidden(
+                                    "Editar um programa gerado por IA é um recurso premium.",
+                                    ErrorCodes.ENTITLEMENT_REQUIRED,
+                                ).asFailure()
+                            } else {
+                                service.update(p.uid, p.email, id, dto).notFoundIfNull()
+                            }
+                        }
+                    }
+                }
+            }
+            call.respondResult(result)
         }
 
         delete("/workouts/{id}") {
