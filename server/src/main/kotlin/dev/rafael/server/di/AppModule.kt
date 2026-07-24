@@ -12,9 +12,14 @@ import dev.rafael.server.features.user.db.UserRepositoryImpl
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.exercise.db.ExerciseRepository
 import dev.rafael.server.features.exercise.db.ExerciseRepositoryImpl
+import dev.rafael.server.features.exercise.engine.DeterministicWorkoutGenerator
+import dev.rafael.server.features.exercise.engine.ExercisePreFilter
+import dev.rafael.server.features.exercise.engine.StructureEngine
+import dev.rafael.server.features.exercise.engine.WorkoutGenerator
 import dev.rafael.server.features.exercise.services.ExerciseService
-import dev.rafael.server.features.workout.ai.StubWorkoutGenerator
-import dev.rafael.server.features.workout.ai.WorkoutGenerator
+import dev.rafael.server.features.program.db.ProgramRepository
+import dev.rafael.server.features.program.db.ProgramRepositoryImpl
+import dev.rafael.server.features.program.services.ProgramService
 import dev.rafael.server.features.workout.db.WorkoutRepository
 import dev.rafael.server.features.workout.db.WorkoutRepositoryImpl
 import dev.rafael.server.features.workout.services.WorkoutService
@@ -39,6 +44,15 @@ val appModule = module {
 
 
     single<WorkoutRepository> { WorkoutRepositoryImpl() }        // <- ESTA linha sumiu
-    single<WorkoutGenerator> { StubWorkoutGenerator(get()) }
     single { WorkoutService(get(), get(), get(), get()) }
+
+
+    // Motor (Fatia F) — as três peças + a interface.
+    single { StructureEngine() }
+    single { ExercisePreFilter() }
+    single<WorkoutGenerator> { DeterministicWorkoutGenerator(get(), get()) }
+
+    // Persistência + orquestração (G.1).
+    single<ProgramRepository> { ProgramRepositoryImpl() }
+    single { ProgramService(get(), get()) }
 }
