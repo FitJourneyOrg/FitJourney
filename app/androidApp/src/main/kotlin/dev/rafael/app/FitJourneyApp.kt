@@ -12,6 +12,8 @@ import dev.rafael.features.exercise.presentation.di.exercisePresentationModule
 import dev.rafael.features.profile.presentation.di.profilePresentationModule
 import dev.rafael.features.workout.data.di.workoutDataModule
 import dev.rafael.features.workout.presentation.di.workoutPresentationModule
+import dev.rafael.features.program.data.di.programDataModule
+import dev.rafael.features.program.presentation.di.programPresentationModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.startKoin
@@ -33,6 +35,8 @@ class FitJourneyApp : Application() {
                 exercisePresentationModule,
                 workoutDataModule,
                 workoutPresentationModule,
+                programDataModule,
+                programPresentationModule,
                 appModule
             )
         }

@@ -1,41 +1,42 @@
-package dev.rafael.features.workout.presentation.viewmodel
+package dev.rafael.features.program.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
-import dev.rafael.features.workout.domain.repository.WorkoutRepository
-import dev.rafael.features.workout.presentation.state.GenerateError
-import dev.rafael.features.workout.presentation.state.WorkoutGenerateEvent
-import dev.rafael.features.workout.presentation.state.WorkoutGenerateState
+import dev.rafael.features.program.domain.repository.ProgramRepository
+import dev.rafael.features.program.presentation.state.GenerateError
+import dev.rafael.features.program.presentation.state.ProgramGenerateEvent
+import dev.rafael.features.program.presentation.state.ProgramGenerateState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-class WorkoutGenerateViewModel(
-    private val repository: WorkoutRepository,
+class ProgramGenerateViewModel(
+    private val repository: ProgramRepository,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(WorkoutGenerateState())
-    val state: StateFlow<WorkoutGenerateState> = _state.asStateFlow()
+    private val _state = MutableStateFlow(ProgramGenerateState())
+    val state: StateFlow<ProgramGenerateState> = _state.asStateFlow()
 
-    fun onEvent(event: WorkoutGenerateEvent) {
+    fun onEvent(event: ProgramGenerateEvent) {
         when (event) {
-            is WorkoutGenerateEvent.PromptChanged ->
-                _state.update { it.copy(prompt = event.value) }
-            WorkoutGenerateEvent.Generate -> generate()
-            WorkoutGenerateEvent.DismissError ->
-                _state.update { it.copy(error = null) }
+            ProgramGenerateEvent.Generate -> generate()
+            ProgramGenerateEvent.DismissError -> _state.update { it.copy(error = null) }
         }
+    }
+
+    /** generatedId é evento one-shot — limpar após navegar evita re-disparo na recomposição. */
+    fun consumeGeneratedId() {
+        _state.update { it.copy(generatedId = null) }
     }
 
     private fun generate() {
         _state.update { it.copy(isGenerating = true, error = null) }
         viewModelScope.launch {
-            val prompt = _state.value.prompt.ifBlank { null }
-            when (val result = repository.generate(prompt)) {
+            when (val result = repository.generate()) {
                 is AppResult.Success ->
                     _state.update { it.copy(isGenerating = false, generatedId = result.value.id) }
                 is AppResult.Failure -> {

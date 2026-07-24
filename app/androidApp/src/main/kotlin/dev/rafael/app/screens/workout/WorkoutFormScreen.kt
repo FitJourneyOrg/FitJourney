@@ -20,9 +20,10 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun WorkoutFormScreen(
     workoutId: String?,
+    programId: String?,   // obrigatório ao criar (ARCH #26); null ao editar
     onBack: () -> Unit,
     onSaved: () -> Unit,
-    viewModel: WorkoutFormViewModel = koinViewModel { parametersOf(workoutId) },
+    viewModel: WorkoutFormViewModel = koinViewModel { parametersOf(workoutId, programId) },
 ) {
     val state by viewModel.state.collectAsState()
     var showPicker by remember { mutableStateOf(false) }
