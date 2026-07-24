@@ -1,4 +1,4 @@
-package dev.rafael.app.screens.workout
+package dev.rafael.app.screens.program
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -6,30 +6,31 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import dev.rafael.features.workout.presentation.state.GenerateError
-import dev.rafael.features.workout.presentation.state.WorkoutGenerateEvent
-import dev.rafael.features.workout.presentation.viewmodel.WorkoutGenerateViewModel
+import dev.rafael.features.program.presentation.state.GenerateError
+import dev.rafael.features.program.presentation.state.ProgramGenerateEvent
+import dev.rafael.features.program.presentation.viewmodel.ProgramGenerateViewModel
 import org.koin.androidx.compose.koinViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun WorkoutGenerateScreen(
+fun ProgramGenerateScreen(
     onBack: () -> Unit,
     onGenerated: (String) -> Unit,
-    onOpenPaywall: () -> Unit,
 ) {
-    val viewModel: WorkoutGenerateViewModel = koinViewModel()
+    val viewModel: ProgramGenerateViewModel = koinViewModel()
     val state by viewModel.state.collectAsState()
 
-    // sucesso → navega pro detalhe do treino gerado
+    // sucesso → navega pro detalhe do programa gerado
     LaunchedEffect(state.generatedId) {
-        state.generatedId?.let(onGenerated)
+        val id = state.generatedId ?: return@LaunchedEffect
+        viewModel.consumeGeneratedId()
+        onGenerated(id)
     }
 
     // reações aos 403 (placeholders)
     when (state.error) {
-        GenerateError.Entitlement -> PremiumDialog(onDismiss = { viewModel.onEvent(WorkoutGenerateEvent.DismissError) })
-        GenerateError.HealthGate -> HealthGateDialog(onDismiss = { viewModel.onEvent(WorkoutGenerateEvent.DismissError) })
+        GenerateError.Entitlement -> PremiumDialog(onDismiss = { viewModel.onEvent(ProgramGenerateEvent.DismissError) })
+        GenerateError.HealthGate -> HealthGateDialog(onDismiss = { viewModel.onEvent(ProgramGenerateEvent.DismissError) })
         is GenerateError.Other -> {} // mostrado inline abaixo
         null -> {}
     }
@@ -47,16 +48,8 @@ fun WorkoutGenerateScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                "Descreva seu objetivo e o assistente monta um treino pra você.",
+                "O assistente monta um programa completo pra você, com base no seu perfil e objetivo.",
                 style = MaterialTheme.typography.bodyMedium,
-            )
-            OutlinedTextField(
-                value = state.prompt,
-                onValueChange = { viewModel.onEvent(WorkoutGenerateEvent.PromptChanged(it)) },
-                label = { Text("Ex.: foco em superiores, 45 min") },
-                modifier = Modifier.fillMaxWidth(),
-                minLines = 3,
-                enabled = !state.isGenerating,
             )
 
             (state.error as? GenerateError.Other)?.let {
@@ -64,7 +57,7 @@ fun WorkoutGenerateScreen(
             }
 
             Button(
-                onClick = { viewModel.onEvent(WorkoutGenerateEvent.Generate) },
+                onClick = { viewModel.onEvent(ProgramGenerateEvent.Generate) },
                 enabled = !state.isGenerating,
                 modifier = Modifier.fillMaxWidth(),
             ) {
@@ -72,10 +65,10 @@ fun WorkoutGenerateScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Gerando seu treino...")
+                        Text("Gerando seu programa...")
                     }
                 } else {
-                    Text("Gerar treino")
+                    Text("Gerar programa")
                 }
             }
         }
@@ -86,8 +79,8 @@ fun WorkoutGenerateScreen(
 private fun PremiumDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Recurso premium") },
-        text = { Text("A geração por IA faz parte do plano premium. Assinatura em breve.") },
+        title = { Text("Limite de programas gratuitos") },
+        text = { Text("Você atingiu o limite de programas gerados no plano grátis. Assine o premium pra gerar mais.") },
         confirmButton = { TextButton(onClick = onDismiss) { Text("Entendi") } },
     )
 }
