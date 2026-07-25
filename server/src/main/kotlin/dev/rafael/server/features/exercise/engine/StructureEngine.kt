@@ -53,7 +53,7 @@ class StructureEngine {
         // 4. Monta cada dia, respeitando o teto de exercícios por sessão.
         val daySkeletons = template.mapIndexed { dayIndex, pair ->
             val (label, muscles) = pair
-            val trained = trainedMuscles(muscles, dayIndex)
+            val trained = trainedMuscles(muscles, dayIndex, focusTargets)
             val sessionSets = trained.associateWith { m ->
                 (weekly.getValue(m).toDouble() / frequency.getValue(m))
                     .roundToInt().coerceIn(SESSION_MIN_SETS, SESSION_MAX_SETS)
@@ -94,15 +94,25 @@ class StructureEngine {
      * (full body = 9 músculos), mantém os compostos grandes e ROTACIONA os pequenos
      * entre os dias (cada dia cobre 1 pequeno diferente; o resto vem indireto dos compostos).
      */
-    private fun trainedMuscles(muscles: Set<TargetMuscle>, dayIndex: Int): List<TargetMuscle> {
+    private fun trainedMuscles(
+        muscles: Set<TargetMuscle>,
+        dayIndex: Int,
+        focus: Set<TargetMuscle>,
+    ): List<TargetMuscle> {
         if (muscles.size <= SESSION_MAX_EXERCISES) {
             return canonicalOrder.filter { it in muscles }
         }
         val bigs = bigMuscles.filter { it in muscles }
         val smalls = smallMuscles.filter { it in muscles }
         val budgetForSmall = (SESSION_MAX_EXERCISES - bigs.size).coerceAtLeast(0)
-        val keptSmalls = rotate(smalls, dayIndex).take(budgetForSmall).toSet()
-        val kept = bigs.toSet() + keptSmalls
+        // FOCO PROTEGIDO (ARCH #28, defeito #1): músculo pequeno de foco entra SEMPRE,
+        // antes da rotação — senão o bônus de volume do foco nunca vira exercício.
+        val focusSmalls = smalls.filter { it in focus }
+        val restSmalls = smalls.filter { it !in focus }
+        val keptFocus = rotate(focusSmalls, dayIndex).take(budgetForSmall)
+        val remaining = (budgetForSmall - keptFocus.size).coerceAtLeast(0)
+        val keptRest = rotate(restSmalls, dayIndex).take(remaining)
+        val kept = bigs.toSet() + keptFocus.toSet() + keptRest.toSet()
         return canonicalOrder.filter { it in kept }
     }
 
