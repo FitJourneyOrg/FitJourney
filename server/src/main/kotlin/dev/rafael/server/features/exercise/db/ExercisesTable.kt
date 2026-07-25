@@ -24,5 +24,8 @@ object ExercisesTable : Table("exercises") {
     val level = varchar("level", 16).nullable()
     val contraindications = array<String>("contraindications").nullable()
 
+    // --- V16: exercício principal (base) vs variação/secundário ---
+    val isBase = bool("is_base")
+
     override val primaryKey = PrimaryKey(id)
 }
