@@ -26,4 +26,7 @@ data class Exercise(
     val prescriptionType: PrescriptionType? = null,
     val level: Level? = null,
     val contraindications: List<BodyLimitation> = emptyList(),
+
+    // --- V16: principal (base) vs variação. Motor escolhe base primeiro. ---
+    val isBase: Boolean = false,
 )

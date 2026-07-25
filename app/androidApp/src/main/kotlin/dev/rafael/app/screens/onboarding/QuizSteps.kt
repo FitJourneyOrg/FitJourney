@@ -118,10 +118,8 @@ fun EnvironmentStep(
         Text("Onde você treina?", style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(16.dp))
         val labels = mapOf(
-            TrainingEnvironment.ACADEMIA_COMPLETA to "Academia completa",
-            TrainingEnvironment.HALTERES_CASA to "Halteres em casa",
-            TrainingEnvironment.PESO_CORPORAL to "Só peso do corpo",
-            TrainingEnvironment.ELASTICOS to "Elásticos / faixas",
+            TrainingEnvironment.ACADEMIA to "Academia (máquinas, barras, cabos, halteres)",
+            TrainingEnvironment.CASA to "Casa (halteres, peso do corpo, elásticos)",
         )
         TrainingEnvironment.entries.forEach { env ->
             Row(

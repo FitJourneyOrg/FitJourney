@@ -61,18 +61,26 @@ testing {
             useJUnitJupiter()
             dependencies {
                 implementation(project())
+                implementation(project(":shared-contract"))   // ProfileDto/ProgramDto e enums (server usa como implementation, não api)
                 implementation(libs.testcontainers.postgresql)
                 implementation(libs.testcontainers.junitJupiter)
                 implementation(libs.flyway.core)
                 implementation(libs.hikari)
                 runtimeOnly(libs.postgres)
                 implementation(libs.kotlin.testJunit)
+                // Exposed p/ gerar treino (connect + query de nomes). Bundle não é aceito no
+                // DependencyCollector da suite; declara individual.
+                implementation(libs.exposed.core)
+                implementation(libs.exposed.jdbc)
+                implementation(libs.exposed.kotlinDatetime)
+                implementation(libs.kotlinx.coroutines.core)  // runBlocking p/ o suspend generate()
             }
         }
     }
 }
 
 // integração roda depois dos unitários quando ambos rodam juntos (ex.: no check)
-tasks.named("integrationTest") {
+tasks.named<Test>("integrationTest") {
     shouldRunAfter(tasks.named("test"))
+    testLogging { showStandardStreams = true }   // mostra o println do treino gerado no console
 }

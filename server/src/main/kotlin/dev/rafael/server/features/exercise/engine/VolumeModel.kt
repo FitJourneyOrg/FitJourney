@@ -71,7 +71,7 @@ object RoleParams {
             SlotRole.COMPOSTO_ACESSORIO ->
                 if (conservative) P("8-12", 105, 3) else P("8-12", 105, 1)
             SlotRole.ISOLAMENTO ->
-                if (conservative) P("10-15", 75, 3) else P("12-20", 75, 1)
+                if (conservative) P("10-15", 75, 3) else P("12-15", 75, 1)
         }
     }
 }
