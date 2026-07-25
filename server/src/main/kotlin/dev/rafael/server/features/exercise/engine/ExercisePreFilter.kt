@@ -28,7 +28,8 @@ class ExercisePreFilter {
         limitations: List<BodyLimitation>,
         level: Level,
     ): List<Exercise> {
-        val allowedEquipment = EquipmentEnvironmentMap.equipmentsFor(environment)
+        // null = academia (sem filtro de equipamento); set = casa (só halter/corporal/elástico)
+        val homeEquipment = EquipmentEnvironmentMap.equipmentsFor(environment)
         val allowedLevels = levelsUpTo(level)
         val blocked = limitations.map { it.name }
 
@@ -36,10 +37,14 @@ class ExercisePreFilter {
             ExercisesTable
                 .selectAll()
                 .where {
-                    (ExercisesTable.modality.isNotNull()) and
+                    val cond = (ExercisesTable.modality.isNotNull()) and
                             (ExercisesTable.modality eq "STRENGTH") and
-                            (ExercisesTable.equipment inList allowedEquipment) and
                             (ExercisesTable.level inList allowedLevels)
+                    if (homeEquipment != null) {
+                        cond and (ExercisesTable.equipment inList homeEquipment.toList())
+                    } else {
+                        cond
+                    }
                 }
                 .map { it.toExercise() }
                 .filter { ex -> blocked.none { b -> ex.contraindications.any { it.name == b } } }

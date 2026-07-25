@@ -27,10 +27,14 @@ class SlotFiller(seed: Long) {
         alreadyUsed: MutableSet<Uuid>,
     ): List<FilledExercise> {
         val out = mutableListOf<FilledExercise>()
+        val usedPatterns = mutableSetOf<MovementPattern>()   // dedup por padrão dentro do dia
         for (slot in day.slots) {
-            val candidates = candidatesFor(slot, pool).filter { it.id !in alreadyUsed }
-            val chosen = pickBest(candidates, slot, focusMuscles, userLevel) ?: continue
+            val pooled = candidatesFor(slot, pool).filter { it.id !in alreadyUsed }
+            // BASE PRIMEIRO (ARCH #28): principais vencem; variações só se a base acabou.
+            val candidates = pooled.filter { it.isBase }.ifEmpty { pooled }
+            val chosen = pickBest(candidates, slot, focusMuscles, userLevel, usedPatterns) ?: continue
             alreadyUsed += chosen.id
+            chosen.movementPattern?.let { usedPatterns += it }
             out += FilledExercise(chosen, slot)
         }
         return out
@@ -63,10 +67,14 @@ class SlotFiller(seed: Long) {
         slot: Slot,
         focusMuscles: Set<String>,
         userLevel: String,
+        usedPatterns: Set<MovementPattern>,
     ): Exercise? {
         if (candidates.isEmpty()) return null
-        return candidates
-            .maxByOrNull { score(it, slot, focusMuscles, userLevel) + rng.nextDouble() * ROTATION_JITTER }
+        return candidates.maxByOrNull {
+            score(it, slot, focusMuscles, userLevel) +
+                (if (it.movementPattern in usedPatterns) PATTERN_REPEAT_PENALTY else 0.0) +
+                rng.nextDouble() * ROTATION_JITTER
+        }
     }
 
     private fun score(ex: Exercise, slot: Slot, focusMuscles: Set<String>, userLevel: String): Double {
@@ -87,7 +95,8 @@ class SlotFiller(seed: Long) {
     }
 
     private companion object {
-        const val ROTATION_JITTER = 0.9
+        const val ROTATION_JITTER = 0.35
+        const val PATTERN_REPEAT_PENALTY = -2.5
         val QUAD_PATTERNS = setOf(MovementPattern.SQUAT, MovementPattern.LUNGE, MovementPattern.KNEE_EXTENSION)
         val POSTERIOR_PATTERNS = setOf(MovementPattern.HINGE, MovementPattern.KNEE_FLEXION)
     }

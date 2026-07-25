@@ -76,4 +76,5 @@ internal fun ResultRow.toExercise(): Exercise = Exercise(
     prescriptionType = this[ExercisesTable.prescriptionType]?.let { runCatching { PrescriptionType.valueOf(it) }.getOrNull() },
     level = this[ExercisesTable.level]?.let { runCatching { Level.valueOf(it) }.getOrNull() },
     contraindications = this[ExercisesTable.contraindications].orEmpty().mapNotNull { runCatching { BodyLimitation.valueOf(it) }.getOrNull() },
+    isBase = this[ExercisesTable.isBase],
 )
