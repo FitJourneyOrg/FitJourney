@@ -142,8 +142,8 @@ class ProgramServiceTest {
 
         val r = svc.rename(user, Uuid.parse(created.id!!), "Novo")
 
-        assertTrue(r is AppResult.Success)
-        assertEquals("Novo", (r as AppResult.Success).value.name)
+        assertIs<AppResult.Success<ProgramDto>>(r)
+        assertEquals("Novo", r.value.name)
     }
 
     // ---------- origem / posse ----------

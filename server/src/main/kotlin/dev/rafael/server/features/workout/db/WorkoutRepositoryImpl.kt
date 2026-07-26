@@ -10,7 +10,7 @@ import dev.rafael.server.features.workout.models.WorkoutSet
 import dev.rafael.server.features.workout.models.WorkoutSummary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
