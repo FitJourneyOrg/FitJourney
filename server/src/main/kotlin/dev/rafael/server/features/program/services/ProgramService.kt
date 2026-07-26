@@ -18,7 +18,7 @@ import dev.rafael.server.features.program.models.Program
 import dev.rafael.server.features.workout.models.Workout
 import dev.rafael.server.features.workout.models.WorkoutExercise
 import dev.rafael.server.features.workout.models.WorkoutSet
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.uuid.Uuid
