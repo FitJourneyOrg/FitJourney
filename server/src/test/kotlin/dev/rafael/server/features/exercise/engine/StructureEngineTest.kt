@@ -104,6 +104,19 @@ class StructureEngineTest {
         assertTrue(comFoco.rationale.contains("ARMS"), "rationale deve explicar o foco")
     }
 
+    @Test
+    fun `musculo de foco aparece em todo dia do full body`() {
+        // ARMS é "pequeno" e seria rotacionado pra fora do Full Body. Com foco protegido
+        // (ARCH #28, defeito #1) ele entra em TODOS os dias.
+        val sk = engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.INTERMEDIATE, 3, setOf(MuscleGroup.ARMS))
+        sk.days.forEach { d ->
+            assertTrue(
+                d.slots.any { it.target == TargetMuscle.ARMS },
+                "dia '${d.label}' deveria treinar ARMS (foco protegido)",
+            )
+        }
+    }
+
     // helpers
     private fun skeleton(days: Int) =
         engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.INTERMEDIATE, days, emptySet())

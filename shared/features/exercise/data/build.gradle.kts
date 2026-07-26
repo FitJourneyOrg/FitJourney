@@ -19,5 +19,8 @@ kotlin {
             implementation(libs.ktor.client.contentNegotiation)
             implementation(libs.sqldelight.coroutinesExtensions)   // <- asFlow().mapToList()
         }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
     }
 }
