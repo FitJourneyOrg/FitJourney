@@ -60,3 +60,5 @@ Thumbs.db
 /secrets
 # ===== Docker (volumes locais, se algum dia montados em ./) =====
 /pgdata/
+# docs locais (Painel/Handoff/ADRs/débitos) — não versionar
+docs/
