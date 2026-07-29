@@ -27,4 +27,8 @@ data class FormExercise(
     val exerciseId: String,
     val name: String,
     val sets: List<String>,   // reps como texto — permite campo vazio durante a digitação
+    // Preservados no round-trip (não editáveis na UI v1). Sem isso, editar um treino de IA
+    // pelo form zeraria a prescrição do motor (#26). Exercício novo nasce com defaults.
+    val restSeconds: Int = 90,
+    val rir: Int? = null,
 )

@@ -78,6 +78,8 @@ class WorkoutFormViewModel(
                                     exerciseId = e.exerciseId,
                                     name = refs[e.exerciseId]?.name ?: "Exercício indisponível",
                                     sets = e.sets.sortedBy { s -> s.orderIndex }.map { s -> s.reps.toString() },
+                                    restSeconds = e.restSeconds,   // preserva a prescrição do motor (#26)
+                                    rir = e.rir,
                                 )
                             },
                         )
@@ -117,6 +119,8 @@ class WorkoutFormViewModel(
                 WorkoutExercise(
                     exerciseId = ex.exerciseId,
                     orderIndex = i,                                    // derivado da posição
+                    restSeconds = ex.restSeconds,                      // round-trip (#26); não zera
+                    rir = ex.rir,
                     sets = ex.sets.mapIndexed { j, reps ->
                         WorkoutSet(reps = reps.toInt(), orderIndex = j)
                     },
