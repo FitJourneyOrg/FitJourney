@@ -36,6 +36,7 @@ class WorkoutDetailViewModel(
             WorkoutDetailEvent.Delete -> delete()
             is WorkoutDetailEvent.SwapExercise -> swap(event.orderIndex, event.newExerciseId)
             is WorkoutDetailEvent.RemoveExercise -> removeExercise(event.orderIndex)
+            WorkoutDetailEvent.ShowPaywall -> _state.update { it.copy(showPaywall = true) }
             WorkoutDetailEvent.DismissPaywall -> _state.update { it.copy(showPaywall = false) }
         }
     }

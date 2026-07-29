@@ -41,10 +41,14 @@ class FirebaseAuthRepository(
             onFailure = { AppError.Unexpected("Falha ao sair", it).asFailure() },
         )
 
-    override suspend fun currentIdToken(): String? {
-        println("token: ${auth.currentUser?.getIdToken(false)}")
-        return auth.currentUser?.getIdToken(false)
-    }
+    /**
+     * Token cacheado do usuário logado, ou null. Robusto a falha de rede: o
+     * getIdToken(false) bate na rede quando o token expirou, e offline lança
+     * FirebaseNetworkException — que NÃO pode derrubar o app (a Splash chama isto
+     * no arranque). Falhou → null → o gate manda pro Login (degrada, não crasha).
+     */
+    override suspend fun currentIdToken(): String? =
+        runCatching { auth.currentUser?.getIdToken(false) }.getOrNull()
 
     override suspend fun fetchMe(): AppResult<AuthUser> =
         runCatching { meDataSource.getMe() }.fold(

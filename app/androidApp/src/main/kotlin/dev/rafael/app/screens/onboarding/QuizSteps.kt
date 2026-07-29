@@ -13,7 +13,47 @@ import dev.rafael.contract.profile.HealthScreening
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.TrainingEnvironment
+import dev.rafael.contract.profile.SplitCatalog
+import dev.rafael.contract.profile.SplitType
 import dev.rafael.features.profile.presentation.state.QuizEvent
+
+@Composable
+fun SplitStep(daysPerWeek: Int, selected: SplitType?, onSelect: (SplitType) -> Unit) {
+    val options = SplitCatalog.optionsFor(daysPerWeek)
+    // recomendado pré-selecionado; se o usuário não tocar, fica null e o server usa o recomendado.
+    val effective = selected ?: SplitCatalog.recommendedFor(daysPerWeek)
+    Column {
+        Text("Qual modelo de treino?", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            "Montamos com base nos seus $daysPerWeek dias. O recomendado já vem marcado — mantenha ou troque.",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(Modifier.height(16.dp))
+        options.forEach { opt ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onSelect(opt.type) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = effective == opt.type, onClick = { onSelect(opt.type) })
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(opt.type.label, style = MaterialTheme.typography.titleMedium)
+                        if (opt.recommended) {
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "★ Recomendado",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    Text(opt.type.description, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun GoalStep(selected: Goal?, onSelect: (Goal) -> Unit) {

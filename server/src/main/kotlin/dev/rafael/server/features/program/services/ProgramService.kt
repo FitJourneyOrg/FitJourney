@@ -1,5 +1,6 @@
 package dev.rafael.server.features.program.services
 
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.profile.ProfileDto
 import dev.rafael.contract.program.ProgramDto
 import dev.rafael.contract.program.ScheduleEntry
@@ -24,18 +25,18 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.uuid.Uuid
 
 /**
- * Orquestra programas (ARCH #22, revisado pela #26 — multi-programa, sem substituição).
+ * Orquestra programas (ARCH #22, revisado pela #27 — multi-programa, sem substituição).
  * O gate por teto/saúde fica na ROTA (padrão ARCH #18); aqui é gerar/criar + salvar.
  */
 class ProgramService(
     private val generator: WorkoutGenerator,
     private val repository: ProgramRepository,
 ) {
-    /** Contagem por origem (AI/MANUAL) — insumo dos gates de teto (ARCH #26) na rota. */
+    /** Contagem por origem (AI/MANUAL) — insumo dos gates de teto (ARCH #27) na rota. */
     suspend fun counts(userId: Uuid): AppResult<dev.rafael.server.features.program.models.ProgramCounts> =
         repository.counts(userId)
 
-    /** Gera o programa determinístico e persiste (NÃO substitui os existentes — ARCH #26). */
+    /** Gera o programa determinístico e persiste (NÃO substitui os existentes — ARCH #27). */
     suspend fun generate(userId: Uuid, profile: ProfileDto): AppResult<ProgramDto> {
         val dto: ProgramDto = try {
             generator.generate(profile, prompt = null)   // motor determinístico ignora prompt
@@ -79,7 +80,7 @@ class ProgramService(
 
     /**
      * Quantos treinos o programa já tem, validando posse — usado pela rota de
-     * POST /workouts (ARCH #26) pra computar dayOfWeek sem workout→program depender
+     * POST /workouts (ARCH #27) pra computar dayOfWeek sem workout→program depender
      * de ProgramRepository diretamente (evita ciclo de feature, ARCH #18).
      * null = programa não existe ou não é do usuário.
      */
@@ -89,6 +90,27 @@ class ProgramService(
     /** Origem do programa (AI/MANUAL) — usado pelo gate premium de edição (ARCH #25). null = não é do usuário. */
     suspend fun originOf(userId: Uuid, programId: Uuid): AppResult<WorkoutOrigin?> =
         repository.findByIdForUser(userId, programId).flatMap { it?.origin.asSuccess() }
+
+    /**
+     * Gate premium de EDIÇÃO (ARCH #25): um programa origin=AI só pode ser MUTADO
+     * (renomear, add/editar/remover treino) por usuário premium. Manual é livre.
+     * Centraliza a regra que antes vivia inline no PUT /workouts. Descartar o programa
+     * inteiro NÃO passa por aqui (é direito de descarte, fica livre).
+     * - null   → NotFound (não é do usuário)
+     * - AI+free → Forbidden(ENTITLEMENT_REQUIRED)
+     * - resto  → Unit (segue a edição)
+     */
+    suspend fun requireEditable(userId: Uuid, programId: Uuid, isPremium: Boolean): AppResult<Unit> =
+        originOf(userId, programId).flatMap { origin ->
+            when {
+                origin == null -> AppError.NotFound("Programa não encontrado").asFailure()
+                origin == WorkoutOrigin.AI && !isPremium -> AppError.Forbidden(
+                    "Editar um programa gerado por IA é um recurso premium.",
+                    ErrorCodes.ENTITLEMENT_REQUIRED,
+                ).asFailure()
+                else -> Unit.asSuccess()
+            }
+        }
 
     private fun autoName(dto: ProgramDto): String = "Programa ${dto.daysPerWeek}x — ${dto.split}"
 }

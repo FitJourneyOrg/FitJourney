@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,13 +26,17 @@ import org.koin.core.parameter.parametersOf
 fun ProgramDetailScreen(
     programId: String,
     onBack: () -> Unit,
-    onOpenWorkout: (String) -> Unit,
+    onOpenWorkout: (String, Boolean) -> Unit,   // (workoutId, editLocked)
     onAddWorkout: (String) -> Unit,
     viewModel: ProgramDetailViewModel = koinViewModel { parametersOf(programId) },
 ) {
     val state by viewModel.state.collectAsState()
     var showRename by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showPaywall by remember { mutableStateOf(false) }   // ARCH #23: toque em dia trancado
+    // ARCH #25: programa IA de usuário free vem trancado — edição é premium.
+    // 'locked' já é setado pelo ProgramBlur só quando (origin=AI && !premium).
+    val readOnly = state.program?.locked == true
 
     // delete bem-sucedido → volta pra lista de programas
     LaunchedEffect(state.isDeleted) { if (state.isDeleted) onBack() }
@@ -66,6 +71,15 @@ fun ProgramDetailScreen(
         )
     }
 
+    if (showPaywall) {
+        AlertDialog(
+            onDismissRequest = { showPaywall = false },
+            title = { Text("Recurso premium") },
+            text = { Text("O Dia 1 é seu de graça. Assine o premium para desbloquear o programa completo.") },
+            confirmButton = { TextButton(onClick = { showPaywall = false }) { Text("Entendi") } },
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -74,13 +88,17 @@ fun ProgramDetailScreen(
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar") }
                 },
                 actions = {
-                    IconButton(onClick = { showRename = true }) { Icon(Icons.Default.Edit, "Renomear") }
+                    if (!readOnly) {
+                        IconButton(onClick = { showRename = true }) { Icon(Icons.Default.Edit, "Renomear") }
+                    }
                     IconButton(onClick = { showDeleteConfirm = true }) { Icon(Icons.Default.Delete, "Excluir") }
                 },
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { onAddWorkout(programId) }) { Text("+") }
+            if (!readOnly) {
+                FloatingActionButton(onClick = { onAddWorkout(programId) }) { Text("+") }
+            }
         },
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
@@ -104,11 +122,20 @@ fun ProgramDetailScreen(
                             }
                         }
                         items(state.program?.workouts.orEmpty()) { w ->
-                            ListItem(
-                                headlineContent = { Text(w.name) },
-                                supportingContent = { Text("${w.exerciseCount} exercícios") },
-                                modifier = Modifier.clickable { w.id?.let(onOpenWorkout) },
-                            )
+                            if (w.locked) {
+                                ListItem(
+                                    headlineContent = { Text(w.name) },
+                                    supportingContent = { Text("${w.exerciseCount} exercícios · Assine para desbloquear") },
+                                    leadingContent = { Icon(Icons.Default.Lock, contentDescription = "Bloqueado") },
+                                    modifier = Modifier.clickable { showPaywall = true },
+                                )
+                            } else {
+                                ListItem(
+                                    headlineContent = { Text(w.name) },
+                                    supportingContent = { Text("${w.exerciseCount} exercícios") },
+                                    modifier = Modifier.clickable { w.id?.let { onOpenWorkout(it, readOnly) } },
+                                )
+                            }
                         }
                     }
             }

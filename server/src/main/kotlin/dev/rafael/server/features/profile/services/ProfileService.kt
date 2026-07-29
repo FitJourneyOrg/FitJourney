@@ -41,6 +41,7 @@ class ProfileService(
                 goal = dto.goal,
                 level = dto.level,
                 daysPerWeek = dto.daysPerWeek,
+                splitPreference = dto.splitPreference,
                 focusAreas = dto.focusAreas,
                 weightKg = dto.weightKg,
                 heightCm = dto.heightCm,

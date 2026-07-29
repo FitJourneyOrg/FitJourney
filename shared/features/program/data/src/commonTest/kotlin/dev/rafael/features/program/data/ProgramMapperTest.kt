@@ -7,6 +7,8 @@ import dev.rafael.contract.workout.WorkoutExerciseDto
 import dev.rafael.contract.workout.WorkoutSetDto
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * Testa ProgramDto.toDomain() — puro, sem banco/rede.
@@ -37,6 +39,22 @@ class ProgramMapperTest {
             ScheduleEntry(workoutId = "w2", dayOfWeek = 3),
         ),
     )
+
+    @Test
+    fun `dia trancado mapeia locked e usa lockedExerciseCount (ARCH 23)`() {
+        val dto = ProgramDto(
+            id = "p", name = "P", daysPerWeek = 3, split = "PPL", rationale = "r",
+            workouts = listOf(
+                WorkoutDto(id = "w1", name = "Dia 1", exercises = listOf(exDto(0), exDto(1))),
+                WorkoutDto(id = "w2", name = "Dia 2", exercises = emptyList(), locked = true, lockedExerciseCount = 6),
+            ),
+        )
+        val d = dto.toDomain()
+        assertFalse(d.workouts[0].locked)
+        assertEquals(2, d.workouts[0].exerciseCount)
+        assertTrue(d.workouts[1].locked)
+        assertEquals(6, d.workouts[1].exerciseCount)   // contador vem do lockedExerciseCount, não do exercises vazio
+    }
 
     @Test
     fun `campos do programa passam direto`() {

@@ -6,7 +6,7 @@ import kotlinx.serialization.Serializable
  * Treino completo (aggregate). Usado no POST (criar), GET/{id} (ler), PUT (editar).
  * id/createdAt/updatedAt são nulos no POST (o servidor gera); preenchidos na resposta.
  *
- * programId (ARCH #26): obrigatório no POST — todo treino vive dentro de um programa
+ * programId (ARCH #27): obrigatório no POST — todo treino vive dentro de um programa
  * (não existe mais treino avulso solto). O servidor valida posse (o programa precisa
  * ser do usuário autenticado) e calcula dayOfWeek a partir da posição dentro do programa.
  */
@@ -19,4 +19,8 @@ data class WorkoutDto(
     val exercises: List<WorkoutExerciseDto> = emptyList(),
     val createdAt: String? = null,   // ISO-8601; servidor preenche
     val updatedAt: String? = null,
+    // ARCH #23 (blur/value-first): dia trancado p/ não-premium. O servidor esvazia
+    // `exercises` e guarda quantos eram em `lockedExerciseCount` (FOMO: "6 exercícios 🔒").
+    val locked: Boolean = false,
+    val lockedExerciseCount: Int = 0,
 )

@@ -4,12 +4,14 @@ import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.profile.TrainingEnvironment
 
 sealed interface QuizEvent {
     data class GoalSelected(val goal: Goal) : QuizEvent
     data class LevelSelected(val level: Level) : QuizEvent
     data class DaysSelected(val days: Int) : QuizEvent
+    data class SplitSelected(val split: SplitType) : QuizEvent   // ARCH #29
     data class FocusToggled(val muscle: MuscleGroup) : QuizEvent
     data class WeightChanged(val value: Double?) : QuizEvent
     data class HeightChanged(val value: Double?) : QuizEvent

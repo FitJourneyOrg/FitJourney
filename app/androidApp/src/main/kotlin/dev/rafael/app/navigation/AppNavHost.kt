@@ -41,9 +41,14 @@ fun AppNavHost() {
 
         composable<AppRoute.Quiz> {
             QuizScreen(onCompleted = {
+                // ARCH #23 (revelação): Home vira a raiz do back stack e, por cima, abre o
+                // fluxo de geração do 1º programa. O detalhe gerado (Dia 1 aberto, dias
+                // trancados + paywall p/ não-premium) É a tela de revelação. Voltar do
+                // detalhe cai no Home.
                 nav.navigate(AppRoute.Home) {
                     popUpTo(AppRoute.Quiz) { inclusive = true }
                 }
+                nav.navigate(AppRoute.ProgramGenerate)
             })
         }
 
@@ -64,7 +69,7 @@ fun AppNavHost() {
             ExerciseLibraryScreen()
         }
 
-        // ---- Programas (ARCH #26 — substitui a antiga AppRoute.Workout flat) ----
+        // ---- Programas (ARCH #27 — substitui a antiga AppRoute.Workout flat) ----
 
         composable<AppRoute.Programs> {
             ProgramListScreen(
@@ -77,7 +82,7 @@ fun AppNavHost() {
             ProgramDetailScreen(
                 programId = route.id,
                 onBack = { nav.popBackStack() },
-                onOpenWorkout = { id -> nav.navigate(AppRoute.WorkoutDetail(id)) },
+                onOpenWorkout = { id, editLocked -> nav.navigate(AppRoute.WorkoutDetail(id, editLocked)) },
                 onAddWorkout = { programId -> nav.navigate(AppRoute.WorkoutCreate(programId)) },
             )
         }
@@ -98,6 +103,7 @@ fun AppNavHost() {
             val route: AppRoute.WorkoutDetail = entry.toRoute()
             WorkoutDetailScreen(
                 workoutId = route.id,
+                editLocked = route.editLocked,
                 onBack = { nav.popBackStack() },
                 onEdit = { nav.navigate(AppRoute.WorkoutEdit(route.id)) },
             )
