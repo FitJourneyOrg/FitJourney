@@ -3,11 +3,13 @@ package dev.rafael.app.screens.program
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -121,7 +123,10 @@ fun ProgramDetailScreen(
                                 Spacer(Modifier.height(4.dp))
                             }
                         }
-                        items(state.program?.workouts.orEmpty()) { w ->
+                        val workouts = state.program?.workouts.orEmpty()
+                        // Reordenar só faz sentido em programa que você edita (não trancado) e com 2+ treinos.
+                        val canReorder = !readOnly && workouts.size > 1
+                        itemsIndexed(workouts) { index, w ->
                             if (w.locked) {
                                 ListItem(
                                     headlineContent = { Text(w.name) },
@@ -131,8 +136,22 @@ fun ProgramDetailScreen(
                                 )
                             } else {
                                 ListItem(
-                                    headlineContent = { Text(w.name) },
+                                    headlineContent = { Text("Dia ${index + 1} · ${w.name}") },
                                     supportingContent = { Text("${w.exerciseCount} exercícios") },
+                                    trailingContent = if (!canReorder) null else {
+                                        {
+                                            Row {
+                                                IconButton(
+                                                    onClick = { w.id?.let { viewModel.onEvent(ProgramDetailEvent.MoveWorkout(it, up = true)) } },
+                                                    enabled = index > 0 && !state.isReordering,
+                                                ) { Icon(Icons.Default.KeyboardArrowUp, "Subir") }
+                                                IconButton(
+                                                    onClick = { w.id?.let { viewModel.onEvent(ProgramDetailEvent.MoveWorkout(it, up = false)) } },
+                                                    enabled = index < workouts.lastIndex && !state.isReordering,
+                                                ) { Icon(Icons.Default.KeyboardArrowDown, "Descer") }
+                                            }
+                                        }
+                                    },
                                     modifier = Modifier.clickable { w.id?.let { onOpenWorkout(it, readOnly) } },
                                 )
                             }

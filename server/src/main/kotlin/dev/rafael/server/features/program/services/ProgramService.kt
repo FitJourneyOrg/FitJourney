@@ -79,6 +79,33 @@ class ProgramService(
         repository.delete(userId, programId)
 
     /**
+     * Reordena os treinos (G.2): grava day_of_week = posição+1. `order` precisa ser uma
+     * permutação EXATA dos treinos do programa. Erros precisos: id inválido/repetido → Validation;
+     * programa não é do usuário → NotFound; ordem não bate com os treinos → Validation.
+     * O gate premium (IA só premium) fica na ROTA (requireEditable), padrão ARCH #18/#25.
+     */
+    suspend fun reorderSchedule(userId: Uuid, programId: Uuid, order: List<String>): AppResult<ProgramDto> {
+        if (order.isEmpty()) return AppError.Validation("A ordem não pode ser vazia").asFailure()
+        val parsed = order.map { it to runCatching { Uuid.parse(it) }.getOrNull() }
+        if (parsed.any { it.second == null }) return AppError.Validation("workoutId inválido na ordem").asFailure()
+        val orderedIds = parsed.mapNotNull { it.second }
+        if (orderedIds.toSet().size != orderedIds.size) {
+            return AppError.Validation("A ordem não pode ter treino repetido").asFailure()
+        }
+        return repository.findByIdForUser(userId, programId).flatMap { program ->
+            when {
+                program == null -> AppError.NotFound("Programa não encontrado").asFailure()
+                orderedIds.toSet() != program.workouts.map { it.id }.toSet() ->
+                    AppError.Validation("A ordem precisa conter exatamente os treinos do programa").asFailure()
+                else -> repository.reorderSchedule(userId, programId, orderedIds).flatMap { updated ->
+                    if (updated == null) AppError.NotFound("Programa não encontrado").asFailure()
+                    else updated.toDto().asSuccess()
+                }
+            }
+        }
+    }
+
+    /**
      * Quantos treinos o programa já tem, validando posse — usado pela rota de
      * POST /workouts (ARCH #27) pra computar dayOfWeek sem workout→program depender
      * de ProgramRepository diretamente (evita ciclo de feature, ARCH #18).

@@ -23,4 +23,11 @@ interface ProgramRepository {
 
     /** Remove o programa (CASCADE apaga os workouts). false se não existe/não é do usuário. */
     suspend fun delete(userId: Uuid, programId: Uuid): AppResult<Boolean>
+
+    /**
+     * Reordena os treinos do programa: grava day_of_week = posição+1 (1..N) na ordem dada.
+     * `orderedWorkoutIds` precisa ser uma permutação EXATA dos treinos do programa.
+     * Retorna o programa relido, ou null se não existe/não é do usuário/ordem inválida.
+     */
+    suspend fun reorderSchedule(userId: Uuid, programId: Uuid, orderedWorkoutIds: List<Uuid>): AppResult<Program?>
 }

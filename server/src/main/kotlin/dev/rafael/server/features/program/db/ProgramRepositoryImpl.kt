@@ -91,6 +91,28 @@ class ProgramRepositoryImpl : ProgramRepository {
         n > 0
     }
 
+    override suspend fun reorderSchedule(
+        userId: Uuid,
+        programId: Uuid,
+        orderedWorkoutIds: List<Uuid>,
+    ): AppResult<Program?> = dbQuery {
+        // valida posse; null → rota devolve NotFound
+        ProgramsTable.selectAll()
+            .where { (ProgramsTable.id eq programId) and (ProgramsTable.userId eq userId) }
+            .limit(1).singleOrNull() ?: return@dbQuery null
+        val ts = now()
+        // grava day_of_week = posição+1. O where inclui programId: id estranho não afeta nada.
+        orderedWorkoutIds.forEachIndexed { index, wId ->
+            WorkoutsTable.update({ (WorkoutsTable.id eq wId) and (WorkoutsTable.programId eq programId) }) {
+                it[dayOfWeek] = index + 1
+                it[updatedAt] = ts
+            }
+        }
+        ProgramsTable.update({ ProgramsTable.id eq programId }) { it[updatedAt] = ts }
+        val row = ProgramsTable.selectAll().where { ProgramsTable.id eq programId }.single()
+        row.toProgram(readProgramWorkouts(userId, programId))
+    }
+
     override suspend fun createForUser(userId: Uuid, program: Program): AppResult<Program> = dbQuery {
         val ts = now()
         val programId = Uuid.random()
@@ -150,8 +172,11 @@ class ProgramRepositoryImpl : ProgramRepository {
     }
 
     private fun readProgramWorkouts(userId: Uuid, programId: Uuid): List<Workout> {
+        // Ordena pelo day_of_week (fonte da verdade do agendamento — G.2). Legado com NULL
+        // cai por último (Postgres NULLS LAST no ASC). O schedule do DTO deriva desta ordem.
         return WorkoutsTable.selectAll()
             .where { WorkoutsTable.programId eq programId }
+            .orderBy(WorkoutsTable.dayOfWeek, SortOrder.ASC)
             .map { wRow ->
                 val workoutId = wRow[WorkoutsTable.id]
                 val exercises = WorkoutExercisesTable.selectAll()
@@ -168,7 +193,6 @@ class ProgramRepositoryImpl : ProgramRepository {
                     updatedAt = wRow[WorkoutsTable.updatedAt],
                 )
             }
-            .sortedBy { it.createdAt }
     }
 
     private fun ResultRow.toWorkoutExercise(): WorkoutExercise {

@@ -9,4 +9,5 @@ interface ProgramRepository {
     suspend fun createManual(name: String): AppResult<Program>     // POST /programs
     suspend fun rename(id: String, name: String): AppResult<Program>  // PUT /programs/{id}
     suspend fun delete(id: String): AppResult<Unit>                    // DELETE /programs/{id}
+    suspend fun reorderSchedule(id: String, orderedWorkoutIds: List<String>): AppResult<Program>  // PUT /programs/{id}/schedule
 }
