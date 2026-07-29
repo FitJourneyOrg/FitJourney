@@ -30,6 +30,9 @@ class ProgramRepositoryImpl(
     override suspend fun delete(id: String): AppResult<Unit> =
         call { remote.delete(id) }
 
+    override suspend fun reorderSchedule(id: String, orderedWorkoutIds: List<String>): AppResult<Program> =
+        call { remote.reorderSchedule(id, orderedWorkoutIds).toDomain() }
+
     private suspend fun <T> call(block: suspend () -> T): AppResult<T> =
         runCatching { block() }.fold(
             onSuccess = { it.asSuccess() },

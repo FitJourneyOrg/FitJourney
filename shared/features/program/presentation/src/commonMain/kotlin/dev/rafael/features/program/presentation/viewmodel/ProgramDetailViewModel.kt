@@ -32,6 +32,30 @@ class ProgramDetailViewModel(
             ProgramDetailEvent.Retry -> load()
             is ProgramDetailEvent.Rename -> rename(event.name)
             ProgramDetailEvent.Delete -> delete()
+            is ProgramDetailEvent.MoveWorkout -> move(event.workoutId, event.up)
+        }
+    }
+
+    /**
+     * Reordena um treino um passo p/ cima/baixo e persiste (PUT /schedule). Monta a nova
+     * ordem a partir da lista atual e manda os workoutIds; o server grava day_of_week=posição.
+     */
+    private fun move(workoutId: String, up: Boolean) {
+        val current = _state.value.program?.workouts ?: return
+        val ids = current.mapNotNull { it.id }.toMutableList()
+        val i = ids.indexOf(workoutId)
+        if (i < 0) return
+        val j = if (up) i - 1 else i + 1
+        if (j < 0 || j > ids.lastIndex) return          // já está na ponta
+        ids[i] = ids[j].also { ids[j] = ids[i] }        // swap
+        _state.update { it.copy(isReordering = true, error = null) }
+        viewModelScope.launch {
+            when (val result = repository.reorderSchedule(programId, ids)) {
+                is AppResult.Success ->
+                    _state.update { it.copy(isReordering = false, program = result.value) }
+                is AppResult.Failure ->
+                    _state.update { it.copy(isReordering = false, error = result.error.message) }
+            }
         }
     }
 

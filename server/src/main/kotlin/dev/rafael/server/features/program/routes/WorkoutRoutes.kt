@@ -3,6 +3,7 @@ package dev.rafael.server.features.program.routes
 import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.program.CreateManualProgramRequest
 import dev.rafael.contract.program.RenameProgramRequest
+import dev.rafael.contract.program.ReorderScheduleRequest
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
@@ -108,6 +109,22 @@ fun Route.programRoutes(
                         programService.requireEditable(user.id, programId, user.isPremium)
                             .flatMap { programService.rename(user.id, programId, body.name) }
                     }
+            }
+            call.respondResult(result)
+        }
+
+        put("/programs/{id}/schedule") {
+            val principal = call.principal<FirebaseUser>()!!
+            val programId = call.programIdParam()
+            val body = call.receive<ReorderScheduleRequest>()
+            val result = if (programId == null) {
+                AppError.Validation("id de programa inválido").asFailure()
+            } else {
+                userService.findOrCreate(principal.uid, principal.email).flatMap { user ->
+                    // GATE (#25): reordenar programa IA exige premium — evita furar o blur (#23).
+                    programService.requireEditable(user.id, programId, user.isPremium)
+                        .flatMap { programService.reorderSchedule(user.id, programId, body.order) }
+                }
             }
             call.respondResult(result)
         }

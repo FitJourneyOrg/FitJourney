@@ -18,10 +18,12 @@ class FakeProgramRepository(
     var createResult: AppResult<Program> = AppResult.Success(program("man")),
     var renameResult: AppResult<Program> = AppResult.Success(program("p1")),
     var deleteResult: AppResult<Unit> = AppResult.Success(Unit),
+    var reorderResult: AppResult<Program> = AppResult.Success(program("p1")),
 ) : ProgramRepository {
     override suspend fun list() = listResult
     override suspend fun generate() = generateResult
     override suspend fun createManual(name: String) = createResult
     override suspend fun rename(id: String, name: String) = renameResult
     override suspend fun delete(id: String) = deleteResult
+    override suspend fun reorderSchedule(id: String, orderedWorkoutIds: List<String>) = reorderResult
 }

@@ -44,3 +44,12 @@ data class RenameProgramRequest(val name: String)
 /** Body de POST /programs — cria programa manual vazio (sem motor) pra abrigar treino avulso. */
 @Serializable
 data class CreateManualProgramRequest(val name: String)
+
+/**
+ * Body de PUT /programs/{id}/schedule — reordena os treinos do programa.
+ * `order` é a lista dos workoutIds na ordem desejada; o servidor grava day_of_week = posição+1
+ * (1..N). Precisa ser uma permutação exata dos treinos do programa. Reorder de programa IA
+ * exige premium (mesma porta de edição, ARCH #25) — evita furar o blur do value-first (#23).
+ */
+@Serializable
+data class ReorderScheduleRequest(val order: List<String>)

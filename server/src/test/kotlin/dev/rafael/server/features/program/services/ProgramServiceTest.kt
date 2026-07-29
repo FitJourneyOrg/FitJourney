@@ -14,6 +14,8 @@ import dev.rafael.server.features.exercise.engine.WorkoutGenerator
 import dev.rafael.server.features.program.db.ProgramRepository
 import dev.rafael.server.features.program.models.Program
 import dev.rafael.server.features.program.models.ProgramCounts
+import dev.rafael.server.features.workout.models.Workout
+import kotlinx.datetime.LocalDateTime
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -59,6 +61,19 @@ class ProgramServiceTest {
         }
 
         override suspend fun delete(userId: Uuid, programId: Uuid) = deleteValue.asSuccess()
+
+        override suspend fun reorderSchedule(
+            userId: Uuid,
+            programId: Uuid,
+            orderedWorkoutIds: List<Uuid>,
+        ): AppResult<Program?> {
+            val p = store[programId]?.takeIf { it.userId == userId } ?: return AppResult.Success(null)
+            val byId = p.workouts.associateBy { it.id }
+            val reordered = orderedWorkoutIds.mapNotNull { byId[it] }
+            val updated = p.copy(workouts = reordered)
+            store[programId] = updated
+            return updated.asSuccess()
+        }
     }
 
     private class FakeGenerator(private val throwInvalid: Boolean = false) : WorkoutGenerator {
@@ -228,6 +243,68 @@ class ProgramServiceTest {
 
         val r = svc.requireEditable(Uuid.random(), Uuid.parse(ai.id!!), isPremium = false)
 
+        assertTrue(r is AppResult.Failure && r.error is AppError.NotFound)
+    }
+
+    // ---------- reorderSchedule (G.2 agendamento) ----------
+
+    private fun seedProgram(repo: FakeRepo, vararg workoutIds: Uuid): Uuid {
+        val ts = LocalDateTime(2026, 1, 1, 0, 0)
+        val pid = Uuid.random()
+        val workouts = workoutIds.mapIndexed { i, wid ->
+            Workout(id = wid, userId = user, name = "Dia ${i + 1}", programId = pid, exercises = emptyList(), createdAt = ts, updatedAt = ts)
+        }
+        repo.store[pid] = Program(
+            id = pid, userId = user, name = "P", origin = WorkoutOrigin.AI, daysPerWeek = workoutIds.size,
+            split = "x", rationale = "", locked = false, workouts = workouts, createdAt = ts, updatedAt = ts,
+        )
+        return pid
+    }
+
+    @Test
+    fun `reorder aplica a nova ordem dos treinos`() = runBlocking {
+        val repo = FakeRepo()
+        val (w1, w2, w3) = Triple(Uuid.random(), Uuid.random(), Uuid.random())
+        val pid = seedProgram(repo, w1, w2, w3)
+
+        val r = service(repo).reorderSchedule(user, pid, listOf(w3.toString(), w1.toString(), w2.toString()))
+
+        assertIs<AppResult.Success<ProgramDto>>(r)
+        assertEquals(listOf(w3.toString(), w1.toString(), w2.toString()), r.value.workouts.map { it.id })
+        // schedule deriva da ordem: day 1,2,3 na nova sequência
+        assertEquals(listOf(1, 2, 3), r.value.schedule.map { it.dayOfWeek })
+    }
+
+    @Test
+    fun `reorder com ordem vazia vira Validation`() = runBlocking {
+        val repo = FakeRepo()
+        val pid = seedProgram(repo, Uuid.random(), Uuid.random())
+        val r = service(repo).reorderSchedule(user, pid, emptyList())
+        assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
+    }
+
+    @Test
+    fun `reorder com id repetido vira Validation`() = runBlocking {
+        val repo = FakeRepo()
+        val w1 = Uuid.random(); val w2 = Uuid.random()
+        val pid = seedProgram(repo, w1, w2)
+        val r = service(repo).reorderSchedule(user, pid, listOf(w1.toString(), w1.toString()))
+        assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
+    }
+
+    @Test
+    fun `reorder que nao bate com os treinos vira Validation`() = runBlocking {
+        val repo = FakeRepo()
+        val w1 = Uuid.random(); val w2 = Uuid.random()
+        val pid = seedProgram(repo, w1, w2)
+        // manda um id que não é do programa
+        val r = service(repo).reorderSchedule(user, pid, listOf(w1.toString(), Uuid.random().toString()))
+        assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
+    }
+
+    @Test
+    fun `reorder de programa inexistente vira NotFound`() = runBlocking {
+        val r = service().reorderSchedule(user, Uuid.random(), listOf(Uuid.random().toString()))
         assertTrue(r is AppResult.Failure && r.error is AppError.NotFound)
     }
 
