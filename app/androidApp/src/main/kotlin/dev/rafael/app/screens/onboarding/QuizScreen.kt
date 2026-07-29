@@ -22,7 +22,7 @@ fun QuizScreen(
         if (state.completed) onCompleted()
     }
 
-    val steps = QuizStep.entries
+    val steps = state.visibleSteps          // iniciante/saúde geral não veem o passo de FOCO (#26/#24)
     val stepIndex = steps.indexOf(state.step)
 
     Column(
@@ -45,6 +45,11 @@ fun QuizScreen(
                 QuizStep.DAYS -> DaysStep(state.daysPerWeek) { viewModel.onEvent(QuizEvent.DaysSelected(it)) }
                 QuizStep.FOCUS -> FocusStep(state.focusAreas) { viewModel.onEvent(QuizEvent.FocusToggled(it)) }
                 QuizStep.ENVIRONMENT -> EnvironmentStep(state.environment) { viewModel.onEvent(QuizEvent.EnvironmentSelected(it)) }
+                QuizStep.SPLIT -> SplitStep(
+                    daysPerWeek = state.daysPerWeek ?: 3,
+                    selected = state.splitPreference,
+                    onSelect = { viewModel.onEvent(QuizEvent.SplitSelected(it)) },
+                )
                 QuizStep.HEALTH -> HealthStep(state.health, onToggle = { viewModel.onEvent(QuizEvent.HealthToggled(it)) }, onAck = { viewModel.onEvent(QuizEvent.AcknowledgedRiskToggled) })
                 QuizStep.LIMITATIONS -> LimitationsStep(state.limitations) {
                     viewModel.onEvent(QuizEvent.LimitationToggled(it))

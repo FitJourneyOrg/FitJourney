@@ -1,5 +1,6 @@
 package dev.rafael.server.features.program.services
 
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.ProfileDto
@@ -179,6 +180,55 @@ class ProgramServiceTest {
         val r = svc.workoutCountForOwner(Uuid.random(), Uuid.parse(created.id!!))
 
         assertNull((r as AppResult.Success).value)
+    }
+
+    // ---------- gate de edição premium (ARCH #25) ----------
+
+    @Test
+    fun `requireEditable bloqueia programa IA para usuario free`() = runBlocking {
+        val repo = FakeRepo()
+        val svc = service(repo)
+        val ai = (svc.generate(user, profile()) as AppResult.Success).value
+
+        val r = svc.requireEditable(user, Uuid.parse(ai.id!!), isPremium = false)
+
+        assertTrue(r is AppResult.Failure && r.error is AppError.Forbidden)
+        assertEquals(ErrorCodes.ENTITLEMENT_REQUIRED, ((r as AppResult.Failure).error as AppError.Forbidden).code)
+    }
+
+    @Test
+    fun `requireEditable libera programa IA para premium`() = runBlocking {
+        val repo = FakeRepo()
+        val svc = service(repo)
+        val ai = (svc.generate(user, profile()) as AppResult.Success).value
+
+        val r = svc.requireEditable(user, Uuid.parse(ai.id!!), isPremium = true)
+
+        assertIs<AppResult.Success<Unit>>(r)
+        Unit   // @Test precisa retornar void; assertIs devolve valor
+    }
+
+    @Test
+    fun `requireEditable libera programa manual mesmo para free`() = runBlocking {
+        val repo = FakeRepo()
+        val svc = service(repo)
+        val manual = (svc.createManual(user, "Meu") as AppResult.Success).value
+
+        val r = svc.requireEditable(user, Uuid.parse(manual.id!!), isPremium = false)
+
+        assertIs<AppResult.Success<Unit>>(r)
+        Unit   // @Test precisa retornar void; assertIs devolve valor
+    }
+
+    @Test
+    fun `requireEditable vira NotFound quando o programa nao e do usuario`() = runBlocking {
+        val repo = FakeRepo()
+        val svc = service(repo)
+        val ai = (svc.generate(user, profile()) as AppResult.Success).value
+
+        val r = svc.requireEditable(Uuid.random(), Uuid.parse(ai.id!!), isPremium = false)
+
+        assertTrue(r is AppResult.Failure && r.error is AppError.NotFound)
     }
 
     // ---------- passthrough ----------

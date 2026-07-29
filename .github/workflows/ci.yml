@@ -40,3 +40,9 @@ jobs:
 
       - name: Build & test server
         run: ./gradlew :server:build
+
+      - name: Integration tests (Testcontainers + Postgres)
+        run: ./gradlew :server:integrationTest   # ubuntu-latest já tem Docker
+
+      - name: Client tests (KMP host)
+        run: ./gradlew testAndroidHostTest        # roda em TODOS os módulos que têm a task

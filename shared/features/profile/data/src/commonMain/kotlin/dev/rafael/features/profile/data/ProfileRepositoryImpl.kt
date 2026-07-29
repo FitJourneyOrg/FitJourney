@@ -22,8 +22,12 @@ class ProfileRepositoryImpl(
             },
             onFailure = { e ->
                 when {
-                    e is ClientRequestException && e.response.status == HttpStatusCode.NotFound ->
+                    e is ClientRequestException && e.response.status == HttpStatusCode.NotFound -> {
+                        // Sem perfil = não onboardou. Corrige o cache stale (single-row por device):
+                        // sem isso, um usuário novo herda o 'true' de um usuário anterior no fallback.
+                        local.saveOnboarding(false)
                         AppError.NotFound("Perfil não encontrado").asFailure()
+                    }
                     else ->
                         AppError.Unexpected("Falha ao buscar perfil", e).asFailure()
                 }

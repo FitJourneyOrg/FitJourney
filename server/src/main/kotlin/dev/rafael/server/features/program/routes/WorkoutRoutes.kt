@@ -8,9 +8,11 @@ import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.core.result.flatMap
+import dev.rafael.core.result.map
 import dev.rafael.server.auth.FirebaseUser
 import dev.rafael.server.error.respondResult
 import dev.rafael.server.features.profile.services.ProfileService
+import dev.rafael.server.features.program.services.ProgramBlur
 import dev.rafael.server.features.program.services.ProgramLimits
 import dev.rafael.server.features.program.services.ProgramService
 import dev.rafael.server.features.user.services.UserService
@@ -26,7 +28,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import kotlin.uuid.Uuid
 
-// Tetos por plano: ver ProgramLimits (ARCH #26).
+// Tetos por plano: ver ProgramLimits (ARCH #27).
 
 fun Route.programRoutes(
     userService: UserService,
@@ -55,10 +57,12 @@ fun Route.programRoutes(
                                 ErrorCodes.HEALTH_GATE_REQUIRED,
                             ).asFailure()
                         } else {
-                            // 2. GATE POR TETO (ARCH #26) — política pura (ProgramLimits).
+                            // 2. GATE POR TETO (ARCH #27) — política pura (ProgramLimits).
                             programService.counts(user.id).flatMap { c ->
                                 ProgramLimits.gate(c, user.isPremium, ProgramLimits.Kind.AI)
                                     .flatMap { programService.generate(user.id, profile) }
+                                    // ARCH #23: blur do value-first (Dia 1 livre, resto trancado p/ não-premium).
+                                    .map { ProgramBlur.apply(it, user.isPremium) }
                             }
                         }
                     }
@@ -70,7 +74,11 @@ fun Route.programRoutes(
         get("/programs") {
             val principal = call.principal<FirebaseUser>()!!
             val result = userService.findOrCreate(principal.uid, principal.email)
-                .flatMap { user -> programService.listForUser(user.id) }
+                .flatMap { user ->
+                    // ARCH #23: aplica o blur em cada programa da lista (o detalhe filtra daqui).
+                    programService.listForUser(user.id)
+                        .map { list -> list.map { ProgramBlur.apply(it, user.isPremium) } }
+                }
             call.respondResult(result)
         }
 
@@ -78,7 +86,7 @@ fun Route.programRoutes(
             val principal = call.principal<FirebaseUser>()!!
             val body = call.receive<CreateManualProgramRequest>()
             val result = userService.findOrCreate(principal.uid, principal.email).flatMap { user ->
-                // GATE POR TETO (ARCH #26) — política pura (ProgramLimits).
+                // GATE POR TETO (ARCH #27) — política pura (ProgramLimits).
                 programService.counts(user.id).flatMap { c ->
                     ProgramLimits.gate(c, user.isPremium, ProgramLimits.Kind.MANUAL)
                         .flatMap { programService.createManual(user.id, body.name) }
@@ -95,7 +103,11 @@ fun Route.programRoutes(
                 AppError.Validation("id de programa inválido").asFailure()
             } else {
                 userService.findOrCreate(principal.uid, principal.email)
-                    .flatMap { user -> programService.rename(user.id, programId, body.name) }
+                    .flatMap { user ->
+                        // GATE PREMIUM (ARCH #25): renomear programa IA exige premium.
+                        programService.requireEditable(user.id, programId, user.isPremium)
+                            .flatMap { programService.rename(user.id, programId, body.name) }
+                    }
             }
             call.respondResult(result)
         }
