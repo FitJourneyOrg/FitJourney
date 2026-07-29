@@ -11,7 +11,7 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 /**
- * Testa a política de teto de programas (ARCH #26) — pura. Cobre a regra de
+ * Testa a política de teto de programas (ARCH #27) — pura. Cobre a regra de
  * monetização que antes estava embutida (e duplicada) nas rotas:
  * grátis 1 IA + 2 manuais (separados); premium 10 no total.
  */

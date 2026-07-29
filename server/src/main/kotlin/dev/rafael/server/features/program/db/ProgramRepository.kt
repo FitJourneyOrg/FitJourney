@@ -6,10 +6,10 @@ import dev.rafael.server.features.program.models.ProgramCounts
 import kotlin.uuid.Uuid
 
 interface ProgramRepository {
-    /** Contagem por origem (AI/MANUAL) — insumo dos gates de teto (ARCH #26). */
+    /** Contagem por origem (AI/MANUAL) — insumo dos gates de teto (ARCH #27). */
     suspend fun counts(userId: Uuid): AppResult<ProgramCounts>
 
-    /** Insere um programa novo pro usuário. NÃO substitui os existentes (ARCH #26). */
+    /** Insere um programa novo pro usuário. NÃO substitui os existentes (ARCH #27). */
     suspend fun createForUser(userId: Uuid, program: Program): AppResult<Program>
 
     /** Todos os programas do usuário, mais recente primeiro. */

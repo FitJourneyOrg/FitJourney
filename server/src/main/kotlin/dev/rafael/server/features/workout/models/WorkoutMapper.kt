@@ -49,7 +49,7 @@ fun Workout.toDto(): WorkoutDto = WorkoutDto(
 )
 
 // programId = null aqui: ignorado no create (repository.create recebe o programId
-// validado como param separado — ARCH #26) e não é reescrito no update.
+// validado como param separado — ARCH #27) e não é reescrito no update.
 fun WorkoutDto.toDomain(): Workout = Workout(
     id = Uuid.NIL,
     userId = Uuid.NIL,

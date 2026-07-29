@@ -8,7 +8,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Testa o modelo de volume/prescrição (ARCH #27/#28) — puro, sem banco.
+ * Testa o modelo de volume/prescrição (ARCH #26) — puro, sem banco.
  * RoleParams: reps/descanso/RIR por papel. VolumeTable: séries/semana por músculo e foco.
  */
 class RoleParamsTest {
@@ -24,7 +24,7 @@ class RoleParamsTest {
     }
 
     @Test
-    fun `isolamento nao passa de 15 reps (fix ARCH #28)`() {
+    fun `isolamento nao passa de 15 reps (fix ARCH #26)`() {
         val p = RoleParams.paramsFor(SlotRole.ISOLAMENTO, Level.INTERMEDIATE, Goal.GAIN_MUSCLE)
         assertEquals("12-15", p.repRange)
         assertEquals(75, p.restSeconds)

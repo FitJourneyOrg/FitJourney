@@ -25,7 +25,7 @@ class WorkoutService(
 ) {
 
     /**
-     * programId/dayOfWeek (ARCH #26): resolvidos e validados na ROTA (não aqui) —
+     * programId/dayOfWeek (ARCH #27): resolvidos e validados na ROTA (não aqui) —
      * validar posse do programa exigiria WorkoutService conhecer ProgramRepository,
      * o que criaria um ciclo workout→program (program já depende de workout).
      * Gate composto na rota, como manda o ARCH #18.

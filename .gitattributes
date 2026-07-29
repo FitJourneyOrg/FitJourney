@@ -1,0 +1,27 @@
+# Normalização de fim de linha: LF no repositório para todo texto.
+# Evita churn CRLF↔LF quando se edita no Windows.
+* text=auto eol=lf
+
+# Scripts que PRECISAM de CRLF no Windows
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# Scripts shell sempre LF
+*.sh      text eol=lf
+gradlew   text eol=lf
+
+# Binários (nunca normalizar)
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.pdf  binary
+*.xlsx binary
+*.xls  binary
+*.jar  binary
+*.keystore binary
+*.jks  binary
+*.ttf  binary
+*.otf  binary

@@ -2,7 +2,7 @@ package dev.rafael.features.workout.presentation.state
 
 data class WorkoutFormState(
     val workoutId: String? = null,
-    val programId: String? = null,   // obrigatório na criação (ARCH #26); ignorado na edição
+    val programId: String? = null,   // obrigatório na criação (ARCH #27); ignorado na edição
     val name: String = "",
     val exercises: List<FormExercise> = emptyList(),
     val isLoading: Boolean = false,

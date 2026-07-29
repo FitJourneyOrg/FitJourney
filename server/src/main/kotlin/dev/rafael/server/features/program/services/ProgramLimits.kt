@@ -8,7 +8,7 @@ import dev.rafael.core.result.asSuccess
 import dev.rafael.server.features.program.models.ProgramCounts
 
 /**
- * Política de teto de programas (ARCH #26) — pura, sem HTTP/banco. Antes vivia
+ * Política de teto de programas (ARCH #27) — pura, sem HTTP/banco. Antes vivia
  * duplicada dentro das rotas POST /programs/generate e POST /programs; extraída
  * aqui pra ter uma única fonte da regra e ser testável direto.
  *

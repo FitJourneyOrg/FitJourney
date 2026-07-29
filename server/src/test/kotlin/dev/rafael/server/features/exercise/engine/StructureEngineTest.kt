@@ -8,7 +8,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Testa o motor de estrutura (F.2, reescrito no ARCH #27) — puro, sem banco.
+ * Testa o motor de estrutura (F.2, reescrito no ARCH #26) — puro, sem banco.
  * Prova: split por dias, volume por nível, perna fina, piso de 3 séries, RIR, descanso por papel.
  */
 class StructureEngineTest {
