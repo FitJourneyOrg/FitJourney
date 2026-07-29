@@ -7,7 +7,7 @@ data class Workout(
     val id: Uuid,
     val userId: Uuid,
     val name: String,
-    // Nullable (ARCH #26): órfãos pré-existentes (dev, débito assumido na V12) ainda
+    // Nullable (ARCH #27): órfãos pré-existentes (dev, débito assumido na V12) ainda
     // têm NULL no banco. Toda criação nova exige programId — validado na rota.
     val programId: Uuid?,
     val exercises: List<WorkoutExercise>,
@@ -22,7 +22,7 @@ data class WorkoutExercise(
     val exerciseId: Uuid,
     val orderIndex: Int,
     val restSeconds: Int,        // <- NOVO (sem default: força passar em todo ponto de construção)
-    val rir: Int?,               // ARCH #27 — RIR alvo (null no manual). Sem default: compilador cobra.
+    val rir: Int?,               // ARCH #26 — RIR alvo (null no manual). Sem default: compilador cobra.
     val sets: List<WorkoutSet>,
 )
 

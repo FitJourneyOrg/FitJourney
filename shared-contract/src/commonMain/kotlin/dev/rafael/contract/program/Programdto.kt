@@ -9,7 +9,7 @@ import kotlinx.serialization.Serializable
  * se premium — editáveis. A rota /programs/generate cria um de origin=AI;
  * POST /programs cria um "shell" vazio de origin=MANUAL pra abrigar treino avulso.
  *
- * Multi-programa (ARCH #26): usuário pode ter vários programas (não é mais 1 ativo
+ * Multi-programa (ARCH #27): usuário pode ter vários programas (não é mais 1 ativo
  * que se substitui). O teto de geração é por contagem de origin=AI — ver ProgramService.
  *
  * Blur/posse (ARCH #23): quando locked=true, os workouts de índice > 0 vêm como
@@ -19,7 +19,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ProgramDto(
     val id: String? = null,               // servidor preenche
-    val name: String,                     // auto-gerado na criação; editável via PUT /programs/{id} (ARCH #26)
+    val name: String,                     // auto-gerado na criação; editável via PUT /programs/{id} (ARCH #27)
     val origin: WorkoutOrigin = WorkoutOrigin.AI,
     val workouts: List<WorkoutDto> = emptyList(),
     val daysPerWeek: Int,

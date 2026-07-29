@@ -21,7 +21,7 @@ private const val DEFAULT_REPS = "12"
 
 class WorkoutFormViewModel(
     private val workoutId: String?,          // null = criar
-    private val programId: String?,          // obrigatório se workoutId == null (ARCH #26)
+    private val programId: String?,          // obrigatório se workoutId == null (ARCH #27)
     private val repository: WorkoutRepository,
     private val lookup: ExerciseLookup,
 ) : ViewModel() {

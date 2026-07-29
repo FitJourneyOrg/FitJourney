@@ -32,7 +32,7 @@ import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.uuid.Uuid
 
 /**
- * Persistência do programa (ARCH #26 — multi-programa, substitui o modelo "1 ativo"
+ * Persistência do programa (ARCH #27 — multi-programa, substitui o modelo "1 ativo"
  * da G.1). Segue o padrão do WorkoutRepositoryImpl (dbQuery → AppResult). Reusa a
  * MESMA lógica de inserir exercises+sets pra evitar drift do restSeconds.
  */
