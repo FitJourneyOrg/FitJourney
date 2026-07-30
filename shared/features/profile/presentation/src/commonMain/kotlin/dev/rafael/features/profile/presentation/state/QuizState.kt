@@ -8,14 +8,15 @@ import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.profile.TrainingEnvironment
 
-/** Os passos do quiz, em ordem. SPLIT (ARCH #29) entra após ENVIRONMENT. */
-enum class QuizStep { GOAL, LEVEL, DAYS, FOCUS, BODY, ENVIRONMENT, SPLIT, HEALTH, LIMITATIONS }
+/** Os passos do quiz, em ordem. REST_DAYS (Estágio 2) após DAYS; SPLIT (ARCH #29) após ENVIRONMENT. */
+enum class QuizStep { GOAL, LEVEL, DAYS, REST_DAYS, FOCUS, BODY, ENVIRONMENT, SPLIT, HEALTH, LIMITATIONS }
 data class QuizState(
     val step: QuizStep = QuizStep.GOAL,
     val goal: Goal? = null,
     val level: Level? = null,
     val daysPerWeek: Int? = null,
     val splitPreference: SplitType? = null,   // ARCH #29: null = usa o recomendado
+    val unavailableDays: List<Int> = emptyList(),   // dias (1=Seg..7=Dom) que NÃO quer treinar
     val focusAreas: List<MuscleGroup> = emptyList(),
     val weightKg: Double? = null,
     val heightCm: Double? = null,
@@ -36,11 +37,16 @@ data class QuizState(
     val visibleSteps: List<QuizStep>
         get() = QuizStep.entries.filter { it != QuizStep.FOCUS || focusEligible }
 
+    /** Sobra dia suficiente pra treinar o que o usuário pediu? (7 - dias off >= daysPerWeek) */
+    val hasEnoughFreeDays: Boolean
+        get() = 7 - unavailableDays.size >= (daysPerWeek ?: 0)
+
     val canAdvance: Boolean
         get() = when (step) {
             QuizStep.GOAL -> goal != null
             QuizStep.LEVEL -> level != null
             QuizStep.DAYS -> daysPerWeek != null
+            QuizStep.REST_DAYS -> hasEnoughFreeDays        // não pode marcar dias off demais
             QuizStep.FOCUS -> true
             QuizStep.BODY -> true
             QuizStep.ENVIRONMENT -> environment != null      // obrigatório escolher

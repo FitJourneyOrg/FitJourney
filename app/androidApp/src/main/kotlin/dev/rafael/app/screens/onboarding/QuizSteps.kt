@@ -123,6 +123,30 @@ fun FocusStep(selected: List<MuscleGroup>, onToggle: (MuscleGroup) -> Unit) {
     }
 }
 
+/** Estágio 2: dias que o usuário NÃO quer treinar (descanso). A IA evita esses na distribuição. */
+@Composable
+fun RestDaysStep(selected: List<Int>, daysPerWeek: Int, onToggle: (Int) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Tem dia que você NÃO quer treinar?", style = MaterialTheme.typography.headlineSmall)
+        Text("Marque seus dias de descanso (opcional). A IA distribui os treinos nos dias livres.", style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(8.dp))
+        listOf("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom").forEachIndexed { idx, lbl ->
+            val d = idx + 1
+            FilterChip(selected = d in selected, onClick = { onToggle(d) }, label = { Text(lbl) })
+        }
+        val free = 7 - selected.size
+        if (free < daysPerWeek) {
+            Text(
+                "Você precisa de ao menos $daysPerWeek dias livres (tem $free).",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        } else {
+            Text("$free dias livres para treinar.", style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
 @Composable
 fun BodyStep(
     weight: Double?,

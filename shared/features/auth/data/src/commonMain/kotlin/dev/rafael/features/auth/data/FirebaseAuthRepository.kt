@@ -4,15 +4,18 @@ import dev.gitlive.firebase.Firebase
 import dev.gitlive.firebase.auth.FirebaseAuthException
 import dev.gitlive.firebase.auth.FirebaseUser
 import dev.gitlive.firebase.auth.auth
+import dev.rafael.core.network.clearBearerToken
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.features.auth.domain.model.AuthUser
 import dev.rafael.features.auth.domain.repository.AuthRepository
+import io.ktor.client.HttpClient
 
 class FirebaseAuthRepository(
     private val meDataSource: MeDataSource,
+    private val httpClient: HttpClient,
 ) : AuthRepository {
 
     private val auth = Firebase.auth
@@ -20,6 +23,7 @@ class FirebaseAuthRepository(
     override suspend fun signIn(email: String, password: String): AppResult<AuthUser> =
         runCatching {
             val result = auth.signInWithEmailAndPassword(email, password)
+            httpClient.clearBearerToken()   // sessão nova → descarta o token cacheado do usuário anterior
             result.user!!.toAuthUser()
         }.fold(
             onSuccess = { it.asSuccess() },
@@ -29,6 +33,7 @@ class FirebaseAuthRepository(
     override suspend fun signUp(email: String, password: String): AppResult<AuthUser> =
         runCatching {
             val result = auth.createUserWithEmailAndPassword(email, password)
+            httpClient.clearBearerToken()   // idem: novo usuário, token novo
             result.user!!.toAuthUser()
         }.fold(
             onSuccess = { it.asSuccess() },
@@ -36,7 +41,10 @@ class FirebaseAuthRepository(
         )
 
     override suspend fun signOut(): AppResult<Unit> =
-        runCatching { auth.signOut() }.fold(
+        runCatching {
+            auth.signOut()
+            httpClient.clearBearerToken()   // não deixa token válido vazar p/ o próximo usuário
+        }.fold(
             onSuccess = { Unit.asSuccess() },
             onFailure = { AppError.Unexpected("Falha ao sair", it).asFailure() },
         )

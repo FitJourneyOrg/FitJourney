@@ -35,6 +35,13 @@ class ProfileService(
         if (dto.focusAreas.size > 2) {
             return AppError.Validation("focusAreas aceita no máximo 2 grupos").asFailure()
         }
+        // Estágio 2 (descanso): dias off válidos e sobra dia p/ treinar.
+        if (dto.unavailableDays.any { it !in 1..7 } || dto.unavailableDays.toSet().size != dto.unavailableDays.size) {
+            return AppError.Validation("Dias indisponíveis inválidos (1..7, sem repetir)").asFailure()
+        }
+        if (7 - dto.unavailableDays.size < dto.daysPerWeek) {
+            return AppError.Validation("Dias livres insuficientes para treinar ${dto.daysPerWeek}x na semana").asFailure()
+        }
         return userService.findOrCreate(firebaseUid, email).flatMap { user ->
             val profile = Profile(
                 userId = user.id,
@@ -42,6 +49,7 @@ class ProfileService(
                 level = dto.level,
                 daysPerWeek = dto.daysPerWeek,
                 splitPreference = dto.splitPreference,
+                unavailableDays = dto.unavailableDays,
                 focusAreas = dto.focusAreas,
                 weightKg = dto.weightKg,
                 heightCm = dto.heightCm,

@@ -44,4 +44,9 @@ class ProfileRepositoryImpl(
         )
 
     override suspend fun cachedOnboardingCompleted(): Boolean? = local.cachedOnboarding()
+
+    // Marca "não onboardado" no logout. Assim, se o próximo usuário (novo cadastro) cair no
+    // fallback (getProfile lento/offline), o gate manda p/ o Quiz — e não herda o 'true' do
+    // usuário anterior mandando pra Home. (Cache é single-row por device — ver débito uid.)
+    override suspend fun clearOnboardingCache() = local.saveOnboarding(false)
 }
