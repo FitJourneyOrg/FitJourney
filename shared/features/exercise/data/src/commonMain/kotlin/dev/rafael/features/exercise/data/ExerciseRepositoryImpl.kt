@@ -1,10 +1,8 @@
 package dev.rafael.features.exercise.data
 
 import dev.rafael.contract.exercise.ExerciseCategory
-import dev.rafael.core.result.AppError
+import dev.rafael.core.network.httpResult
 import dev.rafael.core.result.AppResult
-import dev.rafael.core.result.asFailure
-import dev.rafael.core.result.asSuccess
 import dev.rafael.features.exercise.domain.model.Exercise
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
 import kotlinx.coroutines.flow.Flow
@@ -22,17 +20,8 @@ class ExerciseRepositoryImpl(
     }
 
     override suspend fun refresh(): AppResult<Unit> =
-        runCatching {
-            val dtos = remote.getExercises(category = null)
-            local.replaceAll(dtos)
-        }.fold(
-            onSuccess = { Unit.asSuccess() },
-            onFailure = { AppError.Unexpected("Falha ao atualizar catálogo de exercícios", it).asFailure() },
-        )
+        httpResult { local.replaceAll(remote.getExercises(category = null)) }
 
     override suspend fun alternatives(exerciseId: String): AppResult<List<Exercise>> =
-        runCatching { remote.getAlternatives(exerciseId).map { it.toDomain() } }.fold(
-            onSuccess = { it.asSuccess() },
-            onFailure = { AppError.Unexpected("Falha ao buscar alternativas", it).asFailure() },
-        )
+        httpResult { remote.getAlternatives(exerciseId).map { it.toDomain() } }
 }
