@@ -3,7 +3,8 @@ package dev.rafael.features.program.data
 import dev.rafael.contract.program.CreateManualProgramRequest
 import dev.rafael.contract.program.ProgramDto
 import dev.rafael.contract.program.RenameProgramRequest
-import dev.rafael.contract.program.ReorderScheduleRequest
+import dev.rafael.contract.program.ScheduleEntry
+import dev.rafael.contract.program.SetScheduleRequest
 import dev.rafael.core.network.HttpClientFactory
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
@@ -41,10 +42,10 @@ class ProgramDataSource(private val client: HttpClient) {
         client.delete("$base/$id")   // 204/Unit; expectSuccess lança em 4xx
     }
 
-    /** PUT /programs/{id}/schedule — reordena; `order` = workoutIds na ordem desejada. */
-    suspend fun reorderSchedule(id: String, order: List<String>): ProgramDto =
+    /** PUT /programs/{id}/schedule — define o dia (1..7) de cada treino. */
+    suspend fun setSchedule(id: String, entries: List<ScheduleEntry>): ProgramDto =
         client.put("$base/$id/schedule") {
             contentType(ContentType.Application.Json)
-            setBody(ReorderScheduleRequest(order))
+            setBody(SetScheduleRequest(entries))
         }.body()
 }

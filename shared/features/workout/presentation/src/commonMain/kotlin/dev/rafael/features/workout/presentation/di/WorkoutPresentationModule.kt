@@ -12,5 +12,5 @@ import org.koin.dsl.module
 // (endpoint que nem existia no server — dead code desde antes desta mudança).
 val workoutPresentationModule: Module = module {
     viewModel { (workoutId: String) -> WorkoutDetailViewModel(workoutId, get(), get()) }
-    viewModel { (workoutId: String?, programId: String?) -> WorkoutFormViewModel(workoutId, programId, get(), get()) }
+    viewModel { (workoutId: String?, programId: String?, takenDays: String) -> WorkoutFormViewModel(workoutId, programId, takenDays, get(), get()) }
 }

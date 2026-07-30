@@ -3,6 +3,7 @@ package dev.rafael.features.program.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.core.result.AppResult
+import dev.rafael.features.program.domain.model.ProgramScheduleEntry
 import dev.rafael.features.program.domain.repository.ProgramRepository
 import dev.rafael.features.program.presentation.state.ProgramDetailEvent
 import dev.rafael.features.program.presentation.state.ProgramDetailState
@@ -32,25 +33,29 @@ class ProgramDetailViewModel(
             ProgramDetailEvent.Retry -> load()
             is ProgramDetailEvent.Rename -> rename(event.name)
             ProgramDetailEvent.Delete -> delete()
-            is ProgramDetailEvent.MoveWorkout -> move(event.workoutId, event.up)
+            is ProgramDetailEvent.SetWorkoutDay -> setDay(event.workoutId, event.dayOfWeek)
         }
     }
 
     /**
-     * Reordena um treino um passo p/ cima/baixo e persiste (PUT /schedule). Monta a nova
-     * ordem a partir da lista atual e manda os workoutIds; o server grava day_of_week=posição.
+     * Define o dia da semana de um treino e persiste (PUT /schedule). Monta a agenda completa
+     * a partir do schedule atual, troca só o dia do treino alvo, e manda tudo. Se o dia já
+     * estiver ocupado por outro treino, faz swap (troca os dias) — mantém dias distintos.
      */
-    private fun move(workoutId: String, up: Boolean) {
-        val current = _state.value.program?.workouts ?: return
-        val ids = current.mapNotNull { it.id }.toMutableList()
-        val i = ids.indexOf(workoutId)
-        if (i < 0) return
-        val j = if (up) i - 1 else i + 1
-        if (j < 0 || j > ids.lastIndex) return          // já está na ponta
-        ids[i] = ids[j].also { ids[j] = ids[i] }        // swap
+    private fun setDay(workoutId: String, dayOfWeek: Int) {
+        val program = _state.value.program ?: return
+        val currentDays = program.schedule.associate { it.workoutId to it.dayOfWeek }.toMutableMap()
+        val oldDay = currentDays[workoutId] ?: return
+        if (oldDay == dayOfWeek) return
+        // se o dia destino já é de outro treino, troca (swap) pra manter distintos
+        currentDays.entries.firstOrNull { it.value == dayOfWeek && it.key != workoutId }?.let {
+            currentDays[it.key] = oldDay
+        }
+        currentDays[workoutId] = dayOfWeek
+        val schedule = currentDays.map { (wId, day) -> ProgramScheduleEntry(workoutId = wId, dayOfWeek = day) }
         _state.update { it.copy(isReordering = true, error = null) }
         viewModelScope.launch {
-            when (val result = repository.reorderSchedule(programId, ids)) {
+            when (val result = repository.setSchedule(programId, schedule)) {
                 is AppResult.Success ->
                     _state.update { it.copy(isReordering = false, program = result.value) }
                 is AppResult.Failure ->

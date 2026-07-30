@@ -23,4 +23,5 @@ data class WorkoutDto(
     // `exercises` e guarda quantos eram em `lockedExerciseCount` (FOMO: "6 exercícios 🔒").
     val locked: Boolean = false,
     val lockedExerciseCount: Int = 0,
+    val dayOfWeek: Int? = null,   // dia da semana (1=Seg..7=Dom); no create manual, o dia escolhido
 )

@@ -133,6 +133,7 @@ class WorkoutRepositoryImpl : WorkoutRepository {
             userId = wRow[WorkoutsTable.userId],
             name = wRow[WorkoutsTable.name],
             programId = wRow[WorkoutsTable.programId],
+            dayOfWeek = wRow[WorkoutsTable.dayOfWeek],
             exercises = exercises,
             createdAt = wRow[WorkoutsTable.createdAt],
             updatedAt = wRow[WorkoutsTable.updatedAt],

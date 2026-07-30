@@ -70,7 +70,7 @@ class WorkoutFormViewModelTest {
     @Test
     fun `editar treino de IA preserva rir e restSeconds no save`() = runTest(dispatcher) {
         val repo = FakeRepo(aiWorkout())
-        val vm = WorkoutFormViewModel(workoutId = "w1", programId = null, repository = repo, lookup = FakeLookup())
+        val vm = WorkoutFormViewModel(workoutId = "w1", programId = null, takenDaysCsv = "", repository = repo, lookup = FakeLookup())
         advanceUntilIdle()
 
         // usuário mexe só nas reps de uma série — rir/restSeconds nem aparecem na UI
@@ -90,7 +90,7 @@ class WorkoutFormViewModelTest {
     @Test
     fun `exercicio adicionado nasce com defaults (rir nulo, rest 90)`() = runTest(dispatcher) {
         val repo = FakeRepo(aiWorkout())
-        val vm = WorkoutFormViewModel(workoutId = "w1", programId = null, repository = repo, lookup = FakeLookup())
+        val vm = WorkoutFormViewModel(workoutId = "w1", programId = null, takenDaysCsv = "", repository = repo, lookup = FakeLookup())
         advanceUntilIdle()
 
         vm.onEvent(WorkoutFormEvent.ExercisesAdded(listOf("ex-novo")))

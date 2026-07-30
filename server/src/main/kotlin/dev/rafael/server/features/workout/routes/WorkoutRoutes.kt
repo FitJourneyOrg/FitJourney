@@ -44,9 +44,9 @@ fun Route.workoutRoutes(
                 userService.findOrCreate(p.uid, p.email).flatMap { user ->
                     // GATE PREMIUM (ARCH #25): adicionar treino a programa IA exige premium.
                     programService.requireEditable(user.id, programId, user.isPremium).flatMap {
-                        programService.workoutCountForOwner(user.id, programId).flatMap { count ->
-                            if (count == null) AppError.NotFound("Programa não encontrado").asFailure()
-                            else service.create(p.uid, p.email, dto, programId, dayOfWeek = count + 1)
+                        // G.2: usa o dia escolhido (dto.dayOfWeek) validando colisão, ou 1º dia livre.
+                        programService.resolveNewWorkoutDay(user.id, programId, dto.dayOfWeek).flatMap { day ->
+                            service.create(p.uid, p.email, dto, programId, dayOfWeek = day)
                         }
                     }
                 }

@@ -2,6 +2,7 @@ package dev.rafael.features.program.domain.repository
 
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.program.domain.model.Program
+import dev.rafael.features.program.domain.model.ProgramScheduleEntry
 
 interface ProgramRepository {
     suspend fun list(): AppResult<List<Program>>                  // GET /programs
@@ -9,5 +10,5 @@ interface ProgramRepository {
     suspend fun createManual(name: String): AppResult<Program>     // POST /programs
     suspend fun rename(id: String, name: String): AppResult<Program>  // PUT /programs/{id}
     suspend fun delete(id: String): AppResult<Unit>                    // DELETE /programs/{id}
-    suspend fun reorderSchedule(id: String, orderedWorkoutIds: List<String>): AppResult<Program>  // PUT /programs/{id}/schedule
+    suspend fun setSchedule(id: String, schedule: List<ProgramScheduleEntry>): AppResult<Program>  // PUT /programs/{id}/schedule
 }

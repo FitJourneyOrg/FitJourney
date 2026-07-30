@@ -22,11 +22,26 @@ private const val DEFAULT_REPS = "12"
 class WorkoutFormViewModel(
     private val workoutId: String?,          // null = criar
     private val programId: String?,          // obrigatório se workoutId == null (ARCH #27)
+    takenDaysCsv: String,                    // dias já ocupados no programa (ex.: "1,3,5")
     private val repository: WorkoutRepository,
     private val lookup: ExerciseLookup,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(WorkoutFormState(workoutId = workoutId, programId = programId))
+    private val takenDays: Set<Int> =
+        takenDaysCsv.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
+
+    // Na criação, o dia começa no 1º dia livre da semana (evita cair num já ocupado).
+    private val initialDay: Int? =
+        if (workoutId == null) (1..7).firstOrNull { it !in takenDays } else null
+
+    private val _state = MutableStateFlow(
+        WorkoutFormState(
+            workoutId = workoutId,
+            programId = programId,
+            takenDays = takenDays,
+            selectedDay = initialDay,
+        ),
+    )
     val state: StateFlow<WorkoutFormState> = _state.asStateFlow()
 
     init { if (workoutId != null) loadExisting(workoutId) }
@@ -35,6 +50,9 @@ class WorkoutFormViewModel(
         when (event) {
             is WorkoutFormEvent.NameChanged ->
                 _state.update { it.copy(name = event.value) }
+
+            is WorkoutFormEvent.DaySelected ->
+                _state.update { it.copy(selectedDay = event.dayOfWeek) }
 
             is WorkoutFormEvent.ExercisesAdded -> addExercises(event.ids)
 
@@ -115,6 +133,7 @@ class WorkoutFormViewModel(
             id = s.workoutId,
             name = s.name.trim(),
             programId = s.programId,
+            dayOfWeek = if (s.isEditing) null else s.selectedDay,   // dia só na criação (update preserva no server)
             exercises = s.exercises.mapIndexed { i, ex ->
                 WorkoutExercise(
                     exerciseId = ex.exerciseId,

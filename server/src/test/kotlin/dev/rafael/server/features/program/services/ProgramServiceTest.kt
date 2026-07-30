@@ -6,6 +6,7 @@ import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.ProfileDto
 import dev.rafael.contract.profile.TrainingEnvironment
 import dev.rafael.contract.program.ProgramDto
+import dev.rafael.contract.program.ScheduleEntry
 import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -62,15 +63,16 @@ class ProgramServiceTest {
 
         override suspend fun delete(userId: Uuid, programId: Uuid) = deleteValue.asSuccess()
 
-        override suspend fun reorderSchedule(
+        override suspend fun setSchedule(
             userId: Uuid,
             programId: Uuid,
-            orderedWorkoutIds: List<Uuid>,
+            schedule: Map<Uuid, Int>,
         ): AppResult<Program?> {
             val p = store[programId]?.takeIf { it.userId == userId } ?: return AppResult.Success(null)
-            val byId = p.workouts.associateBy { it.id }
-            val reordered = orderedWorkoutIds.mapNotNull { byId[it] }
-            val updated = p.copy(workouts = reordered)
+            val updatedWorkouts = p.workouts
+                .map { w -> w.copy(dayOfWeek = schedule[w.id] ?: w.dayOfWeek) }
+                .sortedBy { it.dayOfWeek }
+            val updated = p.copy(workouts = updatedWorkouts)
             store[programId] = updated
             return updated.asSuccess()
         }
@@ -246,13 +248,13 @@ class ProgramServiceTest {
         assertTrue(r is AppResult.Failure && r.error is AppError.NotFound)
     }
 
-    // ---------- reorderSchedule (G.2 agendamento) ----------
+    // ---------- setSchedule (G.2 agenda por dia real) ----------
 
     private fun seedProgram(repo: FakeRepo, vararg workoutIds: Uuid): Uuid {
         val ts = LocalDateTime(2026, 1, 1, 0, 0)
         val pid = Uuid.random()
         val workouts = workoutIds.mapIndexed { i, wid ->
-            Workout(id = wid, userId = user, name = "Dia ${i + 1}", programId = pid, exercises = emptyList(), createdAt = ts, updatedAt = ts)
+            Workout(id = wid, userId = user, name = "Dia ${i + 1}", programId = pid, dayOfWeek = i + 1, exercises = emptyList(), createdAt = ts, updatedAt = ts)
         }
         repo.store[pid] = Program(
             id = pid, userId = user, name = "P", origin = WorkoutOrigin.AI, daysPerWeek = workoutIds.size,
@@ -261,50 +263,95 @@ class ProgramServiceTest {
         return pid
     }
 
+    private fun entry(id: Uuid, day: Int) = ScheduleEntry(workoutId = id.toString(), dayOfWeek = day)
+
     @Test
-    fun `reorder aplica a nova ordem dos treinos`() = runBlocking {
+    fun `setSchedule aplica o dia de cada treino`() = runBlocking {
         val repo = FakeRepo()
         val (w1, w2, w3) = Triple(Uuid.random(), Uuid.random(), Uuid.random())
         val pid = seedProgram(repo, w1, w2, w3)
 
-        val r = service(repo).reorderSchedule(user, pid, listOf(w3.toString(), w1.toString(), w2.toString()))
+        // dias reais com folga: w1=Seg(1), w2=Qui(4), w3=Sáb(6)
+        val r = service(repo).setSchedule(user, pid, listOf(entry(w1, 1), entry(w2, 4), entry(w3, 6)))
 
         assertIs<AppResult.Success<ProgramDto>>(r)
-        assertEquals(listOf(w3.toString(), w1.toString(), w2.toString()), r.value.workouts.map { it.id })
-        // schedule deriva da ordem: day 1,2,3 na nova sequência
-        assertEquals(listOf(1, 2, 3), r.value.schedule.map { it.dayOfWeek })
+        val days = r.value.schedule.associate { it.workoutId to it.dayOfWeek }
+        assertEquals(1, days[w1.toString()])
+        assertEquals(4, days[w2.toString()])
+        assertEquals(6, days[w3.toString()])
     }
 
     @Test
-    fun `reorder com ordem vazia vira Validation`() = runBlocking {
-        val repo = FakeRepo()
-        val pid = seedProgram(repo, Uuid.random(), Uuid.random())
-        val r = service(repo).reorderSchedule(user, pid, emptyList())
-        assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
-    }
-
-    @Test
-    fun `reorder com id repetido vira Validation`() = runBlocking {
+    fun `setSchedule com dia fora de 1 a 7 vira Validation`() = runBlocking {
         val repo = FakeRepo()
         val w1 = Uuid.random(); val w2 = Uuid.random()
         val pid = seedProgram(repo, w1, w2)
-        val r = service(repo).reorderSchedule(user, pid, listOf(w1.toString(), w1.toString()))
+        val r = service(repo).setSchedule(user, pid, listOf(entry(w1, 1), entry(w2, 8)))
         assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
     }
 
     @Test
-    fun `reorder que nao bate com os treinos vira Validation`() = runBlocking {
+    fun `setSchedule com dia repetido vira Validation`() = runBlocking {
         val repo = FakeRepo()
         val w1 = Uuid.random(); val w2 = Uuid.random()
         val pid = seedProgram(repo, w1, w2)
-        // manda um id que não é do programa
-        val r = service(repo).reorderSchedule(user, pid, listOf(w1.toString(), Uuid.random().toString()))
+        val r = service(repo).setSchedule(user, pid, listOf(entry(w1, 3), entry(w2, 3)))
         assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
     }
 
     @Test
-    fun `reorder de programa inexistente vira NotFound`() = runBlocking {
-        val r = service().reorderSchedule(user, Uuid.random(), listOf(Uuid.random().toString()))
+    fun `setSchedule que nao cobre os treinos vira Validation`() = runBlocking {
+        val repo = FakeRepo()
+        val w1 = Uuid.random(); val w2 = Uuid.random()
+        val pid = seedProgram(repo, w1, w2)
+        // manda um id que não é do programa (dias válidos e distintos)
+        val r = service(repo).setSchedule(user, pid, listOf(entry(w1, 1), entry(Uuid.random(), 2)))
+        assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
+    }
+
+    @Test
+    fun `setSchedule de programa inexistente vira NotFound`() = runBlocking {
+        val r = service().setSchedule(user, Uuid.random(), listOf(entry(Uuid.random(), 1)))
+        assertTrue(r is AppResult.Failure && r.error is AppError.NotFound)
+    }
+
+    // ---------- resolveNewWorkoutDay (G.2 escolher dia na criação) ----------
+
+    @Test
+    fun `resolveNewWorkoutDay usa o dia escolhido quando livre`() = runBlocking {
+        val repo = FakeRepo()
+        val pid = seedProgram(repo, Uuid.random(), Uuid.random())   // usa dias 1 e 2
+        val r = service(repo).resolveNewWorkoutDay(user, pid, chosen = 5)
+        assertEquals(5, (r as AppResult.Success).value)
+    }
+
+    @Test
+    fun `resolveNewWorkoutDay recusa dia ocupado`() = runBlocking {
+        val repo = FakeRepo()
+        val pid = seedProgram(repo, Uuid.random(), Uuid.random())   // dia 1 já ocupado
+        val r = service(repo).resolveNewWorkoutDay(user, pid, chosen = 1)
+        assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
+    }
+
+    @Test
+    fun `resolveNewWorkoutDay recusa dia fora de 1 a 7`() = runBlocking {
+        val repo = FakeRepo()
+        val pid = seedProgram(repo, Uuid.random())
+        val r = service(repo).resolveNewWorkoutDay(user, pid, chosen = 8)
+        assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
+    }
+
+    @Test
+    fun `resolveNewWorkoutDay sem escolha pega o primeiro dia livre`() = runBlocking {
+        val repo = FakeRepo()
+        val pid = seedProgram(repo, Uuid.random(), Uuid.random())   // 1 e 2 ocupados → livre é 3
+        val r = service(repo).resolveNewWorkoutDay(user, pid, chosen = null)
+        assertEquals(3, (r as AppResult.Success).value)
+    }
+
+    @Test
+    fun `resolveNewWorkoutDay de programa inexistente vira NotFound`() = runBlocking {
+        val r = service().resolveNewWorkoutDay(user, Uuid.random(), chosen = 1)
         assertTrue(r is AppResult.Failure && r.error is AppError.NotFound)
     }
 

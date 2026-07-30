@@ -25,9 +25,9 @@ interface ProgramRepository {
     suspend fun delete(userId: Uuid, programId: Uuid): AppResult<Boolean>
 
     /**
-     * Reordena os treinos do programa: grava day_of_week = posição+1 (1..N) na ordem dada.
-     * `orderedWorkoutIds` precisa ser uma permutação EXATA dos treinos do programa.
-     * Retorna o programa relido, ou null se não existe/não é do usuário/ordem inválida.
+     * Grava o dia da semana de cada treino (G.2). `schedule` = workoutId → dayOfWeek (1..7).
+     * A validação (permutação, dias distintos/faixa) é do ProgramService; aqui só persiste.
+     * Retorna o programa relido, ou null se não existe/não é do usuário.
      */
-    suspend fun reorderSchedule(userId: Uuid, programId: Uuid, orderedWorkoutIds: List<Uuid>): AppResult<Program?>
+    suspend fun setSchedule(userId: Uuid, programId: Uuid, schedule: Map<Uuid, Int>): AppResult<Program?>
 }

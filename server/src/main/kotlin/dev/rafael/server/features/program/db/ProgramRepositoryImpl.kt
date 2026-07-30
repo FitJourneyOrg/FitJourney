@@ -91,20 +91,20 @@ class ProgramRepositoryImpl : ProgramRepository {
         n > 0
     }
 
-    override suspend fun reorderSchedule(
+    override suspend fun setSchedule(
         userId: Uuid,
         programId: Uuid,
-        orderedWorkoutIds: List<Uuid>,
+        schedule: Map<Uuid, Int>,
     ): AppResult<Program?> = dbQuery {
         // valida posse; null → rota devolve NotFound
         ProgramsTable.selectAll()
             .where { (ProgramsTable.id eq programId) and (ProgramsTable.userId eq userId) }
             .limit(1).singleOrNull() ?: return@dbQuery null
         val ts = now()
-        // grava day_of_week = posição+1. O where inclui programId: id estranho não afeta nada.
-        orderedWorkoutIds.forEachIndexed { index, wId ->
+        // grava o dia de cada treino. O where inclui programId: id estranho não afeta nada.
+        schedule.forEach { (wId, day) ->
             WorkoutsTable.update({ (WorkoutsTable.id eq wId) and (WorkoutsTable.programId eq programId) }) {
-                it[dayOfWeek] = index + 1
+                it[dayOfWeek] = day
                 it[updatedAt] = ts
             }
         }
@@ -136,7 +136,7 @@ class ProgramRepositoryImpl : ProgramRepository {
                 it[WorkoutsTable.userId] = userId
                 it[name] = w.name
                 it[WorkoutsTable.programId] = programId
-                it[dayOfWeek] = index + 1                 // 1..N (usuário reordena na G.2)
+                it[dayOfWeek] = w.dayOfWeek ?: (index + 1)   // dia espaçado (WeekSpread) ou fallback posicional
                 it[createdAt] = ts
                 it[updatedAt] = ts
             }
@@ -187,6 +187,7 @@ class ProgramRepositoryImpl : ProgramRepository {
                     id = workoutId,
                     userId = userId,
                     programId = programId,
+                    dayOfWeek = wRow[WorkoutsTable.dayOfWeek],
                     name = wRow[WorkoutsTable.name],
                     exercises = exercises,
                     createdAt = wRow[WorkoutsTable.createdAt],

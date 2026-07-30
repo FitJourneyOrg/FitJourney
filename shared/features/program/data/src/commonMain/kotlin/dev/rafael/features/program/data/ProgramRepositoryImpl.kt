@@ -1,11 +1,13 @@
 package dev.rafael.features.program.data
 
 import dev.rafael.contract.error.ErrorResponse
+import dev.rafael.contract.program.ScheduleEntry
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.features.program.domain.model.Program
+import dev.rafael.features.program.domain.model.ProgramScheduleEntry
 import dev.rafael.features.program.domain.repository.ProgramRepository
 import io.ktor.client.call.body
 import io.ktor.client.plugins.ClientRequestException
@@ -30,8 +32,11 @@ class ProgramRepositoryImpl(
     override suspend fun delete(id: String): AppResult<Unit> =
         call { remote.delete(id) }
 
-    override suspend fun reorderSchedule(id: String, orderedWorkoutIds: List<String>): AppResult<Program> =
-        call { remote.reorderSchedule(id, orderedWorkoutIds).toDomain() }
+    override suspend fun setSchedule(id: String, schedule: List<ProgramScheduleEntry>): AppResult<Program> =
+        call {
+            val entries = schedule.map { ScheduleEntry(workoutId = it.workoutId, dayOfWeek = it.dayOfWeek) }
+            remote.setSchedule(id, entries).toDomain()
+        }
 
     private suspend fun <T> call(block: suspend () -> T): AppResult<T> =
         runCatching { block() }.fold(

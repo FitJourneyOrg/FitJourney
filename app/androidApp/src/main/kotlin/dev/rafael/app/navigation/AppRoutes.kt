@@ -19,6 +19,7 @@ sealed interface AppRoute {
     // editLocked = true quando o treino pertence a um programa IA trancado p/ o usuário
     // (free): o botão editar barra na hora com paywall, sem entrar na tela de edição.
     @Serializable data class WorkoutDetail(val id: String, val editLocked: Boolean = false) : AppRoute
-    @Serializable data class WorkoutCreate(val programId: String) : AppRoute
+    // takenDays = CSV dos dias já ocupados no programa (ex.: "1,3,5") — o form desabilita esses.
+    @Serializable data class WorkoutCreate(val programId: String, val takenDays: String = "") : AppRoute
     @Serializable data class WorkoutEdit(val id: String) : AppRoute
 }
