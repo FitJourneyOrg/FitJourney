@@ -16,6 +16,7 @@ data class Profile(
     val level: Level,
     val daysPerWeek: Int,
     val splitPreference: SplitType? = null,   // ARCH #29: escolha do onboarding; null = recomendado
+    val unavailableDays: List<Int> = emptyList(),   // dias off (1=Seg..7=Dom); motor evita
     val focusAreas: List<MuscleGroup>,
     val weightKg: Double?,
     val heightCm: Double?,

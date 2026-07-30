@@ -25,8 +25,15 @@ class ProfileMapperTest {
         weightKg = 80.0,
         heightCm = 180.0,
         environment = TrainingEnvironment.ACADEMIA,
+        unavailableDays = listOf(6, 7),
         onboardingCompleted = true,
     )
+
+    @Test
+    fun `round-trip preserva unavailableDays (Estagio 2)`() {
+        val rt = dto().toDomain().toDto()
+        assertEquals(listOf(6, 7), rt.unavailableDays)
+    }
 
     @Test
     fun `toDomain preserva splitPreference`() {

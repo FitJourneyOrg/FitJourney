@@ -12,6 +12,7 @@ sealed interface QuizEvent {
     data class LevelSelected(val level: Level) : QuizEvent
     data class DaysSelected(val days: Int) : QuizEvent
     data class SplitSelected(val split: SplitType) : QuizEvent   // ARCH #29
+    data class RestDayToggled(val dayOfWeek: Int) : QuizEvent     // Estágio 2: liga/desliga dia off
     data class FocusToggled(val muscle: MuscleGroup) : QuizEvent
     data class WeightChanged(val value: Double?) : QuizEvent
     data class HeightChanged(val value: Double?) : QuizEvent

@@ -8,4 +8,6 @@ interface ProfileRepository {
     suspend fun getProfile(): AppResult<Profile>
     suspend fun saveProfile(profile: Profile): AppResult<Profile>
     suspend fun cachedOnboardingCompleted(): Boolean?
+    /** Zera o cache de onboarding (chamar no logout — senão o próximo cadastro herda o 'true'). */
+    suspend fun clearOnboardingCache()
 }

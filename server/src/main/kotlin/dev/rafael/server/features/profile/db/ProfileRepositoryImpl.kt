@@ -47,6 +47,7 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[healthScreening] = profile.health?.toJson()
                     it[limitations] = profile.limitations.limitationsToJson()
                     it[splitPreference] = profile.splitPreference?.name
+                    it[unavailableDays] = profile.unavailableDays.daysToJson()
                     it[onboardingCompleted] = profile.onboardingCompleted
                 }
             } else {
@@ -62,6 +63,7 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[healthScreening] = profile.health?.toJson()
                     it[limitations] = profile.limitations.limitationsToJson()
                     it[splitPreference] = profile.splitPreference?.name
+                    it[unavailableDays] = profile.unavailableDays.daysToJson()
                     it[onboardingCompleted] = profile.onboardingCompleted
                 }
             }
@@ -89,5 +91,6 @@ private fun ResultRow.toProfile(): Profile = Profile(
     health = this[ProfilesTable.healthScreening]?.toHealthScreening(),
     limitations = this[ProfilesTable.limitations]?.toLimitations() ?: emptyList(),
     splitPreference = this[ProfilesTable.splitPreference]?.let { SplitType.valueOf(it) },
+    unavailableDays = this[ProfilesTable.unavailableDays]?.toDays() ?: emptyList(),
     onboardingCompleted = this[ProfilesTable.onboardingCompleted],
 )

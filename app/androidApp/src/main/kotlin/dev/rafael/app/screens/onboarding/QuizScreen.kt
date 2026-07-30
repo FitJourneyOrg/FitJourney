@@ -43,6 +43,11 @@ fun QuizScreen(
                 QuizStep.GOAL -> GoalStep(state.goal) { viewModel.onEvent(QuizEvent.GoalSelected(it)) }
                 QuizStep.LEVEL -> LevelStep(state.level) { viewModel.onEvent(QuizEvent.LevelSelected(it)) }
                 QuizStep.DAYS -> DaysStep(state.daysPerWeek) { viewModel.onEvent(QuizEvent.DaysSelected(it)) }
+                QuizStep.REST_DAYS -> RestDaysStep(
+                    selected = state.unavailableDays,
+                    daysPerWeek = state.daysPerWeek ?: 0,
+                    onToggle = { viewModel.onEvent(QuizEvent.RestDayToggled(it)) },
+                )
                 QuizStep.FOCUS -> FocusStep(state.focusAreas) { viewModel.onEvent(QuizEvent.FocusToggled(it)) }
                 QuizStep.ENVIRONMENT -> EnvironmentStep(state.environment) { viewModel.onEvent(QuizEvent.EnvironmentSelected(it)) }
                 QuizStep.SPLIT -> SplitStep(

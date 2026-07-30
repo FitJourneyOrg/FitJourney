@@ -46,7 +46,7 @@ class ProgramService(
             return AppError.Validation(e.message ?: "Perfil incompleto para gerar programa.").asFailure()
         }
 
-        val model = dto.toModel(userId, origin = WorkoutOrigin.AI, name = autoName(dto))
+        val model = dto.toModel(userId, origin = WorkoutOrigin.AI, name = autoName(dto), unavailable = profile.unavailableDays.toSet())
         return repository.createForUser(userId, model).flatMap { saved ->
             saved.toDto().asSuccess()
         }
@@ -172,10 +172,10 @@ class ProgramService(
 
 // ---- conversões ProgramDto (motor) <-> Program (model) ----
 
-private fun ProgramDto.toModel(userId: Uuid, origin: WorkoutOrigin, name: String): Program {
+private fun ProgramDto.toModel(userId: Uuid, origin: WorkoutOrigin, name: String, unavailable: Set<Int> = emptySet()): Program {
     val ts = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-    // Espaça os treinos pela semana (folga p/ recuperação). Descanso é implícito (dia sem treino).
-    val days = WeekSpread.daysFor(workouts.size)
+    // Espaça os treinos pela semana (folga p/ recuperação), evitando os dias off do usuário.
+    val days = WeekSpread.daysFor(workouts.size, unavailable)
     return Program(
         id = Uuid.NIL,            // repository gera o real
         userId = userId,

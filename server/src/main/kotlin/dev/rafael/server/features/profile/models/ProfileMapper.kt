@@ -8,6 +8,7 @@ fun Profile.toDto(): ProfileDto = ProfileDto(
     level = level,
     daysPerWeek = daysPerWeek,
     splitPreference = splitPreference,
+    unavailableDays = unavailableDays,
     focusAreas = focusAreas,
     weightKg = weightKg,
     heightCm = heightCm,
