@@ -5,6 +5,7 @@ import dev.gitlive.firebase.auth.FirebaseAuthException
 import dev.gitlive.firebase.auth.FirebaseUser
 import dev.gitlive.firebase.auth.auth
 import dev.rafael.core.network.clearBearerToken
+import dev.rafael.core.network.httpResult
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
@@ -59,10 +60,7 @@ class FirebaseAuthRepository(
         runCatching { auth.currentUser?.getIdToken(false) }.getOrNull()
 
     override suspend fun fetchMe(): AppResult<AuthUser> =
-        runCatching { meDataSource.getMe() }.fold(
-            onSuccess = { AuthUser(uid = it.id, email = it.email).asSuccess() },
-            onFailure = { AppError.Unexpected("Falha ao validar sessão no servidor", it).asFailure() },
-        )
+        httpResult { meDataSource.getMe().let { AuthUser(uid = it.id, email = it.email) } }
 
     private fun mapAuthError(e: Throwable): AppResult<AuthUser> = when (e) {
         is FirebaseAuthException -> AppError.Unauthorized("Credenciais inválidas").asFailure()
