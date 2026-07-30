@@ -46,10 +46,10 @@ data class RenameProgramRequest(val name: String)
 data class CreateManualProgramRequest(val name: String)
 
 /**
- * Body de PUT /programs/{id}/schedule — reordena os treinos do programa.
- * `order` é a lista dos workoutIds na ordem desejada; o servidor grava day_of_week = posição+1
- * (1..N). Precisa ser uma permutação exata dos treinos do programa. Reorder de programa IA
- * exige premium (mesma porta de edição, ARCH #25) — evita furar o blur do value-first (#23).
+ * Body de PUT /programs/{id}/schedule — define o DIA da semana de cada treino (G.2).
+ * `entries` mapeia workoutId → dayOfWeek (1=Seg..7=Dom). Regras: precisa cobrir exatamente
+ * os treinos do programa, cada dia em 1..7 e DISTINTO (folga = dia sem treino). Agendar
+ * programa IA exige premium (mesma porta de edição, ARCH #25) — não fura o blur (#23).
  */
 @Serializable
-data class ReorderScheduleRequest(val order: List<String>)
+data class SetScheduleRequest(val entries: List<ScheduleEntry>)

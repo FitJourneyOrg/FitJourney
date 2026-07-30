@@ -83,7 +83,7 @@ fun AppNavHost() {
                 programId = route.id,
                 onBack = { nav.popBackStack() },
                 onOpenWorkout = { id, editLocked -> nav.navigate(AppRoute.WorkoutDetail(id, editLocked)) },
-                onAddWorkout = { programId -> nav.navigate(AppRoute.WorkoutCreate(programId)) },
+                onAddWorkout = { programId, taken -> nav.navigate(AppRoute.WorkoutCreate(programId, taken)) },
             )
         }
         composable<AppRoute.ProgramGenerate> {
@@ -113,6 +113,7 @@ fun AppNavHost() {
             WorkoutFormScreen(
                 workoutId = null,
                 programId = route.programId,
+                takenDays = route.takenDays,
                 onBack = { nav.popBackStack() },
                 onSaved = { nav.popBackStack() },
             )

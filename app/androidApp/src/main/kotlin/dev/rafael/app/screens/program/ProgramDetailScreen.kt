@@ -3,13 +3,11 @@ package dev.rafael.app.screens.program
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,7 +27,7 @@ fun ProgramDetailScreen(
     programId: String,
     onBack: () -> Unit,
     onOpenWorkout: (String, Boolean) -> Unit,   // (workoutId, editLocked)
-    onAddWorkout: (String) -> Unit,
+    onAddWorkout: (String, String) -> Unit,     // (programId, diasOcupadosCSV)
     viewModel: ProgramDetailViewModel = koinViewModel { parametersOf(programId) },
 ) {
     val state by viewModel.state.collectAsState()
@@ -99,7 +97,11 @@ fun ProgramDetailScreen(
         },
         floatingActionButton = {
             if (!readOnly) {
-                FloatingActionButton(onClick = { onAddWorkout(programId) }) { Text("+") }
+                FloatingActionButton(onClick = {
+                    val taken = state.program?.schedule.orEmpty()
+                        .map { it.dayOfWeek }.sorted().joinToString(",")
+                    onAddWorkout(programId, taken)
+                }) { Text("+") }
             }
         },
     ) { padding ->
@@ -124,32 +126,40 @@ fun ProgramDetailScreen(
                             }
                         }
                         val workouts = state.program?.workouts.orEmpty()
-                        // Reordenar só faz sentido em programa que você edita (não trancado) e com 2+ treinos.
-                        val canReorder = !readOnly && workouts.size > 1
-                        itemsIndexed(workouts) { index, w ->
-                            if (w.locked) {
-                                ListItem(
+                        // Agendar por dia só em programa que você edita (não trancado).
+                        val canSchedule = !readOnly
+                        val dayByWorkout = state.program?.schedule.orEmpty().associate { it.workoutId to it.dayOfWeek }
+                        // Visão da SEMANA: 7 dias; dia sem treino = "Descanso" (descanso é implícito).
+                        val workoutByDay = workouts
+                            .mapNotNull { w -> w.id?.let { id -> dayByWorkout[id]?.let { d -> d to w } } }
+                            .toMap()
+                        items((1..7).toList()) { day ->
+                            val w = workoutByDay[day]
+                            when {
+                                w == null -> ListItem(
+                                    overlineContent = { Text(weekdayLabel(day)) },
+                                    headlineContent = {
+                                        Text("Descanso", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    },
+                                )
+                                w.locked -> ListItem(
+                                    overlineContent = { Text(weekdayLabel(day)) },
                                     headlineContent = { Text(w.name) },
                                     supportingContent = { Text("${w.exerciseCount} exercícios · Assine para desbloquear") },
                                     leadingContent = { Icon(Icons.Default.Lock, contentDescription = "Bloqueado") },
                                     modifier = Modifier.clickable { showPaywall = true },
                                 )
-                            } else {
-                                ListItem(
-                                    headlineContent = { Text("Dia ${index + 1} · ${w.name}") },
+                                else -> ListItem(
+                                    overlineContent = { Text(weekdayLabel(day)) },
+                                    headlineContent = { Text(w.name) },
                                     supportingContent = { Text("${w.exerciseCount} exercícios") },
-                                    trailingContent = if (!canReorder) null else {
+                                    trailingContent = if (!canSchedule) null else {
                                         {
-                                            Row {
-                                                IconButton(
-                                                    onClick = { w.id?.let { viewModel.onEvent(ProgramDetailEvent.MoveWorkout(it, up = true)) } },
-                                                    enabled = index > 0 && !state.isReordering,
-                                                ) { Icon(Icons.Default.KeyboardArrowUp, "Subir") }
-                                                IconButton(
-                                                    onClick = { w.id?.let { viewModel.onEvent(ProgramDetailEvent.MoveWorkout(it, up = false)) } },
-                                                    enabled = index < workouts.lastIndex && !state.isReordering,
-                                                ) { Icon(Icons.Default.KeyboardArrowDown, "Descer") }
-                                            }
+                                            WeekdayPicker(
+                                                day = day,
+                                                enabled = !state.isReordering,
+                                                onPick = { d -> w.id?.let { viewModel.onEvent(ProgramDetailEvent.SetWorkoutDay(it, d)) } },
+                                            )
                                         }
                                     },
                                     modifier = Modifier.clickable { w.id?.let { onOpenWorkout(it, readOnly) } },
@@ -157,6 +167,26 @@ fun ProgramDetailScreen(
                             }
                         }
                     }
+            }
+        }
+    }
+}
+
+private val WEEKDAYS = listOf("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
+private fun weekdayLabel(day: Int): String = WEEKDAYS.getOrElse(day - 1) { "?" }
+
+/** Botão com o dia atual do treino; abre um menu p/ escolher outro (1=Seg..7=Dom). */
+@Composable
+private fun WeekdayPicker(day: Int, enabled: Boolean, onPick: (Int) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        TextButton(onClick = { open = true }, enabled = enabled) { Text(weekdayLabel(day)) }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            (1..7).forEach { d ->
+                DropdownMenuItem(
+                    text = { Text(weekdayLabel(d) + if (d == day) "  ✓" else "") },
+                    onClick = { open = false; if (d != day) onPick(d) },
+                )
             }
         }
     }

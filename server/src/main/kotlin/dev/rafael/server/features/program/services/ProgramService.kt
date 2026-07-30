@@ -13,6 +13,7 @@ import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.core.result.flatMap
+import dev.rafael.server.features.exercise.engine.WeekSpread
 import dev.rafael.server.features.exercise.engine.WorkoutGenerator
 import dev.rafael.server.features.program.db.ProgramRepository
 import dev.rafael.server.features.program.models.Program
@@ -79,25 +80,31 @@ class ProgramService(
         repository.delete(userId, programId)
 
     /**
-     * Reordena os treinos (G.2): grava day_of_week = posição+1. `order` precisa ser uma
-     * permutação EXATA dos treinos do programa. Erros precisos: id inválido/repetido → Validation;
-     * programa não é do usuário → NotFound; ordem não bate com os treinos → Validation.
-     * O gate premium (IA só premium) fica na ROTA (requireEditable), padrão ARCH #18/#25.
+     * Define o DIA da semana de cada treino (G.2 agenda por dia real). `entries` precisa cobrir
+     * EXATAMENTE os treinos do programa; cada dia em 1..7 e DISTINTO (folga = dia sem treino).
+     * Erros precisos: id inválido/dia fora de faixa/dia repetido/entries não batem → Validation;
+     * programa não é do usuário → NotFound. O gate premium fica na ROTA (requireEditable, #18/#25).
      */
-    suspend fun reorderSchedule(userId: Uuid, programId: Uuid, order: List<String>): AppResult<ProgramDto> {
-        if (order.isEmpty()) return AppError.Validation("A ordem não pode ser vazia").asFailure()
-        val parsed = order.map { it to runCatching { Uuid.parse(it) }.getOrNull() }
-        if (parsed.any { it.second == null }) return AppError.Validation("workoutId inválido na ordem").asFailure()
-        val orderedIds = parsed.mapNotNull { it.second }
-        if (orderedIds.toSet().size != orderedIds.size) {
-            return AppError.Validation("A ordem não pode ter treino repetido").asFailure()
+    suspend fun setSchedule(userId: Uuid, programId: Uuid, entries: List<ScheduleEntry>): AppResult<ProgramDto> {
+        if (entries.isEmpty()) return AppError.Validation("A agenda não pode ser vazia").asFailure()
+        if (entries.any { it.dayOfWeek !in 1..7 }) {
+            return AppError.Validation("Dia da semana deve estar entre 1 (Seg) e 7 (Dom)").asFailure()
+        }
+        if (entries.map { it.dayOfWeek }.toSet().size != entries.size) {
+            return AppError.Validation("Dois treinos não podem cair no mesmo dia").asFailure()
+        }
+        val parsed = entries.map { runCatching { Uuid.parse(it.workoutId) }.getOrNull() to it.dayOfWeek }
+        if (parsed.any { it.first == null }) return AppError.Validation("workoutId inválido").asFailure()
+        val byWorkout = parsed.mapNotNull { (id, day) -> id?.let { it to day } }.toMap()
+        if (byWorkout.size != entries.size) {
+            return AppError.Validation("A agenda não pode ter treino repetido").asFailure()
         }
         return repository.findByIdForUser(userId, programId).flatMap { program ->
             when {
                 program == null -> AppError.NotFound("Programa não encontrado").asFailure()
-                orderedIds.toSet() != program.workouts.map { it.id }.toSet() ->
-                    AppError.Validation("A ordem precisa conter exatamente os treinos do programa").asFailure()
-                else -> repository.reorderSchedule(userId, programId, orderedIds).flatMap { updated ->
+                byWorkout.keys != program.workouts.map { it.id }.toSet() ->
+                    AppError.Validation("A agenda precisa cobrir exatamente os treinos do programa").asFailure()
+                else -> repository.setSchedule(userId, programId, byWorkout).flatMap { updated ->
                     if (updated == null) AppError.NotFound("Programa não encontrado").asFailure()
                     else updated.toDto().asSuccess()
                 }
@@ -117,6 +124,27 @@ class ProgramService(
     /** Origem do programa (AI/MANUAL) — usado pelo gate premium de edição (ARCH #25). null = não é do usuário. */
     suspend fun originOf(userId: Uuid, programId: Uuid): AppResult<WorkoutOrigin?> =
         repository.findByIdForUser(userId, programId).flatMap { it?.origin.asSuccess() }
+
+    /**
+     * Resolve o dia (1..7) de um treino NOVO no programa (G.2 — escolha do dia na criação).
+     * - programa não é do usuário → NotFound
+     * - dia escolhido livre → usa ele; fora de 1..7 ou já ocupado → Validation
+     * - sem escolha (null) → primeiro dia livre (fallback; 1 se lotado)
+     */
+    suspend fun resolveNewWorkoutDay(userId: Uuid, programId: Uuid, chosen: Int?): AppResult<Int> =
+        repository.findByIdForUser(userId, programId).flatMap { p ->
+            if (p == null) {
+                AppError.NotFound("Programa não encontrado").asFailure()
+            } else {
+                val used = p.workouts.mapNotNull { it.dayOfWeek }.toSet()
+                when {
+                    chosen == null -> ((1..7).firstOrNull { it !in used } ?: 1).asSuccess()
+                    chosen !in 1..7 -> AppError.Validation("Dia da semana deve estar entre 1 (Seg) e 7 (Dom)").asFailure()
+                    chosen in used -> AppError.Validation("Esse dia já tem um treino").asFailure()
+                    else -> chosen.asSuccess()
+                }
+            }
+        }
 
     /**
      * Gate premium de EDIÇÃO (ARCH #25): um programa origin=AI só pode ser MUTADO
@@ -146,6 +174,8 @@ class ProgramService(
 
 private fun ProgramDto.toModel(userId: Uuid, origin: WorkoutOrigin, name: String): Program {
     val ts = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    // Espaça os treinos pela semana (folga p/ recuperação). Descanso é implícito (dia sem treino).
+    val days = WeekSpread.daysFor(workouts.size)
     return Program(
         id = Uuid.NIL,            // repository gera o real
         userId = userId,
@@ -155,9 +185,9 @@ private fun ProgramDto.toModel(userId: Uuid, origin: WorkoutOrigin, name: String
         split = split,
         rationale = rationale,
         locked = locked,
-        workouts = workouts.map { w ->
+        workouts = workouts.mapIndexed { index, w ->
             Workout(
-                id = Uuid.NIL, userId = userId, name = w.name, programId = null,   // repository seta ao inserir
+                id = Uuid.NIL, userId = userId, name = w.name, programId = null, dayOfWeek = days.getOrNull(index),
                 exercises = w.exercises.map { e ->
                     WorkoutExercise(
                         id = Uuid.NIL,
@@ -209,9 +239,10 @@ private fun Program.toDto(): ProgramDto {
         split = split,
         rationale = rationale,
         locked = locked,
-        // schedule: i-ésimo treino cai no dia i+1 (v1 sequencial; reordena na G.2).
-        schedule = workoutDtos.mapIndexed { i, w ->
-            ScheduleEntry(workoutId = w.id!!, dayOfWeek = i + 1)
+        // schedule: dia REAL da semana de cada treino (G.2 agenda por dia). Legado sem
+        // dia cai na posição (i+1). A leitura já ordena por day_of_week.
+        schedule = workouts.mapIndexed { i, w ->
+            ScheduleEntry(workoutId = w.id.toString(), dayOfWeek = w.dayOfWeek ?: (i + 1))
         },
     )
 }
