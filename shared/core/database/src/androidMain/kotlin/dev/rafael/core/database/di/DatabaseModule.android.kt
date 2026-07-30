@@ -9,6 +9,8 @@ import org.koin.dsl.module
 
 actual val platformDatabaseModule: Module = module {
     single<SqlDriver> {
-        AndroidSqliteDriver(FitJourneyDatabase.Schema, androidContext(), "fitjourney.db")
+        // _v2: schema do cache mudou (uid no onboarding_cache). Sem .sqm, bumpar o nome
+        // recria o cache fresco (é descartável — repopula do server/catálogo).
+        AndroidSqliteDriver(FitJourneyDatabase.Schema, androidContext(), "fitjourney_v2.db")
     }
 }
