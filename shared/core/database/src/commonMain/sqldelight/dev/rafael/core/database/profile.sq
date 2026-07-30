@@ -1,13 +1,14 @@
 CREATE TABLE onboarding_cache (
     id                  INTEGER NOT NULL PRIMARY KEY DEFAULT 0,  -- single-row: sempre id=0
+    uid                 TEXT NOT NULL DEFAULT '',                -- dono do flag (evita vazar entre usuários)
     onboardingCompleted INTEGER NOT NULL                         -- 0/1
 );
 
 selectOnboarding:
-SELECT onboardingCompleted FROM onboarding_cache WHERE id = 0;
+SELECT uid, onboardingCompleted FROM onboarding_cache WHERE id = 0;
 
 upsertOnboarding:
-INSERT OR REPLACE INTO onboarding_cache(id, onboardingCompleted) VALUES (0, ?);
+INSERT OR REPLACE INTO onboarding_cache(id, uid, onboardingCompleted) VALUES (0, ?, ?);
 
 clearOnboarding:
 DELETE FROM onboarding_cache;

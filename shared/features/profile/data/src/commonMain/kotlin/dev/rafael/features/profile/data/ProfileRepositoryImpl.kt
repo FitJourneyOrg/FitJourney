@@ -1,5 +1,6 @@
 package dev.rafael.features.profile.data
 
+import dev.rafael.core.network.TokenProvider
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
@@ -11,21 +12,20 @@ import io.ktor.http.HttpStatusCode
 
 class ProfileRepositoryImpl(
     private val remote: ProfileDataSource,
-    private val local: ProfileLocalDataSource,   // <- novo
+    private val local: ProfileLocalDataSource,
+    private val tokenProvider: TokenProvider,   // p/ chavear o cache por uid (vem do core, sem dep de feature)
 ) : ProfileRepository {
 
     override suspend fun getProfile(): AppResult<Profile> =
         runCatching { remote.getProfile().toDomain() }.fold(
             onSuccess = { profile ->
-                local.saveOnboarding(profile.onboardingCompleted)   // <- grava cache
+                cacheOnboarding(profile.onboardingCompleted)   // grava o flag do usuário ATUAL
                 profile.asSuccess()
             },
             onFailure = { e ->
                 when {
                     e is ClientRequestException && e.response.status == HttpStatusCode.NotFound -> {
-                        // Sem perfil = não onboardou. Corrige o cache stale (single-row por device):
-                        // sem isso, um usuário novo herda o 'true' de um usuário anterior no fallback.
-                        local.saveOnboarding(false)
+                        cacheOnboarding(false)   // sem perfil = não onboardou (p/ o uid atual)
                         AppError.NotFound("Perfil não encontrado").asFailure()
                     }
                     else ->
@@ -37,16 +37,21 @@ class ProfileRepositoryImpl(
     override suspend fun saveProfile(profile: Profile): AppResult<Profile> =
         runCatching { remote.saveProfile(profile.toDto()).toDomain() }.fold(
             onSuccess = { saved ->
-                local.saveOnboarding(saved.onboardingCompleted)     // <- grava cache (true pós-quiz)
+                cacheOnboarding(saved.onboardingCompleted)   // true pós-quiz (p/ o uid atual)
                 saved.asSuccess()
             },
             onFailure = { AppError.Unexpected("Falha ao salvar perfil", it).asFailure() },
         )
 
-    override suspend fun cachedOnboardingCompleted(): Boolean? = local.cachedOnboarding()
+    override suspend fun cachedOnboardingCompleted(): Boolean? =
+        local.cachedOnboarding(tokenProvider.currentUid())
 
-    // Marca "não onboardado" no logout. Assim, se o próximo usuário (novo cadastro) cair no
-    // fallback (getProfile lento/offline), o gate manda p/ o Quiz — e não herda o 'true' do
-    // usuário anterior mandando pra Home. (Cache é single-row por device — ver débito uid.)
-    override suspend fun clearOnboardingCache() = local.saveOnboarding(false)
+    // Logout: apaga o cache. Como o cache é chaveado por uid, o próximo usuário já não
+    // herdaria o flag; apagar é só higiene extra.
+    override suspend fun clearOnboardingCache() = local.clear()
+
+    private suspend fun cacheOnboarding(completed: Boolean) {
+        val uid = tokenProvider.currentUid() ?: return   // sem uid não dá p/ chavear — não cacheia
+        local.saveOnboarding(uid, completed)
+    }
 }

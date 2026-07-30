@@ -8,6 +8,6 @@ import org.koin.dsl.module
 
 actual val platformDatabaseModule: Module = module {
     single<SqlDriver> {
-        NativeSqliteDriver(FitJourneyDatabase.Schema, "fitjourney.db")
+        NativeSqliteDriver(FitJourneyDatabase.Schema, "fitjourney_v2.db")   // _v2: schema do cache mudou (uid)
     }
 }
