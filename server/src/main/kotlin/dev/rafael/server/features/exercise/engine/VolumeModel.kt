@@ -5,7 +5,7 @@ import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
 
 /**
- * Modelo de volume por músculo (ARCH #27, Fatia A). Substitui o raciocínio antigo
+ * Modelo de volume por músculo (ARCH #26, Fatia A). Substitui o raciocínio antigo
  * de "slots por padrão por dia" pela variável-mãe da hipertrofia: séries semanais
  * efetivas por músculo (RP/Israetel). Determinístico, sem LLM (ARCH #20).
  *
@@ -14,10 +14,10 @@ import dev.rafael.contract.profile.MuscleGroup
  */
 enum class TargetMuscle { CHEST, BACK, SHOULDERS, ARMS, QUADS, POSTERIOR, CALVES, GLUTES, CORE }
 
-/** Papel do exercício → define reps/descanso/RIR (ARCH #27 §3.2). */
+/** Papel do exercício → define reps/descanso/RIR (ARCH #26 §3.2). */
 enum class SlotRole { COMPOSTO_PESADO, COMPOSTO_ACESSORIO, ISOLAMENTO }
 
-/** Tabela de volume ratificada (ARCH #27 §3.1). Séries efetivas/semana. */
+/** Tabela de volume ratificada (ARCH #26 §3.1). Séries efetivas/semana. */
 object VolumeTable {
     private data class V(val ini: Int, val inter: Int, val adv: Int, val mrv: Int)
 
@@ -58,7 +58,7 @@ object VolumeTable {
     }
 }
 
-/** Reps/descanso/RIR por papel (ARCH #27 §3.2), com modificador conservador. */
+/** Reps/descanso/RIR por papel (ARCH #26 §3.2), com modificador conservador. */
 object RoleParams {
     data class P(val repRange: String, val restSeconds: Int, val rir: Int)
 

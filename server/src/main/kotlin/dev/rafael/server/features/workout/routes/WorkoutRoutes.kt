@@ -1,8 +1,6 @@
 package dev.rafael.server.features.workout.routes
 
-import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.workout.WorkoutDto
-import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
@@ -37,16 +35,19 @@ fun Route.workoutRoutes(
         post("/workouts") {
             val p = call.principal<FirebaseUser>()!!
             val dto = call.receive<WorkoutDto>()
-            // ARCH #26: todo treino vive dentro de um programa — gate composto aqui
+            // ARCH #27: todo treino vive dentro de um programa — gate composto aqui
             // (na rota), não no WorkoutService, pra não criar ciclo workout→program.
             val programId = dto.programId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
             val result = if (programId == null) {
                 AppError.Validation("Treino precisa pertencer a um programa (programId inválido ou ausente)").asFailure()
             } else {
                 userService.findOrCreate(p.uid, p.email).flatMap { user ->
-                    programService.workoutCountForOwner(user.id, programId).flatMap { count ->
-                        if (count == null) AppError.NotFound("Programa não encontrado").asFailure()
-                        else service.create(p.uid, p.email, dto, programId, dayOfWeek = count + 1)
+                    // GATE PREMIUM (ARCH #25): adicionar treino a programa IA exige premium.
+                    programService.requireEditable(user.id, programId, user.isPremium).flatMap {
+                        // G.2: usa o dia escolhido (dto.dayOfWeek) validando colisão, ou 1º dia livre.
+                        programService.resolveNewWorkoutDay(user.id, programId, dto.dayOfWeek).flatMap { day ->
+                            service.create(p.uid, p.email, dto, programId, dayOfWeek = day)
+                        }
                     }
                 }
             }
@@ -76,15 +77,8 @@ fun Route.workoutRoutes(
                     if (pid == null) {
                         service.update(p.uid, p.email, id, dto).notFoundIfNull()
                     } else {
-                        programService.originOf(user.id, pid).flatMap { origin ->
-                            if (origin == WorkoutOrigin.AI && !user.isPremium) {
-                                AppError.Forbidden(
-                                    "Editar um programa gerado por IA é um recurso premium.",
-                                    ErrorCodes.ENTITLEMENT_REQUIRED,
-                                ).asFailure()
-                            } else {
-                                service.update(p.uid, p.email, id, dto).notFoundIfNull()
-                            }
+                        programService.requireEditable(user.id, pid, user.isPremium).flatMap {
+                            service.update(p.uid, p.email, id, dto).notFoundIfNull()
                         }
                     }
                 }
@@ -95,8 +89,20 @@ fun Route.workoutRoutes(
         delete("/workouts/{id}") {
             val p = call.principal<FirebaseUser>()!!
             val id = call.workoutIdParam() ?: return@delete call.respondResult(notFound<Unit>())
-            val result = service.delete(p.uid, p.email, id).flatMap { deleted ->
-                if (deleted) Unit.asSuccess() else AppError.NotFound("Treino não encontrado").asFailure()
+            // GATE PREMIUM (ARCH #25): remover treino de programa IA exige premium.
+            val result = userService.findOrCreate(p.uid, p.email).flatMap { user ->
+                service.get(p.uid, p.email, id).notFoundIfNull().flatMap { existing ->
+                    val pid = existing.programId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
+                    val gate: AppResult<Unit> =
+                        if (pid == null) Unit.asSuccess()
+                        else programService.requireEditable(user.id, pid, user.isPremium)
+                    gate.flatMap {
+                        service.delete(p.uid, p.email, id).flatMap { deleted ->
+                            if (deleted) Unit.asSuccess()
+                            else AppError.NotFound("Treino não encontrado").asFailure()
+                        }
+                    }
+                }
             }
             call.respondResult(result)
         }

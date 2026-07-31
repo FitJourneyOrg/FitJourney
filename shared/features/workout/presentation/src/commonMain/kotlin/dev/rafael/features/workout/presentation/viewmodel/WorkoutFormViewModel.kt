@@ -21,12 +21,27 @@ private const val DEFAULT_REPS = "12"
 
 class WorkoutFormViewModel(
     private val workoutId: String?,          // null = criar
-    private val programId: String?,          // obrigatório se workoutId == null (ARCH #26)
+    private val programId: String?,          // obrigatório se workoutId == null (ARCH #27)
+    takenDaysCsv: String,                    // dias já ocupados no programa (ex.: "1,3,5")
     private val repository: WorkoutRepository,
     private val lookup: ExerciseLookup,
 ) : ViewModel() {
 
-    private val _state = MutableStateFlow(WorkoutFormState(workoutId = workoutId, programId = programId))
+    private val takenDays: Set<Int> =
+        takenDaysCsv.split(",").mapNotNull { it.trim().toIntOrNull() }.toSet()
+
+    // Na criação, o dia começa no 1º dia livre da semana (evita cair num já ocupado).
+    private val initialDay: Int? =
+        if (workoutId == null) (1..7).firstOrNull { it !in takenDays } else null
+
+    private val _state = MutableStateFlow(
+        WorkoutFormState(
+            workoutId = workoutId,
+            programId = programId,
+            takenDays = takenDays,
+            selectedDay = initialDay,
+        ),
+    )
     val state: StateFlow<WorkoutFormState> = _state.asStateFlow()
 
     init { if (workoutId != null) loadExisting(workoutId) }
@@ -35,6 +50,9 @@ class WorkoutFormViewModel(
         when (event) {
             is WorkoutFormEvent.NameChanged ->
                 _state.update { it.copy(name = event.value) }
+
+            is WorkoutFormEvent.DaySelected ->
+                _state.update { it.copy(selectedDay = event.dayOfWeek) }
 
             is WorkoutFormEvent.ExercisesAdded -> addExercises(event.ids)
 
@@ -78,6 +96,8 @@ class WorkoutFormViewModel(
                                     exerciseId = e.exerciseId,
                                     name = refs[e.exerciseId]?.name ?: "Exercício indisponível",
                                     sets = e.sets.sortedBy { s -> s.orderIndex }.map { s -> s.reps.toString() },
+                                    restSeconds = e.restSeconds,   // preserva a prescrição do motor (#26)
+                                    rir = e.rir,
                                 )
                             },
                         )
@@ -113,10 +133,13 @@ class WorkoutFormViewModel(
             id = s.workoutId,
             name = s.name.trim(),
             programId = s.programId,
+            dayOfWeek = if (s.isEditing) null else s.selectedDay,   // dia só na criação (update preserva no server)
             exercises = s.exercises.mapIndexed { i, ex ->
                 WorkoutExercise(
                     exerciseId = ex.exerciseId,
                     orderIndex = i,                                    // derivado da posição
+                    restSeconds = ex.restSeconds,                      // round-trip (#26); não zera
+                    rir = ex.rir,
                     sets = ex.sets.mapIndexed { j, reps ->
                         WorkoutSet(reps = reps.toInt(), orderIndex = j)
                     },

@@ -6,10 +6,10 @@ import dev.rafael.server.features.program.models.ProgramCounts
 import kotlin.uuid.Uuid
 
 interface ProgramRepository {
-    /** Contagem por origem (AI/MANUAL) — insumo dos gates de teto (ARCH #26). */
+    /** Contagem por origem (AI/MANUAL) — insumo dos gates de teto (ARCH #27). */
     suspend fun counts(userId: Uuid): AppResult<ProgramCounts>
 
-    /** Insere um programa novo pro usuário. NÃO substitui os existentes (ARCH #26). */
+    /** Insere um programa novo pro usuário. NÃO substitui os existentes (ARCH #27). */
     suspend fun createForUser(userId: Uuid, program: Program): AppResult<Program>
 
     /** Todos os programas do usuário, mais recente primeiro. */
@@ -23,4 +23,11 @@ interface ProgramRepository {
 
     /** Remove o programa (CASCADE apaga os workouts). false se não existe/não é do usuário. */
     suspend fun delete(userId: Uuid, programId: Uuid): AppResult<Boolean>
+
+    /**
+     * Grava o dia da semana de cada treino (G.2). `schedule` = workoutId → dayOfWeek (1..7).
+     * A validação (permutação, dias distintos/faixa) é do ProgramService; aqui só persiste.
+     * Retorna o programa relido, ou null se não existe/não é do usuário.
+     */
+    suspend fun setSchedule(userId: Uuid, programId: Uuid, schedule: Map<Uuid, Int>): AppResult<Program?>
 }

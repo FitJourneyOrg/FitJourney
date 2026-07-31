@@ -40,3 +40,40 @@ jobs:
 
       - name: Build & test server
         run: ./gradlew :server:build
+
+      - name: Integration tests (Testcontainers + Postgres)
+        run: ./gradlew :server:integrationTest   # ubuntu-latest já tem Docker
+
+      - name: Client tests (KMP host)
+        run: ./gradlew testAndroidHostTest        # roda em TODOS os módulos que têm a task
+
+      # google-services.json é local (gitignored). Compilar o app NÃO precisa de Firebase
+      # real — só de um JSON bem-formado com o package casando. Gera um fake só p/ o CI.
+      - name: Fake google-services.json (só p/ compilar)
+        run: |
+          cat > app/androidApp/google-services.json <<'JSON'
+          {
+            "project_info": {
+              "project_number": "000000000000",
+              "project_id": "fitjourney-ci",
+              "storage_bucket": "fitjourney-ci.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+                  "android_client_info": { "package_name": "dev.rafael.app" }
+                },
+                "oauth_client": [],
+                "api_key": [ { "current_key": "AIzaSyA0000000000000000000000000000000" } ],
+                "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
+              }
+            ],
+            "configuration_version": "1"
+          }
+          JSON
+
+      # Compila o app inteiro (Compose/telas/ViewModels) — pega erro de compilação de UI
+      # que os testes de host NÃO cobrem (o :app:androidApp não é testado por eles).
+      - name: Build Android app (compila UI)
+        run: ./gradlew :app:androidApp:assembleDebug

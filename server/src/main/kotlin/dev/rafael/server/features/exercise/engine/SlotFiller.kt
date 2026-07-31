@@ -8,7 +8,7 @@ import kotlin.random.Random
 import kotlin.uuid.Uuid
 
 /**
- * Preenchedor de slots (F.4, ajustado no ARCH #27). Para cada Slot, escolhe UM
+ * Preenchedor de slots (F.4, ajustado no ARCH #26). Para cada Slot, escolhe UM
  * exercício do pool que casa com o músculo-alvo e o papel (composto vs isolamento),
  * sem repetir no programa. Determinístico (mesma seed + perfil = mesmo treino).
  *

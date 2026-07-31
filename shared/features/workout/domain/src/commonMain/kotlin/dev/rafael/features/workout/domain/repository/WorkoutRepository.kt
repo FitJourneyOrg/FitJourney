@@ -10,6 +10,6 @@ interface WorkoutRepository {
     suspend fun create(workout: Workout): AppResult<Workout>    // POST /workouts
     suspend fun update(id: String, workout: Workout): AppResult<Workout>  // PUT /workouts/{id}
     suspend fun delete(id: String): AppResult<Unit>
-    // generate() removido (ARCH #26): POST /workouts/generate não existe no server —
+    // generate() removido (ARCH #27): POST /workouts/generate não existe no server —
     // geração por IA é POST /programs/generate (ver ProgramRepository).
 }

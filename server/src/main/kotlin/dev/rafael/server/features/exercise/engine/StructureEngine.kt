@@ -3,15 +3,17 @@ package dev.rafael.server.features.exercise.engine
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.profile.SplitCatalog
+import dev.rafael.contract.profile.SplitType
 import kotlin.math.roundToInt
 
 /**
- * Motor de estrutura (F.2, reescrito no ARCH #27). A variável-mãe é o VOLUME por
+ * Motor de estrutura (F.2, reescrito no ARCH #26). A variável-mãe é o VOLUME por
  * músculo (séries/semana), não slots por padrão. Fluxo:
  *   1. Alvo semanal por músculo (VolumeTable + foco).
  *   2. Split → em que dias cada músculo cai (define a frequência).
  *   3. Por (dia, músculo): séries da sessão = alvo/frequência → nº de exercícios
- *      (piso de 3 séries por exercício, ARCH #27 §3.3).
+ *      (piso de 3 séries por exercício, ARCH #26 §3.3).
  *   4. Papel por posição → reps/descanso/RIR (§3.2).
  *
  * Determinístico, sem LLM (ARCH #20). Perna fina; idade fica pra fatia própria.
@@ -31,8 +33,11 @@ class StructureEngine {
         level: Level,
         daysPerWeek: Int,
         focusMuscles: Set<MuscleGroup>,
+        splitPreference: SplitType? = null,
     ): ProgramSkeleton {
         val days = daysPerWeek.coerceIn(2, 6)
+        // ARCH #29: usa a escolha do usuário se for válida pro nº de dias; senão o recomendado (#26).
+        val split = SplitCatalog.resolve(days, splitPreference)
 
         // 1. Alvo semanal por músculo (+ foco, respeitando o MRV).
         val focusTargets = focusMuscles.flatMap { VolumeTable.targetsForFocus(it) }.toSet()
@@ -43,7 +48,7 @@ class StructureEngine {
         }
 
         // 2. Split → dias e seus músculos.
-        val template = splitTemplate(days)
+        val template = splitTemplate(days, split)
 
         // 3. Frequência = em quantos dias cada músculo aparece.
         val frequency = TargetMuscle.entries.associateWith { m ->
@@ -86,7 +91,7 @@ class StructureEngine {
             DaySkeleton(label, slots)
         }
 
-        return ProgramSkeleton(daySkeletons, splitName(days), rationale(days, focusMuscles))
+        return ProgramSkeleton(daySkeletons, split.label, rationale(days, focusMuscles, split))
     }
 
     /**
@@ -105,7 +110,7 @@ class StructureEngine {
         val bigs = bigMuscles.filter { it in muscles }
         val smalls = smallMuscles.filter { it in muscles }
         val budgetForSmall = (SESSION_MAX_EXERCISES - bigs.size).coerceAtLeast(0)
-        // FOCO PROTEGIDO (ARCH #28, defeito #1): músculo pequeno de foco entra SEMPRE,
+        // FOCO PROTEGIDO (ARCH #26, defeito #1): músculo pequeno de foco entra SEMPRE,
         // antes da rotação — senão o bônus de volume do foco nunca vira exercício.
         val focusSmalls = smalls.filter { it in focus }
         val restSmalls = smalls.filter { it !in focus }
@@ -156,32 +161,39 @@ class StructureEngine {
 
     // ---- split: em que dias cada músculo cai (frequência-primeiro, ~2x) ----
 
-    private fun splitTemplate(days: Int): List<Pair<String, Set<TargetMuscle>>> = when (days) {
-        2 -> listOf("Full Body A" to FULL, "Full Body B" to FULL)
-        3 -> listOf("Full Body A" to FULL, "Full Body B" to FULL, "Full Body C" to FULL)
-        4 -> listOf("Upper A" to UPPER, "Lower A" to LOWER, "Upper B" to UPPER, "Lower B" to LOWER)
-        5 -> listOf("Upper" to UPPER, "Lower" to LOWER, "Push" to PUSH, "Pull" to PULL, "Legs" to LEGS)
-        else -> listOf(
-            "Push A" to PUSH, "Pull A" to PULL, "Legs A" to LEGS,
-            "Push B" to PUSH, "Pull B" to PULL, "Legs B" to LEGS,
+    private fun splitTemplate(days: Int, split: SplitType): List<Pair<String, Set<TargetMuscle>>> = when (split) {
+        SplitType.FULL_BODY -> cycle(days, listOf("Full Body" to FULL))
+        SplitType.UPPER_LOWER -> cycle(days, listOf("Upper" to UPPER, "Lower" to LOWER))
+        SplitType.UPPER_LOWER_FULL -> listOf("Upper" to UPPER, "Lower" to LOWER, "Full Body" to FULL)
+        SplitType.PUSH_PULL_LEGS -> cycle(days, listOf("Push" to PUSH, "Pull" to PULL, "Legs" to LEGS))
+        SplitType.UL_PPL -> listOf(
+            "Upper" to UPPER, "Lower" to LOWER, "Push" to PUSH, "Pull" to PULL, "Legs" to LEGS,
+        )
+        SplitType.ARNOLD -> cycle(
+            days, listOf("Peito+Costas" to CHEST_BACK, "Pernas" to LEGS, "Ombros+Braços" to SHOULDERS_ARMS),
         )
     }
 
-    private fun splitName(days: Int) = when (days) {
-        2, 3 -> "Full Body"; 4 -> "Upper/Lower"; 5 -> "Upper/Lower + PPL"; else -> "Push/Pull/Legs"
+    /** Repete o ciclo base por `days`, sufixando A/B/... quando há mais de uma rodada. */
+    private fun cycle(
+        days: Int,
+        base: List<Pair<String, Set<TargetMuscle>>>,
+    ): List<Pair<String, Set<TargetMuscle>>> {
+        val n = base.size
+        val rounds = (days + n - 1) / n
+        return (0 until days).map { i ->
+            val (label, muscles) = base[i % n]
+            val suffix = if (rounds > 1) " ${'A' + i / n}" else ""
+            "$label$suffix" to muscles
+        }
     }
 
-    private fun rationale(days: Int, focus: Set<MuscleGroup>): String {
-        val base = when (days) {
-            2, 3 -> "Full Body em $days dias: cada músculo é estimulado com alta frequência, o que a ciência mostra ser mais eficaz em baixa frequência de treinos."
-            4 -> "Upper/Lower em 4 dias: cada músculo 2x por semana, o ponto ideal para hipertrofia."
-            5 -> "Upper/Lower + Push/Pull/Legs em 5 dias: mantém frequência 2x e distribui o volume por músculo."
-            else -> "Push/Pull/Legs repetido em 6 dias: cada músculo 2x por semana, volume alto bem distribuído."
-        }
-        val volume = " O volume (séries/semana por músculo) é calibrado pelo seu nível — a base do modelo de hipertrofia."
+    private fun rationale(days: Int, focus: Set<MuscleGroup>, split: SplitType): String {
+        val base = "Split ${split.label} em $days dias: ${split.description} " +
+            "O volume (séries/semana por músculo) é calibrado pelo seu nível — a base do modelo de hipertrofia."
         val f = if (focus.isEmpty()) "" else
             " Como você priorizou ${focus.joinToString(", ") { it.name }}, esses grupos recebem volume extra."
-        return base + volume + f
+        return base + f
     }
 
     // ---- grupos de músculos por tipo de dia ----
@@ -190,6 +202,8 @@ class StructureEngine {
     private val PUSH = setOf(TargetMuscle.CHEST, TargetMuscle.SHOULDERS, TargetMuscle.ARMS)
     private val PULL = setOf(TargetMuscle.BACK, TargetMuscle.ARMS)
     private val LEGS = setOf(TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.CALVES, TargetMuscle.GLUTES)
+    private val CHEST_BACK = setOf(TargetMuscle.CHEST, TargetMuscle.BACK)                 // Arnold dia 1
+    private val SHOULDERS_ARMS = setOf(TargetMuscle.SHOULDERS, TargetMuscle.ARMS)         // Arnold dia 3
     private val FULL = TargetMuscle.entries.toSet()
 
     /** Ordem canônica pra montagem determinística (grandes → pequenos). */

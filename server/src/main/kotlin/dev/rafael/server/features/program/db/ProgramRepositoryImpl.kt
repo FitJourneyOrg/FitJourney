@@ -16,7 +16,7 @@ import dev.rafael.server.features.workout.models.WorkoutExercise
 import dev.rafael.server.features.workout.models.WorkoutSet
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -32,7 +32,7 @@ import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.uuid.Uuid
 
 /**
- * Persistência do programa (ARCH #26 — multi-programa, substitui o modelo "1 ativo"
+ * Persistência do programa (ARCH #27 — multi-programa, substitui o modelo "1 ativo"
  * da G.1). Segue o padrão do WorkoutRepositoryImpl (dbQuery → AppResult). Reusa a
  * MESMA lógica de inserir exercises+sets pra evitar drift do restSeconds.
  */
@@ -91,6 +91,28 @@ class ProgramRepositoryImpl : ProgramRepository {
         n > 0
     }
 
+    override suspend fun setSchedule(
+        userId: Uuid,
+        programId: Uuid,
+        schedule: Map<Uuid, Int>,
+    ): AppResult<Program?> = dbQuery {
+        // valida posse; null → rota devolve NotFound
+        ProgramsTable.selectAll()
+            .where { (ProgramsTable.id eq programId) and (ProgramsTable.userId eq userId) }
+            .limit(1).singleOrNull() ?: return@dbQuery null
+        val ts = now()
+        // grava o dia de cada treino. O where inclui programId: id estranho não afeta nada.
+        schedule.forEach { (wId, day) ->
+            WorkoutsTable.update({ (WorkoutsTable.id eq wId) and (WorkoutsTable.programId eq programId) }) {
+                it[dayOfWeek] = day
+                it[updatedAt] = ts
+            }
+        }
+        ProgramsTable.update({ ProgramsTable.id eq programId }) { it[updatedAt] = ts }
+        val row = ProgramsTable.selectAll().where { ProgramsTable.id eq programId }.single()
+        row.toProgram(readProgramWorkouts(userId, programId))
+    }
+
     override suspend fun createForUser(userId: Uuid, program: Program): AppResult<Program> = dbQuery {
         val ts = now()
         val programId = Uuid.random()
@@ -114,7 +136,7 @@ class ProgramRepositoryImpl : ProgramRepository {
                 it[WorkoutsTable.userId] = userId
                 it[name] = w.name
                 it[WorkoutsTable.programId] = programId
-                it[dayOfWeek] = index + 1                 // 1..N (usuário reordena na G.2)
+                it[dayOfWeek] = w.dayOfWeek ?: (index + 1)   // dia espaçado (WeekSpread) ou fallback posicional
                 it[createdAt] = ts
                 it[updatedAt] = ts
             }
@@ -150,8 +172,11 @@ class ProgramRepositoryImpl : ProgramRepository {
     }
 
     private fun readProgramWorkouts(userId: Uuid, programId: Uuid): List<Workout> {
+        // Ordena pelo day_of_week (fonte da verdade do agendamento — G.2). Legado com NULL
+        // cai por último (Postgres NULLS LAST no ASC). O schedule do DTO deriva desta ordem.
         return WorkoutsTable.selectAll()
             .where { WorkoutsTable.programId eq programId }
+            .orderBy(WorkoutsTable.dayOfWeek, SortOrder.ASC)
             .map { wRow ->
                 val workoutId = wRow[WorkoutsTable.id]
                 val exercises = WorkoutExercisesTable.selectAll()
@@ -162,13 +187,13 @@ class ProgramRepositoryImpl : ProgramRepository {
                     id = workoutId,
                     userId = userId,
                     programId = programId,
+                    dayOfWeek = wRow[WorkoutsTable.dayOfWeek],
                     name = wRow[WorkoutsTable.name],
                     exercises = exercises,
                     createdAt = wRow[WorkoutsTable.createdAt],
                     updatedAt = wRow[WorkoutsTable.updatedAt],
                 )
             }
-            .sortedBy { it.createdAt }
     }
 
     private fun ResultRow.toWorkoutExercise(): WorkoutExercise {

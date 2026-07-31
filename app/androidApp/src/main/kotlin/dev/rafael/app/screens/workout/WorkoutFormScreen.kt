@@ -1,8 +1,10 @@
 package dev.rafael.app.screens.workout
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,10 +22,11 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun WorkoutFormScreen(
     workoutId: String?,
-    programId: String?,   // obrigatório ao criar (ARCH #26); null ao editar
+    programId: String?,   // obrigatório ao criar (ARCH #27); null ao editar
     onBack: () -> Unit,
     onSaved: () -> Unit,
-    viewModel: WorkoutFormViewModel = koinViewModel { parametersOf(workoutId, programId) },
+    takenDays: String = "",   // CSV dos dias já ocupados no programa
+    viewModel: WorkoutFormViewModel = koinViewModel { parametersOf(workoutId, programId, takenDays) },
 ) {
     val state by viewModel.state.collectAsState()
     var showPicker by remember { mutableStateOf(false) }
@@ -74,6 +77,29 @@ fun WorkoutFormScreen(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+            }
+
+            // Dia da semana — só na criação (na edição o dia é gerido pela agenda do programa).
+            if (!state.isEditing) {
+                item {
+                    Text("Dia da semana", style = MaterialTheme.typography.labelLarge)
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        listOf("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom").forEachIndexed { idx, lbl ->
+                            val d = idx + 1
+                            val taken = d in state.takenDays
+                            FilterChip(
+                                selected = state.selectedDay == d,
+                                enabled = !taken,   // dia já ocupado por outro treino
+                                onClick = { viewModel.onEvent(WorkoutFormEvent.DaySelected(d)) },
+                                label = { Text(lbl) },
+                            )
+                        }
+                    }
+                }
             }
 
             state.error?.let { msg ->

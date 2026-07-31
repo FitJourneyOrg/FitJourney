@@ -31,6 +31,11 @@ class QuizViewModel(
             is QuizEvent.WeightChanged -> _state.update { it.copy(weightKg = event.value) }
             is QuizEvent.HeightChanged -> _state.update { it.copy(heightCm = event.value) }
             is QuizEvent.EnvironmentSelected -> _state.update { it.copy(environment = event.env, error = null) }
+            is QuizEvent.SplitSelected -> _state.update { it.copy(splitPreference = event.split, error = null) }
+            is QuizEvent.RestDayToggled -> _state.update { s ->
+                val cur = s.unavailableDays
+                s.copy(unavailableDays = if (event.dayOfWeek in cur) cur - event.dayOfWeek else cur + event.dayOfWeek, error = null)
+            }
             is QuizEvent.HealthToggled -> toggleHealth(event.field)
             is QuizEvent.LimitationToggled -> _state.update { s ->
                 val cur = s.limitations
@@ -71,17 +76,17 @@ class QuizViewModel(
     private fun next() {
         val s = _state.value
         if (!s.canAdvance) return
-        val steps = QuizStep.entries
+        val steps = s.visibleSteps          // iniciante/saúde geral pulam o FOCO (#26/#24)
         val idx = steps.indexOf(s.step)
         if (idx < steps.lastIndex) {
             _state.update { it.copy(step = steps[idx + 1]) }
         } else {
-            submit()   // último passo (BODY) -> envia
+            submit()   // último passo -> envia
         }
     }
 
     private fun back() {
-        val steps = QuizStep.entries
+        val steps = _state.value.visibleSteps
         val idx = steps.indexOf(_state.value.step)
         if (idx > 0) _state.update { it.copy(step = steps[idx - 1]) }
     }
@@ -101,7 +106,9 @@ class QuizViewModel(
                 goal = goal,
                 level = level,
                 daysPerWeek = days,
-                focusAreas = s.focusAreas,
+                splitPreference = s.splitPreference,   // ARCH #29 (null = recomendado)
+                unavailableDays = s.unavailableDays,   // Estágio 2: dias que não quer treinar
+                focusAreas = if (s.focusEligible) s.focusAreas else emptyList(),   // iniciante/saúde geral não focam
                 weightKg = s.weightKg,
                 heightCm = s.heightCm,
                 environment = s.environment,   // <- novo

@@ -8,7 +8,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 /**
- * Testa o motor de estrutura (F.2, reescrito no ARCH #27) — puro, sem banco.
+ * Testa o motor de estrutura (F.2, reescrito no ARCH #26) — puro, sem banco.
  * Prova: split por dias, volume por nível, perna fina, piso de 3 séries, RIR, descanso por papel.
  */
 class StructureEngineTest {
@@ -102,6 +102,19 @@ class StructureEngineTest {
     fun `rationale menciona o foco quando presente`() {
         val comFoco = engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.ADVANCED, 5, setOf(MuscleGroup.ARMS))
         assertTrue(comFoco.rationale.contains("ARMS"), "rationale deve explicar o foco")
+    }
+
+    @Test
+    fun `musculo de foco aparece em todo dia do full body`() {
+        // ARMS é "pequeno" e seria rotacionado pra fora do Full Body. Com foco protegido
+        // (ARCH #28, defeito #1) ele entra em TODOS os dias.
+        val sk = engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.INTERMEDIATE, 3, setOf(MuscleGroup.ARMS))
+        sk.days.forEach { d ->
+            assertTrue(
+                d.slots.any { it.target == TargetMuscle.ARMS },
+                "dia '${d.label}' deveria treinar ARMS (foco protegido)",
+            )
+        }
     }
 
     // helpers

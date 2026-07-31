@@ -22,5 +22,5 @@ val authDataModule: Module = module {
     single { MeDataSource(client = get()) }
 
     // repositório (implementa a interface do domain)
-    single<AuthRepository> { FirebaseAuthRepository(meDataSource = get()) }
+    single<AuthRepository> { FirebaseAuthRepository(meDataSource = get(), httpClient = get()) }
 }

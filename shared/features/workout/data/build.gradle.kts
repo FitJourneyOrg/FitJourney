@@ -16,5 +16,8 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.contentNegotiation)
         }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+        }
     }
 }
