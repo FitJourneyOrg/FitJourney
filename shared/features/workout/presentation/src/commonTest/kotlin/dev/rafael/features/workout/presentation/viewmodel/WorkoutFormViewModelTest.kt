@@ -49,7 +49,7 @@ class WorkoutFormViewModelTest {
 
     private class FakeLookup : ExerciseLookup {
         override suspend fun byIds(ids: List<String>) =
-            ids.associateWith { ExerciseRef(it, "Exercício $it", null) }
+            ids.associateWith { ExerciseRef(it, "Exercício $it", "") }
     }
 
     private fun aiWorkout() = Workout(
