@@ -42,6 +42,7 @@ dependencies {
     // Testes
     testImplementation(libs.ktor.serverTestHost)
     testImplementation(libs.kotlin.testJunit)
+    testImplementation(libs.kotlinx.coroutines.core)   // runBlocking em testes de service suspend
 
     implementation(libs.flyway.core)              // API Flyway.configure() é referenciada no código
     runtimeOnly(libs.flyway.databasePostgresql)   // plugin de dialeto: descoberto via service loader, código não toca

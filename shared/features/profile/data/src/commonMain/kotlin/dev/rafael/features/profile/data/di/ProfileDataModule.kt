@@ -12,5 +12,5 @@ val profileDataModule: Module = module {
     // reusa o HttpClient autenticado já provido pelo authDataModule
     single { ProfileDataSource(client = get<HttpClient>()) }
     single { ProfileLocalDataSource(get()) }
-    single<ProfileRepository> { ProfileRepositoryImpl(get(), get()) }
+    single<ProfileRepository> { ProfileRepositoryImpl(get(), get(), get()) }   // remote, local, TokenProvider (core)
 }

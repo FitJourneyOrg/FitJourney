@@ -3,14 +3,18 @@ package dev.rafael.server.features.program.routes
 import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.program.CreateManualProgramRequest
 import dev.rafael.contract.program.RenameProgramRequest
+import dev.rafael.contract.program.SetScheduleRequest
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.core.result.flatMap
+import dev.rafael.core.result.map
 import dev.rafael.server.auth.FirebaseUser
 import dev.rafael.server.error.respondResult
 import dev.rafael.server.features.profile.services.ProfileService
+import dev.rafael.server.features.program.services.ProgramBlur
+import dev.rafael.server.features.program.services.ProgramLimits
 import dev.rafael.server.features.program.services.ProgramService
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.plugins.FIREBASE_AUTH
@@ -25,12 +29,7 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import kotlin.uuid.Uuid
 
-// Tetos por plano (ARCH #26):
-//   grátis: 1 gerado por IA + 2 manuais (contados SEPARADAMENTE)
-//   premium: 10 no total (IA + manual)
-private const val FREE_AI_LIMIT = 1
-private const val FREE_MANUAL_LIMIT = 2
-private const val PREMIUM_TOTAL_LIMIT = 10
+// Tetos por plano: ver ProgramLimits (ARCH #27).
 
 fun Route.programRoutes(
     userService: UserService,
@@ -59,25 +58,12 @@ fun Route.programRoutes(
                                 ErrorCodes.HEALTH_GATE_REQUIRED,
                             ).asFailure()
                         } else {
-                            // 2. GATE POR TETO (ARCH #26): grátis = 1 IA; premium = 10 no total.
+                            // 2. GATE POR TETO (ARCH #27) — política pura (ProgramLimits).
                             programService.counts(user.id).flatMap { c ->
-                                val blocked =
-                                    if (user.isPremium) c.total >= PREMIUM_TOTAL_LIMIT
-                                    else c.ai >= FREE_AI_LIMIT
-                                if (blocked) {
-                                    if (user.isPremium)
-                                        AppError.Forbidden(
-                                            "Você atingiu o limite máximo de $PREMIUM_TOTAL_LIMIT programas.",
-                                        ).asFailure()
-                                    else
-                                        AppError.Forbidden(
-                                            "Gerar treino por IA é limitado a $FREE_AI_LIMIT no plano grátis. Assine o premium pra gerar mais.",
-                                            ErrorCodes.ENTITLEMENT_REQUIRED,
-                                        ).asFailure()
-                                } else {
-                                    // 3. GERA + PERSISTE (novo programa, não substitui os existentes)
-                                    programService.generate(user.id, profile)
-                                }
+                                ProgramLimits.gate(c, user.isPremium, ProgramLimits.Kind.AI)
+                                    .flatMap { programService.generate(user.id, profile) }
+                                    // ARCH #23: blur do value-first (Dia 1 livre, resto trancado p/ não-premium).
+                                    .map { ProgramBlur.apply(it, user.isPremium) }
                             }
                         }
                     }
@@ -89,7 +75,11 @@ fun Route.programRoutes(
         get("/programs") {
             val principal = call.principal<FirebaseUser>()!!
             val result = userService.findOrCreate(principal.uid, principal.email)
-                .flatMap { user -> programService.listForUser(user.id) }
+                .flatMap { user ->
+                    // ARCH #23: aplica o blur em cada programa da lista (o detalhe filtra daqui).
+                    programService.listForUser(user.id)
+                        .map { list -> list.map { ProgramBlur.apply(it, user.isPremium) } }
+                }
             call.respondResult(result)
         }
 
@@ -97,24 +87,10 @@ fun Route.programRoutes(
             val principal = call.principal<FirebaseUser>()!!
             val body = call.receive<CreateManualProgramRequest>()
             val result = userService.findOrCreate(principal.uid, principal.email).flatMap { user ->
-                // GATE POR TETO (ARCH #26): grátis = 2 manuais; premium = 10 no total.
+                // GATE POR TETO (ARCH #27) — política pura (ProgramLimits).
                 programService.counts(user.id).flatMap { c ->
-                    val blocked =
-                        if (user.isPremium) c.total >= PREMIUM_TOTAL_LIMIT
-                        else c.manual >= FREE_MANUAL_LIMIT
-                    if (blocked) {
-                        if (user.isPremium)
-                            AppError.Forbidden(
-                                "Você atingiu o limite máximo de $PREMIUM_TOTAL_LIMIT programas.",
-                            ).asFailure()
-                        else
-                            AppError.Forbidden(
-                                "Criar programas é limitado a $FREE_MANUAL_LIMIT no plano grátis. Assine o premium pra criar mais.",
-                                ErrorCodes.ENTITLEMENT_REQUIRED,
-                            ).asFailure()
-                    } else {
-                        programService.createManual(user.id, body.name)
-                    }
+                    ProgramLimits.gate(c, user.isPremium, ProgramLimits.Kind.MANUAL)
+                        .flatMap { programService.createManual(user.id, body.name) }
                 }
             }
             call.respondResult(result)
@@ -128,7 +104,27 @@ fun Route.programRoutes(
                 AppError.Validation("id de programa inválido").asFailure()
             } else {
                 userService.findOrCreate(principal.uid, principal.email)
-                    .flatMap { user -> programService.rename(user.id, programId, body.name) }
+                    .flatMap { user ->
+                        // GATE PREMIUM (ARCH #25): renomear programa IA exige premium.
+                        programService.requireEditable(user.id, programId, user.isPremium)
+                            .flatMap { programService.rename(user.id, programId, body.name) }
+                    }
+            }
+            call.respondResult(result)
+        }
+
+        put("/programs/{id}/schedule") {
+            val principal = call.principal<FirebaseUser>()!!
+            val programId = call.programIdParam()
+            val body = call.receive<SetScheduleRequest>()
+            val result = if (programId == null) {
+                AppError.Validation("id de programa inválido").asFailure()
+            } else {
+                userService.findOrCreate(principal.uid, principal.email).flatMap { user ->
+                    // GATE (#25): agendar programa IA exige premium — evita furar o blur (#23).
+                    programService.requireEditable(user.id, programId, user.isPremium)
+                        .flatMap { programService.setSchedule(user.id, programId, body.entries) }
+                }
             }
             call.respondResult(result)
         }

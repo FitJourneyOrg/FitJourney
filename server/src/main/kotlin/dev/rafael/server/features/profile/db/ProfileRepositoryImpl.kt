@@ -6,6 +6,7 @@ import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
+import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.profile.TrainingEnvironment
 import dev.rafael.server.features.profile.models.Profile
 import kotlinx.coroutines.Dispatchers
@@ -45,6 +46,8 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[environment] = profile.environment?.name
                     it[healthScreening] = profile.health?.toJson()
                     it[limitations] = profile.limitations.limitationsToJson()
+                    it[splitPreference] = profile.splitPreference?.name
+                    it[unavailableDays] = profile.unavailableDays.daysToJson()
                     it[onboardingCompleted] = profile.onboardingCompleted
                 }
             } else {
@@ -59,6 +62,8 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[environment] = profile.environment?.name
                     it[healthScreening] = profile.health?.toJson()
                     it[limitations] = profile.limitations.limitationsToJson()
+                    it[splitPreference] = profile.splitPreference?.name
+                    it[unavailableDays] = profile.unavailableDays.daysToJson()
                     it[onboardingCompleted] = profile.onboardingCompleted
                 }
             }
@@ -85,5 +90,7 @@ private fun ResultRow.toProfile(): Profile = Profile(
     environment = this[ProfilesTable.environment]?.let { TrainingEnvironment.valueOf(it) },
     health = this[ProfilesTable.healthScreening]?.toHealthScreening(),
     limitations = this[ProfilesTable.limitations]?.toLimitations() ?: emptyList(),
+    splitPreference = this[ProfilesTable.splitPreference]?.let { SplitType.valueOf(it) },
+    unavailableDays = this[ProfilesTable.unavailableDays]?.toDays() ?: emptyList(),
     onboardingCompleted = this[ProfilesTable.onboardingCompleted],
 )

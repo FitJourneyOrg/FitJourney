@@ -34,6 +34,7 @@ fun WorkoutDetailScreen(
     workoutId: String,
     onBack: () -> Unit,
     onEdit: () -> Unit,
+    editLocked: Boolean = false,   // ARCH #25: programa IA + free → editar barra na hora
 ) {
     val viewModel: WorkoutDetailViewModel = koinViewModel { parametersOf(workoutId) }
     val exerciseRepo: ExerciseRepository = koinInject()
@@ -137,7 +138,10 @@ fun WorkoutDetailScreen(
                 title = { Text(state.name.ifBlank { "Treino" }) },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar") } },
                 actions = {
-                    IconButton(onClick = onEdit) { Icon(Icons.Default.Edit, "Editar") }
+                    IconButton(onClick = {
+                        // programa IA trancado (free): não entra na edição, mostra paywall
+                        if (editLocked) viewModel.onEvent(WorkoutDetailEvent.ShowPaywall) else onEdit()
+                    }) { Icon(Icons.Default.Edit, "Editar") }
                     IconButton(onClick = { showConfirm = true }) { Icon(Icons.Default.Delete, "Excluir") }
                 },
             )

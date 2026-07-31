@@ -15,6 +15,7 @@ fun WorkoutSummaryDto.toDomain() = WorkoutSummary(id, name, exerciseCount, updat
 fun WorkoutDto.toDomain() = Workout(
     id = id, name = name,
     programId = programId,
+    dayOfWeek = dayOfWeek,
     exercises = exercises.map { it.toDomain() },
     createdAt = createdAt, updatedAt = updatedAt,
 )
@@ -33,6 +34,7 @@ private fun WorkoutSetDto.toDomain() = WorkoutSet(reps, orderIndex)
 fun Workout.toDto() = WorkoutDto(
     id = id, name = name,
     programId = programId,
+    dayOfWeek = dayOfWeek,
     exercises = exercises.map { it.toDto() },
     createdAt = createdAt, updatedAt = updatedAt,
 )

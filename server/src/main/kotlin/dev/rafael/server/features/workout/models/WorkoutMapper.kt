@@ -43,18 +43,20 @@ fun Workout.toDto(): WorkoutDto = WorkoutDto(
     id = id.toString(),
     name = name,
     programId = programId?.toString(),
+    dayOfWeek = dayOfWeek,
     exercises = exercises.map { it.toDto() },
     createdAt = createdAt.toString(),
     updatedAt = updatedAt.toString(),
 )
 
 // programId = null aqui: ignorado no create (repository.create recebe o programId
-// validado como param separado — ARCH #26) e não é reescrito no update.
+// validado como param separado — ARCH #27) e não é reescrito no update.
 fun WorkoutDto.toDomain(): Workout = Workout(
     id = Uuid.NIL,
     userId = Uuid.NIL,
     name = name,
     programId = null,
+    dayOfWeek = null,   // dia é gerido pelo agendamento (PUT /schedule); update não o reescreve
     exercises = exercises.map { it.toDomain() },
     createdAt = kotlinx.datetime.LocalDateTime(1970, 1, 1, 0, 0),
     updatedAt = kotlinx.datetime.LocalDateTime(1970, 1, 1, 0, 0),

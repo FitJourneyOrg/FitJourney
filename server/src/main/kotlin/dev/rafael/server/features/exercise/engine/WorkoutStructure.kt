@@ -1,6 +1,6 @@
 package dev.rafael.server.features.exercise.engine
 
-/** Estruturas do motor de estrutura (F.2, reescrito no ARCH #27). O esqueleto que a F.4 preenche.
+/** Estruturas do motor de estrutura (F.2, reescrito no ARCH #26). O esqueleto que a F.4 preenche.
  *  Cada Slot agora carrega o músculo-alvo, o papel (→ reps/descanso/RIR) e o RIR resolvido. */
 
 data class Slot(

@@ -1,5 +1,6 @@
 package dev.rafael.server.features.program.services
 
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.profile.ProfileDto
 import dev.rafael.contract.program.ProgramDto
 import dev.rafael.contract.program.ScheduleEntry
@@ -12,30 +13,31 @@ import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.core.result.flatMap
+import dev.rafael.server.features.exercise.engine.WeekSpread
 import dev.rafael.server.features.exercise.engine.WorkoutGenerator
 import dev.rafael.server.features.program.db.ProgramRepository
 import dev.rafael.server.features.program.models.Program
 import dev.rafael.server.features.workout.models.Workout
 import dev.rafael.server.features.workout.models.WorkoutExercise
 import dev.rafael.server.features.workout.models.WorkoutSet
-import kotlinx.datetime.Clock
+import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.uuid.Uuid
 
 /**
- * Orquestra programas (ARCH #22, revisado pela #26 — multi-programa, sem substituição).
+ * Orquestra programas (ARCH #22, revisado pela #27 — multi-programa, sem substituição).
  * O gate por teto/saúde fica na ROTA (padrão ARCH #18); aqui é gerar/criar + salvar.
  */
 class ProgramService(
     private val generator: WorkoutGenerator,
     private val repository: ProgramRepository,
 ) {
-    /** Contagem por origem (AI/MANUAL) — insumo dos gates de teto (ARCH #26) na rota. */
+    /** Contagem por origem (AI/MANUAL) — insumo dos gates de teto (ARCH #27) na rota. */
     suspend fun counts(userId: Uuid): AppResult<dev.rafael.server.features.program.models.ProgramCounts> =
         repository.counts(userId)
 
-    /** Gera o programa determinístico e persiste (NÃO substitui os existentes — ARCH #26). */
+    /** Gera o programa determinístico e persiste (NÃO substitui os existentes — ARCH #27). */
     suspend fun generate(userId: Uuid, profile: ProfileDto): AppResult<ProgramDto> {
         val dto: ProgramDto = try {
             generator.generate(profile, prompt = null)   // motor determinístico ignora prompt
@@ -44,7 +46,7 @@ class ProgramService(
             return AppError.Validation(e.message ?: "Perfil incompleto para gerar programa.").asFailure()
         }
 
-        val model = dto.toModel(userId, origin = WorkoutOrigin.AI, name = autoName(dto))
+        val model = dto.toModel(userId, origin = WorkoutOrigin.AI, name = autoName(dto), unavailable = profile.unavailableDays.toSet())
         return repository.createForUser(userId, model).flatMap { saved ->
             saved.toDto().asSuccess()
         }
@@ -78,8 +80,41 @@ class ProgramService(
         repository.delete(userId, programId)
 
     /**
+     * Define o DIA da semana de cada treino (G.2 agenda por dia real). `entries` precisa cobrir
+     * EXATAMENTE os treinos do programa; cada dia em 1..7 e DISTINTO (folga = dia sem treino).
+     * Erros precisos: id inválido/dia fora de faixa/dia repetido/entries não batem → Validation;
+     * programa não é do usuário → NotFound. O gate premium fica na ROTA (requireEditable, #18/#25).
+     */
+    suspend fun setSchedule(userId: Uuid, programId: Uuid, entries: List<ScheduleEntry>): AppResult<ProgramDto> {
+        if (entries.isEmpty()) return AppError.Validation("A agenda não pode ser vazia").asFailure()
+        if (entries.any { it.dayOfWeek !in 1..7 }) {
+            return AppError.Validation("Dia da semana deve estar entre 1 (Seg) e 7 (Dom)").asFailure()
+        }
+        if (entries.map { it.dayOfWeek }.toSet().size != entries.size) {
+            return AppError.Validation("Dois treinos não podem cair no mesmo dia").asFailure()
+        }
+        val parsed = entries.map { runCatching { Uuid.parse(it.workoutId) }.getOrNull() to it.dayOfWeek }
+        if (parsed.any { it.first == null }) return AppError.Validation("workoutId inválido").asFailure()
+        val byWorkout = parsed.mapNotNull { (id, day) -> id?.let { it to day } }.toMap()
+        if (byWorkout.size != entries.size) {
+            return AppError.Validation("A agenda não pode ter treino repetido").asFailure()
+        }
+        return repository.findByIdForUser(userId, programId).flatMap { program ->
+            when {
+                program == null -> AppError.NotFound("Programa não encontrado").asFailure()
+                byWorkout.keys != program.workouts.map { it.id }.toSet() ->
+                    AppError.Validation("A agenda precisa cobrir exatamente os treinos do programa").asFailure()
+                else -> repository.setSchedule(userId, programId, byWorkout).flatMap { updated ->
+                    if (updated == null) AppError.NotFound("Programa não encontrado").asFailure()
+                    else updated.toDto().asSuccess()
+                }
+            }
+        }
+    }
+
+    /**
      * Quantos treinos o programa já tem, validando posse — usado pela rota de
-     * POST /workouts (ARCH #26) pra computar dayOfWeek sem workout→program depender
+     * POST /workouts (ARCH #27) pra computar dayOfWeek sem workout→program depender
      * de ProgramRepository diretamente (evita ciclo de feature, ARCH #18).
      * null = programa não existe ou não é do usuário.
      */
@@ -90,13 +125,57 @@ class ProgramService(
     suspend fun originOf(userId: Uuid, programId: Uuid): AppResult<WorkoutOrigin?> =
         repository.findByIdForUser(userId, programId).flatMap { it?.origin.asSuccess() }
 
+    /**
+     * Resolve o dia (1..7) de um treino NOVO no programa (G.2 — escolha do dia na criação).
+     * - programa não é do usuário → NotFound
+     * - dia escolhido livre → usa ele; fora de 1..7 ou já ocupado → Validation
+     * - sem escolha (null) → primeiro dia livre (fallback; 1 se lotado)
+     */
+    suspend fun resolveNewWorkoutDay(userId: Uuid, programId: Uuid, chosen: Int?): AppResult<Int> =
+        repository.findByIdForUser(userId, programId).flatMap { p ->
+            if (p == null) {
+                AppError.NotFound("Programa não encontrado").asFailure()
+            } else {
+                val used = p.workouts.mapNotNull { it.dayOfWeek }.toSet()
+                when {
+                    chosen == null -> ((1..7).firstOrNull { it !in used } ?: 1).asSuccess()
+                    chosen !in 1..7 -> AppError.Validation("Dia da semana deve estar entre 1 (Seg) e 7 (Dom)").asFailure()
+                    chosen in used -> AppError.Validation("Esse dia já tem um treino").asFailure()
+                    else -> chosen.asSuccess()
+                }
+            }
+        }
+
+    /**
+     * Gate premium de EDIÇÃO (ARCH #25): um programa origin=AI só pode ser MUTADO
+     * (renomear, add/editar/remover treino) por usuário premium. Manual é livre.
+     * Centraliza a regra que antes vivia inline no PUT /workouts. Descartar o programa
+     * inteiro NÃO passa por aqui (é direito de descarte, fica livre).
+     * - null   → NotFound (não é do usuário)
+     * - AI+free → Forbidden(ENTITLEMENT_REQUIRED)
+     * - resto  → Unit (segue a edição)
+     */
+    suspend fun requireEditable(userId: Uuid, programId: Uuid, isPremium: Boolean): AppResult<Unit> =
+        originOf(userId, programId).flatMap { origin ->
+            when {
+                origin == null -> AppError.NotFound("Programa não encontrado").asFailure()
+                origin == WorkoutOrigin.AI && !isPremium -> AppError.Forbidden(
+                    "Editar um programa gerado por IA é um recurso premium.",
+                    ErrorCodes.ENTITLEMENT_REQUIRED,
+                ).asFailure()
+                else -> Unit.asSuccess()
+            }
+        }
+
     private fun autoName(dto: ProgramDto): String = "Programa ${dto.daysPerWeek}x — ${dto.split}"
 }
 
 // ---- conversões ProgramDto (motor) <-> Program (model) ----
 
-private fun ProgramDto.toModel(userId: Uuid, origin: WorkoutOrigin, name: String): Program {
+private fun ProgramDto.toModel(userId: Uuid, origin: WorkoutOrigin, name: String, unavailable: Set<Int> = emptySet()): Program {
     val ts = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+    // Espaça os treinos pela semana (folga p/ recuperação), evitando os dias off do usuário.
+    val days = WeekSpread.daysFor(workouts.size, unavailable)
     return Program(
         id = Uuid.NIL,            // repository gera o real
         userId = userId,
@@ -106,9 +185,9 @@ private fun ProgramDto.toModel(userId: Uuid, origin: WorkoutOrigin, name: String
         split = split,
         rationale = rationale,
         locked = locked,
-        workouts = workouts.map { w ->
+        workouts = workouts.mapIndexed { index, w ->
             Workout(
-                id = Uuid.NIL, userId = userId, name = w.name, programId = null,   // repository seta ao inserir
+                id = Uuid.NIL, userId = userId, name = w.name, programId = null, dayOfWeek = days.getOrNull(index),
                 exercises = w.exercises.map { e ->
                     WorkoutExercise(
                         id = Uuid.NIL,
@@ -160,9 +239,10 @@ private fun Program.toDto(): ProgramDto {
         split = split,
         rationale = rationale,
         locked = locked,
-        // schedule: i-ésimo treino cai no dia i+1 (v1 sequencial; reordena na G.2).
-        schedule = workoutDtos.mapIndexed { i, w ->
-            ScheduleEntry(workoutId = w.id!!, dayOfWeek = i + 1)
+        // schedule: dia REAL da semana de cada treino (G.2 agenda por dia). Legado sem
+        // dia cai na posição (i+1). A leitura já ordena por day_of_week.
+        schedule = workouts.mapIndexed { i, w ->
+            ScheduleEntry(workoutId = w.id.toString(), dayOfWeek = w.dayOfWeek ?: (i + 1))
         },
     )
 }

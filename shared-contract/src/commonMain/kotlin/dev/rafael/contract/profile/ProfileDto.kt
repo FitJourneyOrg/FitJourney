@@ -12,6 +12,8 @@ data class ProfileDto(
     val goal: Goal,
     val level: Level,
     val daysPerWeek: Int,
+    val splitPreference: SplitType? = null,   // ARCH #29: escolha do quiz; null = usa o recomendado
+    val unavailableDays: List<Int> = emptyList(),   // dias (1=Seg..7=Dom) que NÃO quer treinar; motor evita
     val focusAreas: List<MuscleGroup> = emptyList(),
     val weightKg: Double? = null,
     val heightCm: Double? = null,

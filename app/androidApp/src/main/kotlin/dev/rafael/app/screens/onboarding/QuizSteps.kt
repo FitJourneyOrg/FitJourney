@@ -13,7 +13,47 @@ import dev.rafael.contract.profile.HealthScreening
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.TrainingEnvironment
+import dev.rafael.contract.profile.SplitCatalog
+import dev.rafael.contract.profile.SplitType
 import dev.rafael.features.profile.presentation.state.QuizEvent
+
+@Composable
+fun SplitStep(daysPerWeek: Int, selected: SplitType?, onSelect: (SplitType) -> Unit) {
+    val options = SplitCatalog.optionsFor(daysPerWeek)
+    // recomendado pré-selecionado; se o usuário não tocar, fica null e o server usa o recomendado.
+    val effective = selected ?: SplitCatalog.recommendedFor(daysPerWeek)
+    Column {
+        Text("Qual modelo de treino?", style = MaterialTheme.typography.headlineSmall)
+        Text(
+            "Montamos com base nos seus $daysPerWeek dias. O recomendado já vem marcado — mantenha ou troque.",
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(Modifier.height(16.dp))
+        options.forEach { opt ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onSelect(opt.type) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = effective == opt.type, onClick = { onSelect(opt.type) })
+                Spacer(Modifier.width(8.dp))
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(opt.type.label, style = MaterialTheme.typography.titleMedium)
+                        if (opt.recommended) {
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                "★ Recomendado",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                    Text(opt.type.description, style = MaterialTheme.typography.bodySmall)
+                }
+            }
+        }
+    }
+}
 
 @Composable
 fun GoalStep(selected: Goal?, onSelect: (Goal) -> Unit) {
@@ -80,6 +120,30 @@ fun FocusStep(selected: List<MuscleGroup>, onToggle: (MuscleGroup) -> Unit) {
             FilterChip(selected = m in selected, onClick = { onToggle(m) }, label = { Text(label) })
         }
         Text("${selected.size}/2 selecionados", style = MaterialTheme.typography.labelSmall)
+    }
+}
+
+/** Estágio 2: dias que o usuário NÃO quer treinar (descanso). A IA evita esses na distribuição. */
+@Composable
+fun RestDaysStep(selected: List<Int>, daysPerWeek: Int, onToggle: (Int) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Tem dia que você NÃO quer treinar?", style = MaterialTheme.typography.headlineSmall)
+        Text("Marque seus dias de descanso (opcional). A IA distribui os treinos nos dias livres.", style = MaterialTheme.typography.bodySmall)
+        Spacer(Modifier.height(8.dp))
+        listOf("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom").forEachIndexed { idx, lbl ->
+            val d = idx + 1
+            FilterChip(selected = d in selected, onClick = { onToggle(d) }, label = { Text(lbl) })
+        }
+        val free = 7 - selected.size
+        if (free < daysPerWeek) {
+            Text(
+                "Você precisa de ao menos $daysPerWeek dias livres (tem $free).",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        } else {
+            Text("$free dias livres para treinar.", style = MaterialTheme.typography.labelSmall)
+        }
     }
 }
 

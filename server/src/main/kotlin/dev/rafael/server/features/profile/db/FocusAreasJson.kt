@@ -24,3 +24,10 @@ fun List<BodyLimitation>.limitationsToJson(): String = json.encodeToString(this)
 
 fun String.toLimitations(): List<BodyLimitation> =
     if (isBlank()) emptyList() else json.decodeFromString(this)
+
+
+/** Dias off <-> JSON (coluna unavailable_days TEXT). Estágio 2. */
+fun List<Int>.daysToJson(): String = json.encodeToString(this)
+
+fun String.toDays(): List<Int> =
+    if (isBlank()) emptyList() else json.decodeFromString(this)

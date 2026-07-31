@@ -46,6 +46,7 @@ class DeterministicWorkoutGenerator(
         val skeleton = structureEngine.buildSkeleton(
             goal = profile.goal, level = profile.level,
             daysPerWeek = profile.daysPerWeek, focusMuscles = focus,
+            splitPreference = profile.splitPreference,   // ARCH #29: escolha do usuário (ou null = recomendado)
         )
 
         // 2. POOL (F.3) — ambiente + limitações + nível.
@@ -67,7 +68,7 @@ class DeterministicWorkoutGenerator(
 
         return ProgramDto(
             // Placeholder — ProgramService.generate() descarta e gera o nome de
-            // verdade (autoName) ao persistir. O motor não decide nome (ARCH #26).
+            // verdade (autoName) ao persistir. O motor não decide nome (ARCH #27).
             name = skeleton.split,
             workouts = workouts,
             daysPerWeek = profile.daysPerWeek,

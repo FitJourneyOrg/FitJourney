@@ -1,7 +1,7 @@
 package dev.rafael.features.program.domain.model
 
 /**
- * Programa (ARCH #22, revisado pela #26 — usuário pode ter vários, não é mais
+ * Programa (ARCH #22, revisado pela #27 — usuário pode ter vários, não é mais
  * 1 ativo que se substitui). Agrupa N treinos.
  */
 data class Program(
@@ -27,6 +27,7 @@ data class ProgramWorkout(
     val id: String?,
     val name: String,
     val exerciseCount: Int,
+    val locked: Boolean = false,   // ARCH #23: dia trancado (não-premium). exerciseCount = quantos há por trás.
 )
 
 data class ProgramScheduleEntry(

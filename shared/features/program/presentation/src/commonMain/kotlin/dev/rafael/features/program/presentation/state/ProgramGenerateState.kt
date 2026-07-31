@@ -7,7 +7,7 @@ data class ProgramGenerateState(
 )
 
 sealed interface GenerateError {
-    data object Entitlement : GenerateError    // → paywall (teto de programas grátis, ARCH #26)
+    data object Entitlement : GenerateError    // → paywall (teto de programas grátis, ARCH #27)
     data object HealthGate : GenerateError     // → PAR-Q
     data class Other(val message: String) : GenerateError
 }

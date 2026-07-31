@@ -2,6 +2,7 @@ package dev.rafael.features.workout.presentation.state
 
 sealed interface WorkoutFormEvent {
     data class NameChanged(val value: String) : WorkoutFormEvent
+    data class DaySelected(val dayOfWeek: Int) : WorkoutFormEvent   // dia da semana (criação)
     data class ExercisesAdded(val ids: List<String>) : WorkoutFormEvent
     data class ExerciseRemoved(val index: Int) : WorkoutFormEvent
     data class ExerciseMovedUp(val index: Int) : WorkoutFormEvent

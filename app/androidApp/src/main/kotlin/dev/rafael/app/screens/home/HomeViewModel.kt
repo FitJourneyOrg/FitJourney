@@ -3,6 +3,7 @@ package dev.rafael.app.screens.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.features.auth.domain.repository.AuthRepository
+import dev.rafael.features.profile.domain.repository.ProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,6 +16,7 @@ import kotlinx.coroutines.launch
  */
 class HomeViewModel(
     private val auth: AuthRepository,
+    private val profile: ProfileRepository,
 ) : ViewModel() {
 
     private val _loggedOut = MutableStateFlow(false)
@@ -22,7 +24,8 @@ class HomeViewModel(
 
     fun logout() {
         viewModelScope.launch {
-            auth.signOut()               // ignora o resultado: mesmo se falhar, tiramos o usuário
+            profile.clearOnboardingCache()   // evita o próximo cadastro herdar o 'true' e cair na Home
+            auth.signOut()                   // limpa a sessão + invalida o token cacheado do Ktor
             _loggedOut.value = true
         }
     }

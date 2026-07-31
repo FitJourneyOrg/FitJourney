@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,13 +26,17 @@ import org.koin.core.parameter.parametersOf
 fun ProgramDetailScreen(
     programId: String,
     onBack: () -> Unit,
-    onOpenWorkout: (String) -> Unit,
-    onAddWorkout: (String) -> Unit,
+    onOpenWorkout: (String, Boolean) -> Unit,   // (workoutId, editLocked)
+    onAddWorkout: (String, String) -> Unit,     // (programId, diasOcupadosCSV)
     viewModel: ProgramDetailViewModel = koinViewModel { parametersOf(programId) },
 ) {
     val state by viewModel.state.collectAsState()
     var showRename by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showPaywall by remember { mutableStateOf(false) }   // ARCH #23: toque em dia trancado
+    // ARCH #25: programa IA de usuário free vem trancado — edição é premium.
+    // 'locked' já é setado pelo ProgramBlur só quando (origin=AI && !premium).
+    val readOnly = state.program?.locked == true
 
     // delete bem-sucedido → volta pra lista de programas
     LaunchedEffect(state.isDeleted) { if (state.isDeleted) onBack() }
@@ -66,6 +71,15 @@ fun ProgramDetailScreen(
         )
     }
 
+    if (showPaywall) {
+        AlertDialog(
+            onDismissRequest = { showPaywall = false },
+            title = { Text("Recurso premium") },
+            text = { Text("O Dia 1 é seu de graça. Assine o premium para desbloquear o programa completo.") },
+            confirmButton = { TextButton(onClick = { showPaywall = false }) { Text("Entendi") } },
+        )
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -74,13 +88,21 @@ fun ProgramDetailScreen(
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar") }
                 },
                 actions = {
-                    IconButton(onClick = { showRename = true }) { Icon(Icons.Default.Edit, "Renomear") }
+                    if (!readOnly) {
+                        IconButton(onClick = { showRename = true }) { Icon(Icons.Default.Edit, "Renomear") }
+                    }
                     IconButton(onClick = { showDeleteConfirm = true }) { Icon(Icons.Default.Delete, "Excluir") }
                 },
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { onAddWorkout(programId) }) { Text("+") }
+            if (!readOnly) {
+                FloatingActionButton(onClick = {
+                    val taken = state.program?.schedule.orEmpty()
+                        .map { it.dayOfWeek }.sorted().joinToString(",")
+                    onAddWorkout(programId, taken)
+                }) { Text("+") }
+            }
         },
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
@@ -103,14 +125,68 @@ fun ProgramDetailScreen(
                                 Spacer(Modifier.height(4.dp))
                             }
                         }
-                        items(state.program?.workouts.orEmpty()) { w ->
-                            ListItem(
-                                headlineContent = { Text(w.name) },
-                                supportingContent = { Text("${w.exerciseCount} exercícios") },
-                                modifier = Modifier.clickable { w.id?.let(onOpenWorkout) },
-                            )
+                        val workouts = state.program?.workouts.orEmpty()
+                        // Agendar por dia só em programa que você edita (não trancado).
+                        val canSchedule = !readOnly
+                        val dayByWorkout = state.program?.schedule.orEmpty().associate { it.workoutId to it.dayOfWeek }
+                        // Visão da SEMANA: 7 dias; dia sem treino = "Descanso" (descanso é implícito).
+                        val workoutByDay = workouts
+                            .mapNotNull { w -> w.id?.let { id -> dayByWorkout[id]?.let { d -> d to w } } }
+                            .toMap()
+                        items((1..7).toList()) { day ->
+                            val w = workoutByDay[day]
+                            when {
+                                w == null -> ListItem(
+                                    overlineContent = { Text(weekdayLabel(day)) },
+                                    headlineContent = {
+                                        Text("Descanso", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    },
+                                )
+                                w.locked -> ListItem(
+                                    overlineContent = { Text(weekdayLabel(day)) },
+                                    headlineContent = { Text(w.name) },
+                                    supportingContent = { Text("${w.exerciseCount} exercícios · Assine para desbloquear") },
+                                    leadingContent = { Icon(Icons.Default.Lock, contentDescription = "Bloqueado") },
+                                    modifier = Modifier.clickable { showPaywall = true },
+                                )
+                                else -> ListItem(
+                                    overlineContent = { Text(weekdayLabel(day)) },
+                                    headlineContent = { Text(w.name) },
+                                    supportingContent = { Text("${w.exerciseCount} exercícios") },
+                                    trailingContent = if (!canSchedule) null else {
+                                        {
+                                            WeekdayPicker(
+                                                day = day,
+                                                enabled = !state.isReordering,
+                                                onPick = { d -> w.id?.let { viewModel.onEvent(ProgramDetailEvent.SetWorkoutDay(it, d)) } },
+                                            )
+                                        }
+                                    },
+                                    modifier = Modifier.clickable { w.id?.let { onOpenWorkout(it, readOnly) } },
+                                )
+                            }
                         }
                     }
+            }
+        }
+    }
+}
+
+private val WEEKDAYS = listOf("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
+private fun weekdayLabel(day: Int): String = WEEKDAYS.getOrElse(day - 1) { "?" }
+
+/** Botão com o dia atual do treino; abre um menu p/ escolher outro (1=Seg..7=Dom). */
+@Composable
+private fun WeekdayPicker(day: Int, enabled: Boolean, onPick: (Int) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        TextButton(onClick = { open = true }, enabled = enabled) { Text(weekdayLabel(day)) }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            (1..7).forEach { d ->
+                DropdownMenuItem(
+                    text = { Text(weekdayLabel(d) + if (d == day) "  ✓" else "") },
+                    onClick = { open = false; if (d != day) onPick(d) },
+                )
             }
         }
     }

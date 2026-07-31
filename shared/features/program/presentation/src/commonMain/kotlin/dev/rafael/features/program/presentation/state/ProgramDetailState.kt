@@ -6,6 +6,7 @@ data class ProgramDetailState(
     val program: Program? = null,
     val isLoading: Boolean = false,
     val isRenaming: Boolean = false,
+    val isReordering: Boolean = false,   // durante o PUT /schedule (desabilita as setas)
     val error: String? = null,
     val isDeleted: Boolean = false,   // sinaliza pra tela voltar pra lista
 )

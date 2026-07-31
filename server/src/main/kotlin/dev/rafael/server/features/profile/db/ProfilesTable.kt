@@ -14,6 +14,8 @@ object ProfilesTable : Table("profiles") {
     val environment = varchar("environment", 32).nullable()   // <- novo
     val healthScreening = text("health_screening").nullable()  // <- novo (JSON)
     val limitations = text("limitations").nullable()
+    val splitPreference = varchar("split_preference", 24).nullable()   // ARCH #29
+    val unavailableDays = text("unavailable_days").nullable()          // dias off (JSON [Int]); Estágio 2
     val onboardingCompleted = bool("onboarding_completed")
     override val primaryKey = PrimaryKey(userId)
 }
