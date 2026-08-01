@@ -11,6 +11,7 @@ import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.uuid.Uuid
 
@@ -34,6 +35,13 @@ class UserRepositoryImpl : UserRepository {
                 it[UsersTable.isPremium] = false
             }
             User(id = newId, firebaseUid = firebaseUid, email = email, false)
+        }
+
+    override suspend fun setPremium(userId: Uuid, premium: Boolean): AppResult<User?> =
+        dbQuery {
+            val n = UsersTable.update({ UsersTable.id eq userId }) { it[isPremium] = premium }
+            if (n == 0) null
+            else UsersTable.selectAll().where { UsersTable.id eq userId }.single().toUser()
         }
 
     /** Exposed é bloqueante -> IO. Qualquer exceção do banco vira AppError.Unexpected (não vaza). */

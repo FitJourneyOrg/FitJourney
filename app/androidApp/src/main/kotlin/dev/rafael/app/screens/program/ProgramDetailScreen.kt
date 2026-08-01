@@ -28,15 +28,16 @@ fun ProgramDetailScreen(
     onBack: () -> Unit,
     onOpenWorkout: (String, Boolean) -> Unit,   // (workoutId, editLocked)
     onAddWorkout: (String, String) -> Unit,     // (programId, diasOcupadosCSV)
+    onOpenPaywall: () -> Unit,                  // programa trancado → página de assinatura
     viewModel: ProgramDetailViewModel = koinViewModel { parametersOf(programId) },
 ) {
     val state by viewModel.state.collectAsState()
     var showRename by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var showPaywall by remember { mutableStateOf(false) }   // ARCH #23: toque em dia trancado
     // ARCH #25: programa IA de usuário free vem trancado — edição é premium.
     // 'locked' já é setado pelo ProgramBlur só quando (origin=AI && !premium).
     val readOnly = state.program?.locked == true
+    // Ao voltar do Paywall, o ON_RESUME abaixo já refaz o Retry → server desblurra vendo o premium.
 
     // delete bem-sucedido → volta pra lista de programas
     LaunchedEffect(state.isDeleted) { if (state.isDeleted) onBack() }
@@ -71,14 +72,6 @@ fun ProgramDetailScreen(
         )
     }
 
-    if (showPaywall) {
-        AlertDialog(
-            onDismissRequest = { showPaywall = false },
-            title = { Text("Recurso premium") },
-            text = { Text("O Dia 1 é seu de graça. Assine o premium para desbloquear o programa completo.") },
-            confirmButton = { TextButton(onClick = { showPaywall = false }) { Text("Entendi") } },
-        )
-    }
 
     Scaffold(
         topBar = {
@@ -94,6 +87,21 @@ fun ProgramDetailScreen(
                     IconButton(onClick = { showDeleteConfirm = true }) { Icon(Icons.Default.Delete, "Excluir") }
                 },
             )
+        },
+        bottomBar = {
+            // CTA da revelação (value-first): programa IA trancado → assinar desbloqueia tudo.
+            if (readOnly && state.program != null) {
+                Surface(tonalElevation = 3.dp) {
+                    Button(
+                        onClick = onOpenPaywall,
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    ) {
+                        Icon(Icons.Default.Lock, contentDescription = null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Desbloquear todos os treinos")
+                    }
+                }
+            }
         },
         floatingActionButton = {
             if (!readOnly) {
@@ -147,7 +155,7 @@ fun ProgramDetailScreen(
                                     headlineContent = { Text(w.name) },
                                     supportingContent = { Text("${w.exerciseCount} exercícios · Assine para desbloquear") },
                                     leadingContent = { Icon(Icons.Default.Lock, contentDescription = "Bloqueado") },
-                                    modifier = Modifier.clickable { showPaywall = true },
+                                    modifier = Modifier.clickable { onOpenPaywall() },
                                 )
                                 else -> ListItem(
                                     overlineContent = { Text(weekdayLabel(day)) },

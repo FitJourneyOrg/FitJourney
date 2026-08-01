@@ -1,6 +1,8 @@
 package dev.rafael.app.di
 
 import dev.rafael.app.screens.home.HomeViewModel
+import dev.rafael.app.screens.paywall.PaywallViewModel
+import dev.rafael.app.screens.reveal.ProgramRevealViewModel
 import dev.rafael.app.screens.splash.SplashViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -16,4 +18,6 @@ val appModule = module {
 
     viewModelOf(::SplashViewModel)   // injeta AuthRepository + ProfileRepository + ExerciseRepository + CoroutineScope
     viewModelOf(::HomeViewModel)     // injeta AuthRepository (logout)
+    viewModelOf(::ProgramRevealViewModel)   // injeta ProgramRepository (revelação)
+    viewModelOf(::PaywallViewModel)          // injeta Billing (página de assinatura)
 }
