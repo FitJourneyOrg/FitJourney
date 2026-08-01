@@ -2,10 +2,12 @@ package dev.rafael.features.auth.data.di
 
 import dev.rafael.core.network.HttpClientFactory
 import dev.rafael.core.network.TokenProvider
+import dev.rafael.features.auth.data.DevBilling
 import dev.rafael.features.auth.data.FirebaseAuthRepository
 import dev.rafael.features.auth.data.FirebaseTokenProvider
 import dev.rafael.features.auth.data.MeDataSource
 import dev.rafael.features.auth.domain.repository.AuthRepository
+import dev.rafael.features.auth.domain.repository.Billing
 import io.ktor.client.HttpClient
 import org.koin.core.module.Module
 import org.koin.dsl.module
@@ -23,4 +25,8 @@ val authDataModule: Module = module {
 
     // repositório (implementa a interface do domain)
     single<AuthRepository> { FirebaseAuthRepository(meDataSource = get(), httpClient = get()) }
+
+    // Passo de compra atrás de interface (Fase 7). DevBilling = compra simulada; troca por
+    // PlayBilling quando houver Play Console, sem mexer na UI.
+    single<Billing> { DevBilling(meDataSource = get()) }
 }

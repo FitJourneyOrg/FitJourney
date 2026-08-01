@@ -1,6 +1,10 @@
 package dev.rafael.server.features.user.services
 
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
+import dev.rafael.core.result.asFailure
+import dev.rafael.core.result.asSuccess
+import dev.rafael.core.result.flatMap
 import dev.rafael.server.features.user.db.UserRepository
 import dev.rafael.server.features.user.models.User
 
@@ -26,4 +30,16 @@ class UserService(private val repository: UserRepository) {
             }
         }
     }
+
+    /**
+     * Ativa o premium do usuário (compra simulada — Fase 7 dev). O passo de compra REAL
+     * (Play Billing + verificação) fica no cliente atrás da interface Billing; aqui só liga
+     * o flag. Idempotente. Depois, a verificação server-side de recibo entra na frente disto.
+     */
+    suspend fun activatePremium(firebaseUid: String, email: String?): AppResult<User> =
+        findOrCreate(firebaseUid, email).flatMap { user ->
+            repository.setPremium(user.id, true).flatMap { updated ->
+                updated?.asSuccess() ?: AppError.NotFound("Usuário não encontrado").asFailure()
+            }
+        }
 }

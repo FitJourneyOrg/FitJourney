@@ -12,6 +12,8 @@ import dev.rafael.app.screens.onboarding.QuizScreen
 import dev.rafael.app.screens.program.ProgramDetailScreen
 import dev.rafael.app.screens.program.ProgramGenerateScreen
 import dev.rafael.app.screens.program.ProgramListScreen
+import dev.rafael.app.screens.paywall.PaywallScreen
+import dev.rafael.app.screens.reveal.ProgramRevealScreen
 import dev.rafael.app.screens.splash.SplashScreen
 import dev.rafael.app.screens.workout.WorkoutDetailScreen
 import dev.rafael.app.screens.workout.WorkoutFormScreen
@@ -41,15 +43,24 @@ fun AppNavHost() {
 
         composable<AppRoute.Quiz> {
             QuizScreen(onCompleted = {
-                // ARCH #23 (revelação): Home vira a raiz do back stack e, por cima, abre o
-                // fluxo de geração do 1º programa. O detalhe gerado (Dia 1 aberto, dias
-                // trancados + paywall p/ não-premium) É a tela de revelação. Voltar do
-                // detalhe cai no Home.
+                // Revelação (Fase 7): Home vira a raiz e, por cima, abre a tela dedicada de
+                // revelação (gera o 1º programa + CTA de assinar). Voltar/concluir cai no Home.
                 nav.navigate(AppRoute.Home) {
                     popUpTo(AppRoute.Quiz) { inclusive = true }
                 }
-                nav.navigate(AppRoute.ProgramGenerate)
+                nav.navigate(AppRoute.ProgramReveal)
             })
+        }
+
+        composable<AppRoute.ProgramReveal> {
+            ProgramRevealScreen(
+                onDone = { nav.popBackStack() },                     // conclui → Home (raiz do back stack)
+                onOpenPaywall = { nav.navigate(AppRoute.Paywall) },  // "desbloquear" → página de assinatura
+            )
+        }
+
+        composable<AppRoute.Paywall> {
+            PaywallScreen(onClose = { nav.popBackStack() })   // assina/fecha → volta pra origem (que recarrega)
         }
 
         composable<AppRoute.Home> {
@@ -84,6 +95,7 @@ fun AppNavHost() {
                 onBack = { nav.popBackStack() },
                 onOpenWorkout = { id, editLocked -> nav.navigate(AppRoute.WorkoutDetail(id, editLocked)) },
                 onAddWorkout = { programId, taken -> nav.navigate(AppRoute.WorkoutCreate(programId, taken)) },
+                onOpenPaywall = { nav.navigate(AppRoute.Paywall) },
             )
         }
         composable<AppRoute.ProgramGenerate> {

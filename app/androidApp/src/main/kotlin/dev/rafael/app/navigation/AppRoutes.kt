@@ -15,6 +15,8 @@ sealed interface AppRoute {
     @Serializable data object Programs : AppRoute
     @Serializable data class ProgramDetail(val id: String) : AppRoute
     @Serializable data object ProgramGenerate : AppRoute
+    @Serializable data object ProgramReveal : AppRoute   // revelação do onboarding (Fase 7 — conversão)
+    @Serializable data object Paywall : AppRoute          // página de assinatura (Free vs Premium)
 
     // editLocked = true quando o treino pertence a um programa IA trancado p/ o usuário
     // (free): o botão editar barra na hora com paywall, sem entrar na tela de edição.
