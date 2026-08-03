@@ -111,10 +111,33 @@ class StructureEngineTest {
         val sk = engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.INTERMEDIATE, 3, setOf(MuscleGroup.ARMS))
         sk.days.forEach { d ->
             assertTrue(
-                d.slots.any { it.target == TargetMuscle.ARMS },
-                "dia '${d.label}' deveria treinar ARMS (foco protegido)",
+                d.slots.any { it.target in setOf(TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS) },
+                "dia '${d.label}' deveria treinar braço (bíceps/tríceps/antebraço — foco protegido)",
             )
         }
+    }
+
+    @Test
+    fun `desmembramento de braco roteia por push-pull`() {
+        // PPL 6 dias: Push treina TRÍCEPS; Pull treina BÍCEPS/ANTEBRAÇO. Nunca invertido (Fatia B).
+        val ppl = engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.INTERMEDIATE, 6, emptySet())
+        ppl.days.forEach { d ->
+            val targets = d.slots.map { it.target }.toSet()
+            if (d.label.startsWith("Push")) {
+                assertTrue(
+                    TargetMuscle.BICEPS !in targets && TargetMuscle.FOREARMS !in targets,
+                    "dia '${d.label}' não pode treinar bíceps/antebraço",
+                )
+            }
+            if (d.label.startsWith("Pull")) {
+                assertTrue(TargetMuscle.TRICEPS !in targets, "dia '${d.label}' não pode treinar tríceps")
+            }
+        }
+        // e cada um realmente aparece no lado certo (não some do programa)
+        val pushT = ppl.days.filter { it.label.startsWith("Push") }.flatMap { it.slots.map { s -> s.target } }.toSet()
+        val pullT = ppl.days.filter { it.label.startsWith("Pull") }.flatMap { it.slots.map { s -> s.target } }.toSet()
+        assertTrue(TargetMuscle.TRICEPS in pushT, "tríceps deve aparecer no Push")
+        assertTrue(TargetMuscle.BICEPS in pullT, "bíceps deve aparecer no Pull")
     }
 
     // helpers
