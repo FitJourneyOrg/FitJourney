@@ -175,7 +175,7 @@ class ProgramService(
 private fun ProgramDto.toModel(userId: Uuid, origin: WorkoutOrigin, name: String, unavailable: Set<Int> = emptySet()): Program {
     val ts = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
     // Espaça os treinos pela semana (folga p/ recuperação), evitando os dias off do usuário.
-    val days = WeekSpread.daysFor(workouts.size, unavailable)
+    val days = WeekSpread.daysFor(workouts.size, split, unavailable)
     return Program(
         id = Uuid.NIL,            // repository gera o real
         userId = userId,
