@@ -14,6 +14,7 @@ import dev.rafael.app.screens.program.ProgramGenerateScreen
 import dev.rafael.app.screens.program.ProgramListScreen
 import dev.rafael.app.screens.paywall.PaywallScreen
 import dev.rafael.app.screens.reveal.ProgramRevealScreen
+import dev.rafael.app.screens.session.WorkoutSessionScreen
 import dev.rafael.app.screens.splash.SplashScreen
 import dev.rafael.app.screens.workout.WorkoutDetailScreen
 import dev.rafael.app.screens.workout.WorkoutFormScreen
@@ -96,6 +97,8 @@ fun AppNavHost() {
                 onOpenWorkout = { id, editLocked -> nav.navigate(AppRoute.WorkoutDetail(id, editLocked)) },
                 onAddWorkout = { programId, taken -> nav.navigate(AppRoute.WorkoutCreate(programId, taken)) },
                 onOpenPaywall = { nav.navigate(AppRoute.Paywall) },
+                onGenerateNew = { nav.navigate(AppRoute.ProgramGenerate) },
+                onCreateManual = { nav.popBackStack() },   // volta à lista, onde o "+" cria manual
             )
         }
         composable<AppRoute.ProgramGenerate> {
@@ -118,6 +121,7 @@ fun AppNavHost() {
                 editLocked = route.editLocked,
                 onBack = { nav.popBackStack() },
                 onEdit = { nav.navigate(AppRoute.WorkoutEdit(route.id)) },
+                onStartSession = { nav.navigate(AppRoute.WorkoutSession(route.id)) },
             )
         }
         composable<AppRoute.WorkoutCreate> { entry ->
@@ -138,6 +142,10 @@ fun AppNavHost() {
                 onBack = { nav.popBackStack() },
                 onSaved = { nav.popBackStack() },
             )
+        }
+        composable<AppRoute.WorkoutSession> { entry ->
+            val route: AppRoute.WorkoutSession = entry.toRoute()
+            WorkoutSessionScreen(workoutId = route.id, onDone = { nav.popBackStack() })
         }
     }
 }
