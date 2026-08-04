@@ -14,6 +14,8 @@ object ProgramsTable : Table("programs") {
     val locked = bool("locked").default(false)
     val createdAt = datetime("created_at")
     val updatedAt = datetime("updated_at")
+    val durationWeeks = integer("duration_weeks")   // ARCH #22: janela do cronograma (semanas)
+    val startedAt = datetime("started_at")           // início da janela (autoridade do servidor)
 
     override val primaryKey = PrimaryKey(id)
 }

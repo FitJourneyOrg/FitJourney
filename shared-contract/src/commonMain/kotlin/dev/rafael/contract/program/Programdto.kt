@@ -27,6 +27,9 @@ data class ProgramDto(
     val rationale: String,                // explicação do híbrido, mostrada na revelação
     val locked: Boolean = false,
     val schedule: List<ScheduleEntry> = emptyList(),
+    val durationWeeks: Int = 8,           // janela do cronograma (ARCH #22); mín/default 8 (2 meses)
+    val startedAt: String? = null,        // início da janela (ISO); servidor preenche
+    val currentWeek: Int = 1,             // semana atual, derivada no servidor (1..durationWeeks)
     val createdAt: String? = null,
     val updatedAt: String? = null,
 )
