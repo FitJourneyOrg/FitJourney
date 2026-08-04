@@ -21,7 +21,9 @@ import dev.rafael.server.features.workout.models.Workout
 import dev.rafael.server.features.workout.models.WorkoutExercise
 import dev.rafael.server.features.workout.models.WorkoutSet
 import kotlin.time.Clock
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlin.uuid.Uuid
 
@@ -60,6 +62,7 @@ class ProgramService(
             id = Uuid.NIL, userId = userId, name = name, origin = WorkoutOrigin.MANUAL,
             daysPerWeek = 0, split = "Manual", rationale = "", locked = false,
             workouts = emptyList(), createdAt = ts, updatedAt = ts,
+            durationWeeks = PROGRAM_WEEKS, startedAt = ts,
         )
         return repository.createForUser(userId, shell).flatMap { it.toDto().asSuccess() }
     }
@@ -172,6 +175,15 @@ class ProgramService(
 
 // ---- conversões ProgramDto (motor) <-> Program (model) ----
 
+private const val PROGRAM_WEEKS = 8   // [INV] janela mínima/default do cronograma: 8 semanas (2 meses)
+
+/** Semana atual (1..durationWeeks) derivada do início — autoridade do servidor, não do cliente. */
+private fun currentWeekOf(startedAt: LocalDateTime, durationWeeks: Int): Int {
+    val start = startedAt.toInstant(TimeZone.currentSystemDefault())
+    val days = (Clock.System.now() - start).inWholeDays
+    return (days / 7 + 1).toInt().coerceIn(1, durationWeeks)
+}
+
 private fun ProgramDto.toModel(userId: Uuid, origin: WorkoutOrigin, name: String, unavailable: Set<Int> = emptySet()): Program {
     val ts = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
     // Espaça os treinos pela semana (folga p/ recuperação), evitando os dias off do usuário.
@@ -202,6 +214,7 @@ private fun ProgramDto.toModel(userId: Uuid, origin: WorkoutOrigin, name: String
             )
         },
         createdAt = ts, updatedAt = ts,
+        durationWeeks = PROGRAM_WEEKS, startedAt = ts,
     )
 }
 
@@ -244,5 +257,8 @@ private fun Program.toDto(): ProgramDto {
         schedule = workouts.mapIndexed { i, w ->
             ScheduleEntry(workoutId = w.id.toString(), dayOfWeek = w.dayOfWeek ?: (i + 1))
         },
+        durationWeeks = durationWeeks,
+        startedAt = startedAt.toString(),
+        currentWeek = currentWeekOf(startedAt, durationWeeks),
     )
 }
