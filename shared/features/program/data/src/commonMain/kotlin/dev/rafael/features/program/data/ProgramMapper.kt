@@ -16,6 +16,8 @@ fun ProgramDto.toDomain() = Program(
     rationale = rationale,
     locked = locked,
     schedule = schedule.map { it.toDomain() },
+    durationWeeks = durationWeeks,
+    currentWeek = currentWeek,
     createdAt = createdAt,
     updatedAt = updatedAt,
 )

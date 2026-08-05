@@ -13,6 +13,8 @@ data class Program(
     val rationale: String,
     val locked: Boolean,
     val schedule: List<ProgramScheduleEntry>,
+    val durationWeeks: Int = 8,   // janela do cronograma (ARCH #22)
+    val currentWeek: Int = 1,     // semana atual, derivada no servidor
     val createdAt: String?,
     val updatedAt: String?,
 )

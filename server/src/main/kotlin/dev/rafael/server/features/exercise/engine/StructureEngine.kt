@@ -151,7 +151,8 @@ class StructureEngine {
     /** Posição do exercício dentro do músculo → papel. */
     private fun roleFor(target: TargetMuscle, index: Int): SlotRole = when (target) {
         // Isolamento puro (não tem composto-âncora confiável no nosso modelo).
-        TargetMuscle.CALVES, TargetMuscle.CORE, TargetMuscle.ARMS -> SlotRole.ISOLAMENTO
+        TargetMuscle.CALVES, TargetMuscle.CORE,
+        TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS -> SlotRole.ISOLAMENTO
         else -> when (index) {
             0 -> SlotRole.COMPOSTO_PESADO
             1 -> SlotRole.COMPOSTO_ACESSORIO
@@ -197,20 +198,21 @@ class StructureEngine {
     }
 
     // ---- grupos de músculos por tipo de dia ----
-    private val UPPER = setOf(TargetMuscle.CHEST, TargetMuscle.BACK, TargetMuscle.SHOULDERS, TargetMuscle.ARMS)
+    private val UPPER = setOf(TargetMuscle.CHEST, TargetMuscle.BACK, TargetMuscle.SHOULDERS, TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS)
     private val LOWER = setOf(TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.CALVES, TargetMuscle.GLUTES, TargetMuscle.CORE)
-    private val PUSH = setOf(TargetMuscle.CHEST, TargetMuscle.SHOULDERS, TargetMuscle.ARMS)
-    private val PULL = setOf(TargetMuscle.BACK, TargetMuscle.ARMS)
+    private val PUSH = setOf(TargetMuscle.CHEST, TargetMuscle.SHOULDERS, TargetMuscle.TRICEPS)
+    private val PULL = setOf(TargetMuscle.BACK, TargetMuscle.BICEPS, TargetMuscle.FOREARMS)
     private val LEGS = setOf(TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.CALVES, TargetMuscle.GLUTES)
     private val CHEST_BACK = setOf(TargetMuscle.CHEST, TargetMuscle.BACK)                 // Arnold dia 1
-    private val SHOULDERS_ARMS = setOf(TargetMuscle.SHOULDERS, TargetMuscle.ARMS)         // Arnold dia 3
+    private val SHOULDERS_ARMS = setOf(TargetMuscle.SHOULDERS, TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS)  // Arnold dia 3
     private val FULL = TargetMuscle.entries.toSet()
 
     /** Ordem canônica pra montagem determinística (grandes → pequenos). */
     private val canonicalOrder = listOf(
         TargetMuscle.CHEST, TargetMuscle.BACK, TargetMuscle.SHOULDERS,
         TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.GLUTES,
-        TargetMuscle.ARMS, TargetMuscle.CALVES, TargetMuscle.CORE,
+        TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS,
+        TargetMuscle.CALVES, TargetMuscle.CORE,
     )
 
     // Prioridade quando o dia estoura o teto: compostos grandes sempre; pequenos rotacionam.
@@ -219,6 +221,7 @@ class StructureEngine {
         TargetMuscle.POSTERIOR, TargetMuscle.SHOULDERS,
     )
     private val smallMuscles = listOf(
-        TargetMuscle.GLUTES, TargetMuscle.ARMS, TargetMuscle.CALVES, TargetMuscle.CORE,
+        TargetMuscle.GLUTES, TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS,
+        TargetMuscle.CALVES, TargetMuscle.CORE,
     )
 }

@@ -2,6 +2,7 @@ package dev.rafael.app.screens.splash
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.rafael.app.data.session.SessionSync
 import dev.rafael.app.navigation.AppRoute
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -19,6 +20,7 @@ class SplashViewModel(
     private val auth: AuthRepository,
     private val profile: ProfileRepository,
     private val exercises: ExerciseRepository,
+    private val sessionSync: SessionSync,
     private val appScope: CoroutineScope,
 ) : ViewModel() {
 
@@ -29,8 +31,9 @@ class SplashViewModel(
 
     private fun decide() {
         viewModelScope.launch {
-            val token = auth.currentIdToken()
-            if (token == null) {
+            // Gate pela SESSÃO PERSISTIDA (não por token fresco): quem já logou entra mesmo
+            // offline (token pode não renovar sem rede). Só vai pro Login quem nunca logou aqui.
+            if (!auth.isLoggedIn()) {
                 _state.value = SplashState.Decided(AppRoute.Login)
                 return@launch
             }
@@ -54,6 +57,7 @@ class SplashViewModel(
             // empurrava o getProfile além dos 5s → fallback (cache stale) → Home errado no
             // cadastro novo. No appScope o warm sobrevive à Splash ser destruída.
             warmExerciseCatalog()
+            appScope.launch { sessionSync.flush() }   // reenvia sessões de treino pendentes (offline)
         }
     }
 

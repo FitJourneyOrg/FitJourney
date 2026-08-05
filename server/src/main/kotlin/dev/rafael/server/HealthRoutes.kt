@@ -7,6 +7,8 @@ import dev.rafael.server.features.profile.routes.profileRoutes
 import dev.rafael.server.features.profile.services.ProfileService
 import dev.rafael.server.features.program.routes.programRoutes
 import dev.rafael.server.features.program.services.ProgramService
+import dev.rafael.server.features.session.routes.sessionRoutes
+import dev.rafael.server.features.session.services.SessionService
 import dev.rafael.server.features.user.routes.userRoutes
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.workout.routes.workoutRoutes
@@ -35,6 +37,7 @@ fun Application.configureRouting() {
     val exerciseService = get<ExerciseService>()
     val workoutService = get<WorkoutService>()
     val programService = get<ProgramService>()
+    val sessionService = get<SessionService>()
 
 
     routing {
@@ -43,6 +46,7 @@ fun Application.configureRouting() {
         exerciseRoutes(exerciseService, profileService)
         workoutRoutes(workoutService, userService, profileService, programService)
         programRoutes(userService, profileService, programService)
+        sessionRoutes(sessionService)
 
         get("/health") {
             val dbOk = DatabaseFactory.isHealthy()

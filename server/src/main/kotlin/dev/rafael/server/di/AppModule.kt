@@ -23,6 +23,9 @@ import dev.rafael.server.features.program.services.ProgramService
 import dev.rafael.server.features.workout.db.WorkoutRepository
 import dev.rafael.server.features.workout.db.WorkoutRepositoryImpl
 import dev.rafael.server.features.workout.services.WorkoutService
+import dev.rafael.server.features.session.db.SessionRepository
+import dev.rafael.server.features.session.db.SessionRepositoryImpl
+import dev.rafael.server.features.session.services.SessionService
 import org.koin.dsl.module
 
 val appModule = module {
@@ -55,4 +58,8 @@ val appModule = module {
     // Persistência + orquestração (G.1).
     single<ProgramRepository> { ProgramRepositoryImpl() }
     single { ProgramService(get(), get()) }
+
+    // Sessão de treino (Fase 5 — execução).
+    single<SessionRepository> { SessionRepositoryImpl() }
+    single { SessionService(get(), get()) }   // userService + repo
 }

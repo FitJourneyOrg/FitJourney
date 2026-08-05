@@ -127,6 +127,8 @@ class ProgramRepositoryImpl : ProgramRepository {
             it[locked] = program.locked
             it[createdAt] = ts
             it[updatedAt] = ts
+            it[durationWeeks] = program.durationWeeks
+            it[startedAt] = program.startedAt
         }
 
         val savedWorkouts = program.workouts.mapIndexed { index, w ->
@@ -228,6 +230,8 @@ class ProgramRepositoryImpl : ProgramRepository {
         workouts = workouts,
         createdAt = this[ProgramsTable.createdAt],
         updatedAt = this[ProgramsTable.updatedAt],
+        durationWeeks = this[ProgramsTable.durationWeeks],
+        startedAt = this[ProgramsTable.startedAt],
     )
 
     private suspend fun <T> dbQuery(block: () -> T): AppResult<T> =

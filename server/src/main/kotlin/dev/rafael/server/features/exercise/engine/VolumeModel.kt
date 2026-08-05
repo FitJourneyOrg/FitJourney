@@ -10,9 +10,10 @@ import dev.rafael.contract.profile.MuscleGroup
  * efetivas por músculo (RP/Israetel). Determinístico, sem LLM (ARCH #20).
  *
  * Perna FINA: LEGS vira QUADS/POSTERIOR/CALVES (derivados de movement_pattern, dado
- * confiável). ARMS fica combinado (bíceps/tríceps não se separam por padrão — Fatia B).
+ * Braço desmembrado (Fatia B): ARMS (grupo do quiz) → BICEPS/TRICEPS/FOREARMS, casados por
+ * `category` do catálogo (dado que já existe), do mesmo jeito que CALVES/CORE.
  */
-enum class TargetMuscle { CHEST, BACK, SHOULDERS, ARMS, QUADS, POSTERIOR, CALVES, GLUTES, CORE }
+enum class TargetMuscle { CHEST, BACK, SHOULDERS, BICEPS, TRICEPS, FOREARMS, QUADS, POSTERIOR, CALVES, GLUTES, CORE }
 
 /** Papel do exercício → define reps/descanso/RIR (ARCH #26 §3.2). */
 enum class SlotRole { COMPOSTO_PESADO, COMPOSTO_ACESSORIO, ISOLAMENTO }
@@ -25,7 +26,10 @@ object VolumeTable {
         TargetMuscle.CHEST to V(8, 14, 18, 22),
         TargetMuscle.BACK to V(10, 16, 20, 25),
         TargetMuscle.SHOULDERS to V(6, 12, 16, 22),
-        TargetMuscle.ARMS to V(6, 10, 14, 20),
+        // Braço desmembrado (Fatia B). [PROPOSTA] nos números — tríceps > bíceps (músculo maior).
+        TargetMuscle.BICEPS to V(5, 9, 12, 16),
+        TargetMuscle.TRICEPS to V(6, 10, 14, 18),
+        TargetMuscle.FOREARMS to V(3, 6, 9, 12),
         TargetMuscle.QUADS to V(6, 12, 16, 20),
         TargetMuscle.POSTERIOR to V(6, 10, 14, 18),
         TargetMuscle.CALVES to V(5, 9, 12, 16),
@@ -51,7 +55,9 @@ object VolumeTable {
         MuscleGroup.CHEST -> setOf(TargetMuscle.CHEST)
         MuscleGroup.BACK -> setOf(TargetMuscle.BACK)
         MuscleGroup.SHOULDERS -> setOf(TargetMuscle.SHOULDERS)
-        MuscleGroup.ARMS -> setOf(TargetMuscle.ARMS)
+        MuscleGroup.BICEPS -> setOf(TargetMuscle.BICEPS)
+        MuscleGroup.TRICEPS -> setOf(TargetMuscle.TRICEPS)
+        MuscleGroup.FOREARMS -> setOf(TargetMuscle.FOREARMS)
         MuscleGroup.LEGS -> setOf(TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.CALVES)
         MuscleGroup.GLUTES -> setOf(TargetMuscle.GLUTES)
         MuscleGroup.CORE -> setOf(TargetMuscle.CORE)

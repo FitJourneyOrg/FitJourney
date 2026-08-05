@@ -52,7 +52,10 @@ class SlotFiller(seed: Long) {
         TargetMuscle.CHEST -> MuscleGroup.CHEST in ex.primaryMuscles
         TargetMuscle.BACK -> MuscleGroup.BACK in ex.primaryMuscles
         TargetMuscle.SHOULDERS -> MuscleGroup.SHOULDERS in ex.primaryMuscles
-        TargetMuscle.ARMS -> MuscleGroup.ARMS in ex.primaryMuscles
+        // Braço desmembrado (Fatia B): casa por category (como CALVES/CORE), não por primary.
+        TargetMuscle.BICEPS -> ex.category == ExerciseCategory.BICEPS
+        TargetMuscle.TRICEPS -> ex.category == ExerciseCategory.TRICEPS
+        TargetMuscle.FOREARMS -> ex.category == ExerciseCategory.FOREARMS
         TargetMuscle.QUADS -> ex.movementPattern in QUAD_PATTERNS
         // Posterior (isquios): padrão de perna E primário LEGS — exclui hip thrust (primário GLUTES).
         TargetMuscle.POSTERIOR -> ex.movementPattern in POSTERIOR_PATTERNS && MuscleGroup.LEGS in ex.primaryMuscles
@@ -72,8 +75,8 @@ class SlotFiller(seed: Long) {
         if (candidates.isEmpty()) return null
         return candidates.maxByOrNull {
             score(it, slot, focusMuscles, userLevel) +
-                (if (it.movementPattern in usedPatterns) PATTERN_REPEAT_PENALTY else 0.0) +
-                rng.nextDouble() * ROTATION_JITTER
+                    (if (it.movementPattern in usedPatterns) PATTERN_REPEAT_PENALTY else 0.0) +
+                    rng.nextDouble() * ROTATION_JITTER
         }
     }
 
