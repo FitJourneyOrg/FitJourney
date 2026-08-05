@@ -1,0 +1,19 @@
+-- Outbox de sessões de treino (Fase 5). Guarda o payload JSON até sincronizar com o server.
+-- Cache é descartável hoje (bump do nome do DB); antes do beta isto precisa de migração real
+-- (.sqm) p/ não perder treino não-sincronizado — débito Fase E.
+CREATE TABLE session_outbox (
+    id      TEXT NOT NULL PRIMARY KEY,   -- id da sessão (UUID gerado no cliente)
+    payload TEXT NOT NULL                -- JSON do WorkoutSessionDto
+);
+
+enqueue:
+INSERT OR REPLACE INTO session_outbox(id, payload) VALUES (?, ?);
+
+pending:
+SELECT payload FROM session_outbox;
+
+remove:
+DELETE FROM session_outbox WHERE id = ?;
+
+countPending:
+SELECT COUNT(*) FROM session_outbox;
