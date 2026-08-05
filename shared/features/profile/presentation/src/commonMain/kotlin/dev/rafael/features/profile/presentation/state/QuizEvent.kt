@@ -16,6 +16,8 @@ sealed interface QuizEvent {
     data class FocusToggled(val muscle: MuscleGroup) : QuizEvent
     data class WeightChanged(val value: Double?) : QuizEvent
     data class HeightChanged(val value: Double?) : QuizEvent
+    data class AgeChanged(val value: Int?) : QuizEvent            // #24
+    data object SupervisedToggled : QuizEvent                     // #24: <18 aceite de supervisão
     data class EnvironmentSelected(val env: TrainingEnvironment) : QuizEvent
     data class HealthToggled(val field: HealthField) : QuizEvent   // qual pergunta mudou
     data object AcknowledgedRiskToggled : QuizEvent

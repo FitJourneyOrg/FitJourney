@@ -1,6 +1,7 @@
 package dev.rafael.server.features.program.routes
 
 import dev.rafael.contract.error.ErrorCodes
+import dev.rafael.contract.profile.ageGateSatisfied
 import dev.rafael.contract.program.CreateManualProgramRequest
 import dev.rafael.contract.program.RenameProgramRequest
 import dev.rafael.contract.program.SetScheduleRequest
@@ -56,6 +57,12 @@ fun Route.programRoutes(
                             AppError.Forbidden(
                                 "Complete a avaliação de saúde antes de gerar treinos.",
                                 ErrorCodes.HEALTH_GATE_REQUIRED,
+                            ).asFailure()
+                        } else if (!ageGateSatisfied(profile.age, profile.minorSupervised)) {
+                            // GATE DE IDADE (#24) — menor de 18 exige supervisão declarada.
+                            AppError.Forbidden(
+                                "Menor de 18: é preciso o reconhecimento de supervisão de um responsável.",
+                                ErrorCodes.AGE_GATE_REQUIRED,
                             ).asFailure()
                         } else {
                             // 2. GATE POR TETO (ARCH #27) — política pura (ProgramLimits).

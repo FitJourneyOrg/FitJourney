@@ -17,6 +17,8 @@ data class ProfileDto(
     val focusAreas: List<MuscleGroup> = emptyList(),
     val weightKg: Double? = null,
     val heightCm: Double? = null,
+    val age: Int? = null,                  // #24: idade (gate de menor)
+    val minorSupervised: Boolean = false,  // #24: <18 declarou supervisão de responsável
     val environment: TrainingEnvironment? = null,
     val health: HealthScreening? = null,
     val limitations: List<BodyLimitation> = emptyList(),

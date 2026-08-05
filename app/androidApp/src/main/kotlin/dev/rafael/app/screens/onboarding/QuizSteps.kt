@@ -89,6 +89,49 @@ fun LevelStep(selected: Level?, onSelect: (Level) -> Unit) {
 }
 
 @Composable
+fun AgeStep(
+    age: Int?,
+    minorSupervised: Boolean,
+    onAge: (Int?) -> Unit,
+    onToggleSupervised: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text("Qual sua idade?", style = MaterialTheme.typography.headlineSmall)
+        OutlinedTextField(
+            value = age?.toString() ?: "",
+            onValueChange = { onAge(it.filter(Char::isDigit).take(3).toIntOrNull()) },
+            label = { Text("Idade") },
+            singleLine = true,
+            isError = age != null && age !in 5..120,
+        )
+        if (age != null && age !in 5..120) {
+            Text(
+                "Digite uma idade válida (5 a 120).",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.labelSmall,
+            )
+        }
+        if (age != null && age in 5..17) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = minorSupervised, onCheckedChange = { onToggleSupervised() })
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "Um responsável ou profissional supervisiona meu treino.",
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+        if (age != null && age in 69..120) {
+            Text(
+                "Acima de 69: recomendamos acompanhamento médico regular.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
 fun DaysStep(selected: Int?, onSelect: (Int) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Quantos dias por semana?", style = MaterialTheme.typography.headlineSmall)

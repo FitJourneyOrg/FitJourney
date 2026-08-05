@@ -35,6 +35,9 @@ class ProfileService(
         if (dto.focusAreas.size > 2) {
             return AppError.Validation("focusAreas aceita no máximo 2 grupos").asFailure()
         }
+        if (dto.age != null && dto.age !in 5..120) {
+            return AppError.Validation("Idade fora do intervalo válido").asFailure()
+        }
         // Estágio 2 (descanso): dias off válidos e sobra dia p/ treinar.
         if (dto.unavailableDays.any { it !in 1..7 } || dto.unavailableDays.toSet().size != dto.unavailableDays.size) {
             return AppError.Validation("Dias indisponíveis inválidos (1..7, sem repetir)").asFailure()
@@ -53,6 +56,8 @@ class ProfileService(
                 focusAreas = dto.focusAreas,
                 weightKg = dto.weightKg,
                 heightCm = dto.heightCm,
+                age = dto.age,
+                minorSupervised = dto.minorSupervised,
                 environment = dto.environment,
                 health = dto.health,
                 limitations = dto.limitations,
