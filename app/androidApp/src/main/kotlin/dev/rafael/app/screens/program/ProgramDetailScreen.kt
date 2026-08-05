@@ -28,15 +28,18 @@ fun ProgramDetailScreen(
     onBack: () -> Unit,
     onOpenWorkout: (String, Boolean) -> Unit,   // (workoutId, editLocked)
     onAddWorkout: (String, String) -> Unit,     // (programId, diasOcupadosCSV)
+    onOpenPaywall: () -> Unit,                  // programa trancado → página de assinatura
+    onGenerateNew: () -> Unit,                  // programa concluído → gerar novo com IA
+    onCreateManual: () -> Unit,                 // programa concluído → criar um manual
     viewModel: ProgramDetailViewModel = koinViewModel { parametersOf(programId) },
 ) {
     val state by viewModel.state.collectAsState()
     var showRename by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var showPaywall by remember { mutableStateOf(false) }   // ARCH #23: toque em dia trancado
     // ARCH #25: programa IA de usuário free vem trancado — edição é premium.
     // 'locked' já é setado pelo ProgramBlur só quando (origin=AI && !premium).
     val readOnly = state.program?.locked == true
+    // Ao voltar do Paywall, o ON_RESUME abaixo já refaz o Retry → server desblurra vendo o premium.
 
     // delete bem-sucedido → volta pra lista de programas
     LaunchedEffect(state.isDeleted) { if (state.isDeleted) onBack() }
@@ -71,14 +74,6 @@ fun ProgramDetailScreen(
         )
     }
 
-    if (showPaywall) {
-        AlertDialog(
-            onDismissRequest = { showPaywall = false },
-            title = { Text("Recurso premium") },
-            text = { Text("O Dia 1 é seu de graça. Assine o premium para desbloquear o programa completo.") },
-            confirmButton = { TextButton(onClick = { showPaywall = false }) { Text("Entendi") } },
-        )
-    }
 
     Scaffold(
         topBar = {
@@ -94,6 +89,21 @@ fun ProgramDetailScreen(
                     IconButton(onClick = { showDeleteConfirm = true }) { Icon(Icons.Default.Delete, "Excluir") }
                 },
             )
+        },
+        bottomBar = {
+            // CTA da revelação (value-first): programa IA trancado → assinar desbloqueia tudo.
+            if (readOnly && state.program != null) {
+                Surface(tonalElevation = 3.dp) {
+                    Button(
+                        onClick = onOpenPaywall,
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    ) {
+                        Icon(Icons.Default.Lock, contentDescription = null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("Desbloquear todos os treinos")
+                    }
+                }
+            }
         },
         floatingActionButton = {
             if (!readOnly) {
@@ -119,6 +129,17 @@ fun ProgramDetailScreen(
                     Text("Nenhum treino neste programa ainda.", Modifier.align(Alignment.Center))
                 else ->
                     LazyColumn(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        // Cronograma: "Semana Y de X" + banner de conclusão (só p/ programa estruturado).
+                        state.program?.takeIf { it.daysPerWeek > 0 }?.let { p ->
+                            item {
+                                WeekProgress(
+                                    currentWeek = p.currentWeek,
+                                    durationWeeks = p.durationWeeks,
+                                    onGenerateNew = onGenerateNew,
+                                    onCreateManual = onCreateManual,
+                                )
+                            }
+                        }
                         state.program?.rationale?.takeIf { it.isNotBlank() }?.let { rationale ->
                             item {
                                 Text(rationale, style = MaterialTheme.typography.bodyMedium)
@@ -147,7 +168,7 @@ fun ProgramDetailScreen(
                                     headlineContent = { Text(w.name) },
                                     supportingContent = { Text("${w.exerciseCount} exercícios · Assine para desbloquear") },
                                     leadingContent = { Icon(Icons.Default.Lock, contentDescription = "Bloqueado") },
-                                    modifier = Modifier.clickable { showPaywall = true },
+                                    modifier = Modifier.clickable { onOpenPaywall() },
                                 )
                                 else -> ListItem(
                                     overlineContent = { Text(weekdayLabel(day)) },
@@ -174,6 +195,43 @@ fun ProgramDetailScreen(
 
 private val WEEKDAYS = listOf("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
 private fun weekdayLabel(day: Int): String = WEEKDAYS.getOrElse(day - 1) { "?" }
+
+/** "Semana Y de X" + barra de progresso; ao concluir a janela, banner com as 2 ações de novo programa. */
+@Composable
+private fun WeekProgress(
+    currentWeek: Int,
+    durationWeeks: Int,
+    onGenerateNew: () -> Unit,
+    onCreateManual: () -> Unit,
+) {
+    val done = currentWeek >= durationWeeks
+    Column(Modifier.fillMaxWidth()) {
+        Text("Semana $currentWeek de $durationWeeks", style = MaterialTheme.typography.titleMedium)
+        LinearProgressIndicator(
+            progress = { (currentWeek.toFloat() / durationWeeks).coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        )
+        if (done) {
+            Surface(
+                tonalElevation = 2.dp,
+                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Programa concluído", style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        "Hora de trocar. Gere um novo com IA ou crie um manual.",
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(onClick = onGenerateNew, modifier = Modifier.weight(1f)) { Text("Gerar com IA") }
+                        OutlinedButton(onClick = onCreateManual, modifier = Modifier.weight(1f)) { Text("Criar manual") }
+                    }
+                }
+            }
+        }
+    }
+}
 
 /** Botão com o dia atual do treino; abre um menu p/ escolher outro (1=Seg..7=Dom). */
 @Composable

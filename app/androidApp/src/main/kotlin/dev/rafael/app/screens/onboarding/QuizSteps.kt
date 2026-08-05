@@ -111,7 +111,9 @@ fun FocusStep(selected: List<MuscleGroup>, onToggle: (MuscleGroup) -> Unit) {
             val label = when (m) {
                 MuscleGroup.CHEST -> "Peito"
                 MuscleGroup.BACK -> "Costas"
-                MuscleGroup.ARMS -> "Braços"
+                MuscleGroup.BICEPS -> "Bíceps"
+                MuscleGroup.TRICEPS -> "Tríceps"
+                MuscleGroup.FOREARMS -> "Antebraço"
                 MuscleGroup.SHOULDERS -> "Ombros"
                 MuscleGroup.LEGS -> "Pernas"
                 MuscleGroup.GLUTES -> "Glúteos"

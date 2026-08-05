@@ -66,7 +66,7 @@ class WorkoutGenerationIntegrationTest {
         goal = Goal.GAIN_MUSCLE,                                    // GAIN_MUSCLE | LOSE_FAT | MAINTAIN | GENERAL_HEALTH
         level = Level.INTERMEDIATE,                                 // BEGINNER | INTERMEDIATE | ADVANCED
         daysPerWeek = 3,                                            // 2..6
-        focusAreas = listOf(MuscleGroup.CHEST, MuscleGroup.ARMS),  // grupos priorizados (INTER/ADV, máx 2)
+        focusAreas = listOf(MuscleGroup.CHEST, MuscleGroup.BICEPS),  // grupos priorizados (INTER/ADV, máx 2)
         environment = TrainingEnvironment.CASA,                // ACADEMIA | CASA
         weightKg = 78.0,
         heightCm = 178.0,

@@ -24,6 +24,8 @@ data class Program(
     val workouts: List<Workout>,
     val createdAt: LocalDateTime,
     val updatedAt: LocalDateTime,
+    val durationWeeks: Int,      // janela do cronograma (ARCH #22); mín/default 8 (2 meses)
+    val startedAt: LocalDateTime, // início da janela — a semana atual é derivada disto no servidor
 )
 
 /** Contagem de programas por origem — insumo dos gates de teto (ARCH #27). */

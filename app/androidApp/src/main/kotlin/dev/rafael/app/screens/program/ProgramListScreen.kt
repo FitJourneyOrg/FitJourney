@@ -76,7 +76,10 @@ fun ProgramListScreen(
                             items(state.programs) { p ->
                                 ListItem(
                                     headlineContent = { Text(p.name) },
-                                    supportingContent = { Text("${p.workouts.size} treinos") },
+                                    supportingContent = {
+                                        val base = "${p.workouts.size} treinos"
+                                        Text(if (p.daysPerWeek > 0) "$base · Semana ${p.currentWeek}/${p.durationWeeks}" else base)
+                                    },
                                     modifier = Modifier.clickable { p.id?.let(onOpenProgram) },
                                 )
                             }
