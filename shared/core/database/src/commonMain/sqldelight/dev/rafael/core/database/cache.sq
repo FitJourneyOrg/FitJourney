@@ -1,0 +1,16 @@
+-- Cache genérico chave→JSON p/ leitura offline (programas, treinos, e futuros).
+-- Uma tabela só evita bumpar o schema a cada novo cache. Descartável (repopula da rede);
+-- antes do beta, migração real (.sqm) — débito Fase E.
+CREATE TABLE kv_cache (
+    key     TEXT NOT NULL PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+
+put:
+INSERT OR REPLACE INTO kv_cache(key, payload) VALUES (?, ?);
+
+get:
+SELECT payload FROM kv_cache WHERE key = ?;
+
+deleteKey:
+DELETE FROM kv_cache WHERE key = ?;
