@@ -42,6 +42,12 @@ fun QuizScreen(
             when (state.step) {
                 QuizStep.GOAL -> GoalStep(state.goal) { viewModel.onEvent(QuizEvent.GoalSelected(it)) }
                 QuizStep.LEVEL -> LevelStep(state.level) { viewModel.onEvent(QuizEvent.LevelSelected(it)) }
+                QuizStep.AGE -> AgeStep(
+                    age = state.age,
+                    minorSupervised = state.minorSupervised,
+                    onAge = { viewModel.onEvent(QuizEvent.AgeChanged(it)) },
+                    onToggleSupervised = { viewModel.onEvent(QuizEvent.SupervisedToggled) },
+                )
                 QuizStep.DAYS -> DaysStep(state.daysPerWeek) { viewModel.onEvent(QuizEvent.DaysSelected(it)) }
                 QuizStep.REST_DAYS -> RestDaysStep(
                     selected = state.unavailableDays,

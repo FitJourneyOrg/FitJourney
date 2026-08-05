@@ -20,6 +20,8 @@ data class Profile(
     val focusAreas: List<MuscleGroup>,
     val weightKg: Double?,
     val heightCm: Double?,
+    val age: Int? = null,                    // #24
+    val minorSupervised: Boolean = false,    // #24
     val environment: TrainingEnvironment?,   // <- novo
     val health: HealthScreening?,            // <- novo
     val limitations: List<BodyLimitation> = emptyList(),

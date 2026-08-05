@@ -11,6 +11,8 @@ object ProfilesTable : Table("profiles") {
     val focusAreas = text("focus_areas")
     val weightKg = double("weight_kg").nullable()
     val heightCm = double("height_cm").nullable()
+    val age = integer("age").nullable()                            // #24
+    val minorSupervised = bool("minor_supervised").default(false)  // #24
     val environment = varchar("environment", 32).nullable()   // <- novo
     val healthScreening = text("health_screening").nullable()  // <- novo (JSON)
     val limitations = text("limitations").nullable()
