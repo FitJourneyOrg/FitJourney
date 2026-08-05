@@ -59,12 +59,18 @@ class FirebaseAuthRepository(
     override suspend fun currentIdToken(): String? =
         runCatching { auth.currentUser?.getIdToken(false) }.getOrNull()
 
+    /** Sessão persistida (sobrevive offline + restart). Não bate na rede — só olha o cache local. */
+    override suspend fun isLoggedIn(): Boolean = auth.currentUser != null
+
     override suspend fun fetchMe(): AppResult<AuthUser> =
         httpResult { meDataSource.getMe().let { AuthUser(uid = it.id, email = it.email) } }
 
-    private fun mapAuthError(e: Throwable): AppResult<AuthUser> = when (e) {
-        is FirebaseAuthException -> AppError.Unauthorized("Credenciais inválidas").asFailure()
-        else -> AppError.Unexpected("Falha na autenticação", e).asFailure()
+    private fun mapAuthError(e: Throwable): AppResult<AuthUser> = when {
+        e is FirebaseAuthException -> AppError.Unauthorized("Credenciais inválidas").asFailure()
+        // offline no 1º login: Firebase lança erro de rede. Não dá p/ validar credenciais sem internet.
+        (e.message ?: "").contains("network", ignoreCase = true) ->
+            AppError.Unexpected("Sem conexão. O primeiro login precisa de internet.", e).asFailure()
+        else -> AppError.Unexpected("Falha na autenticação. Verifique sua conexão.", e).asFailure()
     }
 }
 
