@@ -34,6 +34,7 @@ fun WorkoutDetailScreen(
     workoutId: String,
     onBack: () -> Unit,
     onEdit: () -> Unit,
+    onStartSession: () -> Unit = {},   // Fase 5: iniciar a execução do treino
     editLocked: Boolean = false,   // ARCH #25: programa IA + free → editar barra na hora
 ) {
     val viewModel: WorkoutDetailViewModel = koinViewModel { parametersOf(workoutId) }
@@ -145,6 +146,17 @@ fun WorkoutDetailScreen(
                     IconButton(onClick = { showConfirm = true }) { Icon(Icons.Default.Delete, "Excluir") }
                 },
             )
+        },
+        bottomBar = {
+            // Fase 5: começar a execução (só quando há exercícios carregados).
+            if (state.exercises.isNotEmpty()) {
+                Surface(tonalElevation = 3.dp) {
+                    Button(
+                        onClick = onStartSession,
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    ) { Text("Iniciar treino") }
+                }
+            }
         },
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {

@@ -36,6 +36,10 @@ dependencies {
     implementation(projects.shared.core.network)
     implementation(projects.shared.core.database)
     implementation(projects.shared.core.result)
+    implementation(projects.shared.core.catalog)      // ExerciseLookup (execução da sessão)
+    implementation(libs.kotlinx.datetime)             // timestamps da sessão (Fase 5)
+    implementation(libs.ktor.client.core)             // SessionApi (data no app — extrair p/ session:data depois)
+    implementation(libs.kotlinx.serialization.json)   // serializa o payload da outbox
     // Features (o app agrega os módulos Koin e usa o ViewModel)
     implementation(projects.shared.features.auth.domain)
     implementation(projects.shared.features.auth.presentation)

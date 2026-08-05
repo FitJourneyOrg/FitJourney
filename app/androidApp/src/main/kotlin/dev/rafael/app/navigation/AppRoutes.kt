@@ -24,4 +24,5 @@ sealed interface AppRoute {
     // takenDays = CSV dos dias já ocupados no programa (ex.: "1,3,5") — o form desabilita esses.
     @Serializable data class WorkoutCreate(val programId: String, val takenDays: String = "") : AppRoute
     @Serializable data class WorkoutEdit(val id: String) : AppRoute
+    @Serializable data class WorkoutSession(val id: String) : AppRoute   // execução do treino (Fase 5)
 }
