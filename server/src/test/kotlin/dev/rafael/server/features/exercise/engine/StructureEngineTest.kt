@@ -89,6 +89,29 @@ class StructureEngineTest {
     }
 
     @Test
+    fun `idade calibra o motor - idoso tem menos volume e treina conservador`() {
+        // ARCH #24: idade vira variável do motor. 60+ = menos volume (recupera menos) + RIR-piso 3.
+        val jovem = engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.INTERMEDIATE, 5, emptySet(), age = 30)
+        val idoso = engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.INTERMEDIATE, 5, emptySet(), age = 65)
+        val volJovem = jovem.days.sumOf { d -> d.slots.sumOf { it.sets } }
+        val volIdoso = idoso.days.sumOf { d -> d.slots.sumOf { it.sets } }
+        assertTrue(volIdoso < volJovem, "idoso deve ter menos volume total ($volIdoso < $volJovem)")
+        // idoso treina longe da falha: nenhum slot abaixo de RIR 3
+        assertTrue(idoso.days.all { d -> d.slots.all { it.rir >= 3 } }, "idoso treina conservador (RIR >= 3)")
+        // o intermediário jovem empurra mais (existe RIR < 3)
+        assertTrue(jovem.days.any { d -> d.slots.any { it.rir < 3 } }, "jovem intermediário empurra (RIR < 3)")
+    }
+
+    @Test
+    fun `idade nula nao penaliza o motor`() {
+        val nulo = engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.INTERMEDIATE, 5, emptySet(), age = null)
+            .days.sumOf { d -> d.slots.sumOf { it.sets } }
+        val jovem = engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.INTERMEDIATE, 5, emptySet(), age = 30)
+            .days.sumOf { d -> d.slots.sumOf { it.sets } }
+        assertEquals(jovem, nulo, "idade nula = mesma calibragem do jovem (<40)")
+    }
+
+    @Test
     fun `composto pesado vem primeiro e descansa mais que isolamento`() {
         val upper = engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.INTERMEDIATE, 4, emptySet()).days[0]
         assertEquals(SlotRole.COMPOSTO_PESADO, upper.slots.first().role, "composto pesado abre o dia")
