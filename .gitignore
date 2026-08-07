@@ -62,7 +62,8 @@ Thumbs.db
 /pgdata/
 # docs locais (Painel/Handoff/ADRs/débitos) — não versionar
 docs/
-# PDFs gerados na raiz (Contrato/Handoff/Painel Mestre/etc.) — locais, como docs/
+# Docs canônicos locais na raiz (Contrato/Handoff/Painel/Débitos/etc.) — PDFs e suas fontes .md
 /FitJourney_*.pdf
+/FitJourney_*.md
 # planilhas de tooling local (curadoria de exercícios) — não versionar
 /tools/**/*.xlsx
