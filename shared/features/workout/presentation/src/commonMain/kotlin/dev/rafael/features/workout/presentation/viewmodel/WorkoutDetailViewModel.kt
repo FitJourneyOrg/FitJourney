@@ -28,7 +28,8 @@ class WorkoutDetailViewModel(
     // Workout carregado (com ids/séries/rir) pra editar e re-enviar no PUT.
     private var loaded: Workout? = null
 
-    init { load() }
+    // Sem init { load() }: a tela dispara Retry no ON_RESUME (1ª entrada + refresh ao voltar).
+    // Ter os dois causava GET duplicado ao abrir o detalhe do treino.
 
     fun onEvent(event: WorkoutDetailEvent) {
         when (event) {
