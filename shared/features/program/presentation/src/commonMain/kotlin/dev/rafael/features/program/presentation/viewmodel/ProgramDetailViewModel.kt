@@ -26,7 +26,8 @@ class ProgramDetailViewModel(
     private val _state = MutableStateFlow(ProgramDetailState())
     val state: StateFlow<ProgramDetailState> = _state.asStateFlow()
 
-    init { load() }
+    // Sem init { load() }: a tela dispara Retry no ON_RESUME (1ª entrada + refresh ao voltar
+    // do paywall). Ter os dois causava GET /programs duplicado ao abrir o detalhe.
 
     fun onEvent(event: ProgramDetailEvent) {
         when (event) {

@@ -76,6 +76,7 @@ class WorkoutDetailViewModelTest {
     @Test
     fun `load preenche nome e exercicios`() = runTest(dispatcher) {
         val vm = WorkoutDetailViewModel("w1", FakeRepo(AppResult.Success(workout(2))), FakeLookup())
+        vm.onEvent(WorkoutDetailEvent.Retry)   // load vem da tela (ON_RESUME), não do init
         advanceUntilIdle()
 
         val s = vm.state.value
@@ -87,6 +88,7 @@ class WorkoutDetailViewModelTest {
     @Test
     fun `load com falha seta erro`() = runTest(dispatcher) {
         val vm = WorkoutDetailViewModel("w1", FakeRepo(AppResult.Failure(AppError.NotFound())), FakeLookup())
+        vm.onEvent(WorkoutDetailEvent.Retry)   // load vem da tela (ON_RESUME), não do init
         advanceUntilIdle()
 
         assertFalse(vm.state.value.isLoading)
@@ -97,6 +99,7 @@ class WorkoutDetailViewModelTest {
     fun `trocar exercicio em programa IA sem premium abre paywall`() = runTest(dispatcher) {
         val repo = FakeRepo(getResult = AppResult.Success(workout(3)), updateResult = entitlement)
         val vm = WorkoutDetailViewModel("w1", repo, FakeLookup())
+        vm.onEvent(WorkoutDetailEvent.Retry)   // load vem da tela (ON_RESUME), não do init
         advanceUntilIdle()
 
         vm.onEvent(WorkoutDetailEvent.SwapExercise(orderIndex = 0, newExerciseId = "novo"))
@@ -109,6 +112,7 @@ class WorkoutDetailViewModelTest {
     fun `dismiss fecha o paywall`() = runTest(dispatcher) {
         val repo = FakeRepo(getResult = AppResult.Success(workout(3)), updateResult = entitlement)
         val vm = WorkoutDetailViewModel("w1", repo, FakeLookup())
+        vm.onEvent(WorkoutDetailEvent.Retry)   // load vem da tela (ON_RESUME), não do init
         advanceUntilIdle()
         vm.onEvent(WorkoutDetailEvent.SwapExercise(0, "novo"))
         advanceUntilIdle()
@@ -121,6 +125,7 @@ class WorkoutDetailViewModelTest {
     fun `remover com so um exercicio bloqueia e nao chama update`() = runTest(dispatcher) {
         val repo = FakeRepo(getResult = AppResult.Success(workout(1)))
         val vm = WorkoutDetailViewModel("w1", repo, FakeLookup())
+        vm.onEvent(WorkoutDetailEvent.Retry)   // load vem da tela (ON_RESUME), não do init
         advanceUntilIdle()
 
         vm.onEvent(WorkoutDetailEvent.RemoveExercise(0))
@@ -134,6 +139,7 @@ class WorkoutDetailViewModelTest {
     fun `delete com sucesso marca isDeleted`() = runTest(dispatcher) {
         val repo = FakeRepo(getResult = AppResult.Success(workout(2)))
         val vm = WorkoutDetailViewModel("w1", repo, FakeLookup())
+        vm.onEvent(WorkoutDetailEvent.Retry)   // load vem da tela (ON_RESUME), não do init
         advanceUntilIdle()
 
         vm.onEvent(WorkoutDetailEvent.Delete)

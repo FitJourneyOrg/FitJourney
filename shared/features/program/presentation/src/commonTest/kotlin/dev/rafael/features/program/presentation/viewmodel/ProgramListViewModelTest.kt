@@ -29,6 +29,7 @@ class ProgramListViewModelTest {
     fun `load popula os programas`() = runTest(dispatcher) {
         val repo = FakeProgramRepository(listResult = AppResult.Success(listOf(program("a"), program("b"))))
         val vm = ProgramListViewModel(repo)
+        vm.onEvent(ProgramListEvent.Load)   // load é disparado pela tela (ON_RESUME), não pelo init
         advanceUntilIdle()
 
         assertFalse(vm.state.value.isLoading)
@@ -39,6 +40,7 @@ class ProgramListViewModelTest {
     fun `load com falha seta erro`() = runTest(dispatcher) {
         val repo = FakeProgramRepository(listResult = AppResult.Failure(AppError.NotFound()))
         val vm = ProgramListViewModel(repo)
+        vm.onEvent(ProgramListEvent.Load)   // load é disparado pela tela (ON_RESUME), não pelo init
         advanceUntilIdle()
 
         assertEquals("Não encontrado", vm.state.value.error)

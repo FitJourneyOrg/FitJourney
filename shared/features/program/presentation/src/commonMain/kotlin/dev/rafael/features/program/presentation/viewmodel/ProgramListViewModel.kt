@@ -19,7 +19,8 @@ class ProgramListViewModel(
     private val _state = MutableStateFlow(ProgramListState())
     val state: StateFlow<ProgramListState> = _state.asStateFlow()
 
-    init { load() }
+    // Sem init { load() }: a tela dispara Load no ON_RESUME, que já cobre a 1ª entrada
+    // E o refresh ao voltar. Ter os dois causava GET /programs duplicado na primeira abertura.
 
     fun onEvent(event: ProgramListEvent) {
         when (event) {
