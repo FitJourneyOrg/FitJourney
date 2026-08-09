@@ -10,4 +10,6 @@ interface ExerciseRepository {
     suspend fun refresh(): AppResult<Unit>
     /** Alternativas de mesmo tipo pra troca (GET /exercises/{id}/alternatives). */
     suspend fun alternatives(exerciseId: String): AppResult<List<Exercise>>
+    /** Detalhe completo (com taxonomia) — via rede, pois o cache local não guarda a taxonomia. */
+    suspend fun getDetail(exerciseId: String): AppResult<Exercise>
 }

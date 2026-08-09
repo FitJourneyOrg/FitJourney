@@ -6,6 +6,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import dev.rafael.app.screens.authentication.LoginScreen
+import dev.rafael.app.screens.exercise.ExerciseDetailScreen
 import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
 import dev.rafael.app.screens.home.HomeScreen
 import dev.rafael.app.screens.onboarding.QuizScreen
@@ -78,7 +79,13 @@ fun AppNavHost() {
         }
 
         composable<AppRoute.Library> {
-            ExerciseLibraryScreen()
+            ExerciseLibraryScreen(
+                onOpenExercise = { id -> nav.navigate(AppRoute.ExerciseDetail(id)) },
+            )
+        }
+        composable<AppRoute.ExerciseDetail> { entry ->
+            val route: AppRoute.ExerciseDetail = entry.toRoute()
+            ExerciseDetailScreen(exerciseId = route.id, onBack = { nav.popBackStack() })
         }
 
         // ---- Programas (ARCH #27 — substitui a antiga AppRoute.Workout flat) ----

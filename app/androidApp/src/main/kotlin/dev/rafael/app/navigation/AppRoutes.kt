@@ -8,6 +8,7 @@ sealed interface AppRoute {
     @Serializable data object Quiz : AppRoute
     @Serializable data object Home : AppRoute
     @Serializable data object Library : AppRoute
+    @Serializable data class ExerciseDetail(val id: String) : AppRoute
 
     // ARCH #27: "Meus treinos" (lista plana) virou "Meus Programas" (programas com
     // treinos aninhados). Workout.* continua existindo, mas Create agora exige programId

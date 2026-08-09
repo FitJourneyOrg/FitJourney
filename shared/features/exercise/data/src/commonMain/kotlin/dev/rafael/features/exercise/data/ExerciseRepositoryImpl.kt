@@ -2,6 +2,7 @@ package dev.rafael.features.exercise.data
 
 import dev.rafael.contract.exercise.ExerciseCategory
 import dev.rafael.core.network.httpResult
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.model.Exercise
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
@@ -24,4 +25,13 @@ class ExerciseRepositoryImpl(
 
     override suspend fun alternatives(exerciseId: String): AppResult<List<Exercise>> =
         httpResult { remote.getAlternatives(exerciseId).map { it.toDomain() } }
+
+    override suspend fun getDetail(exerciseId: String): AppResult<Exercise> =
+        when (val r = httpResult { remote.getExercises(category = null) }) {
+            is AppResult.Success ->
+                r.value.firstOrNull { it.id == exerciseId }?.toDomain()
+                    ?.let { AppResult.Success(it) }
+                    ?: AppResult.Failure(AppError.NotFound())
+            is AppResult.Failure -> r
+        }
 }

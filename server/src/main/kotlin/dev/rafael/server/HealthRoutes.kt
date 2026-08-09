@@ -16,6 +16,7 @@ import dev.rafael.server.features.workout.services.WorkoutService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.response.respond
+import io.ktor.server.http.content.staticFiles
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
@@ -31,6 +32,8 @@ data class HealthResponse(
     val db: String,
 )
 
+
+
 fun Application.configureRouting() {
     val userService = get<UserService>()
     val profileService = get<ProfileService>()
@@ -38,9 +41,15 @@ fun Application.configureRouting() {
     val workoutService = get<WorkoutService>()
     val programService = get<ProgramService>()
     val sessionService = get<SessionService>()
+    val mediaDir = resolveMediaDir(
+        environment.config.propertyOrNull("media.dir")?.getString() ?: "gifs_exercicios",
+    )
 
 
     routing {
+        // Mídia dos exercícios (png/mp4), pública, SÓ DEV. Ver MediaRoutes.kt.
+        staticFiles("/media", mediaDir)
+
         userRoutes(userService)
         profileRoutes(profileService)
         exerciseRoutes(exerciseService, profileService)

@@ -25,6 +25,14 @@ dependencies {
     // navigation compose
     implementation(libs.androidx.navigation.compose)
 
+    // Coil 3 — carregamento async de imagem (thumbs de exercício) + fetcher de rede
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+
+    // Media3 / ExoPlayer — mp4 em loop mudo no detalhe do exercício
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
+
     // icones
     implementation("androidx.compose.material:material-icons-core")
     implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
