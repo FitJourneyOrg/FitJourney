@@ -10,6 +10,11 @@ sealed interface AppRoute {
     @Serializable data object Library : AppRoute
     @Serializable data class ExerciseDetail(val id: String) : AppRoute
 
+    // Abas ainda sem implementação (placeholder) — Grupos é Fase 6, Progresso é Fase 5 (#16).
+    @Serializable data object Grupos : AppRoute
+    @Serializable data object Progresso : AppRoute
+    @Serializable data object Perfil : AppRoute
+
     // ARCH #27: "Meus treinos" (lista plana) virou "Meus Programas" (programas com
     // treinos aninhados). Workout.* continua existindo, mas Create agora exige programId
     // e só é alcançável a partir de ProgramDetail.

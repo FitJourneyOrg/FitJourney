@@ -1,10 +1,17 @@
 package dev.rafael.app.navigation
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import dev.rafael.app.screens.placeholder.EmBreveScreen
 import dev.rafael.app.screens.authentication.LoginScreen
 import dev.rafael.app.screens.exercise.ExerciseDetailScreen
 import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
@@ -23,7 +30,22 @@ import dev.rafael.app.screens.workout.WorkoutFormScreen
 @Composable
 fun AppNavHost() {
     val nav = rememberNavController()
-    NavHost(navController = nav, startDestination = AppRoute.Splash) {
+
+    // A barra de abas só aparece nas telas-raiz. Detalhe, execução, quiz e paywall
+    // ocupam a tela inteira (o usuário está numa tarefa, não navegando).
+    val entry by nav.currentBackStackEntryAsState()
+    val mostrarAbas = BottomTab.entries.any { tab ->
+        entry?.destination?.hasRoute(tab.routeClass) == true
+    }
+
+    Scaffold(
+        bottomBar = { if (mostrarAbas) FitJourneyBottomBar(nav) },
+    ) { padding ->
+    NavHost(
+        navController = nav,
+        startDestination = AppRoute.Splash,
+        modifier = Modifier.padding(padding),
+    ) {
 
         composable<AppRoute.Splash> {
             SplashScreen(
@@ -154,5 +176,17 @@ fun AppNavHost() {
             val route: AppRoute.WorkoutSession = entry.toRoute()
             WorkoutSessionScreen(workoutId = route.id, onDone = { nav.popBackStack() })
         }
+
+        // ---- Abas ainda não implementadas ----
+        composable<AppRoute.Grupos> {
+            EmBreveScreen("Grupos", "Treine com amigos, registre check-ins e dispute o ranking.")
+        }
+        composable<AppRoute.Progresso> {
+            EmBreveScreen("Progresso", "Seu histórico de treinos, XP e conquistas.")
+        }
+        composable<AppRoute.Perfil> {
+            EmBreveScreen("Perfil", "Seus dados, plano e configurações.")
+        }
+    }
     }
 }
