@@ -41,6 +41,7 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
 
+    implementation(projects.shared.core.designsystem)   // tema Volt Athletic (dark-first)
     implementation(projects.shared.core.network)
     implementation(projects.shared.core.database)
     implementation(projects.shared.core.result)
