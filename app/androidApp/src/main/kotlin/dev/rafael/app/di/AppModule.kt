@@ -1,6 +1,7 @@
 package dev.rafael.app.di
 
 import dev.rafael.app.data.session.SessionApi
+import dev.rafael.app.data.stats.StatsApi
 import dev.rafael.app.data.session.SessionSync
 import dev.rafael.app.screens.home.HomeViewModel
 import dev.rafael.app.screens.paywall.PaywallViewModel
@@ -22,6 +23,7 @@ val appModule = module {
 
     // Sessão de treino (Fase 5): remote + sync offline-first (outbox local).
     single { SessionApi(get()) }
+    single { StatsApi(get()) }        // XP/nível/streak (ARCH #16)
     single { SessionSync(get(), get()) }
 
     viewModelOf(::SplashViewModel)   // injeta AuthRepository + ProfileRepository + ExerciseRepository + CoroutineScope

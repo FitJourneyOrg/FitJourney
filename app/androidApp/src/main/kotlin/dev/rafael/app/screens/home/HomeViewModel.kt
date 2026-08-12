@@ -2,6 +2,8 @@ package dev.rafael.app.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.rafael.app.data.stats.StatsApi
+import dev.rafael.contract.stats.UserStatsDto
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.auth.domain.repository.AuthRepository
 import dev.rafael.features.profile.domain.repository.ProfileRepository
@@ -34,6 +36,7 @@ data class HomeState(
     val error: String? = null,
     val today: TodayWorkout? = null,   // null + !isLoading + !semPrograma = dia de descanso
     val semPrograma: Boolean = false,  // usuário ainda não tem programa nenhum
+    val stats: UserStatsDto? = null,   // XP/nível/streak (ARCH #16) — null = ainda não carregou
 )
 
 /**
@@ -49,6 +52,7 @@ class HomeViewModel(
     private val profile: ProfileRepository,
     private val programs: ProgramRepository,
     private val workouts: WorkoutRepository,
+    private val stats: StatsApi,
 ) : ViewModel() {
 
     private val _loggedOut = MutableStateFlow(false)
@@ -59,6 +63,7 @@ class HomeViewModel(
 
     fun load() {
         _state.update { it.copy(isLoading = true, error = null) }
+        carregarStats()
         viewModelScope.launch {
             when (val r = programs.list()) {
                 is AppResult.Failure ->
@@ -103,6 +108,19 @@ class HomeViewModel(
                         )
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * XP/nível/streak em paralelo ao treino do dia. Falha aqui NÃO vira erro de tela:
+     * a gamificação é acessório — o essencial (treinar hoje) não pode ficar refém dela.
+     */
+    private fun carregarStats() {
+        viewModelScope.launch {
+            when (val r = stats.get()) {
+                is AppResult.Success -> _state.update { it.copy(stats = r.value) }
+                is AppResult.Failure -> Unit   // silencioso: a faixa simplesmente não aparece
             }
         }
     }

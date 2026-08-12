@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.Group
+import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +24,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.ui.ShimmerLine
 import dev.rafael.app.ui.shimmer
+import dev.rafael.contract.stats.UserStatsDto
 import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -65,7 +67,13 @@ fun HomeScreen(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
     ) {
         Saudacao(onLogoutClick = { showLogoutConfirm = true })
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(16.dp))
+
+        // Faixa de recompensa (ARCH #16) — lime é EXCLUSIVO do perfil individual.
+        state.stats?.let { s ->
+            FaixaDeProgresso(s)
+            Spacer(Modifier.height(12.dp))
+        }
 
         when {
             state.isLoading -> CardEsqueleto()
@@ -115,6 +123,55 @@ private fun Saudacao(onLogoutClick: () -> Unit) {
             )
         }
         TextButton(onClick = onLogoutClick) { Text("Sair") }
+    }
+}
+
+/**
+ * Streak + nível + barra de XP. Usa `tertiary` (lime) porque é RECOMPENSA do perfil
+ * individual — [REGRA] ARCH #16: lime nunca em ação comum, navegação ou grupo.
+ */
+@Composable
+private fun FaixaDeProgresso(s: UserStatsDto) {
+    val lime = MaterialTheme.colorScheme.tertiary
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Outlined.LocalFireDepartment, contentDescription = null,
+                    tint = if (s.streakDays > 0) lime else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(22.dp),
+                )
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        "${s.streakDays}",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = if (s.streakDays > 0) lime else MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        if (s.streakDays == 1) "dia seguido" else "dias seguidos",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text("Nível ${s.level}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        "${s.xpInLevel} / ${s.xpForNextLevel} XP",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            LinearProgressIndicator(
+                progress = { if (s.xpForNextLevel > 0) s.xpInLevel / s.xpForNextLevel.toFloat() else 0f },
+                color = lime,
+                trackColor = MaterialTheme.colorScheme.surfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 
