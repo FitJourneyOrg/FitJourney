@@ -91,6 +91,9 @@ fun AppNavHost() {
             HomeScreen(
                 onOpenLibrary = { nav.navigate(AppRoute.Library) },
                 onOpenWorkouts = { nav.navigate(AppRoute.Programs) },
+                onStartWorkout = { id -> nav.navigate(AppRoute.WorkoutSession(id)) },
+                onOpenGroups = { nav.navigate(AppRoute.Grupos) },
+                onOpenProgress = { nav.navigate(AppRoute.Progresso) },
                 onLoggedOut = {
                     nav.navigate(AppRoute.Login) {
                         popUpTo(AppRoute.Home) { inclusive = true }  // limpa o back stack
