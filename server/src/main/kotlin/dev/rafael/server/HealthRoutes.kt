@@ -9,6 +9,8 @@ import dev.rafael.server.features.program.routes.programRoutes
 import dev.rafael.server.features.program.services.ProgramService
 import dev.rafael.server.features.session.routes.sessionRoutes
 import dev.rafael.server.features.session.services.SessionService
+import dev.rafael.server.features.stats.StatsService
+import dev.rafael.server.features.stats.statsRoutes
 import dev.rafael.server.features.user.routes.userRoutes
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.workout.routes.workoutRoutes
@@ -41,6 +43,7 @@ fun Application.configureRouting() {
     val workoutService = get<WorkoutService>()
     val programService = get<ProgramService>()
     val sessionService = get<SessionService>()
+    val statsService = get<StatsService>()
     val mediaDir = resolveMediaDir(
         environment.config.propertyOrNull("media.dir")?.getString() ?: "gifs_exercicios",
     )
@@ -56,6 +59,7 @@ fun Application.configureRouting() {
         workoutRoutes(workoutService, userService, profileService, programService)
         programRoutes(userService, profileService, programService)
         sessionRoutes(sessionService)
+        statsRoutes(statsService)
 
         get("/health") {
             val dbOk = DatabaseFactory.isHealthy()
