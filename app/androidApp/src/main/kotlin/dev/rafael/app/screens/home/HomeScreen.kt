@@ -1,5 +1,8 @@
 package dev.rafael.app.screens.home
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Bedtime
+import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Lock
@@ -70,15 +74,23 @@ fun HomeScreen(
         Spacer(Modifier.height(16.dp))
 
         // Faixa de recompensa (ARCH #16) — lime é EXCLUSIVO do perfil individual.
-        state.stats?.let { s ->
-            FaixaDeProgresso(s)
-            Spacer(Modifier.height(12.dp))
-        }
+        // Vem do cache local: aparece SEMPRE, inclusive offline. Antes do 1º sync da vida
+        // mostra zerada, o que é verdade (o usuário ainda não tem XP).
+        FaixaDeProgresso(state.stats, state.sessoesPendentes)
+        Spacer(Modifier.height(12.dp))
 
         when {
             state.isLoading -> CardEsqueleto()
             state.error != null -> CardErro(state.error!!) { viewModel.load() }
             state.semPrograma -> CardSemPrograma(onCriar = onOpenWorkouts)
+            // já treinou hoje (dado LOCAL): celebra e não oferece o mesmo treino de novo.
+            // Funciona offline — o XP é o do servidor quando disponível, mas não é requisito.
+            state.treinouHoje -> CardTreinoConcluido(
+                xpHoje = state.stats?.xpToday ?: 0,
+                streak = state.stats?.streakDays ?: 0,
+                nomeDoTreino = state.today?.name,
+                onVerProgresso = onOpenProgress,
+            )
             state.today != null -> CardTreinoDeHoje(
                 treino = state.today!!,
                 onIniciar = { onStartWorkout(state.today!!.workoutId) },
@@ -131,8 +143,30 @@ private fun Saudacao(onLogoutClick: () -> Unit) {
  * individual — [REGRA] ARCH #16: lime nunca em ação comum, navegação ou grupo.
  */
 @Composable
-private fun FaixaDeProgresso(s: UserStatsDto) {
+private fun FaixaDeProgresso(stats: UserStatsDto?, pendentes: Int) {
     val lime = MaterialTheme.colorScheme.tertiary
+    // sem sync ainda (1ª abertura / offline no primeiro uso): mostra zerado, não some
+    val s = stats ?: UserStatsDto(
+        xp = 0, level = 1, xpInLevel = 0, xpForNextLevel = 1000,
+        streakDays = 0, totalSessions = 0, sessionsThisWeek = 0,
+    )
+    // XP entra "contando" e a barra cresce: quando o treino offline sincroniza, o salto
+    // (0 -> 250) vira uma animação de recompensa em vez de um número que troca seco.
+    val xpAnimado by animateIntAsState(
+        targetValue = s.xpInLevel,
+        animationSpec = tween(durationMillis = 900),
+        label = "xp",
+    )
+    val barraAnimada by animateFloatAsState(
+        targetValue = if (s.xpForNextLevel > 0) s.xpInLevel / s.xpForNextLevel.toFloat() else 0f,
+        animationSpec = tween(durationMillis = 900),
+        label = "xp-barra",
+    )
+    val streakAnimado by animateIntAsState(
+        targetValue = s.streakDays,
+        animationSpec = tween(durationMillis = 600),
+        label = "streak",
+    )
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -144,7 +178,7 @@ private fun FaixaDeProgresso(s: UserStatsDto) {
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        "${s.streakDays}",
+                        "$streakAnimado",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = if (s.streakDays > 0) lime else MaterialTheme.colorScheme.onSurface,
@@ -158,7 +192,7 @@ private fun FaixaDeProgresso(s: UserStatsDto) {
                 Column(horizontalAlignment = Alignment.End) {
                     Text("Nível ${s.level}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(
-                        "${s.xpInLevel} / ${s.xpForNextLevel} XP",
+                        "$xpAnimado / ${s.xpForNextLevel} XP",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -166,11 +200,22 @@ private fun FaixaDeProgresso(s: UserStatsDto) {
             }
             Spacer(Modifier.height(10.dp))
             LinearProgressIndicator(
-                progress = { if (s.xpForNextLevel > 0) s.xpInLevel / s.xpForNextLevel.toFloat() else 0f },
+                progress = { barraAnimada },
                 color = lime,
                 trackColor = MaterialTheme.colorScheme.surfaceVariant,
                 modifier = Modifier.fillMaxWidth(),
             )
+            // XP de treino feito offline só entra depois que a sessão sobe (autoridade do
+            // servidor). Avisar evita o usuário achar que o treino não contou.
+            if (pendentes > 0) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    if (pendentes == 1) "1 treino aguardando sincronizar — o XP entra quando houver conexão"
+                    else "$pendentes treinos aguardando sincronizar — o XP entra quando houver conexão",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                )
+            }
         }
     }
 }
@@ -208,6 +253,58 @@ private fun CardTreinoDeHoje(
                 }
             } else {
                 Button(onClick = onIniciar, modifier = Modifier.fillMaxWidth()) { Text("Iniciar treino") }
+            }
+        }
+    }
+}
+
+/**
+ * Treino do dia concluído. Substitui o card de "iniciar" até o dia seguinte — evita refazer
+ * o mesmo treino em loop e fecha o ciclo do dia com a recompensa à vista (ARCH #16).
+ */
+@Composable
+private fun CardTreinoConcluido(
+    xpHoje: Int,
+    streak: Int,
+    nomeDoTreino: String?,
+    onVerProgresso: () -> Unit,
+) {
+    val lime = MaterialTheme.colorScheme.tertiary
+    Card(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.fillMaxWidth().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                Icons.Outlined.CheckCircle, contentDescription = null,
+                tint = lime, modifier = Modifier.size(44.dp),
+            )
+            Spacer(Modifier.height(12.dp))
+            Text("Treino concluído", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            nomeDoTreino?.let {
+                Spacer(Modifier.height(2.dp))
+                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (xpHoje > 0) {
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "+$xpHoje XP",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = lime,
+                )
+            }
+            Spacer(Modifier.height(8.dp))
+            Text(
+                if (streak > 1) "Sequência de $streak dias mantida. Descanse — o próximo treino aparece amanhã."
+                else "Sequência iniciada. Descanse — o próximo treino aparece amanhã.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(onClick = onVerProgresso, modifier = Modifier.fillMaxWidth()) {
+                Text("Ver progresso")
             }
         }
     }

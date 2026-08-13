@@ -1,8 +1,5 @@
-CREATE TABLE onboarding_cache (
-    id                  INTEGER NOT NULL PRIMARY KEY DEFAULT 0,  -- single-row: sempre id=0
-    uid                 TEXT NOT NULL DEFAULT '',                -- dono do flag (evita vazar entre usuários)
-    onboardingCompleted INTEGER NOT NULL                         -- 0/1
-);
+-- Flag do onboarding (tabela `onboarding_cache`, linha única id = 0).
+-- Schema: 1.sqm. Chaveada por uid para não vazar entre contas.
 
 selectOnboarding:
 SELECT uid, onboardingCompleted FROM onboarding_cache WHERE id = 0;

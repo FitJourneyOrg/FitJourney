@@ -57,7 +57,13 @@ class SplashViewModel(
             // empurrava o getProfile além dos 5s → fallback (cache stale) → Home errado no
             // cadastro novo. No appScope o warm sobrevive à Splash ser destruída.
             warmExerciseCatalog()
-            appScope.launch { sessionSync.flush() }   // reenvia sessões de treino pendentes (offline)
+            // Aquece o banco local no boot (appScope: sobrevive à Splash ser destruída):
+            // sobe o que ficou pendente e BAIXA o histórico. Assim o Progresso funciona
+            // offline mesmo que o usuário nunca o tenha aberto com internet.
+            appScope.launch {
+                sessionSync.flush()
+                sessionSync.sincronizarHistorico()
+            }
         }
     }
 

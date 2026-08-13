@@ -15,6 +15,7 @@ import androidx.compose.ui.unit.dp
 import dev.rafael.app.screens.exercise.ExercisePickerSheet
 import dev.rafael.features.workout.presentation.state.WorkoutFormEvent
 import dev.rafael.features.workout.presentation.viewmodel.WorkoutFormViewModel
+import dev.rafael.app.ui.ShimmerContent
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -59,9 +60,7 @@ fun WorkoutFormScreen(
         },
     ) { padding ->
         if (state.isLoading) {
-            Box(Modifier.padding(padding).fillMaxSize()) {
-                CircularProgressIndicator(Modifier.align(Alignment.Center))
-            }
+            ShimmerContent(Modifier.padding(padding))
             return@Scaffold
         }
 

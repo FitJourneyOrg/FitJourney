@@ -13,6 +13,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.features.program.presentation.state.ProgramListEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramListViewModel
+import dev.rafael.app.ui.ShimmerList
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -68,7 +69,7 @@ fun ProgramListScreen(
             Box(Modifier.weight(1f)) {
                 when {
                     state.isLoading && state.programs.isEmpty() ->
-                        CircularProgressIndicator(Modifier.align(Alignment.Center))
+                        ShimmerList(modifier = Modifier.padding(vertical = 8.dp))
                     state.programs.isEmpty() ->
                         Text("Nenhum programa ainda.", Modifier.align(Alignment.Center))
                     else ->

@@ -1,0 +1,31 @@
+-- Sessões de treino executadas (tabela `workout_session`).
+-- Schema: 1.sqm. Histórico E fila de envio na mesma tabela: `pending = 1` é a fila.
+-- [REGRA] toda query filtra por uid — sessão de um usuário nunca sobe com o token de outro.
+
+salvarLocal:
+INSERT OR REPLACE INTO workout_session(id, uid, payload, finishedAt, pending)
+VALUES (?, ?, ?, ?, 1);
+
+-- Veio do servidor: já é confirmada. Se a linha existir (era pendente nossa), o REPLACE
+-- sobrescreve com pending = 0 — que é exatamente o certo: o servidor já tem essa sessão.
+-- (INSERT OR REPLACE em vez de upsert `ON CONFLICT DO UPDATE`: este exige SQLite 3.24, e o
+--  minSdk 24 alcança aparelhos com SQLite mais antigo.)
+salvarDoServidor:
+INSERT OR REPLACE INTO workout_session(id, uid, payload, finishedAt, pending)
+VALUES (?, ?, ?, ?, 0);
+
+-- Servidor confirmou o envio da pendente.
+marcarSincronizada:
+UPDATE workout_session SET pending = 0 WHERE id = ?;
+
+-- A "outbox" DO USUÁRIO ATUAL: enviar pendência de outra conta atribuiria o treino a quem
+-- está logado agora.
+pendentes:
+SELECT payload FROM workout_session WHERE pending = 1 AND uid = ?;
+
+contarPendentes:
+SELECT COUNT(*) FROM workout_session WHERE pending = 1 AND uid = ?;
+
+-- Histórico do usuário atual (mais recente primeiro) — a tela observa isto.
+observarHistorico:
+SELECT id, payload, finishedAt, pending FROM workout_session WHERE uid = ? ORDER BY finishedAt DESC;

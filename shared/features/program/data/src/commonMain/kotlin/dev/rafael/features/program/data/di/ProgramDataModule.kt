@@ -10,6 +10,6 @@ import org.koin.dsl.module
 
 val programDataModule: Module = module {
     single { ProgramDataSource(client = get<HttpClient>()) }
-    single { ProgramLocalDataSource(get()) }   // FitJourneyDatabase do databaseModule
-    single<ProgramRepository> { ProgramRepositoryImpl(get(), get()) }
+    single { ProgramLocalDataSource(get(), get()) }   // db + TokenProvider (cache por uid)
+    single<ProgramRepository> { ProgramRepositoryImpl(get(), get(), get()) }   // + TokenProvider (cache por uid)
 }

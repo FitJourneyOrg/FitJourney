@@ -1,0 +1,39 @@
+-- Migration 1: schema inicial do banco local.
+--
+-- A partir daqui o schema vive AQUI (não nos .sq). Toda mudança futura entra como uma nova
+-- migration (2.sqm, 3.sqm, ...) e o SQLDelight migra o banco existente sem apagá-lo — que é
+-- o requisito do offline-first: sessões com pending = 1 só existem no aparelho.
+
+-- Catálogo de exercícios (read-only p/ o usuário; o refresh substitui tudo).
+CREATE TABLE exercise (
+    id          TEXT NOT NULL PRIMARY KEY,
+    name        TEXT NOT NULL,
+    category    TEXT NOT NULL,
+    description TEXT,
+    videoRef    TEXT NOT NULL,
+    thumbRef    TEXT NOT NULL
+);
+CREATE INDEX exercise_category ON exercise(category);
+
+-- Flag do onboarding (linha única, id = 0). Chaveada por uid p/ não vazar entre contas.
+CREATE TABLE onboarding_cache (
+    id                  INTEGER NOT NULL PRIMARY KEY DEFAULT 0,
+    uid                 TEXT NOT NULL DEFAULT '',
+    onboardingCompleted INTEGER NOT NULL
+);
+
+-- Cache genérico chave→JSON (programas, treinos, stats). Chaves incluem o uid.
+CREATE TABLE kv_cache (
+    key     TEXT NOT NULL PRIMARY KEY,
+    payload TEXT NOT NULL
+);
+
+-- Sessões executadas: histórico E fila de envio na mesma tabela (pending = 1 é a fila).
+CREATE TABLE workout_session (
+    id          TEXT    NOT NULL PRIMARY KEY,
+    uid         TEXT    NOT NULL DEFAULT '',
+    payload     TEXT    NOT NULL,
+    finishedAt  TEXT    NOT NULL,
+    pending     INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX workout_session_finished ON workout_session(uid, finishedAt DESC);

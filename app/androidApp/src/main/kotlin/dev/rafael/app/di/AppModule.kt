@@ -2,8 +2,12 @@ package dev.rafael.app.di
 
 import dev.rafael.app.data.session.SessionApi
 import dev.rafael.app.data.stats.StatsApi
+import dev.rafael.app.data.stats.StatsRepository
+import dev.rafael.app.data.sync.SyncScheduler
+import org.koin.android.ext.koin.androidContext
 import dev.rafael.app.data.session.SessionSync
 import dev.rafael.app.screens.home.HomeViewModel
+import dev.rafael.app.screens.progress.ProgressViewModel
 import dev.rafael.app.screens.paywall.PaywallViewModel
 import dev.rafael.app.screens.reveal.ProgramRevealViewModel
 import dev.rafael.app.screens.session.WorkoutSessionViewModel
@@ -23,11 +27,14 @@ val appModule = module {
 
     // Sessão de treino (Fase 5): remote + sync offline-first (outbox local).
     single { SessionApi(get()) }
-    single { StatsApi(get()) }        // XP/nível/streak (ARCH #16)
-    single { SessionSync(get(), get()) }
+    single { StatsApi(get()) }              // XP/nível/streak (ARCH #16)
+    single { StatsRepository(get(), get(), get()) }  // api + db + TokenProvider (cache por uid)
+    single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
+    single { SessionSync(get(), get(), get(), get()) }   // api + db + scheduler + TokenProvider
 
     viewModelOf(::SplashViewModel)   // injeta AuthRepository + ProfileRepository + ExerciseRepository + CoroutineScope
     viewModelOf(::HomeViewModel)     // injeta AuthRepository (logout)
+    viewModelOf(::ProgressViewModel) // histórico offline-first + stats
     viewModelOf(::ProgramRevealViewModel)   // injeta ProgramRepository (revelação)
     viewModelOf(::PaywallViewModel)          // injeta Billing (página de assinatura)
     viewModel { (workoutId: String) -> WorkoutSessionViewModel(workoutId, get(), get(), get()) }   // execução
