@@ -33,6 +33,9 @@ dependencies {
     implementation(libs.androidx.media3.exoplayer)
     implementation(libs.androidx.media3.ui)
 
+    // WorkManager — reenvia a outbox quando a rede volta (mesmo com o app fechado)
+    implementation(libs.androidx.work.runtime)
+
     // icones
     implementation("androidx.compose.material:material-icons-core")
     implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
@@ -48,6 +51,7 @@ dependencies {
     implementation(projects.shared.core.catalog)      // ExerciseLookup (execução da sessão)
     implementation(libs.kotlinx.datetime)             // timestamps da sessão (Fase 5)
     implementation(libs.ktor.client.core)             // SessionApi (data no app — extrair p/ session:data depois)
+    implementation(libs.sqldelight.coroutinesExtensions)  // histórico de sessões observado por Flow
     implementation(libs.kotlinx.serialization.json)   // serializa o payload da outbox
     // Features (o app agrega os módulos Koin e usa o ViewModel)
     implementation(projects.shared.features.auth.domain)

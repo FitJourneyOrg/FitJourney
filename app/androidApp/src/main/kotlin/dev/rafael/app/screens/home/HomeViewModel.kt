@@ -2,7 +2,8 @@ package dev.rafael.app.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.rafael.app.data.stats.StatsApi
+import dev.rafael.app.data.session.SessionSync
+import dev.rafael.app.data.stats.StatsRepository
 import dev.rafael.contract.stats.UserStatsDto
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.auth.domain.repository.AuthRepository
@@ -12,6 +13,8 @@ import dev.rafael.features.workout.domain.repository.WorkoutRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
@@ -37,6 +40,13 @@ data class HomeState(
     val today: TodayWorkout? = null,   // null + !isLoading + !semPrograma = dia de descanso
     val semPrograma: Boolean = false,  // usuário ainda não tem programa nenhum
     val stats: UserStatsDto? = null,   // XP/nível/streak (ARCH #16) — null = ainda não carregou
+    /**
+     * Se já treinou hoje. Vem do BANCO LOCAL (não do servidor): funciona offline e é imediato
+     * — o usuário acabou de finalizar o treino, a Home não pode depender de rede pra saber.
+     */
+    val treinouHoje: Boolean = false,
+    /** Sessões ainda não enviadas. O XP delas só entra quando subirem (autoridade do servidor). */
+    val sessoesPendentes: Int = 0,
 )
 
 /**
@@ -52,7 +62,8 @@ class HomeViewModel(
     private val profile: ProfileRepository,
     private val programs: ProgramRepository,
     private val workouts: WorkoutRepository,
-    private val stats: StatsApi,
+    private val stats: StatsRepository,
+    private val sessions: SessionSync,
 ) : ViewModel() {
 
     private val _loggedOut = MutableStateFlow(false)
@@ -60,6 +71,35 @@ class HomeViewModel(
 
     private val _state = MutableStateFlow(HomeState())
     val state: StateFlow<HomeState> = _state.asStateFlow()
+
+    init {
+        // Observa o histórico LOCAL: assim que a sessão é gravada (mesmo offline), a Home
+        // já sabe que o treino de hoje foi feito e troca o card — sem esperar servidor.
+        sessions.observarHistorico()
+            .onEach { historico ->
+                val hoje = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
+                val pendentesAgora = historico.count { s -> s.pendente }
+                val pendentesAntes = _state.value.sessoesPendentes
+                _state.update {
+                    it.copy(
+                        treinouHoje = historico.any { s -> s.dto.finishedAt.startsWith(hoje) },
+                        sessoesPendentes = pendentesAgora,
+                    )
+                }
+                // A pendência CAIU: o WorkManager sincronizou em background (talvez com a tela
+                // aberta). O servidor já recalculou o XP — busca de novo pra a faixa atualizar
+                // sozinha, sem o usuário precisar sair e voltar da tela.
+                if (pendentesAgora < pendentesAntes) {
+                    viewModelScope.launch { stats.sincronizar() }
+                }
+            }
+            .launchIn(viewModelScope)
+
+        // Faixa de XP vem do CACHE local: aparece sempre, offline inclusive.
+        stats.observar()
+            .onEach { s -> _state.update { it.copy(stats = s) } }
+            .launchIn(viewModelScope)
+    }
 
     fun load() {
         _state.update { it.copy(isLoading = true, error = null) }
@@ -118,10 +158,10 @@ class HomeViewModel(
      */
     private fun carregarStats() {
         viewModelScope.launch {
-            when (val r = stats.get()) {
-                is AppResult.Success -> _state.update { it.copy(stats = r.value) }
-                is AppResult.Failure -> Unit   // silencioso: a faixa simplesmente não aparece
-            }
+            // A Home não baixa o histórico: quem faz isso é o boot (Splash), a tela de
+            // Progresso e o SyncWorker. Aqui só sobe pendência e atualiza o XP.
+            sessions.flush()
+            stats.sincronizar()   // grava as stats no cache; o Flow re-emite
         }
     }
 

@@ -20,7 +20,11 @@ class FakeProgramRepository(
     var deleteResult: AppResult<Unit> = AppResult.Success(Unit),
     var scheduleResult: AppResult<Program> = AppResult.Success(program("p1")),
 ) : ProgramRepository {
+    var invalidateCalls = 0
+
     override suspend fun list() = listResult
+    override suspend fun refresh() = listResult
+    override fun invalidate() { invalidateCalls++ }
     override suspend fun generate() = generateResult
     override suspend fun createManual(name: String) = createResult
     override suspend fun rename(id: String, name: String) = renameResult

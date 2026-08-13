@@ -12,6 +12,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import dev.rafael.app.screens.placeholder.EmBreveScreen
+import dev.rafael.app.screens.progress.ProgressScreen
+import dev.rafael.features.program.domain.repository.ProgramRepository
+import org.koin.compose.koinInject
 import dev.rafael.app.screens.authentication.LoginScreen
 import dev.rafael.app.screens.exercise.ExerciseDetailScreen
 import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
@@ -37,6 +40,11 @@ fun AppNavHost() {
     val mostrarAbas = BottomTab.entries.any { tab ->
         entry?.destination?.hasRoute(tab.routeClass) == true
     }
+
+    // A lista de programas é cache-first. Mudanças feitas FORA da feature de programa
+    // (criar/editar/excluir treino, virar premium) precisam sujar esse cache — quem faz a
+    // ponte é a camada do app, porque feature nunca depende de feature (Konsist).
+    val programas: ProgramRepository = koinInject()
 
     Scaffold(
         bottomBar = { if (mostrarAbas) FitJourneyBottomBar(nav) },
@@ -84,7 +92,8 @@ fun AppNavHost() {
         }
 
         composable<AppRoute.Paywall> {
-            PaywallScreen(onClose = { nav.popBackStack() })   // assina/fecha → volta pra origem (que recarrega)
+            // virar premium muda o blur dos programas (#23) → cache de programas fica sujo
+            PaywallScreen(onClose = { programas.invalidate(); nav.popBackStack() })
         }
 
         composable<AppRoute.Home> {
@@ -151,7 +160,9 @@ fun AppNavHost() {
             WorkoutDetailScreen(
                 workoutId = route.id,
                 editLocked = route.editLocked,
-                onBack = { nav.popBackStack() },
+                // aqui dá pra excluir/trocar exercício do treino; ao voltar, o programa pode ter
+                // mudado (contagem, agenda). Invalida — custa 1 refetch, evita lista desatualizada.
+                onBack = { programas.invalidate(); nav.popBackStack() },
                 onEdit = { nav.navigate(AppRoute.WorkoutEdit(route.id)) },
                 onStartSession = { nav.navigate(AppRoute.WorkoutSession(route.id)) },
             )
@@ -163,7 +174,8 @@ fun AppNavHost() {
                 programId = route.programId,
                 takenDays = route.takenDays,
                 onBack = { nav.popBackStack() },
-                onSaved = { nav.popBackStack() },
+                // treino novo muda a contagem/agenda do programa → invalida o cache
+                onSaved = { programas.invalidate(); nav.popBackStack() },
             )
         }
         composable<AppRoute.WorkoutEdit> { entry ->
@@ -172,7 +184,7 @@ fun AppNavHost() {
                 workoutId = route.id,
                 programId = null,
                 onBack = { nav.popBackStack() },
-                onSaved = { nav.popBackStack() },
+                onSaved = { programas.invalidate(); nav.popBackStack() },
             )
         }
         composable<AppRoute.WorkoutSession> { entry ->
@@ -184,9 +196,7 @@ fun AppNavHost() {
         composable<AppRoute.Grupos> {
             EmBreveScreen("Grupos", "Treine com amigos, registre check-ins e dispute o ranking.")
         }
-        composable<AppRoute.Progresso> {
-            EmBreveScreen("Progresso", "Seu histórico de treinos, XP e conquistas.")
-        }
+        composable<AppRoute.Progresso> { ProgressScreen() }
         composable<AppRoute.Perfil> {
             EmBreveScreen("Perfil", "Seus dados, plano e configurações.")
         }

@@ -7,8 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -59,6 +58,36 @@ fun Modifier.shimmer(shape: Shape = RectangleShape): Modifier = composed {
 @Composable
 fun ShimmerLine(width: Dp, height: Dp = 16.dp) {
     Box(Modifier.size(width, height).shimmer(RoundedCornerShape(4.dp)))
+}
+
+/** Esqueleto de lista (linhas shimmer) — pra telas de lista carregando. */
+@Composable
+fun ShimmerList(rows: Int = 6, modifier: Modifier = Modifier) {
+    Column(modifier.fillMaxWidth()) {
+        repeat(rows) {
+            Column(
+                Modifier.fillMaxWidth().padding(vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                ShimmerLine(width = 200.dp, height = 16.dp)
+                ShimmerLine(width = 120.dp, height = 12.dp)
+            }
+        }
+    }
+}
+
+/** Esqueleto genérico de conteúdo (bloco + linhas) — pra telas de detalhe/form carregando. */
+@Composable
+fun ShimmerContent(modifier: Modifier = Modifier) {
+    Column(
+        modifier.fillMaxWidth().padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Box(Modifier.fillMaxWidth().height(120.dp).shimmer(RoundedCornerShape(12.dp)))
+        ShimmerLine(width = 220.dp, height = 22.dp)
+        ShimmerLine(width = 160.dp, height = 16.dp)
+        ShimmerLine(width = 260.dp, height = 16.dp)
+    }
 }
 
 /**

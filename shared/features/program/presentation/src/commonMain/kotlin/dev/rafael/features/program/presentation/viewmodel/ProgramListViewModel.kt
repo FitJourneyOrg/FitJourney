@@ -24,7 +24,8 @@ class ProgramListViewModel(
 
     fun onEvent(event: ProgramListEvent) {
         when (event) {
-            ProgramListEvent.Load, ProgramListEvent.Retry -> load()
+            ProgramListEvent.Load -> load(forcar = false)   // cache-first: trocar de aba não vai à rede
+            ProgramListEvent.Retry -> load(forcar = true)   // o usuário pediu de novo: força a rede
             is ProgramListEvent.CreateManual -> createManual(event.name)
         }
     }
@@ -39,10 +40,10 @@ class ProgramListViewModel(
         _state.update { it.copy(createdId = null) }
     }
 
-    private fun load() {
+    private fun load(forcar: Boolean = false) {
         _state.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
-            when (val result = repository.list()) {
+            when (val result = if (forcar) repository.refresh() else repository.list()) {
                 is AppResult.Success ->
                     _state.update { it.copy(isLoading = false, programs = result.value) }
                 is AppResult.Failure ->

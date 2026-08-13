@@ -18,6 +18,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.features.program.presentation.state.ProgramDetailEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramDetailViewModel
+import dev.rafael.app.ui.ShimmerContent
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -118,7 +119,7 @@ fun ProgramDetailScreen(
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
                 state.isLoading && state.program == null ->
-                    CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    ShimmerContent()
                 state.error != null && state.program == null ->
                     Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(state.error!!, color = MaterialTheme.colorScheme.error)

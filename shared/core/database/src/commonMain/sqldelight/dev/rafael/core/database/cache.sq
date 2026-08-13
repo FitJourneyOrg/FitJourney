@@ -1,10 +1,5 @@
--- Cache genérico chave→JSON p/ leitura offline (programas, treinos, e futuros).
--- Uma tabela só evita bumpar o schema a cada novo cache. Descartável (repopula da rede);
--- antes do beta, migração real (.sqm) — débito Fase E.
-CREATE TABLE kv_cache (
-    key     TEXT NOT NULL PRIMARY KEY,
-    payload TEXT NOT NULL
-);
+-- Cache genérico chave->JSON (tabela `kv_cache`): programas, treinos e stats.
+-- Schema: 1.sqm. As chaves incluem o uid do dono.
 
 put:
 INSERT OR REPLACE INTO kv_cache(key, payload) VALUES (?, ?);

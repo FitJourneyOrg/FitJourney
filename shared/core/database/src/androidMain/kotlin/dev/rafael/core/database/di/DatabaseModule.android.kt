@@ -9,7 +9,9 @@ import org.koin.dsl.module
 
 actual val platformDatabaseModule: Module = module {
     single<SqlDriver> {
-        // _v4: + kv_cache (leitura offline de programas/treinos). Sem .sqm, bumpar recria o DB.
-        AndroidSqliteDriver(FitJourneyDatabase.Schema, androidContext(), "fitjourney_v4.db")
+        // NOME ESTÁVEL (sem sufixo de versão): o banco agora guarda sessões pendentes — dado que
+        // só existe aqui. Evoluir o schema é papel das migrations .sqm; bumpar o nome apagaria
+        // treino não sincronizado. Ver src/commonMain/sqldelight/migrations/LEIA-ME.md.
+        AndroidSqliteDriver(FitJourneyDatabase.Schema, androidContext(), "fitjourney.db")
     }
 }

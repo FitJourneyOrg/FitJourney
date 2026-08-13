@@ -1,11 +1,13 @@
 package dev.rafael.app.screens.exercise
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.core.text.HtmlCompat
 import dev.rafael.app.ui.NetworkImage
 import dev.rafael.app.ui.ShimmerLine
 import dev.rafael.app.ui.shimmer
@@ -92,13 +93,10 @@ private fun ExerciseDetailContent(ex: Exercise) {
         Spacer(Modifier.height(8.dp))
         AssistChip(onClick = {}, label = { Text(categoryLabel(ex.category)) })
 
-        // Seção: Sobre o exercício (a prosa da descrição).
+        // Seção: Sobre o exercício (parágrafos; "Aviso/Atenção/Importante" viram nota).
         ex.description?.takeIf { it.isNotBlank() }?.let { desc ->
             Section("Sobre o exercício") {
-                Text(
-                    HtmlCompat.fromHtml(desc, HtmlCompat.FROM_HTML_MODE_COMPACT).toString().trim(),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                DescriptionBody(desc)
             }
         }
 
@@ -166,6 +164,55 @@ private fun InfoRow(label: String, value: String) {
     }
 }
 
+private val warnRegex = Regex("^\\s*(aviso|aten[cç][aã]o|importante)\\b", RegexOption.IGNORE_CASE)
+
+// Boilerplate de "procure um profissional" que muitas descrições repetem — removido do texto
+// pra não duplicar a nota padrão (SAFETY_NOTE) que mostramos em TODOS os exercícios.
+private val safetyRegex = Regex(
+    "profissional (de educa[çc][aã]o f[íi]sica|qualificado|de sa[úu]de)|" +
+        "orienta[çc][aã]o de um profissional|antes de iniciar qualquer|acompanhamento profissional",
+    RegexOption.IGNORE_CASE,
+)
+private const val SAFETY_NOTE =
+    "Antes de iniciar qualquer programa de treino, procure a orientação de um profissional de " +
+        "educação física para garantir a execução correta e evitar lesões."
+
+/**
+ * Renderiza a descrição em parágrafos (split \n\n). Tira o disclaimer de "profissional" que já
+ * vem no texto (pra não duplicar) e SEMPRE anexa a nota de segurança padrão ao final.
+ */
+@Composable
+private fun ColumnScope.DescriptionBody(desc: String) {
+    val paras = desc.split("\n\n").map { it.trim() }
+        .filter { it.isNotBlank() && !safetyRegex.containsMatchIn(it) }
+    paras.forEachIndexed { i, para ->
+        if (warnRegex.containsMatchIn(para)) NoteBox(para) else Text(para, style = MaterialTheme.typography.bodyMedium)
+        if (i < paras.lastIndex) Spacer(Modifier.height(10.dp))
+    }
+    // nota de segurança padrão — em TODOS os exercícios
+    Spacer(Modifier.height(12.dp))
+    NoteBox(SAFETY_NOTE)
+}
+
+@Composable
+private fun NoteBox(text: String) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant).padding(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Icon(
+            Icons.Outlined.Info, contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp),
+        )
+        Text(
+            text, style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
 private fun categoryLabel(c: ExerciseCategory): String =
     c.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
 
@@ -204,7 +251,12 @@ private fun equipmentLabel(e: String): String = when (e.uppercase()) {
     "SMITH" -> "Smith"
     "EZ_BAR" -> "Barra W"
     "PLATE" -> "Anilha"
-    "MEDICINE_BALL" -> "Bola"
+    "MEDICINE_BALL" -> "Bola medicinal"
+    "STABILITY_BALL" -> "Bola de estabilidade"
+    "BOSU" -> "Bosu"
+    "SUSPENSION" -> "Suspensão / TRX"
+    "ROPE" -> "Corda"
+    "AGILITY_LADDER" -> "Escada de agilidade"
     "NONE", "" -> "—"
     else -> e.lowercase().replaceFirstChar { it.uppercase() }
 }

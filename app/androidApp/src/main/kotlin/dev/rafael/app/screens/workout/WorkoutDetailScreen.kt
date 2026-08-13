@@ -24,6 +24,8 @@ import dev.rafael.features.workout.presentation.state.ResolvedExercise
 import dev.rafael.features.workout.presentation.state.WorkoutDetailEvent
 import dev.rafael.features.workout.presentation.viewmodel.WorkoutDetailViewModel
 import kotlinx.coroutines.launch
+import dev.rafael.app.ui.ShimmerContent
+import dev.rafael.app.ui.ShimmerList
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
@@ -101,7 +103,7 @@ fun WorkoutDetailScreen(
             text = {
                 when {
                     altError != null -> Text(altError!!, color = MaterialTheme.colorScheme.error)
-                    alternatives == null -> Box(Modifier.fillMaxWidth().padding(24.dp), Alignment.Center) { CircularProgressIndicator() }
+                    alternatives == null -> ShimmerList(rows = 4)
                     alternatives!!.isEmpty() -> Text("Nenhuma alternativa do mesmo tipo disponível.")
                     else -> LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
                         items(alternatives!!) { alt ->
@@ -162,7 +164,7 @@ fun WorkoutDetailScreen(
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
                 state.isLoading && state.exercises.isEmpty() ->
-                    CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    ShimmerContent()
                 state.error != null ->
                     Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(state.error!!, color = MaterialTheme.colorScheme.error)
