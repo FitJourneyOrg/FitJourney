@@ -22,6 +22,15 @@ class FakeProgramRepository(
 ) : ProgramRepository {
     var invalidateCalls = 0
 
+    /**
+     * BANCO LOCAL simulado (ARCH #30). Deliberadamente separado de `listResult` (a rede):
+     * é justamente o descasamento entre os dois — tenho dado local mas a rede caiu, ou não
+     * tenho nada e a rede caiu — que os testes de offline precisam exercitar.
+     */
+    val local = kotlinx.coroutines.flow.MutableStateFlow<List<Program>>(emptyList())
+
+    override fun observePrograms(): kotlinx.coroutines.flow.Flow<List<Program>> = local
+
     override suspend fun list() = listResult
     override suspend fun refresh() = listResult
     override fun invalidate() { invalidateCalls++ }

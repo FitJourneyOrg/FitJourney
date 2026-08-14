@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.Bedtime
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Lock
@@ -82,6 +83,10 @@ fun HomeScreen(
         when {
             state.isLoading -> CardEsqueleto()
             state.error != null -> CardErro(state.error!!) { viewModel.load() }
+            // Vazio POR FALTA DE SYNC (nunca sincronizou neste aparelho) ≠ vazio de verdade.
+            // Sem esta distinção, quem já tem programas era convidado a criar tudo de novo.
+            state.semPrograma && state.erroSync != null ->
+                CardNaoSincronizado(onTentarDeNovo = { viewModel.load() })
             state.semPrograma -> CardSemPrograma(onCriar = onOpenWorkouts)
             // já treinou hoje (dado LOCAL): celebra e não oferece o mesmo treino de novo.
             // Funciona offline — o XP é o do servidor quando disponível, mas não é requisito.
@@ -334,6 +339,39 @@ private fun CardDiaDeDescanso(onTreinoAvulso: () -> Unit, onProgresso: () -> Uni
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onTreinoAvulso, modifier = Modifier.weight(1f)) { Text("Treino avulso") }
                 OutlinedButton(onClick = onProgresso, modifier = Modifier.weight(1f)) { Text("Progresso") }
+            }
+        }
+    }
+}
+
+/**
+ * Sem dado local E o sync falhou. Não é "usuário novo": pode ser alguém com programas que
+ * abriu o app num aparelho novo, sem rede. Convidar a criar programa aqui seria enganoso.
+ */
+@Composable
+private fun CardNaoSincronizado(onTentarDeNovo: () -> Unit) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.fillMaxWidth().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                Icons.Outlined.CloudOff, contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(36.dp),
+            )
+            Spacer(Modifier.height(12.dp))
+            Text("Sem conexão", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "Ainda não sincronizamos seus programas neste aparelho. " +
+                    "Conecte-se para baixá-los — depois disso eles funcionam offline.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(onClick = onTentarDeNovo, modifier = Modifier.fillMaxWidth()) {
+                Text("Tentar de novo")
             }
         }
     }

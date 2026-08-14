@@ -9,6 +9,8 @@ import dev.rafael.features.program.presentation.state.ProgramListState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -19,8 +21,13 @@ class ProgramListViewModel(
     private val _state = MutableStateFlow(ProgramListState())
     val state: StateFlow<ProgramListState> = _state.asStateFlow()
 
-    // Sem init { load() }: a tela dispara Load no ON_RESUME, que já cobre a 1ª entrada
-    // E o refresh ao voltar. Ter os dois causava GET /programs duplicado na primeira abertura.
+    init {
+        // ARCH #30: a lista vem do BANCO LOCAL e é reativa — pinta na hora, offline inclusive,
+        // e se atualiza sozinha quando o sync grava. O `load()` abaixo é só sincronização.
+        repository.observePrograms()
+            .onEach { lista -> _state.update { it.copy(programs = lista, isLoading = false) } }
+            .launchIn(viewModelScope)
+    }
 
     fun onEvent(event: ProgramListEvent) {
         when (event) {
@@ -40,14 +47,21 @@ class ProgramListViewModel(
         _state.update { it.copy(createdId = null) }
     }
 
+    /**
+     * SÓ sincroniza — a lista já é observada do banco. Falha de rede não vira erro vermelho na
+     * tela: se há dado local, o usuário nem percebe; se não há, a tela mostra "sem conexão"
+     * (que é diferente de "você não tem programas").
+     */
     private fun load(forcar: Boolean = false) {
-        _state.update { it.copy(isLoading = true, error = null) }
+        _state.update { it.copy(isLoading = _state.value.programs.isEmpty(), erroSync = null) }
         viewModelScope.launch {
             when (val result = if (forcar) repository.refresh() else repository.list()) {
                 is AppResult.Success ->
-                    _state.update { it.copy(isLoading = false, programs = result.value) }
+                    _state.update {
+                        it.copy(isLoading = false, programs = result.value, sincronizouAlgumaVez = true)
+                    }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isLoading = false, error = result.error.message) }
+                    _state.update { it.copy(isLoading = false, erroSync = result.error.message) }
             }
         }
     }
