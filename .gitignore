@@ -67,3 +67,7 @@ docs/
 /FitJourney_*.md
 # planilhas de tooling local (curadoria de exercícios) — não versionar
 /tools/**/*.xlsx
+# mídia de exercícios (963 mp4 + 963 png, ~460MB) — local, servida pelo Ktor em /media; nunca no git
+/gifs_exercicios/
+# catálogo-fonte dos exercícios (~1.6MB) — fonte da V28; embutida na migration, não versionar o json
+catalogo.json
