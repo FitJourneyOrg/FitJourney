@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.ui.ErroDeTela
 import dev.rafael.app.ui.NetworkImage
 import dev.rafael.app.ui.ShimmerLine
 import dev.rafael.app.ui.shimmer
@@ -51,8 +52,11 @@ fun ExerciseDetailScreen(
             when {
                 state.isLoading ->
                     ExerciseDetailSkeleton()
+                // sem exercício E com erro: mostra a causa real (offline? servidor?).
+                state.exercise == null && state.error != null ->
+                    ErroDeTela(erro = state.error!!, modifier = Modifier.align(Alignment.Center))
                 state.exercise == null ->
-                    Text(state.error ?: "Exercício não encontrado", Modifier.align(Alignment.Center))
+                    Text("Exercício não encontrado", Modifier.align(Alignment.Center))
                 else ->
                     ExerciseDetailContent(state.exercise!!)
             }

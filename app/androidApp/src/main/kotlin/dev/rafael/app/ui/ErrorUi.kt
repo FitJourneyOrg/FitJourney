@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.SearchOff
@@ -55,6 +54,16 @@ import dev.rafael.core.result.AppError
 /** O que faz sentido oferecer ao usuário diante deste erro. A tela executa. */
 enum class ErroAcao { TENTAR_DE_NOVO, IR_PRO_LOGIN, VER_PLANOS, VOLTAR, NENHUMA }
 
+/**
+ * O MESMO status HTTP quer dizer coisas diferentes dependendo de onde o usuário está.
+ *
+ * 401 numa tela logada = o token morreu → "Sessão expirada, entre de novo".
+ * 401 na tela de LOGIN = a senha está errada → "E-mail ou senha incorretos". Aplicar a
+ * primeira mensagem na segunda tela seria absurdo (mandar pro login quem já está no login)
+ * e perigoso, porque o handler global de sessão expirada deslogaria quem só errou a senha.
+ */
+enum class ErroContexto { LOGADO, AUTENTICANDO }
+
 /** Erro já traduzido para o que a tela precisa desenhar. */
 data class ErroVisual(
     val icone: ImageVector,
@@ -78,7 +87,10 @@ data class ErroVisual(
  * servidor caído é o sistema operacional — e a diferença importa, porque uma o usuário
  * resolve e a outra não.
  */
-fun AppError.visual(temRede: Boolean): ErroVisual = when (this) {
+fun AppError.visual(
+    temRede: Boolean,
+    contexto: ErroContexto = ErroContexto.LOGADO,
+): ErroVisual = when (this) {
     is AppError.Connection ->
         if (temRede) ErroVisual(
             icone = Icons.Outlined.SyncProblem,
@@ -92,13 +104,21 @@ fun AppError.visual(temRede: Boolean): ErroVisual = when (this) {
             acao = ErroAcao.TENTAR_DE_NOVO,
         )
 
-    // Token morto. Nenhum retry resolve — insistir aqui prende o usuário num loop.
-    is AppError.Unauthorized -> ErroVisual(
-        icone = Icons.Outlined.Lock,
-        titulo = "Sessão expirada",
-        texto = "Faça login novamente para continuar.",
-        acao = ErroAcao.IR_PRO_LOGIN,
-    )
+    is AppError.Unauthorized ->
+        if (contexto == ErroContexto.AUTENTICANDO) ErroVisual(
+            // Credenciais erradas: o erro é do formulário, não da sessão. Sem ação de
+            // navegação — o usuário já está exatamente onde precisa estar.
+            icone = Icons.Outlined.Lock,
+            titulo = "E-mail ou senha incorretos",
+            texto = "Confira os dados e tente de novo.",
+            acao = ErroAcao.NENHUMA,
+        ) else ErroVisual(
+            // Token morto. Nenhum retry resolve — insistir aqui prende o usuário num loop.
+            icone = Icons.Outlined.Lock,
+            titulo = "Sessão expirada",
+            texto = "Faça login novamente para continuar.",
+            acao = ErroAcao.IR_PRO_LOGIN,
+        )
 
     // Falta entitlement (ARCH #23) → paywall. Outros 403 são bloqueio de verdade.
     is AppError.Forbidden ->
@@ -146,6 +166,18 @@ fun AppError.visual(temRede: Boolean): ErroVisual = when (this) {
 }
 
 /**
+ * Mensagem específica de UM campo, quando o servidor disse qual recusou (`fieldErrors`).
+ *
+ * Devolve null quando o erro não é de validação ou não menciona este campo — então dá pra
+ * usar direto em `isError`/`supportingText` de um TextField sem `if` na tela.
+ *
+ * A diferença prática: em vez de "Dados inválidos" no rodapé, o campo errado fica vermelho
+ * com o motivo embaixo dele. O usuário não precisa adivinhar qual dos cinco campos falhou.
+ */
+fun AppError?.erroDoCampo(campo: String): String? =
+    (this as? AppError.Validation)?.fieldErrors?.get(campo)
+
+/**
  * O aparelho tem internet AGORA? Rechecado a cada erro novo (`key`), porque entre um erro e
  * outro o usuário pode ter ligado o wifi. Só leitura — não pede permissão em runtime.
  */
@@ -172,9 +204,10 @@ private fun Context.temRede(): Boolean {
 fun ErroDeTela(
     erro: AppError,
     modifier: Modifier = Modifier,
+    contexto: ErroContexto = ErroContexto.LOGADO,
     onAcao: ((ErroAcao) -> Unit)? = null,
 ) {
-    val visual = erro.visual(rememberTemRede(erro))
+    val visual = erro.visual(rememberTemRede(erro), contexto)
     Column(
         modifier.padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -203,6 +236,29 @@ fun ErroDeTela(
 }
 
 /**
+ * NÍVEL 3, forma compacta — para formulários e telas onde o erro precisa ficar ANCORADO
+ * perto do que falhou (login, quiz, paywall). Snackbar não serve aqui: ele some sozinho e
+ * o usuário perde a referência de qual campo/ação deu problema.
+ *
+ * Uma linha, na cor de erro. O texto vem da mesma política dos outros níveis — é só o
+ * invólucro que muda.
+ */
+@Composable
+fun ErroInline(
+    erro: AppError,
+    modifier: Modifier = Modifier,
+    contexto: ErroContexto = ErroContexto.LOGADO,
+) {
+    val visual = erro.visual(rememberTemRede(erro), contexto)
+    Text(
+        visual.titulo,
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.error,
+        style = MaterialTheme.typography.bodyMedium,
+    )
+}
+
+/**
  * NÍVEL 3 — o usuário tocou algo e falhou. Efêmero, não ocupa a tela e não vira estado
  * permanente em vermelho (o banner fixo antigo continuava lá muito depois de irrelevante).
  *
@@ -214,12 +270,16 @@ fun ErroEmSnackbar(
     erro: AppError?,
     host: SnackbarHostState,
     onConsumir: () -> Unit,
+    contexto: ErroContexto = ErroContexto.LOGADO,
     onAcao: ((ErroAcao) -> Unit)? = null,
 ) {
     val temRede = rememberTemRede(erro)
     LaunchedEffect(erro) {
         val e = erro ?: return@LaunchedEffect
-        val visual = e.visual(temRede)
+        // Validação NÃO vira snackbar: ela pertence ao campo (ver erroDoCampo). Mandar as duas
+        // coisas seria dizer o mesmo erro duas vezes, uma delas longe de onde ele aconteceu.
+        if (e is AppError.Validation) return@LaunchedEffect
+        val visual = e.visual(temRede, contexto)
         val resultado = host.showSnackbar(
             message = visual.titulo,
             actionLabel = if (onAcao != null) visual.rotuloDaAcao else null,

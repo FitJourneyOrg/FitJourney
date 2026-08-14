@@ -2,6 +2,7 @@ package dev.rafael.features.exercise.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
 import dev.rafael.features.exercise.presentation.state.ExerciseDetailState
@@ -34,7 +35,7 @@ class ExerciseDetailViewModel(
                 is AppResult.Success ->
                     _state.update { it.copy(isLoading = false, exercise = r.value) }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isLoading = false, error = r.error.message) }
+                    _state.update { it.copy(isLoading = false, error = r.error) }
             }
         }
     }

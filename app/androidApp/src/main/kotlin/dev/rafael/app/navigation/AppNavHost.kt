@@ -3,6 +3,7 @@ package dev.rafael.app.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -13,6 +14,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import dev.rafael.app.screens.placeholder.EmBreveScreen
 import dev.rafael.app.screens.progress.ProgressScreen
+import dev.rafael.core.network.SessionExpiryBus
+import dev.rafael.features.auth.domain.repository.AuthRepository
 import dev.rafael.features.program.domain.repository.ProgramRepository
 import org.koin.compose.koinInject
 import dev.rafael.app.screens.authentication.LoginScreen
@@ -45,6 +48,21 @@ fun AppNavHost() {
     // (criar/editar/excluir treino, virar premium) precisam sujar esse cache — quem faz a
     // ponte é a camada do app, porque feature nunca depende de feature (Konsist).
     val programas: ProgramRepository = koinInject()
+
+    // SESSÃO EXPIRADA (401 que sobreviveu à renovação do token). Fica aqui, e não numa tela,
+    // porque o 401 pode vir de qualquer request — inclusive do SyncWorker em background. Sem
+    // isto o usuário ficava preso: "Sessão expirada" + um "Tentar de novo" que só repetia o 401.
+    val sessionExpiry: SessionExpiryBus = koinInject()
+    val auth: AuthRepository = koinInject()
+    LaunchedEffect(Unit) {
+        sessionExpiry.eventos.collect {
+            auth.signOut()   // limpa a sessão local e o token cacheado do Ktor
+            nav.navigate(AppRoute.Login) {
+                popUpTo(0) { inclusive = true }   // não dá pra "voltar" pra uma sessão morta
+                launchSingleTop = true
+            }
+        }
+    }
 
     Scaffold(
         bottomBar = { if (mostrarAbas) FitJourneyBottomBar(nav) },

@@ -5,6 +5,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.ui.ErroInline
 import dev.rafael.features.profile.presentation.state.QuizEvent
 import dev.rafael.features.profile.presentation.state.QuizStep
 import dev.rafael.features.profile.presentation.viewmodel.QuizViewModel
@@ -76,7 +77,7 @@ fun QuizScreen(
 
         // erro do servidor, se houver
         state.error?.let {
-            Text(it, color = MaterialTheme.colorScheme.error)
+            ErroInline(it)
             Spacer(Modifier.height(8.dp))
         }
 

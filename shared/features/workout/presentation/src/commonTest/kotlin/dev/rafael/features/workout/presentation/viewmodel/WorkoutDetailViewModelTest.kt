@@ -21,6 +21,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -92,7 +93,7 @@ class WorkoutDetailViewModelTest {
         advanceUntilIdle()
 
         assertFalse(vm.state.value.isLoading)
-        assertEquals("Não encontrado", vm.state.value.error)
+        assertIs<AppError.NotFound>(vm.state.value.error)
     }
 
     @Test
@@ -132,7 +133,7 @@ class WorkoutDetailViewModelTest {
         advanceUntilIdle()
 
         assertEquals(0, repo.updateCalls, "não deveria salvar com 1 exercício")
-        assertTrue(vm.state.value.error?.contains("ao menos 1") == true)
+        assertTrue(vm.state.value.error?.message?.contains("ao menos 1") == true)
     }
 
     @Test

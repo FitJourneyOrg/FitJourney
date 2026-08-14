@@ -1,6 +1,7 @@
 package dev.rafael.server.features.profile.services
 
 import dev.rafael.contract.profile.ProfileDto
+import dev.rafael.contract.error.ErrorFields
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
@@ -30,20 +31,23 @@ class ProfileService(
     /** Cria/atualiza o perfil. Validação autoritativa do servidor. */
     suspend fun saveProfile(firebaseUid: String, email: String?, dto: ProfileDto): AppResult<ProfileDto> {
         if (dto.daysPerWeek !in 2..6) {
-            return AppError.Validation("daysPerWeek deve estar entre 2 e 6").asFailure()
+            return AppError.Validation("Escolha entre 2 e 6 dias por semana", mapOf(ErrorFields.DAYS_PER_WEEK to "Escolha entre 2 e 6 dias por semana")).asFailure()
         }
         if (dto.focusAreas.size > 2) {
-            return AppError.Validation("focusAreas aceita no máximo 2 grupos").asFailure()
+            return AppError.Validation("Escolha no máximo 2 grupos de foco", mapOf(ErrorFields.FOCUS_AREAS to "Escolha no máximo 2 grupos de foco")).asFailure()
         }
         if (dto.age != null && dto.age !in 5..120) {
-            return AppError.Validation("Idade fora do intervalo válido").asFailure()
+            return AppError.Validation("Idade fora do intervalo válido", mapOf(ErrorFields.AGE to "Idade fora do intervalo válido")).asFailure()
         }
         // Estágio 2 (descanso): dias off válidos e sobra dia p/ treinar.
         if (dto.unavailableDays.any { it !in 1..7 } || dto.unavailableDays.toSet().size != dto.unavailableDays.size) {
-            return AppError.Validation("Dias indisponíveis inválidos (1..7, sem repetir)").asFailure()
+            return AppError.Validation("Dias indisponíveis inválidos", mapOf(ErrorFields.UNAVAILABLE_DAYS to "Dias indisponíveis inválidos")).asFailure()
         }
         if (7 - dto.unavailableDays.size < dto.daysPerWeek) {
-            return AppError.Validation("Dias livres insuficientes para treinar ${dto.daysPerWeek}x na semana").asFailure()
+            return AppError.Validation(
+                "Dias livres insuficientes para treinar ${dto.daysPerWeek}x na semana",
+                mapOf(ErrorFields.UNAVAILABLE_DAYS to "Sobram poucos dias livres para essa frequência"),
+            ).asFailure()
         }
         return userService.findOrCreate(firebaseUid, email).flatMap { user ->
             val profile = Profile(

@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.ui.ErroInline
 import dev.rafael.app.ui.NetworkImage
 import dev.rafael.app.ui.ShimmerLine
 import dev.rafael.app.ui.shimmer
@@ -67,7 +68,7 @@ fun ExerciseListContent(
         Spacer(Modifier.height(12.dp))
 
         state.error?.let {
-            Text(it, color = MaterialTheme.colorScheme.error)
+            ErroInline(it)
             Spacer(Modifier.height(8.dp))
         }
 

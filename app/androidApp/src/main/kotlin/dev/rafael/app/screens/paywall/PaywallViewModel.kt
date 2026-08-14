@@ -2,6 +2,7 @@ package dev.rafael.app.screens.paywall
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.auth.domain.repository.Billing
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,7 +14,7 @@ import kotlinx.coroutines.launch
 data class PaywallState(
     val isSubscribing: Boolean = false,
     val subscribed: Boolean = false,   // one-shot: a tela fecha e volta
-    val error: String? = null,
+    val error: AppError? = null,
 )
 
 /**
@@ -34,7 +35,7 @@ class PaywallViewModel(
             when (billing.subscribe()) {
                 is AppResult.Success -> _state.update { it.copy(isSubscribing = false, subscribed = true) }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isSubscribing = false, error = "Não deu pra concluir a assinatura. Tente de novo.") }
+                    _state.update { it.copy(isSubscribing = false, error = AppError.Unexpected("Não deu pra concluir a assinatura. Tente de novo.")) }
             }
         }
     }

@@ -18,7 +18,9 @@ val authDataModule: Module = module {
     single<TokenProvider> { FirebaseTokenProvider() }
 
     // HttpClient autenticado: usa a engine (get) + o TokenProvider (get)
-    single<HttpClient> { HttpClientFactory.create(engine = get(), tokenProvider = get()) }
+    single<HttpClient> {
+        HttpClientFactory.create(engine = get(), tokenProvider = get(), sessionExpiry = get())
+    }
 
     // datasource do /me
     single { MeDataSource(client = get()) }

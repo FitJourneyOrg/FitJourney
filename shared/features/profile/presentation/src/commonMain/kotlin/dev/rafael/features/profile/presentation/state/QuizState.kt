@@ -7,6 +7,7 @@ import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.profile.TrainingEnvironment
+import dev.rafael.core.result.AppError
 
 /** Os passos do quiz, em ordem. REST_DAYS (Estágio 2) após DAYS; SPLIT (ARCH #29) após ENVIRONMENT. */
 enum class QuizStep { GOAL, LEVEL, AGE, DAYS, REST_DAYS, FOCUS, BODY, ENVIRONMENT, SPLIT, HEALTH, LIMITATIONS }
@@ -26,7 +27,7 @@ data class QuizState(
     val limitations: List<BodyLimitation> = emptyList(),
     val health: HealthScreening = HealthScreening(),        // <- novo (não-null, começa tudo false)
     val isSubmitting: Boolean = false,
-    val error: String? = null,
+    val error: AppError? = null,
     val completed: Boolean = false,
 ) {
 

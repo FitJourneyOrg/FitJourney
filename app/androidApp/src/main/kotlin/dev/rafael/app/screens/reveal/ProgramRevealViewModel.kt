@@ -2,6 +2,7 @@ package dev.rafael.app.screens.reveal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.program.domain.model.Program
 import dev.rafael.features.program.domain.repository.ProgramRepository
@@ -14,7 +15,7 @@ import kotlinx.coroutines.launch
 data class ProgramRevealState(
     val program: Program? = null,
     val isGenerating: Boolean = true,     // montando o 1º programa
-    val error: String? = null,
+    val error: AppError? = null,
 ) {
     /** Programa IA de usuário free vem trancado (blur #23). Destranca após assinar. */
     val locked: Boolean get() = program?.locked == true
@@ -47,7 +48,7 @@ class ProgramRevealViewModel(
                     _state.update { it.copy(isGenerating = false, program = r.value) }
                 }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isGenerating = false, error = r.error.message) }
+                    _state.update { it.copy(isGenerating = false, error = r.error) }
             }
         }
     }

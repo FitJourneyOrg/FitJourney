@@ -20,6 +20,7 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
@@ -64,6 +65,6 @@ class ExerciseDetailViewModelTest {
         advanceUntilIdle()
 
         assertNull(vm.state.value.exercise)
-        assertEquals("Não encontrado", vm.state.value.error)
+        assertIs<AppError.NotFound>(vm.state.value.error)   // tipo, não texto: o texto é da UI
     }
 }
