@@ -40,6 +40,7 @@ import org.koin.androidx.compose.koinViewModel
 fun HomeScreen(
     onOpenLibrary: () -> Unit,
     onOpenWorkouts: () -> Unit,
+    onGenerateWithAI: () -> Unit,
     onStartWorkout: (String) -> Unit,
     onOpenGroups: () -> Unit,
     onOpenProgress: () -> Unit,
@@ -88,7 +89,10 @@ fun HomeScreen(
             // Sem esta distinção, quem já tem programas era convidado a criar tudo de novo.
             state.semPrograma && state.erroSync != null ->
                 CardNaoSincronizado(state.erroSync!!, onTentarDeNovo = { viewModel.load() })
-            state.semPrograma -> CardSemPrograma(onCriar = onOpenWorkouts)
+            state.semPrograma -> CardSemPrograma(
+                onGerarComIa = onGenerateWithAI,
+                onCriarManual = onOpenWorkouts,
+            )
             // já treinou hoje (dado LOCAL): celebra e não oferece o mesmo treino de novo.
             // Funciona offline — o XP é o do servidor quando disponível, mas não é requisito.
             state.treinouHoje -> CardTreinoConcluido(
@@ -364,7 +368,7 @@ private fun CardNaoSincronizado(erro: AppError, onTentarDeNovo: () -> Unit) {
 }
 
 @Composable
-private fun CardSemPrograma(onCriar: () -> Unit) {
+private fun CardSemPrograma(onGerarComIa: () -> Unit, onCriarManual: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(
             Modifier.fillMaxWidth().padding(24.dp),
@@ -379,7 +383,14 @@ private fun CardSemPrograma(onCriar: () -> Unit) {
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(16.dp))
-            Button(onClick = onCriar, modifier = Modifier.fillMaxWidth()) { Text("Criar programa") }
+            // DUAS saídas: quem recusou a oferta no onboarding não pode cair num card que
+            // só oferece a mesma coisa que ele acabou de recusar.
+            Button(onClick = onGerarComIa, modifier = Modifier.fillMaxWidth()) {
+                Text("Montar com IA")
+            }
+            TextButton(onClick = onCriarManual, modifier = Modifier.fillMaxWidth()) {
+                Text("Criar treino manualmente")
+            }
         }
     }
 }

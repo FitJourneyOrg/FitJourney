@@ -21,8 +21,22 @@ sealed interface AppRoute {
     @Serializable data object Programs : AppRoute
     @Serializable data class ProgramDetail(val id: String) : AppRoute
     @Serializable data object ProgramGenerate : AppRoute
+    /**
+     * Fim do onboarding: pergunta se o usuário QUER o primeiro programa (Fase 7).
+     * Existe pra que nada seja criado no servidor sem alguém pedir — antes o Reveal gerava
+     * no `init`, então todo mundo ganhava um programa quisesse ou não.
+     */
+    @Serializable data object ProgramOffer : AppRoute
     @Serializable data object ProgramReveal : AppRoute   // revelação do onboarding (Fase 7 — conversão)
-    @Serializable data object Paywall : AppRoute          // página de assinatura (Free vs Premium)
+
+    /**
+     * Página de assinatura. `voltarParaHome` distingue os dois contextos de abertura:
+     * - onboarding (vindo do Reveal): recusar tem que levar pra Home. Voltar pro Reveal, que
+     *   é a tela que oferece premium, dá a sensação de gaiola — o usuário recusou e caiu de
+     *   volta na oferta.
+     * - dentro do app (programa trancado): recusar volta pra tela de onde veio, como sempre.
+     */
+    @Serializable data class Paywall(val voltarParaHome: Boolean = false) : AppRoute
 
     // editLocked = true quando o treino pertence a um programa IA trancado p/ o usuário
     // (free): o botão editar barra na hora com paywall, sem entrar na tela de edição.
