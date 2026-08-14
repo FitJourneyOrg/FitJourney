@@ -11,6 +11,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import dev.rafael.app.ui.erroDoCampo
+import dev.rafael.contract.error.ErrorFields
+import dev.rafael.core.result.AppError
 import dev.rafael.features.program.presentation.state.ProgramListEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramListViewModel
 import dev.rafael.app.ui.ErroDeTela
@@ -33,17 +36,18 @@ fun ProgramListScreen(
 
     LaunchedEffect(state.createdId) {
         val id = state.createdId ?: return@LaunchedEffect
+        showCreateDialog = false       // só fecha quando DEU CERTO
         viewModel.consumeCreatedId()   // limpa antes de navegar (evento one-shot, não re-dispara ao voltar)
         onOpenProgram(id)
     }
 
     if (showCreateDialog) {
         CreateProgramDialog(
+            erro = state.error,
             onDismiss = { showCreateDialog = false },
-            onConfirm = { name ->
-                showCreateDialog = false
-                viewModel.onEvent(ProgramListEvent.CreateManual(name))
-            },
+            // NÃO fecha aqui: se o servidor recusar o nome, o diálogo precisa continuar
+            // aberto pra mostrar o erro NO CAMPO. Fecha no sucesso (LaunchedEffect acima).
+            onConfirm = { name -> viewModel.onEvent(ProgramListEvent.CreateManual(name)) },
         )
     }
 
@@ -108,8 +112,13 @@ fun ProgramListScreen(
 }
 
 @Composable
-private fun CreateProgramDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+private fun CreateProgramDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+    erro: AppError? = null,
+) {
     var name by remember { mutableStateOf("") }
+    val erroNome = erro.erroDoCampo(ErrorFields.NAME)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Novo programa") },
@@ -119,6 +128,8 @@ private fun CreateProgramDialog(onDismiss: () -> Unit, onConfirm: (String) -> Un
                 onValueChange = { name = it },
                 label = { Text("Nome") },
                 singleLine = true,
+                isError = erroNome != null,
+                supportingText = erroNome?.let { { Text(it) } },
             )
         },
         confirmButton = {

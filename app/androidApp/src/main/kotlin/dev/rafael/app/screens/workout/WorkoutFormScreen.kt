@@ -13,6 +13,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
 import dev.rafael.app.screens.exercise.ExercisePickerSheet
+import dev.rafael.app.ui.ErroInline
+import dev.rafael.app.ui.erroDoCampo
+import dev.rafael.contract.error.ErrorFields
 import dev.rafael.features.workout.presentation.state.WorkoutFormEvent
 import dev.rafael.features.workout.presentation.viewmodel.WorkoutFormViewModel
 import dev.rafael.app.ui.ShimmerContent
@@ -69,11 +72,16 @@ fun WorkoutFormScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
+                // O servidor diz QUAL campo recusou (fieldErrors): o erro fica no campo,
+                // não numa frase solta no rodapé que o usuário tem que interpretar.
+                val erroNome = state.error.erroDoCampo(ErrorFields.NAME)
                 OutlinedTextField(
                     value = state.name,
                     onValueChange = { viewModel.onEvent(WorkoutFormEvent.NameChanged(it)) },
                     label = { Text("Nome do treino") },
                     singleLine = true,
+                    isError = erroNome != null,
+                    supportingText = erroNome?.let { { Text(it) } },
                     modifier = Modifier.fillMaxWidth(),
                 )
             }
@@ -101,8 +109,8 @@ fun WorkoutFormScreen(
                 }
             }
 
-            state.error?.let { msg ->
-                item { Text(msg, color = MaterialTheme.colorScheme.error) }
+            state.error?.let { erro ->
+                item { ErroInline(erro) }
             }
 
             itemsIndexed(state.exercises) { i, ex ->

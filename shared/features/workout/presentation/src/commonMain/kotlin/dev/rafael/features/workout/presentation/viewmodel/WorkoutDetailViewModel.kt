@@ -3,6 +3,7 @@ package dev.rafael.features.workout.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.core.catalog.ExerciseLookup
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.workout.domain.model.Workout
@@ -48,7 +49,7 @@ class WorkoutDetailViewModel(
             when (val result = repository.get(workoutId)) {
                 is AppResult.Success -> applyWorkout(result.value)
                 is AppResult.Failure ->
-                    _state.update { it.copy(isLoading = false, error = result.error.message) }
+                    _state.update { it.copy(isLoading = false, error = result.error) }
             }
         }
     }
@@ -80,7 +81,7 @@ class WorkoutDetailViewModel(
     private fun removeExercise(orderIndex: Int) {
         val w = loaded ?: return
         if (w.exercises.size <= 1) {
-            _state.update { it.copy(error = "O treino precisa de ao menos 1 exercício.") }
+            _state.update { it.copy(error = AppError.Validation("O treino precisa de ao menos 1 exercício.")) }
             return
         }
         val restantes = w.exercises
@@ -99,10 +100,10 @@ class WorkoutDetailViewModel(
                 is AppResult.Success -> applyWorkout(result.value)
                 is AppResult.Failure -> {
                     val err = result.error
-                    if (err is AppError.Forbidden && err.code == "ENTITLEMENT_REQUIRED")
+                    if (err is AppError.Forbidden && err.code == ErrorCodes.ENTITLEMENT_REQUIRED)
                         _state.update { it.copy(isLoading = false, showPaywall = true) }
                     else
-                        _state.update { it.copy(isLoading = false, error = err.message) }
+                        _state.update { it.copy(isLoading = false, error = err) }
                 }
             }
         }
@@ -112,7 +113,7 @@ class WorkoutDetailViewModel(
         viewModelScope.launch {
             when (val result = repository.delete(workoutId)) {
                 is AppResult.Success -> _state.update { it.copy(isDeleted = true) }
-                is AppResult.Failure -> _state.update { it.copy(error = result.error.message) }
+                is AppResult.Failure -> _state.update { it.copy(error = result.error) }
             }
         }
     }

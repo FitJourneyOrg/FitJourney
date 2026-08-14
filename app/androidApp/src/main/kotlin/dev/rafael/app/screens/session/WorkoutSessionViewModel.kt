@@ -6,6 +6,7 @@ import dev.rafael.app.data.session.SessionSync
 import dev.rafael.contract.session.SetLogDto
 import dev.rafael.contract.session.WorkoutSessionDto
 import dev.rafael.core.catalog.ExerciseLookup
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.workout.domain.repository.WorkoutRepository
 import kotlinx.coroutines.Job
@@ -38,7 +39,7 @@ data class WorkoutSessionState(
     val entries: List<SetEntry> = emptyList(),
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
-    val error: String? = null,
+    val error: AppError? = null,
     val saved: Boolean = false,
     // --- descanso ---
     val restRemaining: Int? = null,   // segundos restantes; null = sem descanso rodando
@@ -161,7 +162,7 @@ class WorkoutSessionViewModel(
                     }
                     _state.update { it.copy(isLoading = false, workoutName = w.name, entries = entries) }
                 }
-                is AppResult.Failure -> _state.update { it.copy(isLoading = false, error = r.error.message) }
+                is AppResult.Failure -> _state.update { it.copy(isLoading = false, error = r.error) }
             }
         }
     }
@@ -192,7 +193,7 @@ class WorkoutSessionViewModel(
         viewModelScope.launch {
             runCatching { sync.record(dto) }.fold(
                 onSuccess = { _state.update { it.copy(isSaving = false, saved = true) } },   // salvo (local ao menos)
-                onFailure = { _state.update { it.copy(isSaving = false, error = "Não deu pra salvar o treino.") } },
+                onFailure = { _state.update { it.copy(isSaving = false, error = AppError.Unexpected("Não deu pra salvar o treino.")) } },
             )
         }
     }

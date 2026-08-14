@@ -38,7 +38,7 @@ data class TodayWorkout(
 
 data class HomeState(
     val isLoading: Boolean = true,
-    val error: String? = null,
+    val error: AppError? = null,
     val today: TodayWorkout? = null,   // null + !isLoading + !semPrograma = dia de descanso
     val semPrograma: Boolean = false,  // usuário ainda não tem programa nenhum
     /**

@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import dev.rafael.app.ui.ErroDeTela
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.model.Exercise
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
@@ -166,11 +167,11 @@ fun WorkoutDetailScreen(
                 state.isLoading && state.exercises.isEmpty() ->
                     ShimmerContent()
                 state.error != null ->
-                    Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(state.error!!, color = MaterialTheme.colorScheme.error)
-                        Spacer(Modifier.height(8.dp))
-                        Button(onClick = { viewModel.onEvent(WorkoutDetailEvent.Retry) }) { Text("Tentar de novo") }
-                    }
+                    ErroDeTela(
+                        erro = state.error!!,
+                        modifier = Modifier.align(Alignment.Center),
+                        onAcao = { viewModel.onEvent(WorkoutDetailEvent.Retry) },
+                    )
                 state.exercises.isEmpty() ->
                     Text("Nenhum exercício neste treino.", Modifier.align(Alignment.Center))
                 else ->

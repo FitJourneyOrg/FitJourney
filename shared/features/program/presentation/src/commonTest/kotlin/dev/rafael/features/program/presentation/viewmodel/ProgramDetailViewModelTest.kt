@@ -45,7 +45,7 @@ class ProgramDetailViewModelTest {
         advanceUntilIdle()
 
         assertNull(vm.state.value.program)
-        assertEquals("Programa não encontrado", vm.state.value.error)
+        assertEquals("Programa não encontrado", vm.state.value.error?.message)
     }
 
     @Test

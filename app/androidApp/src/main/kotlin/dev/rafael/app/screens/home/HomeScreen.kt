@@ -83,7 +83,7 @@ fun HomeScreen(
 
         when {
             state.isLoading -> CardEsqueleto()
-            state.error != null -> CardErro(state.error!!) { viewModel.load() }
+            state.error != null -> CardErro(state.error!!) { viewModel.load() }   // erro de ação
             // Vazio POR FALTA DE SYNC (nunca sincronizou neste aparelho) ≠ vazio de verdade.
             // Sem esta distinção, quem já tem programas era convidado a criar tudo de novo.
             state.semPrograma && state.erroSync != null ->
@@ -385,21 +385,9 @@ private fun CardSemPrograma(onCriar: () -> Unit) {
 }
 
 @Composable
-private fun CardErro(mensagem: String, onRetry: () -> Unit) {
+private fun CardErro(erro: AppError, onRetry: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
-        Column(
-            Modifier.fillMaxWidth().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text("Não foi possível carregar", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                mensagem, style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = onRetry) { Text("Tentar de novo") }
-        }
+        ErroDeTela(erro = erro, modifier = Modifier.fillMaxWidth(), onAcao = { onRetry() })
     }
 }
 

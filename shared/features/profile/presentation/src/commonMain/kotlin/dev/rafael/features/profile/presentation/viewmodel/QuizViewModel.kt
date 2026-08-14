@@ -3,6 +3,7 @@ package dev.rafael.features.profile.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.profile.domain.model.Profile
 import dev.rafael.features.profile.domain.repository.ProfileRepository
@@ -98,7 +99,7 @@ class QuizViewModel(
         // obrigatórios garantidos pelo canAdvance de cada passo; checagem defensiva:
         val goal = s.goal; val level = s.level; val days = s.daysPerWeek
         if (goal == null || level == null || days == null) {
-            _state.update { it.copy(error = "Responda as perguntas obrigatórias.") }
+            _state.update { it.copy(error = AppError.Validation("Responda as perguntas obrigatórias.")) }
             return
         }
         println("QUIZ SUBMIT: limitations=${s.limitations}")
@@ -124,7 +125,7 @@ class QuizViewModel(
                 is AppResult.Success ->
                     _state.update { it.copy(isSubmitting = false, completed = true) }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isSubmitting = false, error = result.error.message) }
+                    _state.update { it.copy(isSubmitting = false, error = result.error) }
             }
         }
     }

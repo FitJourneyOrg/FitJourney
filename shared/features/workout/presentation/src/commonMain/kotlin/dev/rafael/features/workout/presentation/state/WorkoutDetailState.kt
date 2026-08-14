@@ -1,11 +1,13 @@
 package dev.rafael.features.workout.presentation.state
 
+import dev.rafael.core.result.AppError
+
 data class WorkoutDetailState(
     val id: String? = null,
     val name: String = "",
     val exercises: List<ResolvedExercise> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null,
+    val error: AppError? = null,
     val isDeleted: Boolean = false,      // sinaliza pra tela navegar de volta
     val showPaywall: Boolean = false,    // 403 ao editar programa IA sem premium
 )

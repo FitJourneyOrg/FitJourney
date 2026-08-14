@@ -1,5 +1,7 @@
 package dev.rafael.features.workout.presentation.state
 
+import dev.rafael.core.result.AppError
+
 data class WorkoutFormState(
     val workoutId: String? = null,
     val programId: String? = null,   // obrigatório na criação (ARCH #27); ignorado na edição
@@ -9,7 +11,7 @@ data class WorkoutFormState(
     val exercises: List<FormExercise> = emptyList(),
     val isLoading: Boolean = false,
     val isSaving: Boolean = false,
-    val error: String? = null,
+    val error: AppError? = null,
     val savedId: String? = null,
 ) {
     val isEditing: Boolean get() = workoutId != null

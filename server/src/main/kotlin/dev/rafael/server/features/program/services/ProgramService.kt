@@ -8,6 +8,7 @@ import dev.rafael.contract.workout.WorkoutDto
 import dev.rafael.contract.workout.WorkoutExerciseDto
 import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.contract.workout.WorkoutSetDto
+import dev.rafael.contract.error.ErrorFields
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
@@ -56,7 +57,7 @@ class ProgramService(
 
     /** Cria um programa vazio (sem motor) só pra abrigar treino avulso. Não conta no teto. */
     suspend fun createManual(userId: Uuid, name: String): AppResult<ProgramDto> {
-        if (name.isBlank()) return AppError.Validation("Nome do programa é obrigatório").asFailure()
+        if (name.isBlank()) return AppError.Validation("Nome do programa é obrigatório", mapOf(ErrorFields.NAME to "Nome do programa é obrigatório")).asFailure()
         val ts = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
         val shell = Program(
             id = Uuid.NIL, userId = userId, name = name, origin = WorkoutOrigin.MANUAL,
@@ -71,7 +72,7 @@ class ProgramService(
         repository.findAllByUser(userId).flatMap { it.map { p -> p.toDto() }.asSuccess() }
 
     suspend fun rename(userId: Uuid, programId: Uuid, name: String): AppResult<ProgramDto> {
-        if (name.isBlank()) return AppError.Validation("Nome do programa é obrigatório").asFailure()
+        if (name.isBlank()) return AppError.Validation("Nome do programa é obrigatório", mapOf(ErrorFields.NAME to "Nome do programa é obrigatório")).asFailure()
         return repository.rename(userId, programId, name).flatMap { updated ->
             if (updated == null) AppError.NotFound("Programa não encontrado").asFailure()
             else updated.toDto().asSuccess()

@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.ui.ErroDeTela
 import dev.rafael.app.ui.ShimmerContent
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -78,7 +79,8 @@ fun WorkoutSessionScreen(
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
                 state.isLoading -> ShimmerContent()
-                state.error != null -> Text(state.error!!, Modifier.align(Alignment.Center), color = MaterialTheme.colorScheme.error)
+                state.error != null ->
+                    ErroDeTela(erro = state.error!!, modifier = Modifier.align(Alignment.Center))
                 else -> LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
                     itemsIndexed(state.entries) { i, e ->
                         val firstOfExercise = i == 0 || state.entries[i - 1].orderIndex != e.orderIndex

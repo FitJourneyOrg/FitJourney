@@ -3,6 +3,7 @@ package dev.rafael.features.exercise.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.contract.exercise.ExerciseCategory
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
 import dev.rafael.features.exercise.presentation.state.ExerciseListEvent
@@ -55,7 +56,7 @@ class ExerciseListViewModel(
                 is AppResult.Success ->
                     _state.update { it.copy(isRefreshing = false) }   // banco atualiza a lista sozinho
                 is AppResult.Failure ->
-                    _state.update { it.copy(isRefreshing = false, error = result.error.message) }
+                    _state.update { it.copy(isRefreshing = false, error = result.error) }
             }
         }
     }

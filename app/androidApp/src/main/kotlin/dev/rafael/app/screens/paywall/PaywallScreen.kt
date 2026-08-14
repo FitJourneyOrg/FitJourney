@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.ui.ErroInline
 import org.koin.androidx.compose.koinViewModel
 
 /** Uma linha do comparativo. free/premium: "Sim" → ✓, null → ✗, texto → mostra o texto. */
@@ -75,9 +76,7 @@ fun PaywallScreen(
         bottomBar = {
             Surface(tonalElevation = 3.dp) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    state.error?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    }
+                    state.error?.let { ErroInline(it) }
                     Button(
                         onClick = viewModel::subscribe,
                         enabled = !state.isSubscribing,
