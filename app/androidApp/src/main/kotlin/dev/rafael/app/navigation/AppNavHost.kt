@@ -27,6 +27,7 @@ import dev.rafael.app.screens.program.ProgramDetailScreen
 import dev.rafael.app.screens.program.ProgramGenerateScreen
 import dev.rafael.app.screens.program.ProgramListScreen
 import dev.rafael.app.screens.paywall.PaywallScreen
+import dev.rafael.app.screens.reveal.ProgramOfferScreen
 import dev.rafael.app.screens.reveal.ProgramRevealScreen
 import dev.rafael.app.screens.session.WorkoutSessionScreen
 import dev.rafael.app.screens.splash.SplashScreen
@@ -93,31 +94,55 @@ fun AppNavHost() {
 
         composable<AppRoute.Quiz> {
             QuizScreen(onCompleted = {
-                // Revelação (Fase 7): Home vira a raiz e, por cima, abre a tela dedicada de
-                // revelação (gera o 1º programa + CTA de assinar). Voltar/concluir cai no Home.
+                // Home vira a raiz e, por cima, abre a OFERTA do 1º programa (Fase 7).
+                // Qualquer saída dali (gerar ou pular) desemboca na Home.
                 nav.navigate(AppRoute.Home) {
                     popUpTo(AppRoute.Quiz) { inclusive = true }
                 }
-                nav.navigate(AppRoute.ProgramReveal)
+                nav.navigate(AppRoute.ProgramOffer)
             })
+        }
+
+        composable<AppRoute.ProgramOffer> {
+            ProgramOfferScreen(
+                // Sai da pilha ao gerar: o Reveal não deve poder voltar pra oferta (o
+                // programa já foi criado — reperguntar "quer um programa?" não faz sentido).
+                onGerar = {
+                    nav.navigate(AppRoute.ProgramReveal) {
+                        popUpTo(AppRoute.ProgramOffer) { inclusive = true }
+                    }
+                },
+                onPular = { nav.popBackStack() },   // → Home, sem nada criado no servidor
+            )
         }
 
         composable<AppRoute.ProgramReveal> {
             ProgramRevealScreen(
                 onDone = { nav.popBackStack() },                     // conclui → Home (raiz do back stack)
-                onOpenPaywall = { nav.navigate(AppRoute.Paywall) },  // "desbloquear" → página de assinatura
+                // voltarParaHome: recusar o premium aqui não pode devolver pro Reveal, que é
+                // a própria tela de oferta — seria recusar e cair de volta na oferta.
+                onOpenPaywall = { nav.navigate(AppRoute.Paywall(voltarParaHome = true)) },
             )
         }
 
-        composable<AppRoute.Paywall> {
+        composable<AppRoute.Paywall> { entry ->
+            val rota: AppRoute.Paywall = entry.toRoute()
             // virar premium muda o blur dos programas (#23) → cache de programas fica sujo
-            PaywallScreen(onClose = { programas.invalidate(); nav.popBackStack() })
+            PaywallScreen(onClose = {
+                programas.invalidate()
+                if (rota.voltarParaHome) {
+                    nav.navigate(AppRoute.Home) { popUpTo(AppRoute.Home) { inclusive = true } }
+                } else {
+                    nav.popBackStack()
+                }
+            })
         }
 
         composable<AppRoute.Home> {
             HomeScreen(
                 onOpenLibrary = { nav.navigate(AppRoute.Library) },
                 onOpenWorkouts = { nav.navigate(AppRoute.Programs) },
+                onGenerateWithAI = { nav.navigate(AppRoute.ProgramGenerate) },
                 onStartWorkout = { id -> nav.navigate(AppRoute.WorkoutSession(id)) },
                 onOpenGroups = { nav.navigate(AppRoute.Grupos) },
                 onOpenProgress = { nav.navigate(AppRoute.Progresso) },
@@ -155,7 +180,7 @@ fun AppNavHost() {
                 onBack = { nav.popBackStack() },
                 onOpenWorkout = { id, editLocked -> nav.navigate(AppRoute.WorkoutDetail(id, editLocked)) },
                 onAddWorkout = { programId, taken -> nav.navigate(AppRoute.WorkoutCreate(programId, taken)) },
-                onOpenPaywall = { nav.navigate(AppRoute.Paywall) },
+                onOpenPaywall = { nav.navigate(AppRoute.Paywall()) },
                 onGenerateNew = { nav.navigate(AppRoute.ProgramGenerate) },
                 onCreateManual = { nav.popBackStack() },   // volta à lista, onde o "+" cria manual
             )
