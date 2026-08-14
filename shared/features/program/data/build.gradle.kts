@@ -12,7 +12,8 @@ kotlin {
             // program:domain/build.gradle.kts). Mapeia WorkoutDto -> ProgramWorkout aqui mesmo.
             implementation(projects.shared.core.result)
             implementation(projects.shared.core.network)
-            implementation(projects.shared.core.database)   // cache local (leitura offline)
+            implementation(projects.shared.core.database)   // tabelas locais (offline-first)
+            implementation(libs.sqldelight.coroutinesExtensions)   // asFlow().mapToList()
             implementation(projects.sharedContract)
             implementation(libs.koin.core)
             implementation(libs.kotlinx.coroutines.core)

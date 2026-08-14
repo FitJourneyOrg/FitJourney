@@ -3,8 +3,16 @@ package dev.rafael.features.program.domain.repository
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.program.domain.model.Program
 import dev.rafael.features.program.domain.model.ProgramScheduleEntry
+import kotlinx.coroutines.flow.Flow
 
 interface ProgramRepository {
+    /**
+     * Programas do BANCO LOCAL, reativo (ARCH #30). A tela observa isto e pinta na hora —
+     * offline inclusive. Quando o sync grava, o Flow re-emite e a tela se atualiza sozinha.
+     * Use junto com `refresh()`, que é quem fala com a rede.
+     */
+    fun observePrograms(): Flow<List<Program>>
+
     /**
      * CACHE-FIRST: devolve o cache local se ainda estiver fresco; só vai à rede quando o cache
      * está vazio, vencido (TTL) ou foi invalidado por uma mutação. Trocar de aba não refaz
