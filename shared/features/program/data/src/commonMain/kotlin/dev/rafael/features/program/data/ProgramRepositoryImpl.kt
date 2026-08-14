@@ -10,6 +10,8 @@ import dev.rafael.core.result.asSuccess
 import dev.rafael.features.program.domain.model.Program
 import dev.rafael.features.program.domain.model.ProgramScheduleEntry
 import dev.rafael.features.program.domain.repository.ProgramRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlin.time.Clock
 
 class ProgramRepositoryImpl(
@@ -36,6 +38,9 @@ class ProgramRepositoryImpl(
      * O fallback offline continua: se a rede falhar por conexão (Unexpected), lê o cache mesmo
      * vencido. Erro do servidor (401/403/…) NÃO cai no cache — é resposta real, não falta de rede.
      */
+    override fun observePrograms(): Flow<List<Program>> =
+        local.observar().map { dtos -> dtos.map { it.toDomain() } }
+
     override suspend fun list(): AppResult<List<Program>> {
         val dono = tokenProvider.currentUid()
         if (dono != donoDoCache) invalidate()   // trocou de conta → nada de reaproveitar

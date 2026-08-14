@@ -1,0 +1,19 @@
+    -- Treinos (tabela `workout`). Cabeçalho em colunas, exercícios em JSON.
+-- Schema: 2.sqm. [REGRA] toda query filtra por uid.
+
+salvarTreino:
+INSERT OR REPLACE INTO workout(
+    id, uid, programId, name, origin, locked, lockedExerciseCount, exerciseCount, exercisesJson
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+limparTreinos:
+DELETE FROM workout WHERE uid = ?;
+
+observarTreino:
+SELECT * FROM workout WHERE id = ? AND uid = ?;
+
+observarTreinosDoPrograma:
+SELECT * FROM workout WHERE programId = ? AND uid = ? ORDER BY name;
+
+lerTreino:
+SELECT * FROM workout WHERE id = ? AND uid = ?;

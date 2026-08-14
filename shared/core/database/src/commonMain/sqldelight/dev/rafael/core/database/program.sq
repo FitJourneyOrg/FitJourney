@@ -1,0 +1,46 @@
+-- Programas e agenda (tabelas `program` e `program_schedule`).
+-- Schema: 2.sqm. [REGRA] toda query filtra por uid.
+
+-- ---------- escrita (sync) ----------
+
+salvarPrograma:
+INSERT OR REPLACE INTO program(
+    id, uid, name, origin, daysPerWeek, split, rationale,
+    locked, durationWeeks, startedAt, currentWeek, updatedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+
+salvarAgenda:
+INSERT OR REPLACE INTO program_schedule(programId, workoutId, uid, dayOfWeek)
+VALUES (?, ?, ?, ?);
+
+-- Limpeza antes de regravar o sync: o que não vier na resposta some (evita órfão de
+-- programa excluído em outro dispositivo).
+limparProgramas:
+DELETE FROM program WHERE uid = ?;
+
+limparAgenda:
+DELETE FROM program_schedule WHERE uid = ?;
+
+-- ---------- leitura ----------
+
+observarProgramas:
+SELECT * FROM program WHERE uid = ? ORDER BY updatedAt DESC;
+
+observarPrograma:
+SELECT * FROM program WHERE id = ? AND uid = ?;
+
+agendaDoPrograma:
+SELECT workoutId, dayOfWeek FROM program_schedule WHERE programId = ? AND uid = ?;
+
+-- O TREINO DE HOJE: antes a Home baixava todos os programas e filtrava em Kotlin.
+observarTreinoDoDia:
+SELECT w.id, w.name, w.exerciseCount, w.locked, p.id AS programId, p.name AS programName,
+       p.currentWeek, p.durationWeeks
+FROM program_schedule s
+JOIN workout w ON w.id = s.workoutId
+JOIN program p ON p.id = s.programId
+WHERE s.uid = ? AND s.dayOfWeek = ?
+LIMIT 1;
+
+contarProgramas:
+SELECT COUNT(*) FROM program WHERE uid = ?;

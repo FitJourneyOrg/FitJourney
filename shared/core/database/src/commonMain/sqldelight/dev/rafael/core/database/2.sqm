@@ -1,0 +1,50 @@
+-- Migration 2: programa e treino saem do blob (kv_cache) e ganham tabelas reais.
+--
+-- POR QUÊ: no kv_cache eles não eram consultáveis nem observáveis — a Home baixava todos os
+-- programas e filtrava em Kotlin pra achar o treino de hoje, e a lista não se atualizava
+-- sozinha. Com tabelas, vira SQL + Flow. Também abre espaço p/ `pending` na escrita offline.
+--
+-- GRANULARIDADE: vira coluna o que é CONSULTADO (nome, dia da semana, semana atual); fica em
+-- JSON o que é sempre lido em bloco (os exercícios de um treino). Normalizar série/repetição
+-- seria mais 2 tabelas sem nenhuma consulta que as justifique.
+
+-- Cabeçalho do programa — o que a lista e a Home mostram.
+CREATE TABLE program (
+    id            TEXT    NOT NULL PRIMARY KEY,
+    uid           TEXT    NOT NULL DEFAULT '',   -- dono (mesmo aparelho, várias contas)
+    name          TEXT    NOT NULL,
+    origin        TEXT    NOT NULL,              -- AI | MANUAL
+    daysPerWeek   INTEGER NOT NULL,
+    split         TEXT    NOT NULL,
+    rationale     TEXT    NOT NULL,
+    locked        INTEGER NOT NULL DEFAULT 0,    -- ARCH #23: blur p/ não-premium
+    durationWeeks INTEGER NOT NULL DEFAULT 8,
+    startedAt     TEXT,
+    currentWeek   INTEGER NOT NULL DEFAULT 1,
+    updatedAt     TEXT
+);
+CREATE INDEX program_uid ON program(uid);
+
+-- A AGENDA: qual treino cai em qual dia. É esta tabela que responde "o treino de hoje".
+CREATE TABLE program_schedule (
+    programId TEXT    NOT NULL,
+    workoutId TEXT    NOT NULL,
+    uid       TEXT    NOT NULL DEFAULT '',
+    dayOfWeek INTEGER NOT NULL,                 -- 1=Seg .. 7=Dom
+    PRIMARY KEY (programId, workoutId)
+);
+CREATE INDEX program_schedule_dia ON program_schedule(uid, dayOfWeek);
+
+-- Treino: cabeçalho em colunas + exercícios em JSON (lidos sempre em bloco).
+CREATE TABLE workout (
+    id                  TEXT    NOT NULL PRIMARY KEY,
+    uid                 TEXT    NOT NULL DEFAULT '',
+    programId           TEXT,
+    name                TEXT    NOT NULL,
+    origin              TEXT    NOT NULL,
+    locked              INTEGER NOT NULL DEFAULT 0,
+    lockedExerciseCount INTEGER NOT NULL DEFAULT 0,
+    exerciseCount       INTEGER NOT NULL DEFAULT 0,   -- desnormalizado: a lista mostra sem abrir o JSON
+    exercisesJson       TEXT    NOT NULL              -- List<WorkoutExerciseDto>
+);
+CREATE INDEX workout_program ON workout(uid, programId);
