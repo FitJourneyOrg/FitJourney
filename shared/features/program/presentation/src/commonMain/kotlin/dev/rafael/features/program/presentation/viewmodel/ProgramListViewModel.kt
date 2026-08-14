@@ -47,6 +47,11 @@ class ProgramListViewModel(
         _state.update { it.copy(createdId = null) }
     }
 
+    /** Erro de ação é one-shot (snackbar). Sem limpar, ele reaparece a cada recomposição. */
+    fun consumeError() {
+        _state.update { it.copy(error = null) }
+    }
+
     /**
      * SÓ sincroniza — a lista já é observada do banco. Falha de rede não vira erro vermelho na
      * tela: se há dado local, o usuário nem percebe; se não há, a tela mostra "sem conexão"
@@ -61,7 +66,7 @@ class ProgramListViewModel(
                         it.copy(isLoading = false, programs = result.value, sincronizouAlgumaVez = true)
                     }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isLoading = false, erroSync = result.error.message) }
+                    _state.update { it.copy(isLoading = false, erroSync = result.error) }
             }
         }
     }
@@ -74,7 +79,7 @@ class ProgramListViewModel(
                 is AppResult.Success ->
                     _state.update { it.copy(isCreating = false, createdId = result.value.id) }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isCreating = false, error = result.error.message) }
+                    _state.update { it.copy(isCreating = false, error = result.error) }
             }
         }
     }

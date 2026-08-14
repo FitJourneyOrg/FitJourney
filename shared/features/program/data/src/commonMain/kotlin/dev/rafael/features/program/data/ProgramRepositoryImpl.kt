@@ -59,7 +59,10 @@ class ProgramRepositoryImpl(
                 net.value.map { it.toDomain() }.asSuccess()
             }
             is AppResult.Failure -> {
-                val cached = if (net.error is AppError.Unexpected) local.read() else null
+                // Só falha de TRANSPORTE justifica servir cache: o servidor não disse nada, então
+                // o último dado conhecido segue válido. 401/403/404/500 são resposta real — servir
+                // cache ali esconderia o problema (era o que acontecia quando 500 caía em Unexpected).
+                val cached = if (net.error is AppError.Connection) local.read() else null
                 cached?.map { it.toDomain() }?.asSuccess() ?: net.error.asFailure()
             }
         }

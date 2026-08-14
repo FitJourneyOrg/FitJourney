@@ -19,4 +19,8 @@ fun AppError.toHttp(): Pair<HttpStatusCode, ErrorResponse> = when (this) {
     // Unexpected: NÃO vaza `message`/`cause` pro cliente — genérico no fio, detalhe só no log.
     is AppError.Unexpected ->
         HttpStatusCode.InternalServerError to ErrorResponse(ErrorCodes.INTERNAL, "Erro interno")
+    // Connection é erro de CLIENTE (não consegui falar com o servidor). Se aparecer aqui, algo
+    // interno se enganou de tipo — trata como falha interna e o log do StatusPages mostra onde.
+    is AppError.Connection ->
+        HttpStatusCode.InternalServerError to ErrorResponse(ErrorCodes.INTERNAL, "Erro interno")
 }

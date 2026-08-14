@@ -4,6 +4,13 @@
     <!-- vibração ao fim do descanso entre séries (Fase 5) -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
+    <!-- Declaradas explicitamente: hoje elas chegam por merge do manifesto do Firebase/WorkManager,
+         o que significa que remover uma dependência tiraria a permissão sem aviso. Ambas são
+         normais (concedidas na instalação, sem diálogo). ACCESS_NETWORK_STATE é o que permite
+         distinguir "você está offline" de "o servidor não respondeu" (ver ui/ErrorUi.kt). -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
     <application
         android:name=".FitJourneyApp"
         android:usesCleartextTraffic="true"

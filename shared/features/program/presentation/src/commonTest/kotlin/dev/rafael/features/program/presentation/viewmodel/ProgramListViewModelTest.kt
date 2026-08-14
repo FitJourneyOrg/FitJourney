@@ -15,6 +15,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -41,18 +42,18 @@ class ProgramListViewModelTest {
 
     @Test
     fun `falha de sync nao vira erro vermelho`() = runTest(dispatcher) {
-        val repo = FakeProgramRepository(listResult = AppResult.Failure(AppError.Unexpected("Falha de rede")))
+        val repo = FakeProgramRepository(listResult = AppResult.Failure(AppError.Connection()))
         val vm = ProgramListViewModel(repo)
         vm.onEvent(ProgramListEvent.Load)
         advanceUntilIdle()
 
         assertNull(vm.state.value.error)                  // `error` é só pra erro de AÇÃO
-        assertEquals("Falha de rede", vm.state.value.erroSync)
+        assertIs<AppError.Connection>(vm.state.value.erroSync)   // tipo, não texto: quem escreve o texto é a UI
     }
 
     @Test
     fun `sem dado local e sync falhou mostra sem conexao`() = runTest(dispatcher) {
-        val repo = FakeProgramRepository(listResult = AppResult.Failure(AppError.Unexpected("Falha de rede")))
+        val repo = FakeProgramRepository(listResult = AppResult.Failure(AppError.Connection()))
         val vm = ProgramListViewModel(repo)                // local vazio: aparelho novo, offline
         vm.onEvent(ProgramListEvent.Load)
         advanceUntilIdle()
@@ -63,7 +64,7 @@ class ProgramListViewModelTest {
 
     @Test
     fun `com dado local a falha de sync e invisivel`() = runTest(dispatcher) {
-        val repo = FakeProgramRepository(listResult = AppResult.Failure(AppError.Unexpected("Falha de rede")))
+        val repo = FakeProgramRepository(listResult = AppResult.Failure(AppError.Connection()))
         repo.local.value = listOf(program("a"), program("b"))   // já sincronizou antes
         val vm = ProgramListViewModel(repo)
         vm.onEvent(ProgramListEvent.Load)
@@ -87,7 +88,7 @@ class ProgramListViewModelTest {
 
     @Test
     fun `retry com sucesso tira o sem conexao`() = runTest(dispatcher) {
-        val repo = FakeProgramRepository(listResult = AppResult.Failure(AppError.Unexpected("Falha de rede")))
+        val repo = FakeProgramRepository(listResult = AppResult.Failure(AppError.Connection()))
         val vm = ProgramListViewModel(repo)
         vm.onEvent(ProgramListEvent.Load)
         advanceUntilIdle()
@@ -103,7 +104,7 @@ class ProgramListViewModelTest {
 
     @Test
     fun `sync que grava no local re-emite pra tela`() = runTest(dispatcher) {
-        val repo = FakeProgramRepository(listResult = AppResult.Failure(AppError.Unexpected("Falha de rede")))
+        val repo = FakeProgramRepository(listResult = AppResult.Failure(AppError.Connection()))
         val vm = ProgramListViewModel(repo)
         advanceUntilIdle()
         assertEquals(0, vm.state.value.programs.size)
@@ -116,14 +117,14 @@ class ProgramListViewModelTest {
 
     @Test
     fun `erro de acao continua vermelho`() = runTest(dispatcher) {
-        val repo = FakeProgramRepository(createResult = AppResult.Failure(AppError.Unexpected("Falha de rede")))
+        val repo = FakeProgramRepository(createResult = AppResult.Failure(AppError.Connection()))
         val vm = ProgramListViewModel(repo)
         advanceUntilIdle()
 
         vm.onEvent(ProgramListEvent.CreateManual("Meu programa"))
         advanceUntilIdle()
 
-        assertEquals("Falha de rede", vm.state.value.error)   // aqui SIM: o usuário pediu algo
+        assertIs<AppError.Connection>(vm.state.value.error)      // aqui SIM: o usuário pediu algo
     }
 
     @Test
