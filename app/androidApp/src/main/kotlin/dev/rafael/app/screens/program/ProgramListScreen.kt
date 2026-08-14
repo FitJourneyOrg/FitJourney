@@ -4,10 +4,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
@@ -61,6 +65,8 @@ fun ProgramListScreen(
             Text("Meus programas", style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(12.dp))
 
+            // Só erro de AÇÃO em vermelho (ex.: falhou ao criar). Falha de SYNC não é erro de
+            // tela: com dado local o usuário nem percebe; sem dado, vira o estado abaixo.
             state.error?.let {
                 Text(it, color = MaterialTheme.colorScheme.error)
                 Spacer(Modifier.height(8.dp))
@@ -70,6 +76,11 @@ fun ProgramListScreen(
                 when {
                     state.isLoading && state.programs.isEmpty() ->
                         ShimmerList(modifier = Modifier.padding(vertical = 8.dp))
+                    // vazio POR FALTA DE SYNC ≠ vazio de verdade
+                    state.vazioPorFaltaDeSync -> SemConexao(
+                        modifier = Modifier.align(Alignment.Center),
+                        onTentarDeNovo = { viewModel.onEvent(ProgramListEvent.Retry) },
+                    )
                     state.programs.isEmpty() ->
                         Text("Nenhum programa ainda.", Modifier.align(Alignment.Center))
                     else ->
@@ -113,4 +124,33 @@ private fun CreateProgramDialog(onDismiss: () -> Unit, onConfirm: (String) -> Un
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
+}
+
+/**
+ * Sem dado local E sync falhou. Diferente de "você não tem programas": pode ser alguém com
+ * programas abrindo o app num aparelho novo, sem rede. Não sugere criar nada.
+ */
+@Composable
+private fun SemConexao(modifier: Modifier = Modifier, onTentarDeNovo: () -> Unit) {
+    Column(
+        modifier.padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(
+            Icons.Outlined.CloudOff, contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(36.dp),
+        )
+        Spacer(Modifier.height(12.dp))
+        Text("Sem conexão", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(8.dp))
+        Text(
+            "Ainda não sincronizamos seus programas neste aparelho. " +
+                "Conecte-se para baixá-los — depois disso funcionam offline.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(16.dp))
+        OutlinedButton(onClick = onTentarDeNovo) { Text("Tentar de novo") }
+    }
 }

@@ -19,4 +19,7 @@ data class UserStatsDto(
     val streakDays: Int,
     val totalSessions: Int,      // sessões válidas (com ao menos 1 série feita)
     val sessionsThisWeek: Int,
+    // Hoje: a Home usa pra mostrar "treino concluído" em vez de oferecer o mesmo treino de novo.
+    val trainedToday: Boolean = false,
+    val xpToday: Int = 0,
 )

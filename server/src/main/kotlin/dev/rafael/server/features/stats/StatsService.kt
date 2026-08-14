@@ -56,6 +56,8 @@ class StatsService(
                         streakDays = XpPolicy.streak(porDia.keys, diasDeTreino, hoje),
                         totalSessions = validas.size,
                         sessionsThisWeek = validas.count { (dia, _) -> dia > semanaAtras },
+                        trainedToday = porDia.containsKey(hoje),
+                        xpToday = XpPolicy.xpDoDia(porDia[hoje].orEmpty()),
                     )
                 }
             }

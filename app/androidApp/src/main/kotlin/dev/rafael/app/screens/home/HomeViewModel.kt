@@ -8,6 +8,7 @@ import dev.rafael.contract.stats.UserStatsDto
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.auth.domain.repository.AuthRepository
 import dev.rafael.features.profile.domain.repository.ProfileRepository
+import dev.rafael.features.program.domain.model.Program
 import dev.rafael.features.program.domain.repository.ProgramRepository
 import dev.rafael.features.workout.domain.repository.WorkoutRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -39,6 +40,8 @@ data class HomeState(
     val error: String? = null,
     val today: TodayWorkout? = null,   // null + !isLoading + !semPrograma = dia de descanso
     val semPrograma: Boolean = false,  // usuário ainda não tem programa nenhum
+    /** Última falha de sincronização. Com lista vazia, distingue "sem programa" de "sem sync". */
+    val erroSync: String? = null,
     val stats: UserStatsDto? = null,   // XP/nível/streak (ARCH #16) — null = ainda não carregou
     /**
      * Se já treinou hoje. Vem do BANCO LOCAL (não do servidor): funciona offline e é imediato
@@ -99,55 +102,62 @@ class HomeViewModel(
         stats.observar()
             .onEach { s -> _state.update { it.copy(stats = s) } }
             .launchIn(viewModelScope)
+
+        // Programas do BANCO LOCAL (ARCH #30): o card do dia pinta na hora, offline inclusive,
+        // e se atualiza sozinho quando o sync grava algo novo.
+        programs.observePrograms()
+            .onEach { lista -> resolverTreinoDeHoje(lista) }
+            .launchIn(viewModelScope)
     }
 
+    /** Acha o treino agendado para hoje entre os programas locais. */
+    private suspend fun resolverTreinoDeHoje(programas: List<Program>) {
+        val hoje = diaDaSemanaHoje()
+        val achado = programas.firstNotNullOfOrNull { p ->
+            p.schedule.firstOrNull { it.dayOfWeek == hoje }?.let { e -> p to e.workoutId }
+        }
+        if (achado == null) {
+            _state.update { it.copy(isLoading = false, today = null, semPrograma = programas.isEmpty()) }
+            return
+        }
+        val (programa, workoutId) = achado
+        val resumo = programa.workouts.firstOrNull { it.id == workoutId }
+        val minutos = when (val w = workouts.get(workoutId)) {
+            is AppResult.Success -> estimarMinutos(w.value.exercises.map { it.sets.size to it.restSeconds })
+            is AppResult.Failure -> 0
+        }
+        _state.update {
+            it.copy(
+                isLoading = false,
+                semPrograma = false,
+                today = TodayWorkout(
+                    workoutId = workoutId,
+                    name = resumo?.name ?: "Treino de hoje",
+                    programName = programa.name,
+                    exerciseCount = resumo?.exerciseCount ?: 0,
+                    minutes = minutos,
+                    locked = resumo?.locked == true,
+                    week = programa.currentWeek,
+                    totalWeeks = programa.durationWeeks,
+                ),
+            )
+        }
+    }
+
+    /**
+     * A tela NÃO carrega dado aqui — ela já observa o banco (ver init). Isto é só o SYNC:
+     * atualiza o local com o servidor e, se algo mudar, o Flow re-emite (ARCH #30).
+     * Falha de rede não vira erro de tela: o usuário segue vendo o que tem.
+     */
     fun load() {
-        _state.update { it.copy(isLoading = true, error = null) }
         carregarStats()
         viewModelScope.launch {
-            when (val r = programs.list()) {
-                is AppResult.Failure ->
-                    _state.update { it.copy(isLoading = false, error = r.error.message) }
-
-                is AppResult.Success -> {
-                    val hoje = diaDaSemanaHoje()
-                    // programa mais recente que tenha treino agendado pra hoje
-                    val achado = r.value.firstNotNullOfOrNull { p ->
-                        p.schedule.firstOrNull { it.dayOfWeek == hoje }
-                            ?.let { entry -> p to entry.workoutId }
-                    }
-                    if (achado == null) {
-                        _state.update {
-                            it.copy(isLoading = false, today = null, semPrograma = r.value.isEmpty())
-                        }
-                        return@launch
-                    }
-                    val (programa, workoutId) = achado
-                    val resumo = programa.workouts.firstOrNull { it.id == workoutId }
-                    // detalhe traz séries e descanso -> permite estimar a duração
-                    val minutos = when (val w = workouts.get(workoutId)) {
-                        is AppResult.Success -> estimarMinutos(
-                            w.value.exercises.map { ex -> ex.sets.size to ex.restSeconds },
-                        )
-                        is AppResult.Failure -> 0
-                    }
-                    _state.update {
-                        it.copy(
-                            isLoading = false,
-                            semPrograma = false,
-                            today = TodayWorkout(
-                                workoutId = workoutId,
-                                name = resumo?.name ?: "Treino de hoje",
-                                programName = programa.name,
-                                exerciseCount = resumo?.exerciseCount ?: 0,
-                                minutes = minutos,
-                                locked = resumo?.locked == true,
-                                week = programa.currentWeek,
-                                totalWeeks = programa.durationWeeks,
-                            ),
-                        )
-                    }
-                }
+            // Guarda a falha p/ a tela distinguir "você ainda não tem programa" de
+            // "não consegui sincronizar". Convidar alguém que JÁ TEM programas a criar
+            // tudo de novo é o pior conselho possível.
+            val r = programs.list()
+            _state.update {
+                it.copy(erroSync = (r as? AppResult.Failure)?.error?.message)
             }
         }
     }
