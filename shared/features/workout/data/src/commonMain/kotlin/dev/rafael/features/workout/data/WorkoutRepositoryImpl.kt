@@ -25,7 +25,8 @@ class WorkoutRepositoryImpl(
                 net.value.toDomain().asSuccess()
             }
             is AppResult.Failure -> {
-                val cached = if (net.error is AppError.Unexpected) local.read(id) else null
+                // Ver ProgramRepositoryImpl: só transporte cai no cache; resposta do servidor, não.
+                val cached = if (net.error is AppError.Connection) local.read(id) else null
                 cached?.toDomain()?.asSuccess() ?: net.error.asFailure()
             }
         }

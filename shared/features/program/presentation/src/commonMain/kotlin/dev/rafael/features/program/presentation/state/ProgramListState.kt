@@ -1,18 +1,24 @@
 package dev.rafael.features.program.presentation.state
 
+import dev.rafael.core.result.AppError
 import dev.rafael.features.program.domain.model.Program
 
+/**
+ * Os erros viajam como [AppError], não como String já formatada. O texto depende de coisas que
+ * só a camada de UI sabe — se o aparelho está offline ou se foi o servidor que caiu, por
+ * exemplo. Achatar pra String aqui joga essa decisão fora (ver app/ui/ErrorUi.kt).
+ */
 data class ProgramListState(
     val programs: List<Program> = emptyList(),
     val isLoading: Boolean = false,
     val isCreating: Boolean = false,
-    /** Erro de AÇÃO (ex.: falhou ao criar). Falha de sync NÃO entra aqui — ver `erroSync`. */
-    val error: String? = null,
+    /** Erro de AÇÃO (ex.: falhou ao criar) → snackbar. Falha de sync NÃO entra aqui. */
+    val error: AppError? = null,
     /**
      * Falha na última sincronização (ARCH #30). Só é MOSTRADA quando não há nada local:
      * offline com dados na mão não é erro — a tela funciona normalmente.
      */
-    val erroSync: String? = null,
+    val erroSync: AppError? = null,
     val sincronizouAlgumaVez: Boolean = false,
     val createdId: String? = null,   // sinaliza navegação pro detalhe do programa recém-criado
 ) {

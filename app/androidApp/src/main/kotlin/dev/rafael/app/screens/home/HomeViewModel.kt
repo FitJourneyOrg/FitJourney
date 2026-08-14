@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.rafael.app.data.session.SessionSync
 import dev.rafael.app.data.stats.StatsRepository
 import dev.rafael.contract.stats.UserStatsDto
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.auth.domain.repository.AuthRepository
 import dev.rafael.features.profile.domain.repository.ProfileRepository
@@ -40,8 +41,12 @@ data class HomeState(
     val error: String? = null,
     val today: TodayWorkout? = null,   // null + !isLoading + !semPrograma = dia de descanso
     val semPrograma: Boolean = false,  // usuário ainda não tem programa nenhum
-    /** Última falha de sincronização. Com lista vazia, distingue "sem programa" de "sem sync". */
-    val erroSync: String? = null,
+    /**
+     * Última falha de sincronização, como AppError (não String). Com lista vazia, distingue
+     * "sem programa" de "sem sync" — e o TEXTO fica a cargo da UI, que sabe se o aparelho está
+     * offline ou se foi o servidor que caiu. Ver app/ui/ErrorUi.kt.
+     */
+    val erroSync: AppError? = null,
     val stats: UserStatsDto? = null,   // XP/nível/streak (ARCH #16) — null = ainda não carregou
     /**
      * Se já treinou hoje. Vem do BANCO LOCAL (não do servidor): funciona offline e é imediato
@@ -157,7 +162,7 @@ class HomeViewModel(
             // tudo de novo é o pior conselho possível.
             val r = programs.list()
             _state.update {
-                it.copy(erroSync = (r as? AppResult.Failure)?.error?.message)
+                it.copy(erroSync = (r as? AppResult.Failure)?.error)
             }
         }
     }

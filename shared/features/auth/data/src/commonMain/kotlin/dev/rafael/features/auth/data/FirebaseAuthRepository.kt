@@ -69,7 +69,7 @@ class FirebaseAuthRepository(
         e is FirebaseAuthException -> AppError.Unauthorized("Credenciais inválidas").asFailure()
         // offline no 1º login: Firebase lança erro de rede. Não dá p/ validar credenciais sem internet.
         (e.message ?: "").contains("network", ignoreCase = true) ->
-            AppError.Unexpected("Sem conexão. O primeiro login precisa de internet.", e).asFailure()
+            AppError.Connection("O primeiro login precisa de internet.", e).asFailure()
         else -> AppError.Unexpected("Falha na autenticação. Verifique sua conexão.", e).asFailure()
     }
 }

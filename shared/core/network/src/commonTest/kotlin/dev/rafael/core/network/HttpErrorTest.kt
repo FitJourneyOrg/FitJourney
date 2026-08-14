@@ -43,6 +43,9 @@ class HttpErrorTest {
     private suspend fun call(client: HttpClient): AppResult<String> =
         httpResult { client.get("https://x/").body<String>() }
 
+    /** Faz o papel da falha de socket em commonTest (IOException é JVM, não existe no common). */
+    private class IOExceptionSimulada : Exception("Failed to connect to /10.0.2.2:8080")
+
     @Test
     fun `401 vira Unauthorized`() = runTest {
         val r = call(client(HttpStatusCode.Unauthorized, errorBody("UNAUTHORIZED", "expirou")))
@@ -74,6 +77,37 @@ class HttpErrorTest {
     fun `500 vira Unexpected`() = runTest {
         val r = call(client(HttpStatusCode.InternalServerError, "erro"))
         assertTrue(r is AppResult.Failure && r.error is AppError.Unexpected)
+    }
+
+    // ---- transporte: nem chegou a haver resposta HTTP ----
+
+    @Test
+    fun `falha de transporte vira Connection e nao Unexpected`() = runTest {
+        // Sem rede / servidor fora do ar: o engine lança antes de existir resposta.
+        val semServidor = HttpClient(MockEngine { throw IOExceptionSimulada() })
+        val r = httpResult { semServidor.get("https://x/").body<String>() }
+
+        assertIs<AppResult.Failure>(r)
+        assertIs<AppError.Connection>(
+            r.error,
+            "sem isto o app nao distingue 'estou offline' de '500 do servidor'",
+        )
+    }
+
+    @Test
+    fun `503 vira Connection`() = runTest {
+        // Servidor no ar mas sem atender (deploy, proxy sem upstream). Pro cliente é o mesmo
+        // que queda de rede: mesma UI, e servir cache local continua correto.
+        val r = call(client(HttpStatusCode.ServiceUnavailable, "indisponivel"))
+        assertTrue(r is AppResult.Failure && r.error is AppError.Connection)
+    }
+
+    @Test
+    fun `500 nao e Connection`() = runTest {
+        // Guarda-costas do fallback de cache: 500 é resposta REAL do servidor. Se virasse
+        // Connection, os repositórios serviriam cache e esconderiam o erro interno.
+        val r = call(client(HttpStatusCode.InternalServerError, "erro"))
+        assertTrue(r is AppResult.Failure && r.error !is AppError.Connection)
     }
 
     @Test
