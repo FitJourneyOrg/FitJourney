@@ -1,6 +1,7 @@
 package dev.rafael.features.exercise.data
 
 import dev.rafael.contract.exercise.ExerciseCategory
+import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.httpResult
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -8,11 +9,11 @@ import dev.rafael.features.exercise.domain.model.Exercise
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlin.time.Clock
 
 class ExerciseRepositoryImpl(
     private val remote: ExerciseRemoteDataSource,
     private val local: ExerciseLocalDataSource,
+    private val stamps: SyncStamps,
 ) : ExerciseRepository {
 
     override fun observeExercises(category: ExerciseCategory?): Flow<List<Exercise>> {
@@ -20,12 +21,6 @@ class ExerciseRepositoryImpl(
         else local.observeByCategory(category.name)
         return rows.map { list -> list.mapNotNull { it.toDomainOrNull() } }
     }
-
-    // Último download bem-sucedido do catálogo. Singleton no Koin → sobrevive à navegação.
-    private var sincronizadoEm: Long? = null
-
-    private val fresco: Boolean
-        get() = sincronizadoEm?.let { Clock.System.now().toEpochMilliseconds() - it < TTL_MS } == true
 
     /**
      * Baixa o catálogo inteiro e substitui o local.
@@ -35,14 +30,19 @@ class ExerciseRepositoryImpl(
      * `init`, ou seja, 965 exercícios baixados a cada entrada na aba Exercícios, mais uma vez
      * no boot pela Splash.
      *
+     * O carimbo é PERSISTIDO ([SyncStamps]): quando morava em memória, essas 24h expiravam ao
+     * fechar o app e todo cold start rebaixava o catálogo inteiro.
+     *
      * Catálogo local vazio ignora o TTL: sem dado não há o que preservar.
      *
      * @param forcar pull-to-refresh do usuário — ele pediu, então vai.
      */
     override suspend fun refresh(forcar: Boolean): AppResult<Unit> {
+        // GLOBAL: o catálogo é igual para todo mundo, não entra no escopo do uid.
+        val fresco = stamps.fresco(SyncStamps.CATALOGO, TTL_MS, SyncStamps.Escopo.GLOBAL)
         if (!forcar && fresco && !local.isEmpty()) return AppResult.Success(Unit)
         return httpResult { local.replaceAll(remote.getExercises(category = null)) }
-            .also { if (it is AppResult.Success) sincronizadoEm = Clock.System.now().toEpochMilliseconds() }
+            .also { if (it is AppResult.Success) stamps.marcar(SyncStamps.CATALOGO, SyncStamps.Escopo.GLOBAL) }
     }
 
     override suspend fun alternatives(exerciseId: String): AppResult<List<Exercise>> =

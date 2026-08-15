@@ -1,7 +1,7 @@
 package dev.rafael.features.program.data
 
 import dev.rafael.contract.program.ScheduleEntry
-import dev.rafael.core.network.TokenProvider
+import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.httpResult
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -12,24 +12,22 @@ import dev.rafael.features.program.domain.model.ProgramScheduleEntry
 import dev.rafael.features.program.domain.repository.ProgramRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlin.time.Clock
 
 class ProgramRepositoryImpl(
     private val remote: ProgramDataSource,
     private val local: ProgramLocalDataSource,
-    private val tokenProvider: TokenProvider,
+    private val stamps: SyncStamps,
 ) : ProgramRepository {
 
-    // Momento do último sync bem-sucedido (singleton no Koin, então sobrevive à navegação).
-    // null = cache sujo/inexistente -> próxima list() vai à rede.
-    private var sincronizadoEm: Long? = null
-
-    // Dono do cache em memória. Trocar de conta invalida: sem isto, o usuário novo veria
-    // a lista do anterior como se estivesse fresca.
-    private var donoDoCache: String? = null
-
-    private val cacheFresco: Boolean
-        get() = sincronizadoEm?.let { Clock.System.now().toEpochMilliseconds() - it < TTL_MS } == true
+    /**
+     * "Mutei algo AGORA, nesta sessão." Fica em memória de propósito: `invalidate()` é chamado
+     * de lambdas de UI (não-suspend) no NavHost, e gravar no banco exigiria tornar a interface
+     * suspend e mudar todos os call sites.
+     *
+     * Divisão de trabalho: o carimbo PERSISTIDO responde "está fresco entre aberturas do app";
+     * este flag responde "eu mesmo acabei de mudar". Cache sujo é a soma dos dois.
+     */
+    private var sujo = false
 
     /**
      * CACHE-FIRST. Antes isto era network-first e refazia GET /programs a cada entrada na aba.
@@ -42,33 +40,50 @@ class ProgramRepositoryImpl(
         local.observar().map { dtos -> dtos.map { it.toDomain() } }
 
     override suspend fun list(): AppResult<List<Program>> {
-        val dono = tokenProvider.currentUid()
-        if (dono != donoDoCache) invalidate()   // trocou de conta → nada de reaproveitar
-        if (cacheFresco) {
-            local.read()?.let { return it.map { dto -> dto.toDomain() }.asSuccess() }
+        // Trocar de conta não precisa mais de checagem manual: o carimbo é chaveado por uid,
+        // então a conta nova simplesmente não encontra o da anterior. Era aqui que o
+        // isolamento dependia de alguém lembrar de comparar `donoDoCache`.
+        if (!sujo && stamps.fresco(SyncStamps.PROGRAMAS, TTL_MS)) {
+            // Lista vazia é resposta VÁLIDA: "sincronizei e você não tem programas". Antes o
+            // read() devolvia null nesse caso e caía na rede em toda abertura.
+            return local.read().map { dto -> dto.toDomain() }.asSuccess()
         }
         return refresh()
     }
+
+    /**
+     * Já baixou programas neste aparelho, com esta conta?
+     *
+     * A UI usa isto para distinguir "você não tem programas" de "ainda não baixei" — sem esta
+     * resposta, uma conta que já sincronizou ontem e abre o app offline hoje via "Sem conexão"
+     * como se nunca tivesse baixado nada.
+     */
+    override suspend fun jaSincronizou(): Boolean = stamps.jaSincronizou(SyncStamps.PROGRAMAS)
 
     override suspend fun refresh(): AppResult<List<Program>> =
         when (val net = httpResult { remote.list() }) {
             is AppResult.Success -> {
                 local.save(net.value)
-                sincronizadoEm = Clock.System.now().toEpochMilliseconds()
-                donoDoCache = tokenProvider.currentUid()
+                stamps.marcar(SyncStamps.PROGRAMAS)
+                sujo = false
                 net.value.map { it.toDomain() }.asSuccess()
             }
             is AppResult.Failure -> {
-                // Só falha de TRANSPORTE justifica servir cache: o servidor não disse nada, então
-                // o último dado conhecido segue válido. 401/403/404/500 são resposta real — servir
-                // cache ali esconderia o problema (era o que acontecia quando 500 caía em Unexpected).
-                val cached = if (net.error is AppError.Connection) local.read() else null
-                cached?.map { it.toDomain() }?.asSuccess() ?: net.error.asFailure()
+                // Servir cache exige DUAS condições:
+                //  1. falha de TRANSPORTE — o servidor não disse nada, então o último dado
+                //     conhecido segue válido. 401/403/404/500 são resposta real e propagam.
+                //  2. já ter sincronizado alguma vez nesta conta — senão "lista vazia" seria
+                //     indistinguível de "nunca baixei", e a tela diria "você não tem programas"
+                //     a quem só está offline num aparelho novo.
+                val podeServirCache = net.error is AppError.Connection &&
+                    stamps.jaSincronizou(SyncStamps.PROGRAMAS)
+                if (podeServirCache) local.read().map { it.toDomain() }.asSuccess()
+                else net.error.asFailure()
             }
         }
 
     override fun invalidate() {
-        sincronizadoEm = null
+        sujo = true
     }
 
     // --- mutações: invalidam o próprio cache (a próxima list() busca o estado novo) ---

@@ -9,5 +9,6 @@ import org.koin.dsl.module
 val exerciseDataModule = module {
     single { ExerciseRemoteDataSource(get()) }               // HttpClient do networkModule
     single { ExerciseLocalDataSource(get()) }                // FitJourneyDatabase do databaseModule
-    single<ExerciseRepository> { ExerciseRepositoryImpl(get(), get()) }
+    // + SyncStamps: carimbo de sync persistido (TTL sobrevive ao fechar o app)
+    single<ExerciseRepository> { ExerciseRepositoryImpl(get(), get(), get()) }
 }

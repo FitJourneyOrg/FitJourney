@@ -5,6 +5,7 @@ import app.cash.sqldelight.coroutines.mapToList
 import dev.rafael.app.data.sync.SyncScheduler
 import dev.rafael.contract.session.WorkoutSessionDto
 import dev.rafael.core.database.FitJourneyDatabase
+import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.TokenProvider
 import dev.rafael.core.result.AppResult
 import kotlinx.coroutines.Dispatchers
@@ -38,6 +39,7 @@ class SessionSync(
     private val db: FitJourneyDatabase,
     private val scheduler: SyncScheduler,
     private val tokenProvider: TokenProvider,
+    private val stamps: SyncStamps,
 ) {
     private val q = db.workoutSessionQueries
     private val json = Json { ignoreUnknownKeys = true }
@@ -75,7 +77,9 @@ class SessionSync(
                 finishedAt = dto.finishedAt,
             )
         }
-        historicoSincronizadoEm = null   // treino novo: o histórico do servidor mudou
+        // Treino novo: o histórico do servidor mudou. Isto é MUTAÇÃO, não aposta — invalida
+        // o carimbo para o próximo sync ir à rede em vez de esperar o TTL vencer.
+        stamps.invalidar(SyncStamps.HISTORICO)
         flush()
     }
 
@@ -97,12 +101,6 @@ class SessionSync(
         if (aindaPendentes > 0) scheduler.agendarAgora()
     }
 
-    // Último download do histórico. Home, Progresso e o Worker chamam o sync; sem esta guarda,
-    // trocar de aba refaria GET /sessions toda vez. Não afeta a fluidez (a tela lê do banco),
-    // mas é dado e bateria à toa — e o custo cresce com o tamanho do histórico.
-    private var historicoSincronizadoEm: Long? = null
-    private var donoDoHistorico: String? = null
-
     /**
      * Puxa o histórico do servidor para o banco local. Falha em silêncio: a tela já está
      * pintada com o local. NÃO mexe nas pendentes (elas ainda não existem lá).
@@ -113,10 +111,12 @@ class SessionSync(
         val dono = uid()
         if (dono.isEmpty()) return AppResult.Success(Unit)
 
-        val agora = Clock.System.now().toEpochMilliseconds()
-        val fresco = donoDoHistorico == dono &&
-            historicoSincronizadoEm?.let { agora - it < TTL_HISTORICO_MS } == true
-        if (fresco && !forcar) return AppResult.Success(Unit)
+        // Carimbo PERSISTIDO (SyncStamps): quando esta janela vivia em memória, todo cold
+        // start rebaixava o histórico inteiro — e o custo cresce com o tamanho dele.
+        // O uid entra na chave, então trocar de conta não reaproveita nada.
+        if (!forcar && stamps.fresco(SyncStamps.HISTORICO, TTL_HISTORICO_MS)) {
+            return AppResult.Success(Unit)
+        }
         val remoto = api.list()
         if (remoto is AppResult.Success) {
             withContext(Dispatchers.Default) {
@@ -131,8 +131,7 @@ class SessionSync(
                     }
                 }
             }
-            historicoSincronizadoEm = agora
-            donoDoHistorico = dono
+            stamps.marcar(SyncStamps.HISTORICO)
             return AppResult.Success(Unit)
         }
         return AppResult.Success(Unit)   // offline não é erro de tela

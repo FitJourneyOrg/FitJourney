@@ -38,6 +38,25 @@ class SplashViewModel(
                 return@launch
             }
 
+            // CACHE-FIRST no gate (ARCH #30). `onboardingCompleted` é MONOTÔNICO: uma vez
+            // concluído, nunca volta atrás. Então um `true` cacheado é confiável e dispensa
+            // esperar a rede — o usuário recorrente abre o app instantaneamente, e o perfil
+            // sincroniza de fundo.
+            //
+            // A assimetria é o ponto: `false` ou `null` NÃO podem ser confiados. Pular o
+            // onboarding por engano é muito pior que esperar 2 segundos, então nesses casos
+            // a rede continua sendo consultada antes de decidir.
+            if (profile.cachedOnboardingCompleted() == true) {
+                _state.value = SplashState.Decided(AppRoute.Home)
+                appScope.launch { profile.getProfile() }   // atualiza o cache sem travar a tela
+                warmExerciseCatalog()
+                appScope.launch {
+                    sessionSync.flush()
+                    sessionSync.sincronizarHistorico()
+                }
+                return@launch
+            }
+
             // Timeout maior: o 1º request após o boot do server é lento (JIT/pool) e
             // estourava 1,5s → caía no fallback (cache stale) → Home errado p/ cadastro novo.
             val result = withTimeoutOrNull(5000) { profile.getProfile() }

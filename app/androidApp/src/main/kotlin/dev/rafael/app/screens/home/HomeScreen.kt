@@ -87,7 +87,9 @@ fun HomeScreen(
             state.error != null -> CardErro(state.error!!) { viewModel.load() }   // erro de ação
             // Vazio POR FALTA DE SYNC (nunca sincronizou neste aparelho) ≠ vazio de verdade.
             // Sem esta distinção, quem já tem programas era convidado a criar tudo de novo.
-            state.semPrograma && state.erroSync != null ->
+            // "não baixei ainda" ≠ "você não tem". Sem o !jaSincronizou, quem sincronizou
+            // ontem e abre offline hoje com zero programas via "Sem conexão" — mentira.
+            state.semPrograma && state.erroSync != null && !state.jaSincronizou ->
                 CardNaoSincronizado(state.erroSync!!, onTentarDeNovo = { viewModel.load() })
             state.semPrograma -> CardSemPrograma(
                 onGerarComIa = onGenerateWithAI,

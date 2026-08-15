@@ -1,6 +1,6 @@
 package dev.rafael.features.workout.data
 
-import dev.rafael.core.network.TokenProvider
+import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.httpResult
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -9,24 +9,12 @@ import dev.rafael.core.result.asSuccess
 import dev.rafael.features.workout.domain.model.Workout
 import dev.rafael.features.workout.domain.model.WorkoutSummary
 import dev.rafael.features.workout.domain.repository.WorkoutRepository
-import kotlin.time.Clock
 
 class WorkoutRepositoryImpl(
     private val remote: WorkoutDataSource,
     private val local: WorkoutLocalDataSource,
-    private val tokenProvider: TokenProvider,
+    private val stamps: SyncStamps,
 ) : WorkoutRepository {
-
-    // Momento do último sync bem-sucedido, POR TREINO. Singleton no Koin, então sobrevive à
-    // navegação. Ausente = cache sujo/inexistente → próximo get() vai à rede.
-    private val sincronizadoEm = mutableMapOf<String, Long>()
-
-    // Dono do cache. Trocar de conta descarta tudo: sem isto o usuário novo reaproveitaria os
-    // carimbos do anterior e leria o treino dele do banco como se estivesse fresco.
-    private var donoDoCache: String? = null
-
-    private fun fresco(id: String): Boolean =
-        sincronizadoEm[id]?.let { Clock.System.now().toEpochMilliseconds() - it < TTL_MS } == true
 
     override suspend fun list(): AppResult<List<WorkoutSummary>> =
         httpResult { remote.list().map { it.toDomain() } }
@@ -40,12 +28,8 @@ class WorkoutRepositoryImpl(
      * stack) reagia ao Flow e buscava o treino do dia trancado.
      */
     override suspend fun get(id: String): AppResult<Workout> {
-        val dono = tokenProvider.currentUid()
-        if (dono != donoDoCache) {
-            sincronizadoEm.clear()
-            donoDoCache = dono
-        }
-        if (fresco(id)) {
+        // Carimbo por treino E por uid (`sync:workout:{id}:{uid}`) — o isolamento vem da chave.
+        if (stamps.fresco(SyncStamps.treino(id), TTL_MS)) {
             local.read(id)?.let { return it.toDomain().asSuccess() }
         }
         return refresh(id)
@@ -56,8 +40,7 @@ class WorkoutRepositoryImpl(
         when (val net = httpResult { remote.get(id) }) {
             is AppResult.Success -> {
                 local.save(id, net.value)
-                sincronizadoEm[id] = Clock.System.now().toEpochMilliseconds()
-                donoDoCache = tokenProvider.currentUid()
+                stamps.marcar(SyncStamps.treino(id))
                 net.value.toDomain().asSuccess()
             }
             is AppResult.Failure -> {
@@ -68,8 +51,8 @@ class WorkoutRepositoryImpl(
         }
 
     /** Muda o treino → o carimbo dele morre, e o próximo get() busca o estado novo. */
-    private fun invalidar(id: String) {
-        sincronizadoEm.remove(id)
+    private suspend fun invalidar(id: String) {
+        stamps.invalidar(SyncStamps.treino(id))
     }
 
     override suspend fun create(workout: Workout): AppResult<Workout> =

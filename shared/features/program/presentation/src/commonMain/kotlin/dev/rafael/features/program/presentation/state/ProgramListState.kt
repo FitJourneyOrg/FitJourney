@@ -19,6 +19,12 @@ data class ProgramListState(
      * offline com dados na mão não é erro — a tela funciona normalmente.
      */
     val erroSync: AppError? = null,
+    /**
+     * Já baixou programas neste aparelho, com esta conta. Vem do carimbo PERSISTIDO
+     * (`SyncStamps`), não do ciclo de vida do ViewModel: quando era só um campo em memória,
+     * todo cold start offline voltava a false e a tela dizia "Sem conexão" para quem já tinha
+     * baixado tudo no dia anterior.
+     */
     val sincronizouAlgumaVez: Boolean = false,
     val createdId: String? = null,   // sinaliza navegação pro detalhe do programa recém-criado
 ) {
