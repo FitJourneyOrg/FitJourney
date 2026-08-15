@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlin.time.Clock
 
 /**
  * XP/nível/streak — OFFLINE-FIRST na leitura.
@@ -52,13 +53,40 @@ class StatsRepository(
         }
 
     /** Busca no servidor e grava no cache (o Flow re-emite). Offline: não faz nada, sem erro. */
-    suspend fun sincronizar() {
+    /**
+     * Busca no servidor e grava no cache (o Flow re-emite). Offline: não faz nada, sem erro.
+     *
+     * TTL: a Home chama isto em TODO `onResume`, então sem janela de frescor trocar de aba 6
+     * vezes gerava 6 `GET /me/stats`. XP não muda sozinho — só quando uma sessão sobe, e nesse
+     * caso quem chama passa `forcar = true`.
+     *
+     * @param forcar ignora o TTL. Use quando você SABE que o XP mudou (pendência sincronizada).
+     */
+    suspend fun sincronizar(forcar: Boolean = false) {
+        val dono = tokenProvider.currentUid()
+        if (dono != donoDoCache) {          // trocou de conta → o carimbo do anterior não vale
+            sincronizadoEm = null
+            donoDoCache = dono
+        }
+        if (!forcar && fresco) return
         val k = chave()
         when (val r = api.get()) {
             is AppResult.Success -> withContext(Dispatchers.Default) {
                 cache.put(k, json.encodeToString(UserStatsDto.serializer(), r.value))
+                sincronizadoEm = Clock.System.now().toEpochMilliseconds()
             }
             is AppResult.Failure -> Unit   // mantém o último valor conhecido
         }
+    }
+
+    private var sincronizadoEm: Long? = null
+    private var donoDoCache: String? = null
+
+    private val fresco: Boolean
+        get() = sincronizadoEm?.let { Clock.System.now().toEpochMilliseconds() - it < TTL_MS } == true
+
+    private companion object {
+        /** Menor que o dos programas (5 min): XP é o número que o usuário mais olha. */
+        const val TTL_MS = 2 * 60 * 1000L
     }
 }

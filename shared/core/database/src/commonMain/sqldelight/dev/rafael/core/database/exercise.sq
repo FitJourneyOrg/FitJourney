@@ -4,6 +4,11 @@
 selectByIds:
 SELECT id, name, thumbRef FROM exercise WHERE id IN ?;
 
+-- Detalhe de UM exercício. Antes o cliente baixava o catálogo inteiro (965 linhas)
+-- e filtrava em memória para abrir uma tela de detalhe.
+selectById:
+SELECT * FROM exercise WHERE id = ?;
+
 selectAll:
 SELECT * FROM exercise;
 

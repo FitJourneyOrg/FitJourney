@@ -42,7 +42,7 @@ class ExerciseDetailViewModelTest {
 
     private class FakeRepo(private val detail: AppResult<Exercise>) : ExerciseRepository {
         override fun observeExercises(category: ExerciseCategory?): Flow<List<Exercise>> = flowOf(emptyList())
-        override suspend fun refresh(): AppResult<Unit> = AppResult.Success(Unit)
+        override suspend fun refresh(forcar: Boolean): AppResult<Unit> = AppResult.Success(Unit)
         override suspend fun alternatives(exerciseId: String): AppResult<List<Exercise>> = AppResult.Success(emptyList())
         override suspend fun getDetail(exerciseId: String): AppResult<Exercise> = detail
     }
