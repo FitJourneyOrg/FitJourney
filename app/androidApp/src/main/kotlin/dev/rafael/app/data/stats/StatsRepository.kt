@@ -4,6 +4,7 @@ import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToOneOrNull
 import dev.rafael.contract.stats.UserStatsDto
 import dev.rafael.core.database.FitJourneyDatabase
+import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.TokenProvider
 import dev.rafael.core.result.AppResult
 import kotlinx.coroutines.Dispatchers
@@ -14,7 +15,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import kotlin.time.Clock
 
 /**
  * XP/nível/streak — OFFLINE-FIRST na leitura.
@@ -32,6 +32,7 @@ class StatsRepository(
     private val api: StatsApi,
     private val db: FitJourneyDatabase,
     private val tokenProvider: TokenProvider,
+    private val stamps: SyncStamps,
 ) {
     private val cache = db.cacheQueries
     private val json = Json { ignoreUnknownKeys = true }
@@ -63,27 +64,17 @@ class StatsRepository(
      * @param forcar ignora o TTL. Use quando você SABE que o XP mudou (pendência sincronizada).
      */
     suspend fun sincronizar(forcar: Boolean = false) {
-        val dono = tokenProvider.currentUid()
-        if (dono != donoDoCache) {          // trocou de conta → o carimbo do anterior não vale
-            sincronizadoEm = null
-            donoDoCache = dono
-        }
-        if (!forcar && fresco) return
+        // O carimbo é chaveado por uid, então trocar de conta já não reaproveita nada —
+        // não precisa mais comparar o dono na mão.
+        if (!forcar && stamps.fresco(SyncStamps.STATS, TTL_MS)) return
         val k = chave()
         when (val r = api.get()) {
             is AppResult.Success -> withContext(Dispatchers.Default) {
                 cache.put(k, json.encodeToString(UserStatsDto.serializer(), r.value))
-                sincronizadoEm = Clock.System.now().toEpochMilliseconds()
-            }
+            }.also { stamps.marcar(SyncStamps.STATS) }
             is AppResult.Failure -> Unit   // mantém o último valor conhecido
         }
     }
-
-    private var sincronizadoEm: Long? = null
-    private var donoDoCache: String? = null
-
-    private val fresco: Boolean
-        get() = sincronizadoEm?.let { Clock.System.now().toEpochMilliseconds() - it < TTL_MS } == true
 
     private companion object {
         /** Menor que o dos programas (5 min): XP é o número que o usuário mais olha. */

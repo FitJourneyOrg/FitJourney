@@ -20,6 +20,13 @@ interface ProgramRepository {
      */
     suspend fun list(): AppResult<List<Program>>                  // GET /programs (condicional)
 
+    /**
+     * Já sincronizou programas neste aparelho, com esta conta? Persistido, então sobrevive a
+     * fechar o app. A UI precisa disto para não dizer "você não tem programas" a quem apenas
+     * não baixou ainda — nem "sem conexão" a quem já baixou e está offline.
+     */
+    suspend fun jaSincronizou(): Boolean
+
     /** Força ida à rede (pull-to-refresh / "tentar de novo"), ignorando o cache. */
     suspend fun refresh(): AppResult<List<Program>>
 

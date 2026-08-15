@@ -55,6 +55,8 @@ data class HomeState(
     val treinouHoje: Boolean = false,
     /** Sessões ainda não enviadas. O XP delas só entra quando subirem (autoridade do servidor). */
     val sessoesPendentes: Int = 0,
+    /** Já baixou programas neste aparelho (carimbo persistido). Ver ProgramListState. */
+    val jaSincronizou: Boolean = false,
 )
 
 /**
@@ -107,6 +109,10 @@ class HomeViewModel(
         stats.observar()
             .onEach { s -> _state.update { it.copy(stats = s) } }
             .launchIn(viewModelScope)
+
+        viewModelScope.launch {
+            _state.update { it.copy(jaSincronizou = programs.jaSincronizou()) }
+        }
 
         // Programas do BANCO LOCAL (ARCH #30): o card do dia pinta na hora, offline inclusive,
         // e se atualiza sozinho quando o sync grava algo novo.

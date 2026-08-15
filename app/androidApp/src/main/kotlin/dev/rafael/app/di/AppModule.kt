@@ -4,6 +4,8 @@ import dev.rafael.app.data.session.SessionApi
 import dev.rafael.app.data.stats.StatsApi
 import dev.rafael.app.data.stats.StatsRepository
 import dev.rafael.app.data.sync.SyncScheduler
+import dev.rafael.core.database.SyncStamps
+import dev.rafael.core.network.TokenProvider
 import org.koin.android.ext.koin.androidContext
 import dev.rafael.app.data.session.SessionSync
 import dev.rafael.app.screens.home.HomeViewModel
@@ -25,12 +27,18 @@ val appModule = module {
     // é destruída assim que decide a rota (popUpTo inclusive) e cancelaria o viewModelScope.
     single<CoroutineScope> { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
 
+    // CARIMBOS DE SYNC persistidos (ARCH #30). Registrado aqui — na raiz de composição —
+    // porque é o único ponto que vê ao mesmo tempo o banco (core:database) e o TokenProvider
+    // (core:network). Passar o uid como lambda evita core:database depender de core:network,
+    // o que seria persistência dependendo de rede.
+    single { SyncStamps(db = get(), uidAtual = { get<TokenProvider>().currentUid() }) }
+
     // Sessão de treino (Fase 5): remote + sync offline-first (outbox local).
     single { SessionApi(get()) }
     single { StatsApi(get()) }              // XP/nível/streak (ARCH #16)
-    single { StatsRepository(get(), get(), get()) }  // api + db + TokenProvider (cache por uid)
+    single { StatsRepository(get(), get(), get(), get()) }  // api + db + TokenProvider + SyncStamps
     single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
-    single { SessionSync(get(), get(), get(), get()) }   // api + db + scheduler + TokenProvider
+    single { SessionSync(get(), get(), get(), get(), get()) }   // + SyncStamps
 
     viewModelOf(::SplashViewModel)   // injeta AuthRepository + ProfileRepository + ExerciseRepository + CoroutineScope
     viewModelOf(::HomeViewModel)     // injeta AuthRepository (logout)

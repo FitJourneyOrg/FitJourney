@@ -109,11 +109,17 @@ class ProgramLocalDataSource(
                 .map { linhas -> linhas.map { montarPrograma(it, dono) } }
         }
 
-    /** Leitura pontual (mantida para o caminho cache-first do repositório). */
-    suspend fun read(): List<ProgramDto>? {
+    /**
+     * Leitura pontual (caminho cache-first do repositório).
+     *
+     * Devolve lista VAZIA quando não há programas — não null. Antes o null servia duplo papel
+     * ("não tenho nada" e "nunca sincronizei"), e isso quebrava o cache-first para toda conta
+     * sem programa: o carimbo dizia fresco, o read devolvia null, e o repositório ia à rede
+     * mesmo assim, em toda abertura. Quem responde "nunca sincronizei" agora é o SyncStamps.
+     */
+    suspend fun read(): List<ProgramDto> {
         val dono = uid()
-        val linhas = qPrograma.observarProgramas(dono).executeAsList()
-        return if (linhas.isEmpty()) null else linhas.map { montarPrograma(it, dono) }
+        return qPrograma.observarProgramas(dono).executeAsList().map { montarPrograma(it, dono) }
     }
 
     /** Detalhe de um treino (usado pelo cache do workout:data). */

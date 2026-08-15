@@ -27,6 +27,13 @@ class ProgramListViewModel(
         repository.observePrograms()
             .onEach { lista -> _state.update { it.copy(programs = lista, isLoading = false) } }
             .launchIn(viewModelScope)
+
+        // Carimbo persistido: responde "já baixei alguma vez aqui?" mesmo em cold start
+        // offline, quando nenhum sync desta sessão teve chance de acontecer.
+        viewModelScope.launch {
+            val ja = repository.jaSincronizou()
+            _state.update { it.copy(sincronizouAlgumaVez = ja) }
+        }
     }
 
     fun onEvent(event: ProgramListEvent) {

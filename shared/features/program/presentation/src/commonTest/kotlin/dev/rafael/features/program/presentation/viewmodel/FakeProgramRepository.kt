@@ -31,6 +31,10 @@ class FakeProgramRepository(
 
     override fun observePrograms(): kotlinx.coroutines.flow.Flow<List<Program>> = local
 
+    /** Simula "já baixou neste aparelho, com esta conta" (carimbo persistido). */
+    var sincronizouNesteAparelho: Boolean = false
+
+    override suspend fun jaSincronizou() = sincronizouNesteAparelho
     override suspend fun list() = listResult
     override suspend fun refresh() = listResult
     override fun invalidate() { invalidateCalls++ }
