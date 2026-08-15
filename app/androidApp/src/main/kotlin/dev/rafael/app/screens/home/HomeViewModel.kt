@@ -98,7 +98,7 @@ class HomeViewModel(
                 // aberta). O servidor já recalculou o XP — busca de novo pra a faixa atualizar
                 // sozinha, sem o usuário precisar sair e voltar da tela.
                 if (pendentesAgora < pendentesAntes) {
-                    viewModelScope.launch { stats.sincronizar() }
+                    viewModelScope.launch { stats.sincronizar(forcar = true) }   // o XP mudou: ignora o TTL
                 }
             }
             .launchIn(viewModelScope)
@@ -127,7 +127,10 @@ class HomeViewModel(
         }
         val (programa, workoutId) = achado
         val resumo = programa.workouts.firstOrNull { it.id == workoutId }
-        val minutos = when (val w = workouts.get(workoutId)) {
+        // Dia trancado (ARCH #23): não busca o detalhe. O servidor recusa com 403 — o card
+        // trancado não mostra duração de qualquer forma, e pedir o que já se sabe negado só
+        // enche o log de 403 que parecem bug.
+        val minutos = if (resumo?.locked == true) 0 else when (val w = workouts.get(workoutId)) {
             is AppResult.Success -> estimarMinutos(w.value.exercises.map { it.sets.size to it.restSeconds })
             is AppResult.Failure -> 0
         }
