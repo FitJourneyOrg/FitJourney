@@ -2,11 +2,13 @@ package dev.rafael.app.di
 
 import dev.rafael.app.data.session.SessionApi
 import dev.rafael.app.data.stats.StatsApi
+import dev.rafael.app.data.stats.Stats
 import dev.rafael.app.data.stats.StatsRepository
 import dev.rafael.app.data.sync.SyncScheduler
 import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.TokenProvider
 import org.koin.android.ext.koin.androidContext
+import dev.rafael.app.data.session.HistoricoDeSessoes
 import dev.rafael.app.data.session.SessionSync
 import dev.rafael.app.screens.home.HomeViewModel
 import dev.rafael.app.screens.progress.ProgressViewModel
@@ -36,9 +38,9 @@ val appModule = module {
     // Sessão de treino (Fase 5): remote + sync offline-first (outbox local).
     single { SessionApi(get()) }
     single { StatsApi(get()) }              // XP/nível/streak (ARCH #16)
-    single { StatsRepository(get(), get(), get(), get()) }  // api + db + TokenProvider + SyncStamps
+    single<Stats> { StatsRepository(get(), get(), get(), get()) }   // api + db + TokenProvider + SyncStamps
     single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
-    single { SessionSync(get(), get(), get(), get(), get()) }   // + SyncStamps
+    single<HistoricoDeSessoes> { SessionSync(get(), get(), get(), get(), get()) }   // + SyncStamps
 
     viewModelOf(::SplashViewModel)   // injeta AuthRepository + ProfileRepository + ExerciseRepository + CoroutineScope
     viewModelOf(::HomeViewModel)     // injeta AuthRepository (logout)

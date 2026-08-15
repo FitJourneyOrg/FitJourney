@@ -33,7 +33,7 @@ class StatsRepository(
     private val db: FitJourneyDatabase,
     private val tokenProvider: TokenProvider,
     private val stamps: SyncStamps,
-) {
+) : Stats {
     private val cache = db.cacheQueries
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -41,7 +41,7 @@ class StatsRepository(
     private suspend fun chave(): String = "stats:${tokenProvider.currentUid() ?: ""}"
 
     /** Último XP/nível/streak conhecido. Nunca falha; null só antes do primeiro sync da vida. */
-    fun observar(): Flow<UserStatsDto?> =
+    override fun observar(): Flow<UserStatsDto?> =
         flow { emit(chave()) }.flatMapLatest { k ->
             cache.get(k)
                 .asFlow()
@@ -63,7 +63,7 @@ class StatsRepository(
      *
      * @param forcar ignora o TTL. Use quando você SABE que o XP mudou (pendência sincronizada).
      */
-    suspend fun sincronizar(forcar: Boolean = false) {
+    override suspend fun sincronizar(forcar: Boolean) {
         // O carimbo é chaveado por uid, então trocar de conta já não reaproveita nada —
         // não precisa mais comparar o dono na mão.
         if (!forcar && stamps.fresco(SyncStamps.STATS, TTL_MS)) return

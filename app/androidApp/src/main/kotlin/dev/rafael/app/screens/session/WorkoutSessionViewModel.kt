@@ -2,7 +2,7 @@ package dev.rafael.app.screens.session
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.rafael.app.data.session.SessionSync
+import dev.rafael.app.data.session.HistoricoDeSessoes
 import dev.rafael.contract.session.SetLogDto
 import dev.rafael.contract.session.WorkoutSessionDto
 import dev.rafael.core.catalog.ExerciseLookup
@@ -63,7 +63,7 @@ class WorkoutSessionViewModel(
     private val workoutId: String,
     private val workouts: WorkoutRepository,
     private val lookup: ExerciseLookup,
-    private val sync: SessionSync,
+    private val sync: HistoricoDeSessoes,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(WorkoutSessionState())
