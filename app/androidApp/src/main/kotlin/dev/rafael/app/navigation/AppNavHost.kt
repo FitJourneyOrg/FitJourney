@@ -128,8 +128,10 @@ fun AppNavHost() {
         composable<AppRoute.Paywall> { entry ->
             val rota: AppRoute.Paywall = entry.toRoute()
             // virar premium muda o blur dos programas (#23) → cache de programas fica sujo
-            PaywallScreen(onClose = {
-                programas.invalidate()
+            PaywallScreen(onClose = { assinou ->
+                // Só invalida se ASSINOU: virar premium destrava o blur (#23) e muda a lista.
+                // Antes invalidava em todo fechamento, então até o "Agora não" custava um refetch.
+                if (assinou) programas.invalidate()
                 if (rota.voltarParaHome) {
                     nav.navigate(AppRoute.Home) { popUpTo(AppRoute.Home) { inclusive = true } }
                 } else {
@@ -203,9 +205,13 @@ fun AppNavHost() {
             WorkoutDetailScreen(
                 workoutId = route.id,
                 editLocked = route.editLocked,
-                // aqui dá pra excluir/trocar exercício do treino; ao voltar, o programa pode ter
-                // mudado (contagem, agenda). Invalida — custa 1 refetch, evita lista desatualizada.
-                onBack = { programas.invalidate(); nav.popBackStack() },
+                // Invalida só se ALGO mudou de fato (trocou/removeu exercício, excluiu o
+                // treino). Antes invalidava em toda volta, então só entrar e sair de um treino
+                // já gerava um GET /programs — era o ruído que sobrava no log do servidor.
+                onBack = { alterou ->
+                    if (alterou) programas.invalidate()
+                    nav.popBackStack()
+                },
                 onEdit = { nav.navigate(AppRoute.WorkoutEdit(route.id)) },
                 onStartSession = { nav.navigate(AppRoute.WorkoutSession(route.id)) },
             )

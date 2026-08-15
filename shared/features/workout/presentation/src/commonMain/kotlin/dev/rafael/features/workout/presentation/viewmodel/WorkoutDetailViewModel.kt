@@ -97,7 +97,12 @@ class WorkoutDetailViewModel(
         _state.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
             when (val result = repository.update(id, newWorkout)) {
-                is AppResult.Success -> applyWorkout(result.value)
+                is AppResult.Success -> {
+                    applyWorkout(result.value)
+                    // mutação aplicada: a agenda/contagem do programa mudou → a tela avisa
+                    // o app na volta, e só então o cache de programas é invalidado.
+                    _state.update { it.copy(alterado = true) }
+                }
                 is AppResult.Failure -> {
                     val err = result.error
                     if (err is AppError.Forbidden && err.code == ErrorCodes.ENTITLEMENT_REQUIRED)

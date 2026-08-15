@@ -54,20 +54,20 @@ private val GROUPS = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaywallScreen(
-    onClose: () -> Unit,
+    onClose: (assinou: Boolean) -> Unit,
     viewModel: PaywallViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
 
     // sucesso → fecha e volta pra origem (que recarrega e enxerga o premium)
-    LaunchedEffect(state.subscribed) { if (state.subscribed) onClose() }
+    LaunchedEffect(state.subscribed) { if (state.subscribed) onClose(true) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Premium") },
                 navigationIcon = {
-                    IconButton(onClick = onClose, enabled = !state.isSubscribing) {
+                    IconButton(onClick = { onClose(false) }, enabled = !state.isSubscribing) {
                         Icon(Icons.Default.Close, contentDescription = "Fechar")
                     }
                 },
@@ -86,7 +86,7 @@ fun PaywallScreen(
                         else Text("Assinar premium")
                     }
                     TextButton(
-                        onClick = onClose,
+                        onClick = { onClose(false) },
                         enabled = !state.isSubscribing,
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text("Agora não") }
