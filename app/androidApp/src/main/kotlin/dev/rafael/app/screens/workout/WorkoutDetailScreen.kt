@@ -35,7 +35,7 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun WorkoutDetailScreen(
     workoutId: String,
-    onBack: () -> Unit,
+    onBack: (alterou: Boolean) -> Unit,
     onEdit: () -> Unit,
     onStartSession: () -> Unit = {},   // Fase 5: iniciar a execução do treino
     editLocked: Boolean = false,   // ARCH #25: programa IA + free → editar barra na hora
@@ -51,7 +51,8 @@ fun WorkoutDetailScreen(
     var alternatives by remember { mutableStateOf<List<Exercise>?>(null) }        // null = carregando
     var altError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(state.isDeleted) { if (state.isDeleted) onBack() }
+    // excluir treino SEMPRE muda o programa (agenda e contagem) → invalida na volta
+    LaunchedEffect(state.isDeleted) { if (state.isDeleted) onBack(true) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         if (!state.isDeleted) viewModel.onEvent(WorkoutDetailEvent.Retry)
     }
@@ -140,7 +141,11 @@ fun WorkoutDetailScreen(
         topBar = {
             TopAppBar(
                 title = { Text(state.name.ifBlank { "Treino" }) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar") } },
+                navigationIcon = {
+                    IconButton(onClick = { onBack(state.alterado) }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar")
+                    }
+                },
                 actions = {
                     IconButton(onClick = {
                         // programa IA trancado (free): não entra na edição, mostra paywall
