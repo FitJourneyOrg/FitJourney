@@ -2,7 +2,7 @@ package dev.rafael.app.screens.splash
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.rafael.app.data.session.SessionSync
+import dev.rafael.app.data.session.HistoricoDeSessoes
 import dev.rafael.app.navigation.AppRoute
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -20,7 +20,7 @@ class SplashViewModel(
     private val auth: AuthRepository,
     private val profile: ProfileRepository,
     private val exercises: ExerciseRepository,
-    private val sessionSync: SessionSync,
+    private val sessionSync: HistoricoDeSessoes,
     private val appScope: CoroutineScope,
 ) : ViewModel() {
 
@@ -35,6 +35,25 @@ class SplashViewModel(
             // offline (token pode não renovar sem rede). Só vai pro Login quem nunca logou aqui.
             if (!auth.isLoggedIn()) {
                 _state.value = SplashState.Decided(AppRoute.Login)
+                return@launch
+            }
+
+            // CACHE-FIRST no gate (ARCH #30). `onboardingCompleted` é MONOTÔNICO: uma vez
+            // concluído, nunca volta atrás. Então um `true` cacheado é confiável e dispensa
+            // esperar a rede — o usuário recorrente abre o app instantaneamente, e o perfil
+            // sincroniza de fundo.
+            //
+            // A assimetria é o ponto: `false` ou `null` NÃO podem ser confiados. Pular o
+            // onboarding por engano é muito pior que esperar 2 segundos, então nesses casos
+            // a rede continua sendo consultada antes de decidir.
+            if (profile.cachedOnboardingCompleted() == true) {
+                _state.value = SplashState.Decided(AppRoute.Home)
+                appScope.launch { profile.getProfile() }   // atualiza o cache sem travar a tela
+                warmExerciseCatalog()
+                appScope.launch {
+                    sessionSync.flush()
+                    sessionSync.sincronizarHistorico()
+                }
                 return@launch
             }
 
@@ -57,7 +76,13 @@ class SplashViewModel(
             // empurrava o getProfile além dos 5s → fallback (cache stale) → Home errado no
             // cadastro novo. No appScope o warm sobrevive à Splash ser destruída.
             warmExerciseCatalog()
-            appScope.launch { sessionSync.flush() }   // reenvia sessões de treino pendentes (offline)
+            // Aquece o banco local no boot (appScope: sobrevive à Splash ser destruída):
+            // sobe o que ficou pendente e BAIXA o histórico. Assim o Progresso funciona
+            // offline mesmo que o usuário nunca o tenha aberto com internet.
+            appScope.launch {
+                sessionSync.flush()
+                sessionSync.sincronizarHistorico()
+            }
         }
     }
 

@@ -8,6 +8,7 @@ import org.koin.dsl.module
 
 actual val platformDatabaseModule: Module = module {
     single<SqlDriver> {
-        NativeSqliteDriver(FitJourneyDatabase.Schema, "fitjourney_v4.db")   // _v4: + kv_cache (leitura offline)
+        // Nome estável: migrations .sqm cuidam da evolução (ver migrations/LEIA-ME.md).
+        NativeSqliteDriver(FitJourneyDatabase.Schema, "fitjourney.db")
     }
 }

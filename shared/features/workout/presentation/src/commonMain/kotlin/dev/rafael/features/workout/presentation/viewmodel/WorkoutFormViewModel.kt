@@ -3,6 +3,7 @@ package dev.rafael.features.workout.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.core.catalog.ExerciseLookup
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.workout.domain.model.Workout
 import dev.rafael.features.workout.domain.model.WorkoutExercise
@@ -104,7 +105,7 @@ class WorkoutFormViewModel(
                     }
                 }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isLoading = false, error = result.error.message) }
+                    _state.update { it.copy(isLoading = false, error = result.error) }
             }
         }
     }
@@ -156,7 +157,7 @@ class WorkoutFormViewModel(
                 is AppResult.Success ->
                     _state.update { it.copy(isSaving = false, savedId = result.value.id) }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isSaving = false, error = result.error.message) }
+                    _state.update { it.copy(isSaving = false, error = result.error) }
             }
         }
     }

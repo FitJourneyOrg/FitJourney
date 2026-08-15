@@ -1,8 +1,17 @@
 package dev.rafael.app.di
 
 import dev.rafael.app.data.session.SessionApi
+import dev.rafael.app.data.stats.StatsApi
+import dev.rafael.app.data.stats.Stats
+import dev.rafael.app.data.stats.StatsRepository
+import dev.rafael.app.data.sync.SyncScheduler
+import dev.rafael.core.database.SyncStamps
+import dev.rafael.core.network.TokenProvider
+import org.koin.android.ext.koin.androidContext
+import dev.rafael.app.data.session.HistoricoDeSessoes
 import dev.rafael.app.data.session.SessionSync
 import dev.rafael.app.screens.home.HomeViewModel
+import dev.rafael.app.screens.progress.ProgressViewModel
 import dev.rafael.app.screens.paywall.PaywallViewModel
 import dev.rafael.app.screens.reveal.ProgramRevealViewModel
 import dev.rafael.app.screens.session.WorkoutSessionViewModel
@@ -20,12 +29,22 @@ val appModule = module {
     // é destruída assim que decide a rota (popUpTo inclusive) e cancelaria o viewModelScope.
     single<CoroutineScope> { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
 
+    // CARIMBOS DE SYNC persistidos (ARCH #30). Registrado aqui — na raiz de composição —
+    // porque é o único ponto que vê ao mesmo tempo o banco (core:database) e o TokenProvider
+    // (core:network). Passar o uid como lambda evita core:database depender de core:network,
+    // o que seria persistência dependendo de rede.
+    single { SyncStamps(db = get(), uidAtual = { get<TokenProvider>().currentUid() }) }
+
     // Sessão de treino (Fase 5): remote + sync offline-first (outbox local).
     single { SessionApi(get()) }
-    single { SessionSync(get(), get()) }
+    single { StatsApi(get()) }              // XP/nível/streak (ARCH #16)
+    single<Stats> { StatsRepository(get(), get(), get(), get()) }   // api + db + TokenProvider + SyncStamps
+    single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
+    single<HistoricoDeSessoes> { SessionSync(get(), get(), get(), get(), get()) }   // + SyncStamps
 
     viewModelOf(::SplashViewModel)   // injeta AuthRepository + ProfileRepository + ExerciseRepository + CoroutineScope
     viewModelOf(::HomeViewModel)     // injeta AuthRepository (logout)
+    viewModelOf(::ProgressViewModel) // histórico offline-first + stats
     viewModelOf(::ProgramRevealViewModel)   // injeta ProgramRepository (revelação)
     viewModelOf(::PaywallViewModel)          // injeta Billing (página de assinatura)
     viewModel { (workoutId: String) -> WorkoutSessionViewModel(workoutId, get(), get(), get()) }   // execução

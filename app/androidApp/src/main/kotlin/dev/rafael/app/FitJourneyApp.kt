@@ -1,6 +1,7 @@
 package dev.rafael.app
 
 import android.app.Application
+import dev.rafael.app.data.sync.SyncScheduler
 import dev.rafael.app.di.appModule
 import dev.rafael.core.database.di.databaseModule
 import dev.rafael.core.network.di.networkModule
@@ -21,7 +22,7 @@ import org.koin.core.context.startKoin
 class FitJourneyApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        startKoin {
+        val koin = startKoin {
             androidLogger()
             androidContext(this@FitJourneyApp)
             modules(
@@ -39,6 +40,9 @@ class FitJourneyApp : Application() {
                 programPresentationModule,
                 appModule
             )
-        }
+        }.koin
+        // rede de segurança: mesmo que o app fique fechado, o WorkManager tenta esvaziar
+        // a outbox a cada 6h quando houver conexão.
+        koin.get<SyncScheduler>().agendarPeriodico()
     }
 }

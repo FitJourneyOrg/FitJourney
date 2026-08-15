@@ -10,4 +10,5 @@ object ErrorCodes {
     const val INTERNAL = "INTERNAL"
     const val ENTITLEMENT_REQUIRED = "ENTITLEMENT_REQUIRED"   // <- novo (§8.2)
     const val HEALTH_GATE_REQUIRED = "HEALTH_GATE_REQUIRED"   // <- novo (§3.2)
+    const val AGE_GATE_REQUIRED = "AGE_GATE_REQUIRED"         // #24: menor sem supervisão declarada
 }

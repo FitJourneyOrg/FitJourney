@@ -17,7 +17,11 @@ import kotlinx.serialization.json.Json
 object HttpClientFactory {
     const val BASE_URL = "http://10.0.2.2:8080"
 
-    fun create(engine: HttpClientEngine, tokenProvider: TokenProvider): HttpClient =
+    fun create(
+        engine: HttpClientEngine,
+        tokenProvider: TokenProvider,
+        sessionExpiry: SessionExpiryBus,
+    ): HttpClient =
         HttpClient(engine) {
             expectSuccess = true
             install(ContentNegotiation) {
@@ -30,6 +34,26 @@ object HttpClientFactory {
                 bearer {
                     loadTokens {
                         tokenProvider.currentToken()?.let { BearerTokens(it, "") }
+                    }
+                    /**
+                     * SEM ESTE BLOCO o Ktor guarda o token do `loadTokens` e nunca mais o
+                     * recarrega. Token do Firebase dura ~1h: passada essa hora, TODO request
+                     * virava 401 permanente e o app dizia "sessão expirada" sem chance de
+                     * recuperação — mesmo com o usuário perfeitamente logado.
+                     *
+                     * Aqui o `currentToken()` volta ao Firebase, que renova sozinho quando o
+                     * token venceu. Se voltar nulo ou idêntico ao que já falhou, aí a sessão
+                     * morreu de verdade (refresh token revogado, conta removida): sinaliza,
+                     * e o app manda pro login em vez de oferecer um retry que nunca funciona.
+                     */
+                    refreshTokens {
+                        val novo = tokenProvider.currentToken()
+                        if (novo == null || novo == oldTokens?.accessToken) {
+                            sessionExpiry.sinalizar()
+                            null
+                        } else {
+                            BearerTokens(novo, "")
+                        }
                     }
                 }
             }

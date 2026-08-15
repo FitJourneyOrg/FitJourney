@@ -1,5 +1,6 @@
 package dev.rafael.features.program.presentation.state
 
+import dev.rafael.core.result.AppError
 import dev.rafael.features.program.domain.model.Program
 
 data class ProgramDetailState(
@@ -7,6 +8,6 @@ data class ProgramDetailState(
     val isLoading: Boolean = false,
     val isRenaming: Boolean = false,
     val isReordering: Boolean = false,   // durante o PUT /schedule (desabilita as setas)
-    val error: String? = null,
+    val error: AppError? = null,
     val isDeleted: Boolean = false,   // sinaliza pra tela voltar pra lista
 )

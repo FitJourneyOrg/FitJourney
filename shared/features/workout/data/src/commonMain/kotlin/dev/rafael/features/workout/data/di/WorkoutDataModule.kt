@@ -10,6 +10,6 @@ import org.koin.dsl.module
 
 val workoutDataModule: Module = module {
     single { WorkoutDataSource(client = get<HttpClient>()) }
-    single { WorkoutLocalDataSource(get()) }   // FitJourneyDatabase do databaseModule
-    single<WorkoutRepository> { WorkoutRepositoryImpl(get(), get()) }
+    single { WorkoutLocalDataSource(get(), get()) }   // db + TokenProvider (cache por uid)
+    single<WorkoutRepository> { WorkoutRepositoryImpl(get(), get(), get()) }   // + TokenProvider (cache por uid)
 }

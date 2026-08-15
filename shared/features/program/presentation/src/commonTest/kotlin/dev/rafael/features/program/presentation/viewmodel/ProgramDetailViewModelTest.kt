@@ -31,6 +31,7 @@ class ProgramDetailViewModelTest {
             listResult = AppResult.Success(listOf(program("p1", "A"), program("p2", "B"))),
         )
         val vm = ProgramDetailViewModel("p1", repo)
+        vm.onEvent(ProgramDetailEvent.Retry)   // load vem da tela (ON_RESUME), não do init
         advanceUntilIdle()
 
         assertEquals("p1", vm.state.value.program?.id)
@@ -40,10 +41,11 @@ class ProgramDetailViewModelTest {
     fun `load sem achar o id vira erro`() = runTest(dispatcher) {
         val repo = FakeProgramRepository(listResult = AppResult.Success(listOf(program("outro"))))
         val vm = ProgramDetailViewModel("p1", repo)
+        vm.onEvent(ProgramDetailEvent.Retry)   // load vem da tela (ON_RESUME), não do init
         advanceUntilIdle()
 
         assertNull(vm.state.value.program)
-        assertEquals("Programa não encontrado", vm.state.value.error)
+        assertEquals("Programa não encontrado", vm.state.value.error?.message)
     }
 
     @Test
@@ -53,6 +55,7 @@ class ProgramDetailViewModelTest {
             renameResult = AppResult.Success(program("p1", "Novo nome")),
         )
         val vm = ProgramDetailViewModel("p1", repo)
+        vm.onEvent(ProgramDetailEvent.Retry)   // load vem da tela (ON_RESUME), não do init
         advanceUntilIdle()
 
         vm.onEvent(ProgramDetailEvent.Rename("Novo nome"))
@@ -65,6 +68,7 @@ class ProgramDetailViewModelTest {
     fun `delete com sucesso marca isDeleted`() = runTest(dispatcher) {
         val repo = FakeProgramRepository(listResult = AppResult.Success(listOf(program("p1"))))
         val vm = ProgramDetailViewModel("p1", repo)
+        vm.onEvent(ProgramDetailEvent.Retry)   // load vem da tela (ON_RESUME), não do init
         advanceUntilIdle()
 
         vm.onEvent(ProgramDetailEvent.Delete)

@@ -9,6 +9,8 @@ import dev.rafael.server.features.program.routes.programRoutes
 import dev.rafael.server.features.program.services.ProgramService
 import dev.rafael.server.features.session.routes.sessionRoutes
 import dev.rafael.server.features.session.services.SessionService
+import dev.rafael.server.features.stats.StatsService
+import dev.rafael.server.features.stats.statsRoutes
 import dev.rafael.server.features.user.routes.userRoutes
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.workout.routes.workoutRoutes
@@ -16,6 +18,7 @@ import dev.rafael.server.features.workout.services.WorkoutService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.response.respond
+import io.ktor.server.http.content.staticFiles
 import io.ktor.server.routing.get
 import io.ktor.server.routing.routing
 import kotlinx.serialization.Serializable
@@ -31,6 +34,8 @@ data class HealthResponse(
     val db: String,
 )
 
+
+
 fun Application.configureRouting() {
     val userService = get<UserService>()
     val profileService = get<ProfileService>()
@@ -38,15 +43,23 @@ fun Application.configureRouting() {
     val workoutService = get<WorkoutService>()
     val programService = get<ProgramService>()
     val sessionService = get<SessionService>()
+    val statsService = get<StatsService>()
+    val mediaDir = resolveMediaDir(
+        environment.config.propertyOrNull("media.dir")?.getString() ?: "gifs_exercicios",
+    )
 
 
     routing {
+        // Mídia dos exercícios (png/mp4), pública, SÓ DEV. Ver MediaRoutes.kt.
+        staticFiles("/media", mediaDir)
+
         userRoutes(userService)
         profileRoutes(profileService)
         exerciseRoutes(exerciseService, profileService)
         workoutRoutes(workoutService, userService, profileService, programService)
         programRoutes(userService, profileService, programService)
         sessionRoutes(sessionService)
+        statsRoutes(statsService)
 
         get("/health") {
             val dbOk = DatabaseFactory.isHealthy()

@@ -9,4 +9,12 @@ fun Exercise.toDto(): ExerciseDto = ExerciseDto(
     description = description,
     videoRef = videoRef,
     thumbRef = thumbRef,
+    primaryMuscles = primaryMuscles,
+    secondaryMuscles = secondaryMuscles,
+    equipment = equipment,
+    movementPattern = movementPattern?.name,
+    isCompound = isCompound,
+    unilateral = unilateral,
+    prescriptionType = prescriptionType?.name,
+    level = level,
 )

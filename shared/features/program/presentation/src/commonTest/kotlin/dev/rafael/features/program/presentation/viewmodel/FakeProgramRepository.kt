@@ -20,7 +20,24 @@ class FakeProgramRepository(
     var deleteResult: AppResult<Unit> = AppResult.Success(Unit),
     var scheduleResult: AppResult<Program> = AppResult.Success(program("p1")),
 ) : ProgramRepository {
+    var invalidateCalls = 0
+
+    /**
+     * BANCO LOCAL simulado (ARCH #30). Deliberadamente separado de `listResult` (a rede):
+     * é justamente o descasamento entre os dois — tenho dado local mas a rede caiu, ou não
+     * tenho nada e a rede caiu — que os testes de offline precisam exercitar.
+     */
+    val local = kotlinx.coroutines.flow.MutableStateFlow<List<Program>>(emptyList())
+
+    override fun observePrograms(): kotlinx.coroutines.flow.Flow<List<Program>> = local
+
+    /** Simula "já baixou neste aparelho, com esta conta" (carimbo persistido). */
+    var sincronizouNesteAparelho: Boolean = false
+
+    override suspend fun jaSincronizou() = sincronizouNesteAparelho
     override suspend fun list() = listResult
+    override suspend fun refresh() = listResult
+    override fun invalidate() { invalidateCalls++ }
     override suspend fun generate() = generateResult
     override suspend fun createManual(name: String) = createResult
     override suspend fun rename(id: String, name: String) = renameResult

@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.ui.ErroInline
 import org.koin.androidx.compose.koinViewModel
 
 /** Uma linha do comparativo. free/premium: "Sim" → ✓, null → ✗, texto → mostra o texto. */
@@ -53,20 +54,20 @@ private val GROUPS = listOf(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PaywallScreen(
-    onClose: () -> Unit,
+    onClose: (assinou: Boolean) -> Unit,
     viewModel: PaywallViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
 
     // sucesso → fecha e volta pra origem (que recarrega e enxerga o premium)
-    LaunchedEffect(state.subscribed) { if (state.subscribed) onClose() }
+    LaunchedEffect(state.subscribed) { if (state.subscribed) onClose(true) }
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("Premium") },
                 navigationIcon = {
-                    IconButton(onClick = onClose, enabled = !state.isSubscribing) {
+                    IconButton(onClick = { onClose(false) }, enabled = !state.isSubscribing) {
                         Icon(Icons.Default.Close, contentDescription = "Fechar")
                     }
                 },
@@ -75,9 +76,7 @@ fun PaywallScreen(
         bottomBar = {
             Surface(tonalElevation = 3.dp) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    state.error?.let {
-                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-                    }
+                    state.error?.let { ErroInline(it) }
                     Button(
                         onClick = viewModel::subscribe,
                         enabled = !state.isSubscribing,
@@ -87,7 +86,7 @@ fun PaywallScreen(
                         else Text("Assinar premium")
                     }
                     TextButton(
-                        onClick = onClose,
+                        onClick = { onClose(false) },
                         enabled = !state.isSubscribing,
                         modifier = Modifier.fillMaxWidth(),
                     ) { Text("Agora não") }

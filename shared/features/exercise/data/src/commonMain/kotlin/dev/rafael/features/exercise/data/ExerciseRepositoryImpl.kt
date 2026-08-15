@@ -1,7 +1,9 @@
 package dev.rafael.features.exercise.data
 
 import dev.rafael.contract.exercise.ExerciseCategory
+import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.httpResult
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.model.Exercise
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
@@ -11,6 +13,7 @@ import kotlinx.coroutines.flow.map
 class ExerciseRepositoryImpl(
     private val remote: ExerciseRemoteDataSource,
     private val local: ExerciseLocalDataSource,
+    private val stamps: SyncStamps,
 ) : ExerciseRepository {
 
     override fun observeExercises(category: ExerciseCategory?): Flow<List<Exercise>> {
@@ -19,9 +22,54 @@ class ExerciseRepositoryImpl(
         return rows.map { list -> list.mapNotNull { it.toDomainOrNull() } }
     }
 
-    override suspend fun refresh(): AppResult<Unit> =
-        httpResult { local.replaceAll(remote.getExercises(category = null)) }
+    /**
+     * Baixa o catálogo inteiro e substitui o local.
+     *
+     * TTL de 24h (não 5 min como o resto): o catálogo é SEMIESTÁTICO — vem de migration no
+     * servidor, então só muda em deploy. Antes não havia TTL e a lista chamava `refresh()` no
+     * `init`, ou seja, 965 exercícios baixados a cada entrada na aba Exercícios, mais uma vez
+     * no boot pela Splash.
+     *
+     * O carimbo é PERSISTIDO ([SyncStamps]): quando morava em memória, essas 24h expiravam ao
+     * fechar o app e todo cold start rebaixava o catálogo inteiro.
+     *
+     * Catálogo local vazio ignora o TTL: sem dado não há o que preservar.
+     *
+     * @param forcar pull-to-refresh do usuário — ele pediu, então vai.
+     */
+    override suspend fun refresh(forcar: Boolean): AppResult<Unit> {
+        // GLOBAL: o catálogo é igual para todo mundo, não entra no escopo do uid.
+        val fresco = stamps.fresco(SyncStamps.CATALOGO, TTL_MS, SyncStamps.Escopo.GLOBAL)
+        if (!forcar && fresco && !local.isEmpty()) return AppResult.Success(Unit)
+        return httpResult { local.replaceAll(remote.getExercises(category = null)) }
+            .also { if (it is AppResult.Success) stamps.marcar(SyncStamps.CATALOGO, SyncStamps.Escopo.GLOBAL) }
+    }
 
     override suspend fun alternatives(exerciseId: String): AppResult<List<Exercise>> =
         httpResult { remote.getAlternatives(exerciseId).map { it.toDomain() } }
+
+    /**
+     * CACHE-FIRST ([REGRA] ARCH #30). Antes isto baixava o CATÁLOGO INTEIRO (965 exercícios)
+     * para filtrar um id em memória — a cada abertura de tela de detalhe, e sem nem olhar o
+     * banco local, que já tinha o mesmo dado desde o boot.
+     *
+     * Só vai à rede se o exercício não estiver local (catálogo desatualizado após um deploy
+     * que adicionou exercícios novos).
+     */
+    override suspend fun getDetail(exerciseId: String): AppResult<Exercise> {
+        local.readById(exerciseId)?.toDomainOrNull()?.let { return AppResult.Success(it) }
+
+        return when (val r = refresh(forcar = true)) {
+            is AppResult.Success ->
+                local.readById(exerciseId)?.toDomainOrNull()
+                    ?.let { AppResult.Success(it) }
+                    ?: AppResult.Failure(AppError.NotFound("Exercício não encontrado"))
+            is AppResult.Failure -> AppResult.Failure(r.error)
+        }
+    }
+
+    private companion object {
+        /** 24h: catálogo vem de migration, muda só em deploy. */
+        const val TTL_MS = 24 * 60 * 60 * 1000L
+    }
 }

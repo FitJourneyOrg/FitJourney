@@ -17,6 +17,12 @@ class ExerciseLocalDataSource(private val db: FitJourneyDatabase) {
     fun observeByCategory(category: String): Flow<List<Exercise>> =
         queries.selectByCategory(category).asFlow().mapToList(Dispatchers.Default)
 
+    /** Detalhe pontual — sem baixar o catálogo. */
+    fun readById(id: String): Exercise? = queries.selectById(id).executeAsOneOrNull()
+
+    /** Catálogo vazio = nunca sincronizou neste aparelho; aí o TTL não vale. */
+    fun isEmpty(): Boolean = queries.countAll().executeAsOne() == 0L
+
     fun replaceAll(dtos: List<ExerciseDto>) {
         queries.transaction {
             queries.deleteAll()

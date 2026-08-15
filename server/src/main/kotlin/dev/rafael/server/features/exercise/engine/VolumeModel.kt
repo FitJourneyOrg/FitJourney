@@ -18,6 +18,27 @@ enum class TargetMuscle { CHEST, BACK, SHOULDERS, BICEPS, TRICEPS, FOREARMS, QUA
 /** Papel do exercício → define reps/descanso/RIR (ARCH #26 §3.2). */
 enum class SlotRole { COMPOSTO_PESADO, COMPOSTO_ACESSORIO, ISOLAMENTO }
 
+/**
+ * Faixa etária → calibragem do motor (ARCH #24). Além do gate de menor, a idade é VARIÁVEL do
+ * motor: a capacidade de recuperação cai com a idade. <40 normal · 40–59 leve · 60+ conservador.
+ * Idade nula (não informada) não penaliza. [PROPOSTA] nos números.
+ */
+enum class AgeBand { YOUNG, ADULT, SENIOR }
+
+fun ageBandOf(age: Int?): AgeBand = when {
+    age == null -> AgeBand.YOUNG
+    age >= 60 -> AgeBand.SENIOR
+    age >= 40 -> AgeBand.ADULT
+    else -> AgeBand.YOUNG
+}
+
+/** Fator de volume por faixa: idoso recupera menos → menos séries/semana. */
+fun ageVolumeFactor(age: Int?): Double = when (ageBandOf(age)) {
+    AgeBand.YOUNG -> 1.0
+    AgeBand.ADULT -> 0.9
+    AgeBand.SENIOR -> 0.75
+}
+
 /** Tabela de volume ratificada (ARCH #26 §3.1). Séries efetivas/semana. */
 object VolumeTable {
     private data class V(val ini: Int, val inter: Int, val adv: Int, val mrv: Int)
@@ -68,9 +89,10 @@ object VolumeTable {
 object RoleParams {
     data class P(val repRange: String, val restSeconds: Int, val rir: Int)
 
-    /** Iniciante e GENERAL_HEALTH: RIR-piso 3 (cue "deixe no tanque", nunca falha). */
-    fun paramsFor(role: SlotRole, level: Level, goal: Goal): P {
-        val conservative = goal == Goal.GENERAL_HEALTH || level == Level.BEGINNER
+    /** Iniciante, GENERAL_HEALTH e IDOSO (60+): RIR-piso 3 (cue "deixe no tanque", nunca falha). */
+    fun paramsFor(role: SlotRole, level: Level, goal: Goal, age: Int? = null): P {
+        val conservative = goal == Goal.GENERAL_HEALTH || level == Level.BEGINNER ||
+            ageBandOf(age) == AgeBand.SENIOR
         return when (role) {
             SlotRole.COMPOSTO_PESADO ->
                 if (conservative) P("6-10", 150, 3) else P("5-8", 150, 2)

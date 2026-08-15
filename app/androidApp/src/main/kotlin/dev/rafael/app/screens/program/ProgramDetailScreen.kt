@@ -16,8 +16,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import dev.rafael.app.ui.ErroDeTela
 import dev.rafael.features.program.presentation.state.ProgramDetailEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramDetailViewModel
+import dev.rafael.app.ui.ShimmerContent
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
 
@@ -118,13 +120,14 @@ fun ProgramDetailScreen(
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
                 state.isLoading && state.program == null ->
-                    CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    ShimmerContent()
+                // com programa carregado, falha vira ruído: a tela funciona (ARCH #30, nível 1)
                 state.error != null && state.program == null ->
-                    Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(state.error!!, color = MaterialTheme.colorScheme.error)
-                        Spacer(Modifier.height(8.dp))
-                        Button(onClick = { viewModel.onEvent(ProgramDetailEvent.Retry) }) { Text("Tentar de novo") }
-                    }
+                    ErroDeTela(
+                        erro = state.error!!,
+                        modifier = Modifier.align(Alignment.Center),
+                        onAcao = { viewModel.onEvent(ProgramDetailEvent.Retry) },
+                    )
                 state.program?.workouts?.isEmpty() == true ->
                     Text("Nenhum treino neste programa ainda.", Modifier.align(Alignment.Center))
                 else ->

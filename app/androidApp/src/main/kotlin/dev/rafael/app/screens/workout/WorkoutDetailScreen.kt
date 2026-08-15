@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import dev.rafael.app.ui.ErroDeTela
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.model.Exercise
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
@@ -24,6 +25,8 @@ import dev.rafael.features.workout.presentation.state.ResolvedExercise
 import dev.rafael.features.workout.presentation.state.WorkoutDetailEvent
 import dev.rafael.features.workout.presentation.viewmodel.WorkoutDetailViewModel
 import kotlinx.coroutines.launch
+import dev.rafael.app.ui.ShimmerContent
+import dev.rafael.app.ui.ShimmerList
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
@@ -32,7 +35,7 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun WorkoutDetailScreen(
     workoutId: String,
-    onBack: () -> Unit,
+    onBack: (alterou: Boolean) -> Unit,
     onEdit: () -> Unit,
     onStartSession: () -> Unit = {},   // Fase 5: iniciar a execução do treino
     editLocked: Boolean = false,   // ARCH #25: programa IA + free → editar barra na hora
@@ -48,7 +51,8 @@ fun WorkoutDetailScreen(
     var alternatives by remember { mutableStateOf<List<Exercise>?>(null) }        // null = carregando
     var altError by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(state.isDeleted) { if (state.isDeleted) onBack() }
+    // excluir treino SEMPRE muda o programa (agenda e contagem) → invalida na volta
+    LaunchedEffect(state.isDeleted) { if (state.isDeleted) onBack(true) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         if (!state.isDeleted) viewModel.onEvent(WorkoutDetailEvent.Retry)
     }
@@ -101,7 +105,7 @@ fun WorkoutDetailScreen(
             text = {
                 when {
                     altError != null -> Text(altError!!, color = MaterialTheme.colorScheme.error)
-                    alternatives == null -> Box(Modifier.fillMaxWidth().padding(24.dp), Alignment.Center) { CircularProgressIndicator() }
+                    alternatives == null -> ShimmerList(rows = 4)
                     alternatives!!.isEmpty() -> Text("Nenhuma alternativa do mesmo tipo disponível.")
                     else -> LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
                         items(alternatives!!) { alt ->
@@ -137,7 +141,11 @@ fun WorkoutDetailScreen(
         topBar = {
             TopAppBar(
                 title = { Text(state.name.ifBlank { "Treino" }) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar") } },
+                navigationIcon = {
+                    IconButton(onClick = { onBack(state.alterado) }) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar")
+                    }
+                },
                 actions = {
                     IconButton(onClick = {
                         // programa IA trancado (free): não entra na edição, mostra paywall
@@ -162,13 +170,13 @@ fun WorkoutDetailScreen(
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
                 state.isLoading && state.exercises.isEmpty() ->
-                    CircularProgressIndicator(Modifier.align(Alignment.Center))
+                    ShimmerContent()
                 state.error != null ->
-                    Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(state.error!!, color = MaterialTheme.colorScheme.error)
-                        Spacer(Modifier.height(8.dp))
-                        Button(onClick = { viewModel.onEvent(WorkoutDetailEvent.Retry) }) { Text("Tentar de novo") }
-                    }
+                    ErroDeTela(
+                        erro = state.error!!,
+                        modifier = Modifier.align(Alignment.Center),
+                        onAcao = { viewModel.onEvent(WorkoutDetailEvent.Retry) },
+                    )
                 state.exercises.isEmpty() ->
                     Text("Nenhum exercício neste treino.", Modifier.align(Alignment.Center))
                 else ->
