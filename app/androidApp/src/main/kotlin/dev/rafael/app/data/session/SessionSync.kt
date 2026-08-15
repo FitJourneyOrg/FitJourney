@@ -40,7 +40,7 @@ class SessionSync(
     private val scheduler: SyncScheduler,
     private val tokenProvider: TokenProvider,
     private val stamps: SyncStamps,
-) {
+) : HistoricoDeSessoes {
     private val q = db.workoutSessionQueries
     private val json = Json { ignoreUnknownKeys = true }
 
@@ -51,7 +51,7 @@ class SessionSync(
      * Histórico local DO USUÁRIO ATUAL. Nunca falha, nunca espera rede.
      * É um Flow que troca de dono: ao logar com outra conta, re-emite a lista dela.
      */
-    fun observarHistorico(): Flow<List<SessaoLocal>> =
+    override fun observarHistorico(): Flow<List<SessaoLocal>> =
         flow { emit(uid()) }.flatMapLatest { dono ->
             q.observarHistorico(dono)
             .asFlow()
@@ -67,7 +67,7 @@ class SessionSync(
         }
 
     /** Salva a sessão executada (aparece no histórico NA HORA, como pendente) e tenta enviar. */
-    suspend fun record(dto: WorkoutSessionDto) {
+    override suspend fun record(dto: WorkoutSessionDto) {
         val dono = uid()
         withContext(Dispatchers.Default) {
             q.salvarLocal(
@@ -84,7 +84,7 @@ class SessionSync(
     }
 
     /** Envia as pendentes. Confirmada = marcador cai (a linha CONTINUA no histórico). */
-    suspend fun flush() {
+    override suspend fun flush() {
         val dono = uid()
         if (dono.isEmpty()) return   // sem usuário logado não se envia nada
         val payloads = withContext(Dispatchers.Default) { q.pendentes(dono).executeAsList() }
@@ -107,7 +107,7 @@ class SessionSync(
      *
      * @param forcar ignora a janela de frescor (usar em pull-to-refresh / "tentar de novo").
      */
-    suspend fun sincronizarHistorico(forcar: Boolean = false): AppResult<Unit> {
+    override suspend fun sincronizarHistorico(forcar: Boolean): AppResult<Unit> {
         val dono = uid()
         if (dono.isEmpty()) return AppResult.Success(Unit)
 

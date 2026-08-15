@@ -3,8 +3,8 @@ package dev.rafael.app.screens.progress
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.app.data.session.SessaoLocal
-import dev.rafael.app.data.session.SessionSync
-import dev.rafael.app.data.stats.StatsRepository
+import dev.rafael.app.data.session.HistoricoDeSessoes
+import dev.rafael.app.data.stats.Stats
 import dev.rafael.contract.stats.UserStatsDto
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,8 +29,8 @@ data class ProgressState(
  * falhar, o usuário continua vendo o histórico dele. Erro de rede não é erro de tela.
  */
 class ProgressViewModel(
-    private val sessions: SessionSync,
-    private val stats: StatsRepository,
+    private val sessions: HistoricoDeSessoes,
+    private val stats: Stats,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProgressState())

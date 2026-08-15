@@ -2,8 +2,8 @@ package dev.rafael.app.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.rafael.app.data.session.SessionSync
-import dev.rafael.app.data.stats.StatsRepository
+import dev.rafael.app.data.session.HistoricoDeSessoes
+import dev.rafael.app.data.stats.Stats
 import dev.rafael.contract.stats.UserStatsDto
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -72,8 +72,17 @@ class HomeViewModel(
     private val profile: ProfileRepository,
     private val programs: ProgramRepository,
     private val workouts: WorkoutRepository,
-    private val stats: StatsRepository,
-    private val sessions: SessionSync,
+    private val stats: Stats,
+    private val sessions: HistoricoDeSessoes,
+    /**
+     * Relógio INJETADO. Com `Clock.System` cravado, a Home era intestável: "achou o treino de
+     * hoje" passaria na segunda e falharia no domingo, porque o resultado dependia do dia em
+     * que a suíte rodasse.
+     *
+     * Continua sendo o relógio do cliente e continua sendo só APRESENTAÇÃO — nada de XP ou
+     * validação depende dele ([REGRA] autoridade do servidor).
+     */
+    private val clock: Clock = Clock.System,
 ) : ViewModel() {
 
     private val _loggedOut = MutableStateFlow(false)
@@ -87,7 +96,7 @@ class HomeViewModel(
         // já sabe que o treino de hoje foi feito e troca o card — sem esperar servidor.
         sessions.observarHistorico()
             .onEach { historico ->
-                val hoje = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
+                val hoje = clock.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.toString()
                 val pendentesAgora = historico.count { s -> s.pendente }
                 val pendentesAntes = _state.value.sessoesPendentes
                 _state.update {
@@ -198,7 +207,7 @@ class HomeViewModel(
     }
 
     private fun diaDaSemanaHoje(): Int {
-        val d = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.dayOfWeek
+        val d = clock.now().toLocalDateTime(TimeZone.currentSystemDefault()).date.dayOfWeek
         return when (d) {                    // schedule usa 1=Seg..7=Dom
             DayOfWeek.MONDAY -> 1; DayOfWeek.TUESDAY -> 2; DayOfWeek.WEDNESDAY -> 3
             DayOfWeek.THURSDAY -> 4; DayOfWeek.FRIDAY -> 5; DayOfWeek.SATURDAY -> 6

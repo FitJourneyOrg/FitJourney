@@ -53,6 +53,15 @@ dependencies {
     implementation(libs.ktor.client.core)             // SessionApi (data no app — extrair p/ session:data depois)
     implementation(libs.sqldelight.coroutinesExtensions)  // histórico de sessões observado por Flow
     implementation(libs.kotlinx.serialization.json)   // serializa o payload da outbox
+
+    // Testes de ViewModel do app. Antes este source set não existia, e por isso a Home — a
+    // tela mais importante — era a única sem cobertura nenhuma.
+    // kotlin-test-junit (não só kotlin-test): num módulo Android o runner é JUnit4, e é esta
+    // ponte que faz as anotações `kotlin.test.*` serem reconhecidas. Assim o código de teste
+    // fica idêntico ao dos módulos KMP, que também usam kotlin.test.
+    testImplementation(libs.kotlin.testJunit)
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)   // runTest + Dispatchers.setMain
     // Features (o app agrega os módulos Koin e usa o ViewModel)
     implementation(projects.shared.features.auth.domain)
     implementation(projects.shared.features.auth.presentation)

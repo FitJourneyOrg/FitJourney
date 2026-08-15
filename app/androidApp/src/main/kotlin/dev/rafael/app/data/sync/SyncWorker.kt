@@ -3,7 +3,7 @@ package dev.rafael.app.data.sync
 import android.content.Context
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import dev.rafael.app.data.session.SessionSync
+import dev.rafael.app.data.session.HistoricoDeSessoes
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 
@@ -22,7 +22,7 @@ class SyncWorker(
     params: WorkerParameters,
 ) : CoroutineWorker(context, params), KoinComponent {
 
-    private val sync: SessionSync by inject()
+    private val sync: HistoricoDeSessoes by inject()
 
     override suspend fun doWork(): Result =
         runCatching {
