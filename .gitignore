@@ -65,9 +65,14 @@ docs/
 # Docs canônicos locais na raiz (Contrato/Handoff/Painel/Débitos/etc.) — PDFs e suas fontes .md
 /FitJourney_*.pdf
 /FitJourney_*.md
-# planilhas de tooling local (curadoria de exercícios) — não versionar
-/tools/**/*.xlsx
 # mídia de exercícios (963 mp4 + 963 png, ~460MB) — local, servida pelo Ktor em /media; nunca no git
 /gifs_exercicios/
 # catálogo-fonte dos exercícios (~1.6MB) — fonte da V28; embutida na migration, não versionar o json
 catalogo.json
+# artefato dos geradores de PDF (docs/ e tools/ rodam Python)
+__pycache__/
+*.pyc
+# tooling local de curadoria (scripts Python + planilhas) — nao versionado
+/tools/
+# insumo morto do scraping; o catalogo vem das migrations (V28+)
+/exercises.csv
