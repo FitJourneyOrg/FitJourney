@@ -1,15 +1,13 @@
-CREATE TABLE exercise (
-    id          TEXT NOT NULL PRIMARY KEY,
-    name        TEXT NOT NULL,
-    category    TEXT NOT NULL,
-    description TEXT,               -- nullable (espelha ExerciseDto.description: String?)
-    videoRef    TEXT NOT NULL,      -- non-null no contrato
-    thumbRef    TEXT NOT NULL       -- non-null no contrato
-);
-CREATE INDEX exercise_category ON exercise(category);
+-- Catálogo de exercícios (tabela `exercise`).
+-- Schema: 1.sqm (nesta pasta). Aqui só ficam as QUERIES.
 
 selectByIds:
 SELECT id, name, thumbRef FROM exercise WHERE id IN ?;
+
+-- Detalhe de UM exercício. Antes o cliente baixava o catálogo inteiro (965 linhas)
+-- e filtrava em memória para abrir uma tela de detalhe.
+selectById:
+SELECT * FROM exercise WHERE id = ?;
 
 selectAll:
 SELECT * FROM exercise;

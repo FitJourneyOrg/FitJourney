@@ -26,6 +26,7 @@ import dev.rafael.server.features.workout.services.WorkoutService
 import dev.rafael.server.features.session.db.SessionRepository
 import dev.rafael.server.features.session.db.SessionRepositoryImpl
 import dev.rafael.server.features.session.services.SessionService
+import dev.rafael.server.features.stats.StatsService
 import org.koin.dsl.module
 
 val appModule = module {
@@ -62,4 +63,5 @@ val appModule = module {
     // Sessão de treino (Fase 5 — execução).
     single<SessionRepository> { SessionRepositoryImpl() }
     single { SessionService(get(), get()) }   // userService + repo
+    single { StatsService(get(), get(), get()) }   // userService + sessionRepo + programService (ARCH #16)
 }

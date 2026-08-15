@@ -25,6 +25,17 @@ dependencies {
     // navigation compose
     implementation(libs.androidx.navigation.compose)
 
+    // Coil 3 — carregamento async de imagem (thumbs de exercício) + fetcher de rede
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
+
+    // Media3 / ExoPlayer — mp4 em loop mudo no detalhe do exercício
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.ui)
+
+    // WorkManager — reenvia a outbox quando a rede volta (mesmo com o app fechado)
+    implementation(libs.androidx.work.runtime)
+
     // icones
     implementation("androidx.compose.material:material-icons-core")
     implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
@@ -33,13 +44,24 @@ dependencies {
     implementation(libs.koin.android)
     implementation(libs.koin.androidx.compose)
 
+    implementation(projects.shared.core.designsystem)   // tema Volt Athletic (dark-first)
     implementation(projects.shared.core.network)
     implementation(projects.shared.core.database)
     implementation(projects.shared.core.result)
     implementation(projects.shared.core.catalog)      // ExerciseLookup (execução da sessão)
     implementation(libs.kotlinx.datetime)             // timestamps da sessão (Fase 5)
     implementation(libs.ktor.client.core)             // SessionApi (data no app — extrair p/ session:data depois)
+    implementation(libs.sqldelight.coroutinesExtensions)  // histórico de sessões observado por Flow
     implementation(libs.kotlinx.serialization.json)   // serializa o payload da outbox
+
+    // Testes de ViewModel do app. Antes este source set não existia, e por isso a Home — a
+    // tela mais importante — era a única sem cobertura nenhuma.
+    // kotlin-test-junit (não só kotlin-test): num módulo Android o runner é JUnit4, e é esta
+    // ponte que faz as anotações `kotlin.test.*` serem reconhecidas. Assim o código de teste
+    // fica idêntico ao dos módulos KMP, que também usam kotlin.test.
+    testImplementation(libs.kotlin.testJunit)
+    testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)   // runTest + Dispatchers.setMain
     // Features (o app agrega os módulos Koin e usa o ViewModel)
     implementation(projects.shared.features.auth.domain)
     implementation(projects.shared.features.auth.presentation)

@@ -1,11 +1,25 @@
 package dev.rafael.app.navigation
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import dev.rafael.app.screens.placeholder.EmBreveScreen
+import dev.rafael.app.screens.progress.ProgressScreen
+import dev.rafael.core.network.SessionExpiryBus
+import dev.rafael.features.auth.domain.repository.AuthRepository
+import dev.rafael.features.program.domain.repository.ProgramRepository
+import org.koin.compose.koinInject
 import dev.rafael.app.screens.authentication.LoginScreen
+import dev.rafael.app.screens.exercise.ExerciseDetailScreen
 import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
 import dev.rafael.app.screens.home.HomeScreen
 import dev.rafael.app.screens.onboarding.QuizScreen
@@ -13,6 +27,7 @@ import dev.rafael.app.screens.program.ProgramDetailScreen
 import dev.rafael.app.screens.program.ProgramGenerateScreen
 import dev.rafael.app.screens.program.ProgramListScreen
 import dev.rafael.app.screens.paywall.PaywallScreen
+import dev.rafael.app.screens.reveal.ProgramOfferScreen
 import dev.rafael.app.screens.reveal.ProgramRevealScreen
 import dev.rafael.app.screens.session.WorkoutSessionScreen
 import dev.rafael.app.screens.splash.SplashScreen
@@ -22,7 +37,42 @@ import dev.rafael.app.screens.workout.WorkoutFormScreen
 @Composable
 fun AppNavHost() {
     val nav = rememberNavController()
-    NavHost(navController = nav, startDestination = AppRoute.Splash) {
+
+    // A barra de abas só aparece nas telas-raiz. Detalhe, execução, quiz e paywall
+    // ocupam a tela inteira (o usuário está numa tarefa, não navegando).
+    val entry by nav.currentBackStackEntryAsState()
+    val mostrarAbas = BottomTab.entries.any { tab ->
+        entry?.destination?.hasRoute(tab.routeClass) == true
+    }
+
+    // A lista de programas é cache-first. Mudanças feitas FORA da feature de programa
+    // (criar/editar/excluir treino, virar premium) precisam sujar esse cache — quem faz a
+    // ponte é a camada do app, porque feature nunca depende de feature (Konsist).
+    val programas: ProgramRepository = koinInject()
+
+    // SESSÃO EXPIRADA (401 que sobreviveu à renovação do token). Fica aqui, e não numa tela,
+    // porque o 401 pode vir de qualquer request — inclusive do SyncWorker em background. Sem
+    // isto o usuário ficava preso: "Sessão expirada" + um "Tentar de novo" que só repetia o 401.
+    val sessionExpiry: SessionExpiryBus = koinInject()
+    val auth: AuthRepository = koinInject()
+    LaunchedEffect(Unit) {
+        sessionExpiry.eventos.collect {
+            auth.signOut()   // limpa a sessão local e o token cacheado do Ktor
+            nav.navigate(AppRoute.Login) {
+                popUpTo(0) { inclusive = true }   // não dá pra "voltar" pra uma sessão morta
+                launchSingleTop = true
+            }
+        }
+    }
+
+    Scaffold(
+        bottomBar = { if (mostrarAbas) FitJourneyBottomBar(nav) },
+    ) { padding ->
+    NavHost(
+        navController = nav,
+        startDestination = AppRoute.Splash,
+        modifier = Modifier.padding(padding),
+    ) {
 
         composable<AppRoute.Splash> {
             SplashScreen(
@@ -44,30 +94,60 @@ fun AppNavHost() {
 
         composable<AppRoute.Quiz> {
             QuizScreen(onCompleted = {
-                // Revelação (Fase 7): Home vira a raiz e, por cima, abre a tela dedicada de
-                // revelação (gera o 1º programa + CTA de assinar). Voltar/concluir cai no Home.
+                // Home vira a raiz e, por cima, abre a OFERTA do 1º programa (Fase 7).
+                // Qualquer saída dali (gerar ou pular) desemboca na Home.
                 nav.navigate(AppRoute.Home) {
                     popUpTo(AppRoute.Quiz) { inclusive = true }
                 }
-                nav.navigate(AppRoute.ProgramReveal)
+                nav.navigate(AppRoute.ProgramOffer)
             })
+        }
+
+        composable<AppRoute.ProgramOffer> {
+            ProgramOfferScreen(
+                // Sai da pilha ao gerar: o Reveal não deve poder voltar pra oferta (o
+                // programa já foi criado — reperguntar "quer um programa?" não faz sentido).
+                onGerar = {
+                    nav.navigate(AppRoute.ProgramReveal) {
+                        popUpTo(AppRoute.ProgramOffer) { inclusive = true }
+                    }
+                },
+                onPular = { nav.popBackStack() },   // → Home, sem nada criado no servidor
+            )
         }
 
         composable<AppRoute.ProgramReveal> {
             ProgramRevealScreen(
                 onDone = { nav.popBackStack() },                     // conclui → Home (raiz do back stack)
-                onOpenPaywall = { nav.navigate(AppRoute.Paywall) },  // "desbloquear" → página de assinatura
+                // voltarParaHome: recusar o premium aqui não pode devolver pro Reveal, que é
+                // a própria tela de oferta — seria recusar e cair de volta na oferta.
+                onOpenPaywall = { nav.navigate(AppRoute.Paywall(voltarParaHome = true)) },
             )
         }
 
-        composable<AppRoute.Paywall> {
-            PaywallScreen(onClose = { nav.popBackStack() })   // assina/fecha → volta pra origem (que recarrega)
+        composable<AppRoute.Paywall> { entry ->
+            val rota: AppRoute.Paywall = entry.toRoute()
+            // virar premium muda o blur dos programas (#23) → cache de programas fica sujo
+            PaywallScreen(onClose = { assinou ->
+                // Só invalida se ASSINOU: virar premium destrava o blur (#23) e muda a lista.
+                // Antes invalidava em todo fechamento, então até o "Agora não" custava um refetch.
+                if (assinou) programas.invalidate()
+                if (rota.voltarParaHome) {
+                    nav.navigate(AppRoute.Home) { popUpTo(AppRoute.Home) { inclusive = true } }
+                } else {
+                    nav.popBackStack()
+                }
+            })
         }
 
         composable<AppRoute.Home> {
             HomeScreen(
                 onOpenLibrary = { nav.navigate(AppRoute.Library) },
                 onOpenWorkouts = { nav.navigate(AppRoute.Programs) },
+                onGenerateWithAI = { nav.navigate(AppRoute.ProgramGenerate) },
+                onStartWorkout = { id -> nav.navigate(AppRoute.WorkoutSession(id)) },
+                onOpenGroups = { nav.navigate(AppRoute.Grupos) },
+                onOpenProgress = { nav.navigate(AppRoute.Progresso) },
                 onLoggedOut = {
                     nav.navigate(AppRoute.Login) {
                         popUpTo(AppRoute.Home) { inclusive = true }  // limpa o back stack
@@ -78,7 +158,13 @@ fun AppNavHost() {
         }
 
         composable<AppRoute.Library> {
-            ExerciseLibraryScreen()
+            ExerciseLibraryScreen(
+                onOpenExercise = { id -> nav.navigate(AppRoute.ExerciseDetail(id)) },
+            )
+        }
+        composable<AppRoute.ExerciseDetail> { entry ->
+            val route: AppRoute.ExerciseDetail = entry.toRoute()
+            ExerciseDetailScreen(exerciseId = route.id, onBack = { nav.popBackStack() })
         }
 
         // ---- Programas (ARCH #27 — substitui a antiga AppRoute.Workout flat) ----
@@ -96,7 +182,7 @@ fun AppNavHost() {
                 onBack = { nav.popBackStack() },
                 onOpenWorkout = { id, editLocked -> nav.navigate(AppRoute.WorkoutDetail(id, editLocked)) },
                 onAddWorkout = { programId, taken -> nav.navigate(AppRoute.WorkoutCreate(programId, taken)) },
-                onOpenPaywall = { nav.navigate(AppRoute.Paywall) },
+                onOpenPaywall = { nav.navigate(AppRoute.Paywall()) },
                 onGenerateNew = { nav.navigate(AppRoute.ProgramGenerate) },
                 onCreateManual = { nav.popBackStack() },   // volta à lista, onde o "+" cria manual
             )
@@ -119,7 +205,13 @@ fun AppNavHost() {
             WorkoutDetailScreen(
                 workoutId = route.id,
                 editLocked = route.editLocked,
-                onBack = { nav.popBackStack() },
+                // Invalida só se ALGO mudou de fato (trocou/removeu exercício, excluiu o
+                // treino). Antes invalidava em toda volta, então só entrar e sair de um treino
+                // já gerava um GET /programs — era o ruído que sobrava no log do servidor.
+                onBack = { alterou ->
+                    if (alterou) programas.invalidate()
+                    nav.popBackStack()
+                },
                 onEdit = { nav.navigate(AppRoute.WorkoutEdit(route.id)) },
                 onStartSession = { nav.navigate(AppRoute.WorkoutSession(route.id)) },
             )
@@ -131,7 +223,8 @@ fun AppNavHost() {
                 programId = route.programId,
                 takenDays = route.takenDays,
                 onBack = { nav.popBackStack() },
-                onSaved = { nav.popBackStack() },
+                // treino novo muda a contagem/agenda do programa → invalida o cache
+                onSaved = { programas.invalidate(); nav.popBackStack() },
             )
         }
         composable<AppRoute.WorkoutEdit> { entry ->
@@ -140,12 +233,22 @@ fun AppNavHost() {
                 workoutId = route.id,
                 programId = null,
                 onBack = { nav.popBackStack() },
-                onSaved = { nav.popBackStack() },
+                onSaved = { programas.invalidate(); nav.popBackStack() },
             )
         }
         composable<AppRoute.WorkoutSession> { entry ->
             val route: AppRoute.WorkoutSession = entry.toRoute()
             WorkoutSessionScreen(workoutId = route.id, onDone = { nav.popBackStack() })
         }
+
+        // ---- Abas ainda não implementadas ----
+        composable<AppRoute.Grupos> {
+            EmBreveScreen("Grupos", "Treine com amigos, registre check-ins e dispute o ranking.")
+        }
+        composable<AppRoute.Progresso> { ProgressScreen() }
+        composable<AppRoute.Perfil> {
+            EmBreveScreen("Perfil", "Seus dados, plano e configurações.")
+        }
+    }
     }
 }

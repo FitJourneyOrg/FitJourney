@@ -11,8 +11,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import dev.rafael.app.ui.erroDoCampo
+import dev.rafael.contract.error.ErrorFields
+import dev.rafael.core.result.AppError
 import dev.rafael.features.program.presentation.state.ProgramListEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramListViewModel
+import dev.rafael.app.ui.ErroDeTela
+import dev.rafael.app.ui.ErroEmSnackbar
+import dev.rafael.app.ui.ShimmerList
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
@@ -30,21 +36,34 @@ fun ProgramListScreen(
 
     LaunchedEffect(state.createdId) {
         val id = state.createdId ?: return@LaunchedEffect
+        showCreateDialog = false       // só fecha quando DEU CERTO
         viewModel.consumeCreatedId()   // limpa antes de navegar (evento one-shot, não re-dispara ao voltar)
         onOpenProgram(id)
     }
 
     if (showCreateDialog) {
         CreateProgramDialog(
+            erro = state.error,
             onDismiss = { showCreateDialog = false },
-            onConfirm = { name ->
-                showCreateDialog = false
-                viewModel.onEvent(ProgramListEvent.CreateManual(name))
-            },
+            // NÃO fecha aqui: se o servidor recusar o nome, o diálogo precisa continuar
+            // aberto pra mostrar o erro NO CAMPO. Fecha no sucesso (LaunchedEffect acima).
+            onConfirm = { name -> viewModel.onEvent(ProgramListEvent.CreateManual(name)) },
         )
     }
 
+    val snackbarHost = remember { SnackbarHostState() }
+
+    // NÍVEL 3: falhou algo que o usuário pediu (criar programa). Efêmero — o banner vermelho
+    // fixo de antes continuava na tela muito depois de ter deixado de importar.
+    ErroEmSnackbar(
+        erro = state.error,
+        host = snackbarHost,
+        onConsumir = viewModel::consumeError,
+        onAcao = { viewModel.onEvent(ProgramListEvent.Retry) },
+    )
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHost) },
         floatingActionButton = {
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ExtendedFloatingActionButton(
@@ -60,15 +79,17 @@ fun ProgramListScreen(
             Text("Meus programas", style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(12.dp))
 
-            state.error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error)
-                Spacer(Modifier.height(8.dp))
-            }
-
             Box(Modifier.weight(1f)) {
                 when {
                     state.isLoading && state.programs.isEmpty() ->
-                        CircularProgressIndicator(Modifier.align(Alignment.Center))
+                        ShimmerList(modifier = Modifier.padding(vertical = 8.dp))
+                    // NÍVEL 2: vazio POR FALTA DE SYNC ≠ vazio de verdade. Com dado local a
+                    // falha de sync é nível 1 (silêncio) e este ramo nem é alcançado.
+                    state.vazioPorFaltaDeSync -> ErroDeTela(
+                        erro = state.erroSync!!,
+                        modifier = Modifier.align(Alignment.Center),
+                        onAcao = { viewModel.onEvent(ProgramListEvent.Retry) },
+                    )
                     state.programs.isEmpty() ->
                         Text("Nenhum programa ainda.", Modifier.align(Alignment.Center))
                     else ->
@@ -91,8 +112,13 @@ fun ProgramListScreen(
 }
 
 @Composable
-private fun CreateProgramDialog(onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+private fun CreateProgramDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+    erro: AppError? = null,
+) {
     var name by remember { mutableStateOf("") }
+    val erroNome = erro.erroDoCampo(ErrorFields.NAME)
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Novo programa") },
@@ -102,6 +128,8 @@ private fun CreateProgramDialog(onDismiss: () -> Unit, onConfirm: (String) -> Un
                 onValueChange = { name = it },
                 label = { Text("Nome") },
                 singleLine = true,
+                isError = erroNome != null,
+                supportingText = erroNome?.let { { Text(it) } },
             )
         },
         confirmButton = {
@@ -113,3 +141,4 @@ private fun CreateProgramDialog(onDismiss: () -> Unit, onConfirm: (String) -> Un
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
     )
 }
+

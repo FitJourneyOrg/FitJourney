@@ -14,7 +14,9 @@ kotlin {
         withHostTestBuilder {}
     }
 
-    iosX64()
+    // SEM iosX64 (simulador de Mac Intel): o Compose Multiplatform não publica mais artefato
+    // para esse alvo, então declará-lo quebra a resolução de dependências deste módulo.
+    // iosArm64 (device) + iosSimulatorArm64 (simulador Apple Silicon) cobrem o iOS atual.
     iosArm64()
     iosSimulatorArm64()
 }

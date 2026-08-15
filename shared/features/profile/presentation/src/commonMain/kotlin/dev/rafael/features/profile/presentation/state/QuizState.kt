@@ -7,9 +7,10 @@ import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.profile.TrainingEnvironment
+import dev.rafael.core.result.AppError
 
 /** Os passos do quiz, em ordem. REST_DAYS (Estágio 2) após DAYS; SPLIT (ARCH #29) após ENVIRONMENT. */
-enum class QuizStep { GOAL, LEVEL, DAYS, REST_DAYS, FOCUS, BODY, ENVIRONMENT, SPLIT, HEALTH, LIMITATIONS }
+enum class QuizStep { GOAL, LEVEL, AGE, DAYS, REST_DAYS, FOCUS, BODY, ENVIRONMENT, SPLIT, HEALTH, LIMITATIONS }
 data class QuizState(
     val step: QuizStep = QuizStep.GOAL,
     val goal: Goal? = null,
@@ -20,11 +21,13 @@ data class QuizState(
     val focusAreas: List<MuscleGroup> = emptyList(),
     val weightKg: Double? = null,
     val heightCm: Double? = null,
+    val age: Int? = null,                  // #24
+    val minorSupervised: Boolean = false,  // #24
     val environment: TrainingEnvironment? = null,          // <- novo
     val limitations: List<BodyLimitation> = emptyList(),
     val health: HealthScreening = HealthScreening(),        // <- novo (não-null, começa tudo false)
     val isSubmitting: Boolean = false,
-    val error: String? = null,
+    val error: AppError? = null,
     val completed: Boolean = false,
 ) {
 
@@ -45,6 +48,8 @@ data class QuizState(
         get() = when (step) {
             QuizStep.GOAL -> goal != null
             QuizStep.LEVEL -> level != null
+            // #24: idade obrigatória e válida; menor de 18 só passa com o aceite de supervisão.
+            QuizStep.AGE -> age != null && age in 5..120 && (age >= 18 || minorSupervised)
             QuizStep.DAYS -> daysPerWeek != null
             QuizStep.REST_DAYS -> hasEnoughFreeDays        // não pode marcar dias off demais
             QuizStep.FOCUS -> true

@@ -16,7 +16,7 @@ import kotlin.math.roundToInt
  *      (piso de 3 séries por exercício, ARCH #26 §3.3).
  *   4. Papel por posição → reps/descanso/RIR (§3.2).
  *
- * Determinístico, sem LLM (ARCH #20). Perna fina; idade fica pra fatia própria.
+ * Determinístico, sem LLM (ARCH #20). Perna fina. Idade calibra volume + RIR (ARCH #24).
  */
 class StructureEngine {
 
@@ -34,15 +34,19 @@ class StructureEngine {
         daysPerWeek: Int,
         focusMuscles: Set<MuscleGroup>,
         splitPreference: SplitType? = null,
+        age: Int? = null,
     ): ProgramSkeleton {
         val days = daysPerWeek.coerceIn(2, 6)
         // ARCH #29: usa a escolha do usuário se for válida pro nº de dias; senão o recomendado (#26).
         val split = SplitCatalog.resolve(days, splitPreference)
 
         // 1. Alvo semanal por músculo (+ foco, respeitando o MRV).
+        // ARCH #24: idade calibra o volume-base (idoso recupera menos). O foco é somado DEPOIS,
+        // pra a faixa etária reduzir a carga sistêmica sem apagar a prioridade escolhida.
+        val ageFactor = ageVolumeFactor(age)
         val focusTargets = focusMuscles.flatMap { VolumeTable.targetsForFocus(it) }.toSet()
         val weekly = TargetMuscle.entries.associateWith { m ->
-            val base = VolumeTable.weeklySets(m, level, goal)
+            val base = (VolumeTable.weeklySets(m, level, goal) * ageFactor).roundToInt()
             val bonus = if (m in focusTargets) FOCUS_BONUS else 0
             minOf(base + bonus, VolumeTable.mrv(m))
         }
@@ -84,7 +88,7 @@ class StructureEngine {
                 val sp = setsPer.getValue(m)
                 (0 until exerciseCount.getValue(m)).map { i ->
                     val role = roleFor(m, i)
-                    val p = RoleParams.paramsFor(role, level, goal)
+                    val p = RoleParams.paramsFor(role, level, goal, age)
                     Slot(m, role, sp, p.repRange, p.restSeconds, p.rir)
                 }
             }.sortedBy { it.role.ordinal }   // compostos pesados primeiro no dia

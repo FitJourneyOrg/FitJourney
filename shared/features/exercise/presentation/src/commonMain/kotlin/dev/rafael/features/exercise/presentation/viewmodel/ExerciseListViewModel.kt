@@ -3,6 +3,7 @@ package dev.rafael.features.exercise.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.contract.exercise.ExerciseCategory
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
 import dev.rafael.features.exercise.presentation.state.ExerciseListEvent
@@ -26,8 +27,10 @@ class ExerciseListViewModel(
     private var observeJob: Job? = null
 
     init {
-        observe(category = null)   // observa o banco (todas)
-        refresh()                  // network-first: popula o cache on-load
+        observe(category = null)   // observa o banco (a lista pinta daqui, ARCH #30)
+        // Sincronização de fundo, com TTL de 24h no repositório. Antes isto era "network-first"
+        // e baixava os 965 exercícios em TODA entrada na aba.
+        refresh(forcar = false)
     }
 
     fun onEvent(event: ExerciseListEvent) {
@@ -36,7 +39,7 @@ class ExerciseListViewModel(
                 _state.update { it.copy(selectedCategory = event.category) }
                 observe(event.category)   // re-observa com o novo filtro
             }
-            ExerciseListEvent.Refresh -> refresh()
+            ExerciseListEvent.Refresh -> refresh(forcar = true)   // o usuário pediu: fura o TTL
         }
     }
 
@@ -48,14 +51,14 @@ class ExerciseListViewModel(
             .launchIn(viewModelScope)
     }
 
-    private fun refresh() {
+    private fun refresh(forcar: Boolean) {
         _state.update { it.copy(isRefreshing = true, error = null) }
         viewModelScope.launch {
-            when (val result = repository.refresh()) {
+            when (val result = repository.refresh(forcar)) {
                 is AppResult.Success ->
                     _state.update { it.copy(isRefreshing = false) }   // banco atualiza a lista sozinho
                 is AppResult.Failure ->
-                    _state.update { it.copy(isRefreshing = false, error = result.error.message) }
+                    _state.update { it.copy(isRefreshing = false, error = result.error) }
             }
         }
     }

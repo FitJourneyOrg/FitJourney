@@ -43,6 +43,8 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[focusAreas] = profile.focusAreas.toJson()
                     it[weightKg] = profile.weightKg
                     it[heightCm] = profile.heightCm
+                    it[age] = profile.age
+                    it[minorSupervised] = profile.minorSupervised
                     it[environment] = profile.environment?.name
                     it[healthScreening] = profile.health?.toJson()
                     it[limitations] = profile.limitations.limitationsToJson()
@@ -59,6 +61,8 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[focusAreas] = profile.focusAreas.toJson()
                     it[weightKg] = profile.weightKg
                     it[heightCm] = profile.heightCm
+                    it[age] = profile.age
+                    it[minorSupervised] = profile.minorSupervised
                     it[environment] = profile.environment?.name
                     it[healthScreening] = profile.health?.toJson()
                     it[limitations] = profile.limitations.limitationsToJson()
@@ -87,6 +91,8 @@ private fun ResultRow.toProfile(): Profile = Profile(
     focusAreas = this[ProfilesTable.focusAreas].toMuscleGroups(),
     weightKg = this[ProfilesTable.weightKg],
     heightCm = this[ProfilesTable.heightCm],
+    age = this[ProfilesTable.age],
+    minorSupervised = this[ProfilesTable.minorSupervised],
     environment = this[ProfilesTable.environment]?.let { TrainingEnvironment.valueOf(it) },
     health = this[ProfilesTable.healthScreening]?.toHealthScreening(),
     limitations = this[ProfilesTable.limitations]?.toLimitations() ?: emptyList(),

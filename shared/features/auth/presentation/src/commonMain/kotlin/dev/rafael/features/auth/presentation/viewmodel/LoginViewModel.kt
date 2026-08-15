@@ -6,7 +6,6 @@ import dev.rafael.core.result.AppResult
 import dev.rafael.features.auth.domain.repository.AuthRepository
 import dev.rafael.features.auth.presentation.state.LoginEvent
 import dev.rafael.features.auth.presentation.state.LoginState
-import dev.rafael.features.auth.presentation.toMessage
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -40,7 +39,7 @@ class LoginViewModel(
                 authRepository.signIn(current.email, current.password)
             when (authResult) {
                 is AppResult.Failure -> {
-                    _state.update { it.copy(isLoading = false, error = authResult.error.toMessage()) }
+                    _state.update { it.copy(isLoading = false, error = authResult.error) }
                     return@launch
                 }
                 is AppResult.Success -> {
@@ -49,7 +48,7 @@ class LoginViewModel(
                         is AppResult.Success ->
                             _state.update { it.copy(isLoading = false, loggedInUserId = me.value.uid) }
                         is AppResult.Failure ->
-                            _state.update { it.copy(isLoading = false, error = me.error.toMessage()) }
+                            _state.update { it.copy(isLoading = false, error = me.error) }
                     }
                 }
             }

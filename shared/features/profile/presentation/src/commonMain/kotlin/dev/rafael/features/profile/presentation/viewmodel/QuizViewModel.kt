@@ -3,6 +3,7 @@ package dev.rafael.features.profile.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.profile.domain.model.Profile
 import dev.rafael.features.profile.domain.repository.ProfileRepository
@@ -30,6 +31,8 @@ class QuizViewModel(
             is QuizEvent.FocusToggled -> toggleFocus(event.muscle)
             is QuizEvent.WeightChanged -> _state.update { it.copy(weightKg = event.value) }
             is QuizEvent.HeightChanged -> _state.update { it.copy(heightCm = event.value) }
+            is QuizEvent.AgeChanged -> _state.update { it.copy(age = event.value, error = null) }
+            QuizEvent.SupervisedToggled -> _state.update { it.copy(minorSupervised = !it.minorSupervised) }
             is QuizEvent.EnvironmentSelected -> _state.update { it.copy(environment = event.env, error = null) }
             is QuizEvent.SplitSelected -> _state.update { it.copy(splitPreference = event.split, error = null) }
             is QuizEvent.RestDayToggled -> _state.update { s ->
@@ -96,7 +99,7 @@ class QuizViewModel(
         // obrigatórios garantidos pelo canAdvance de cada passo; checagem defensiva:
         val goal = s.goal; val level = s.level; val days = s.daysPerWeek
         if (goal == null || level == null || days == null) {
-            _state.update { it.copy(error = "Responda as perguntas obrigatórias.") }
+            _state.update { it.copy(error = AppError.Validation("Responda as perguntas obrigatórias.")) }
             return
         }
         println("QUIZ SUBMIT: limitations=${s.limitations}")
@@ -111,6 +114,8 @@ class QuizViewModel(
                 focusAreas = if (s.focusEligible) s.focusAreas else emptyList(),   // iniciante/saúde geral não focam
                 weightKg = s.weightKg,
                 heightCm = s.heightCm,
+                age = s.age,                       // #24
+                minorSupervised = s.minorSupervised,   // #24
                 environment = s.environment,   // <- novo
                 limitations = s.limitations,
                 health = s.health,             // <- novo
@@ -120,7 +125,7 @@ class QuizViewModel(
                 is AppResult.Success ->
                     _state.update { it.copy(isSubmitting = false, completed = true) }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isSubmitting = false, error = result.error.message) }
+                    _state.update { it.copy(isSubmitting = false, error = result.error) }
             }
         }
     }

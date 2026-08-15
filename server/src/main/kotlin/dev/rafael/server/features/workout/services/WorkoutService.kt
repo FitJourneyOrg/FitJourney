@@ -3,6 +3,7 @@ package dev.rafael.server.features.workout.services
 import dev.rafael.contract.profile.ProfileDto
 import dev.rafael.contract.workout.WorkoutDto
 import dev.rafael.contract.workout.WorkoutSummaryDto
+import dev.rafael.contract.error.ErrorFields
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
@@ -68,12 +69,12 @@ class WorkoutService(
         }
 
     private fun validate(dto: WorkoutDto): AppError? {
-        if (dto.name.isBlank()) return AppError.Validation("Nome do treino é obrigatório")
-        if (dto.exercises.isEmpty()) return AppError.Validation("Treino precisa de ao menos 1 exercício")
+        if (dto.name.isBlank()) return AppError.Validation("Nome do treino é obrigatório", mapOf(ErrorFields.NAME to "Nome do treino é obrigatório"))
+        if (dto.exercises.isEmpty()) return AppError.Validation("Treino precisa de ao menos 1 exercício", mapOf(ErrorFields.EXERCISES to "Treino precisa de ao menos 1 exercício"))
         dto.exercises.forEach { ex ->
-            if (ex.sets.isEmpty()) return AppError.Validation("Cada exercício precisa de ao menos 1 série")
+            if (ex.sets.isEmpty()) return AppError.Validation("Cada exercício precisa de ao menos 1 série", mapOf(ErrorFields.SETS to "Cada exercício precisa de ao menos 1 série"))
             ex.sets.forEach { s ->
-                if (s.reps <= 0) return AppError.Validation("Repetições devem ser maiores que zero")
+                if (s.reps <= 0) return AppError.Validation("Repetições devem ser maiores que zero", mapOf(ErrorFields.REPS to "Repetições devem ser maiores que zero"))
             }
         }
         return null

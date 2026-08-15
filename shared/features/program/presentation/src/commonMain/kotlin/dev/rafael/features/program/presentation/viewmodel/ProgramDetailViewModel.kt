@@ -2,6 +2,7 @@ package dev.rafael.features.program.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.program.domain.model.ProgramScheduleEntry
 import dev.rafael.features.program.domain.repository.ProgramRepository
@@ -26,7 +27,8 @@ class ProgramDetailViewModel(
     private val _state = MutableStateFlow(ProgramDetailState())
     val state: StateFlow<ProgramDetailState> = _state.asStateFlow()
 
-    init { load() }
+    // Sem init { load() }: a tela dispara Retry no ON_RESUME (1ª entrada + refresh ao voltar
+    // do paywall). Ter os dois causava GET /programs duplicado ao abrir o detalhe.
 
     fun onEvent(event: ProgramDetailEvent) {
         when (event) {
@@ -59,7 +61,7 @@ class ProgramDetailViewModel(
                 is AppResult.Success ->
                     _state.update { it.copy(isReordering = false, program = result.value) }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isReordering = false, error = result.error.message) }
+                    _state.update { it.copy(isReordering = false, error = result.error) }
             }
         }
     }
@@ -74,12 +76,12 @@ class ProgramDetailViewModel(
                         it.copy(
                             isLoading = false,
                             program = found,
-                            error = if (found == null) "Programa não encontrado" else null,
+                            error = if (found == null) AppError.NotFound("Programa não encontrado") else null,
                         )
                     }
                 }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isLoading = false, error = result.error.message) }
+                    _state.update { it.copy(isLoading = false, error = result.error) }
             }
         }
     }
@@ -92,7 +94,7 @@ class ProgramDetailViewModel(
                 is AppResult.Success ->
                     _state.update { it.copy(isRenaming = false, program = result.value) }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isRenaming = false, error = result.error.message) }
+                    _state.update { it.copy(isRenaming = false, error = result.error) }
             }
         }
     }
@@ -101,7 +103,7 @@ class ProgramDetailViewModel(
         viewModelScope.launch {
             when (val result = repository.delete(programId)) {
                 is AppResult.Success -> _state.update { it.copy(isDeleted = true) }
-                is AppResult.Failure -> _state.update { it.copy(error = result.error.message) }
+                is AppResult.Failure -> _state.update { it.copy(error = result.error) }
             }
         }
     }

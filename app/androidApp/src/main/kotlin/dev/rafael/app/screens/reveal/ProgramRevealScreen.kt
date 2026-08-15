@@ -14,6 +14,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import dev.rafael.app.ui.ErroInline
+import dev.rafael.core.result.AppError
 import dev.rafael.features.program.domain.model.ProgramWorkout
 import org.koin.androidx.compose.koinViewModel
 
@@ -66,7 +68,7 @@ private fun GeneratingView() {
 }
 
 @Composable
-private fun ErrorView(error: String?, onRetry: () -> Unit) {
+private fun ErrorView(error: AppError?, onRetry: () -> Unit) {
     Column(
         Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -75,7 +77,7 @@ private fun ErrorView(error: String?, onRetry: () -> Unit) {
         Text("Não deu pra montar seu programa.", style = MaterialTheme.typography.titleMedium)
         error?.let {
             Spacer(Modifier.height(6.dp))
-            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+            ErroInline(it)
         }
         Spacer(Modifier.height(16.dp))
         Button(onClick = onRetry) { Text("Tentar de novo") }

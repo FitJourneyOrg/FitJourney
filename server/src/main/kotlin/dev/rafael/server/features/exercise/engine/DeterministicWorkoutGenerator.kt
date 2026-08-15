@@ -47,6 +47,7 @@ class DeterministicWorkoutGenerator(
             goal = profile.goal, level = profile.level,
             daysPerWeek = profile.daysPerWeek, focusMuscles = focus,
             splitPreference = profile.splitPreference,   // ARCH #29: escolha do usuário (ou null = recomendado)
+            age = profile.age,                           // ARCH #24: idade calibra volume + modo conservador
         )
 
         // 2. POOL (F.3) — ambiente + limitações + nível.
