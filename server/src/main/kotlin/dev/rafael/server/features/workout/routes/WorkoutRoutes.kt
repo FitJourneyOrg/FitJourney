@@ -62,7 +62,20 @@ fun Route.workoutRoutes(
         get("/workouts/{id}") {
             val p = call.principal<FirebaseUser>()!!
             val id = call.workoutIdParam() ?: return@get call.respondResult(notFound<WorkoutDto>())
-            call.respondResult(service.get(p.uid, p.email, id).notFoundIfNull())
+            // GATE PREMIUM DE LEITURA (ARCH #23): sem isto, o blur do GET /programs escondia os
+            // dias trancados na lista mas este endpoint entregava o conteúdo inteiro a quem
+            // pedisse pelo id — inclusive à própria Home, que busca o treino do dia só para
+            // estimar a duração e acabava gravando `locked = false` no banco local.
+            val result = userService.findOrCreate(p.uid, p.email).flatMap { user ->
+                service.get(p.uid, p.email, id).notFoundIfNull().flatMap { treino ->
+                    val pid = treino.programId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
+                    // Treino avulso (sem programa) não tem trava de entitlement.
+                    if (pid == null) treino.asSuccess()
+                    else programService.requireReadable(user.id, pid, id, user.isPremium)
+                        .flatMap { treino.asSuccess() }
+                }
+            }
+            call.respondResult(result)
         }
 
         put("/workouts/{id}") {

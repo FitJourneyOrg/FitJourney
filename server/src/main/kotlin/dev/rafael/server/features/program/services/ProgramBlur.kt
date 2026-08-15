@@ -18,7 +18,9 @@ object ProgramBlur {
         if (isPremium || program.origin != WorkoutOrigin.AI) return program
 
         val workouts = program.workouts.mapIndexed { index, w ->
-            if (index == 0) {
+            // A regra de quem está liberado mora no ProgramAccess — a MESMA que o gate de
+            // leitura usa. Reimplementá-la aqui foi o que deixou GET /workouts/{id} sem trava.
+            if (ProgramAccess.liberado(program.origin, isPremium, index)) {
                 w
             } else {
                 w.copy(

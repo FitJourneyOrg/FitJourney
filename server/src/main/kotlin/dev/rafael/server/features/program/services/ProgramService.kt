@@ -171,6 +171,42 @@ class ProgramService(
             }
         }
 
+    /**
+     * Gate premium de LEITURA (ARCH #23) — o gêmeo do [requireEditable].
+     *
+     * O blur esconde os dias trancados na LISTAGEM, mas o recurso continuava aberto: quem
+     * pedisse `GET /workouts/{id}` de um dia trancado recebia o treino completo. Bloqueio que
+     * só existe na vitrine não é bloqueio ([REGRA] autoridade do servidor).
+     *
+     * Usa [ProgramAccess], a mesma regra do blur — as duas não podem divergir.
+     * - programa não é do usuário / não existe → NotFound
+     * - treino fora do programa                → NotFound
+     * - dia trancado + free                    → Forbidden(ENTITLEMENT_REQUIRED)
+     * - resto                                  → Unit
+     */
+    suspend fun requireReadable(
+        userId: Uuid,
+        programId: Uuid,
+        workoutId: Uuid,
+        isPremium: Boolean,
+    ): AppResult<Unit> =
+        repository.findByIdForUser(userId, programId).flatMap { programa ->
+            when {
+                programa == null -> AppError.NotFound("Programa não encontrado").asFailure()
+                else -> {
+                    val indice = programa.workouts.indexOfFirst { it.id == workoutId }
+                    when {
+                        indice < 0 -> AppError.NotFound("Treino não encontrado").asFailure()
+                        ProgramAccess.liberado(programa.origin, isPremium, indice) -> Unit.asSuccess()
+                        else -> AppError.Forbidden(
+                            "Este treino faz parte do plano Premium.",
+                            ErrorCodes.ENTITLEMENT_REQUIRED,
+                        ).asFailure()
+                    }
+                }
+            }
+        }
+
     private fun autoName(dto: ProgramDto): String = "Programa ${dto.daysPerWeek}x — ${dto.split}"
 }
 
