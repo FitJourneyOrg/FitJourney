@@ -1,0 +1,46 @@
+-- Fila de escritas pendentes (tabela `outbox`). Schema: 3.sqm.
+-- [REGRA] toda query filtra por uid — operação de um usuário nunca sobe com o token de outro.
+
+enfileirar:
+INSERT INTO outbox(uid, tipo, alvoId, payload, criadoEm)
+VALUES (?, ?, ?, ?, ?);
+
+-- A fila PRONTA PARA ENVIO: exclui o que já falhou em definitivo (esse não volta à rede).
+-- Ordem global por `seq`: criar-treino precisa subir antes da agenda que o referencia.
+pendentes:
+SELECT seq, tipo, alvoId, payload, tentativas
+FROM outbox
+WHERE uid = ? AND erroPermanente IS NULL
+ORDER BY seq;
+
+-- Tudo do usuário, inclusive o que falhou — a UI usa para marcar "pendente" e para avisar.
+observarFila:
+SELECT seq, tipo, alvoId, payload, tentativas, erroPermanente
+FROM outbox
+WHERE uid = ?
+ORDER BY seq;
+
+contarPendentes:
+SELECT COUNT(*) FROM outbox WHERE uid = ? AND erroPermanente IS NULL;
+
+-- Alvos com operação pendente: o sync usa para NÃO apagar o que ainda não subiu.
+-- Sem isto, `limparTreinos` + regravar (o caminho do GET /programs) apagaria o treino
+-- criado offline antes de ele chegar ao servidor — e o usuário veria o treino sumir.
+alvosPendentes:
+SELECT DISTINCT alvoId FROM outbox WHERE uid = ?;
+
+remover:
+DELETE FROM outbox WHERE seq = ?;
+
+removerAlvo:
+DELETE FROM outbox WHERE uid = ? AND alvoId = ?;
+
+registrarTentativa:
+UPDATE outbox SET tentativas = tentativas + 1 WHERE seq = ?;
+
+-- 403/400/404: para de tentar e guarda a mensagem que a UI vai mostrar.
+marcarFalhaPermanente:
+UPDATE outbox SET erroPermanente = ? WHERE seq = ?;
+
+limparDoUsuario:
+DELETE FROM outbox WHERE uid = ?;

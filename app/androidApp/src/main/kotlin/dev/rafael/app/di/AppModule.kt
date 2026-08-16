@@ -6,6 +6,8 @@ import dev.rafael.app.data.stats.Stats
 import dev.rafael.app.data.stats.StatsRepository
 import dev.rafael.app.data.sync.SyncScheduler
 import dev.rafael.core.database.SyncStamps
+import dev.rafael.core.database.outbox.Outbox
+import kotlin.time.Clock
 import dev.rafael.core.network.TokenProvider
 import org.koin.android.ext.koin.androidContext
 import dev.rafael.app.data.session.HistoricoDeSessoes
@@ -29,11 +31,22 @@ val appModule = module {
     // é destruída assim que decide a rota (popUpTo inclusive) e cancelaria o viewModelScope.
     single<CoroutineScope> { CoroutineScope(SupervisorJob() + Dispatchers.Default) }
 
+    // Relógio do app. Registrado porque o `viewModelOf` resolve TODOS os parâmetros do
+    // construtor por reflexão e IGNORA valores default — sem esta definição o boot crasha
+    // com NoDefinitionFoundException, mesmo o HomeViewModel tendo `clock = Clock.System`.
+    // Injetável de propósito: é o que torna "achou o treino de hoje" testável sem depender
+    // do dia em que a suíte roda.
+    single<Clock> { Clock.System }
+
     // CARIMBOS DE SYNC persistidos (ARCH #30). Registrado aqui — na raiz de composição —
     // porque é o único ponto que vê ao mesmo tempo o banco (core:database) e o TokenProvider
     // (core:network). Passar o uid como lambda evita core:database depender de core:network,
     // o que seria persistência dependendo de rede.
     single { SyncStamps(db = get(), uidAtual = { get<TokenProvider>().currentUid() }) }
+
+    // FILA DE ESCRITAS pendentes (ARCH #30, fatia B.2). Mesmo motivo do SyncStamps para
+    // morar aqui: é o único ponto que vê o banco e o TokenProvider ao mesmo tempo.
+    single { Outbox(db = get(), uidAtual = { get<TokenProvider>().currentUid() }) }
 
     // Sessão de treino (Fase 5): remote + sync offline-first (outbox local).
     single { SessionApi(get()) }

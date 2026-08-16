@@ -1,0 +1,29 @@
+-- ============================================================================
+-- OUTBOX — fila de escritas pendentes (ARCH #30, fatia B.2)
+--
+-- POR QUE uma tabela nova, e não o padrão `pending = 1` da sessão: aquele funciona porque
+-- sessão é APPEND-ONLY e nunca é editada. Treino e programa são MUTÁVEIS — criar, editar
+-- duas vezes e excluir offline não cabe num flag na linha de dado:
+--   * uma linha guarda ESTADO, não INTENÇÃO (não dá pra saber se é POST, PUT ou DELETE);
+--   * "criei e excluí offline" deveria enviar NADA, e a linha nem existiria pra carregar o flag.
+--
+-- `seq` é a ordem GLOBAL de enfileiramento, e ela importa entre alvos diferentes: criar um
+-- treino e depois agendá-lo produz duas operações em que a segunda referencia a primeira.
+-- Processar fora de ordem faria o servidor recusar a agenda ("o treino não existe").
+-- ============================================================================
+CREATE TABLE outbox (
+    seq             INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    uid             TEXT    NOT NULL,
+    tipo            TEXT    NOT NULL,   -- TipoOperacao.name
+    alvoId          TEXT    NOT NULL,   -- id do recurso (gerado no cliente — ver B.1)
+    payload         TEXT    NOT NULL,   -- JSON do DTO; vazio em exclusão
+    criadoEm        INTEGER NOT NULL,
+    tentativas      INTEGER NOT NULL DEFAULT 0,
+    -- Falha PERMANENTE (403/400/404): retry não resolve. A linha fica para a UI conseguir
+    -- explicar o que aconteceu ("editar programa IA é premium") e some quando o usuário
+    -- reconhece. Sem isto, uma operação inválida ficaria em retry infinito gastando bateria
+    -- e o usuário só veria "não sincroniza".
+    erroPermanente  TEXT
+);
+
+CREATE INDEX outbox_fila ON outbox(uid, erroPermanente, seq);
