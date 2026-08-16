@@ -52,7 +52,10 @@ fun Workout.toDto(): WorkoutDto = WorkoutDto(
 // programId = null aqui: ignorado no create (repository.create recebe o programId
 // validado como param separado — ARCH #27) e não é reescrito no update.
 fun WorkoutDto.toDomain(): Workout = Workout(
-    id = Uuid.NIL,
+    // Id do CLIENTE quando vier (outbox, ARCH #30): é o que torna o POST idempotente e permite
+    // reenviar sem duplicar. UUID inválido cai em NIL = "servidor gera", que era o comportamento
+    // anterior. NIL nunca vira id real: o repositório o trata como "gere um".
+    id = id?.let { runCatching { Uuid.parse(it) }.getOrNull() } ?: Uuid.NIL,
     userId = Uuid.NIL,
     name = name,
     programId = null,

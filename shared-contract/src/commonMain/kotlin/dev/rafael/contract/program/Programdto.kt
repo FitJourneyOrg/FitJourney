@@ -44,9 +44,15 @@ data class ScheduleEntry(
 @Serializable
 data class RenameProgramRequest(val name: String)
 
-/** Body de POST /programs — cria programa manual vazio (sem motor) pra abrigar treino avulso. */
+/**
+ * Body de POST /programs — cria programa manual vazio (sem motor) pra abrigar treino avulso.
+ *
+ * `id` é OPCIONAL e vem do cliente quando a criação passou pelo outbox (ARCH #30): é o que
+ * torna o POST idempotente, para que reenviar depois de uma resposta perdida não crie um
+ * segundo programa. Ausente = o servidor gera, como sempre.
+ */
 @Serializable
-data class CreateManualProgramRequest(val name: String)
+data class CreateManualProgramRequest(val name: String, val id: String? = null)
 
 /**
  * Body de PUT /programs/{id}/schedule — define o DIA da semana de cada treino (G.2).

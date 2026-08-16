@@ -19,6 +19,7 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
@@ -29,12 +30,27 @@ class WorkoutRepositoryImpl : WorkoutRepository {
     private fun now(): LocalDateTime =
         Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
 
-    override suspend fun create(userId: Uuid, workout: Workout, programId: Uuid, dayOfWeek: Int): AppResult<Workout> =
+    /**
+     * Cria o treino. **IDEMPOTENTE** quando o cliente manda o id (ARCH #30, outbox).
+     *
+     * POR QUE aceitar id do cliente: uma fila com retry vai, cedo ou tarde, cair no caso em que
+     * o POST chega, o servidor grava, e a RESPOSTA se perde. O worker vê falha e reenvia. Com id
+     * gerado aqui, isso criaria um treino duplicado — não é hipótese, é garantido com volume.
+     * Com id do cliente, o reenvio bate no mesmo id e não duplica.
+     *
+     * Mesmo padrão que a sessão já usa (`insertIgnore` = ON CONFLICT DO NOTHING). Se o insert
+     * não pegou, o id já existe: devolve o que está lá, **filtrado por userId** — id vindo do
+     * cliente não pode servir para tocar em treino alheio.
+     *
+     * `workout.id == Uuid.NIL` (o default do modelo) significa "gere você" — mantém o
+     * comportamento antigo para quem ainda não manda id.
+     */
+    override suspend fun create(userId: Uuid, workout: Workout, programId: Uuid, dayOfWeek: Int): AppResult<Workout?> =
         dbQuery {
             val ts = now()
-            val newWorkoutId = Uuid.random()
-            WorkoutsTable.insert {
-                it[id] = newWorkoutId
+            val novoId = if (workout.id == Uuid.NIL) Uuid.random() else workout.id
+            val inserted = WorkoutsTable.insertIgnore {
+                it[id] = novoId
                 it[WorkoutsTable.userId] = userId
                 it[name] = workout.name
                 it[WorkoutsTable.programId] = programId
@@ -42,8 +58,15 @@ class WorkoutRepositoryImpl : WorkoutRepository {
                 it[createdAt] = ts
                 it[updatedAt] = ts
             }
-            insertChildren(newWorkoutId, workout.exercises)
-            readWorkout(userId, newWorkoutId)!!
+            if (inserted.insertedCount == 0) {
+                // Reenvio: o treino já existe. Devolve o estado atual SEM regravar os filhos —
+                // regravar duplicaria exercícios (mesmo cuidado da sessão).
+                // null = o id existe mas é de OUTRO usuário → o service traduz em 409.
+                readWorkout(userId, novoId)
+            } else {
+                insertChildren(novoId, workout.exercises)
+                readWorkout(userId, novoId)!!
+            }
         }
 
     override suspend fun findAllByUser(userId: Uuid): AppResult<List<WorkoutSummary>> =
