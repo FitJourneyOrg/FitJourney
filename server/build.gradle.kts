@@ -63,6 +63,10 @@ testing {
             dependencies {
                 implementation(project())
                 implementation(project(":shared-contract"))   // ProfileDto/ProgramDto e enums (server usa como implementation, não api)
+                // AppResult/AppError: o server usa como `implementation`, então não vaza para
+                // os testes. Necessário desde que o teste passou a assertar o retorno dos
+                // repositórios direto (idempotência do POST — ARCH #30).
+                implementation(project(":shared:core:result"))
                 implementation(libs.testcontainers.postgresql)
                 implementation(libs.testcontainers.junitJupiter)
                 implementation(libs.flyway.core)
