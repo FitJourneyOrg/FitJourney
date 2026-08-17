@@ -95,6 +95,9 @@ class SyncStamps(
         const val PROGRAMAS = "programs"
         const val CATALOGO = "exercises"
         const val STATS = "stats"
+
+        /** Mesma janela do STATS: as duas telas mostram o mesmo progresso (ARCH #16). */
+        const val CONQUISTAS = "achievements"
         const val HISTORICO = "sessions"
 
         /** Carimbo de um treino específico. */
