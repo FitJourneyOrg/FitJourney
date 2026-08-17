@@ -59,6 +59,20 @@ object CompactadorDeOutbox {
             .sortedBy { estreia[it.alvoId] }
     }
 
+    /**
+     * Alvos que a compactação ANULOU — o caso `criar + … + excluir` offline.
+     *
+     * Não há o que enviar, mas as linhas precisam SAIR da fila. Sem isto elas ficam para
+     * sempre: o processador só itera sobre o resultado de [compactar], então um alvo anulado
+     * nunca chega em `concluir()`. O sintoma é silencioso e não é o óbvio — a tabela crescendo
+     * é o menor problema. `contarPendentes()` fica travado acima de zero, e com ele a condição
+     * de cache-first do repositório, que volta a ir à rede em toda abertura.
+     */
+    fun alvosAnulados(fila: List<Operacao>): Set<String> {
+        val sobreviventes = compactar(fila).map { it.alvoId }.toSet()
+        return fila.map { it.alvoId }.toSet() - sobreviventes
+    }
+
     /** Resolve as operações de UM alvo numa só (ou em nenhuma). */
     private fun resolver(doAlvo: List<Operacao>): Operacao? {
         val criou = doAlvo.any { it.tipo.ehCriacao }

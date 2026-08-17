@@ -103,6 +103,29 @@ class CompactadorDeOutboxTest {
     }
 
     @Test
+    fun `alvo anulado e reportado para ser removido da fila`() {
+        // Sem isto as linhas de um criar+excluir offline ficam na tabela para sempre: elas não
+        // aparecem no resultado da compactação, então o processador nunca as conclui.
+        val fila = listOf(
+            op(TipoOperacao.CRIAR_TREINO, "w1"),
+            op(TipoOperacao.EXCLUIR_TREINO, "w1"),
+            op(TipoOperacao.CRIAR_TREINO, "w2"),
+        )
+
+        assertEquals(setOf("w1"), CompactadorDeOutbox.alvosAnulados(fila))
+    }
+
+    @Test
+    fun `nada e anulado quando tudo sobrevive`() {
+        val fila = listOf(
+            op(TipoOperacao.EDITAR_TREINO, "w1"),
+            op(TipoOperacao.EXCLUIR_TREINO, "w1"),   // existe no servidor: o DELETE precisa ir
+        )
+
+        assertTrue(CompactadorDeOutbox.alvosAnulados(fila).isEmpty())
+    }
+
+    @Test
     fun `fila vazia nao quebra`() {
         assertTrue(CompactadorDeOutbox.compactar(emptyList()).isEmpty())
     }

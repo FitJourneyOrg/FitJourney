@@ -43,7 +43,7 @@ data class ItemDaFila(
 class Outbox(
     db: FitJourneyDatabase,
     private val uidAtual: suspend () -> String?,
-) {
+) : FilaDeSaida {
     private val q = db.outboxQueries
 
     private suspend fun uid(): String = uidAtual() ?: ""
@@ -75,7 +75,7 @@ class Outbox(
      * Exclui o que falhou em definitivo: retry não resolve 403/400/404, e insistir só gasta
      * bateria enquanto o usuário vê "não sincroniza" sem entender por quê.
      */
-    suspend fun paraEnviar(): List<Operacao> {
+    override suspend fun paraEnviar(): List<Operacao> {
         val dono = uid()
         if (dono.isEmpty()) return emptyList()
         val cru = withContext(Dispatchers.Default) {
@@ -88,6 +88,10 @@ class Outbox(
                 )
             }
         }
+        // Tira da fila o que a compactação anulou (criar + excluir offline). Estes alvos não
+        // passam pelo processador — logo, nunca seriam concluídos — e ficariam na tabela para
+        // sempre, mantendo `contarPendentes()` acima de zero eternamente.
+        CompactadorDeOutbox.alvosAnulados(cru).forEach { concluir(it) }
         return CompactadorDeOutbox.compactar(cru)
     }
 
@@ -130,13 +134,13 @@ class Outbox(
      * Enviou com sucesso. Remove TODAS as operações do alvo, não só a compactada — as outras
      * foram fundidas nela e já estão representadas no que subiu.
      */
-    suspend fun concluir(alvoId: String) {
+    override suspend fun concluir(alvoId: String) {
         val dono = uid()
         withContext(Dispatchers.Default) { q.removerAlvo(dono, alvoId) }
     }
 
     /** Falha temporária (sem rede, 5xx): fica na fila e conta a tentativa. */
-    suspend fun registrarTentativa(seq: Long) {
+    override suspend fun registrarTentativa(seq: Long) {
         withContext(Dispatchers.Default) { q.registrarTentativa(seq) }
     }
 
@@ -147,7 +151,7 @@ class Outbox(
      * não têm o que fazer — insistir nelas geraria uma segunda mensagem de erro sobre um
      * recurso que nunca existiu.
      */
-    suspend fun marcarFalhaPermanente(alvoId: String, mensagem: String) {
+    override suspend fun marcarFalhaPermanente(alvoId: String, mensagem: String) {
         val dono = uid()
         withContext(Dispatchers.Default) {
             q.transaction {
