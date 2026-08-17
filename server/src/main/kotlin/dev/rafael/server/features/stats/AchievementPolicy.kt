@@ -35,7 +35,7 @@ object AchievementPolicy {
     ) {
         PRIMEIRO_TREINO("Começou", "Registre seu primeiro treino", Metrica.SESSOES, 1),
         TREINOS_10("Dez na conta", "Registre 10 treinos", Metrica.SESSOES, 10),
-        TREINOS_50("Meio century", "Registre 50 treinos", Metrica.SESSOES, 50),
+        TREINOS_50("Cinquenta treinos", "Registre 50 treinos", Metrica.SESSOES, 50),
         TREINOS_100("Cem treinos", "Registre 100 treinos", Metrica.SESSOES, 100),
 
         // Streak reusa a definição do XpPolicy, em que DIA DE DESCANSO AGENDADO conta como

@@ -73,7 +73,15 @@ class AchievementService(
             .sortedWith(
                 compareByDescending<AchievementDto> { it.unlockedAt != null }
                     .thenByDescending { it.unlockedAt }
-                    .thenByDescending { it.current.toDouble() / it.target },
+                    // Proximidade do alvo SÓ desempata bloqueadas — é o que sugere o próximo
+                    // passo. Nas desbloqueadas o progresso continua mudando (streak quebra), e
+                    // usá-lo faria medalha já ganha trocar de lugar sozinha entre duas aberturas
+                    // da tela. Observado no emulador: apagar sessões reordenou a fileira de cima.
+                    .thenByDescending { if (it.unlocked) 0.0 else it.current.toDouble() / it.target }
+                    // Desempate final ESTÁVEL: conquistas do mesmo lote compartilham o
+                    // `unlocked_at` (um `now()` por lote, de propósito), então sem isto a ordem
+                    // entre elas fica à mercê do banco.
+                    .thenBy { it.id },
             )
 
     /**

@@ -144,6 +144,10 @@ private fun CartaoDeConquista(conquista: AchievementDto) {
                     progress = { conquista.current.toFloat() / conquista.target.coerceAtLeast(1) },
                     modifier = Modifier.fillMaxWidth(),
                     color = apagado,
+                    // `trackColor` EXPLÍCITO. O default do Material3 é `secondaryContainer`, que
+                    // neste tema é roxo vivo — mais chamativo que o próprio progresso, cinza.
+                    // O resultado lido de relance era o inverso do real: 11 de 30 parecia 90%.
+                    trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
