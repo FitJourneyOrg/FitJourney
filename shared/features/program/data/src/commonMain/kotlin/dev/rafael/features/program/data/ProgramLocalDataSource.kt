@@ -48,18 +48,36 @@ class ProgramLocalDataSource(
      * Substitui o estado local pelo que veio do servidor, em UMA transação.
      *
      * Apaga antes de gravar: o GET /programs devolve a verdade completa, então um programa
-     * excluído em outro dispositivo precisa sumir daqui. (Quando existir escrita offline —
-     * passo 5 — esta limpeza terá de PRESERVAR as linhas pendentes.)
+     * excluído em outro dispositivo precisa sumir daqui.
+     *
+     * @param pendentes ids que estão na fila do outbox — o sync **não pode tocar neles**.
+     *
+     * O `GET /programs` devolve a verdade do SERVIDOR, e o servidor ainda não sabe do que foi
+     * feito offline. São DUAS proteções, não uma:
+     *  1. a limpeza pula esses ids — senão o treino criado offline sumiria da tela;
+     *  2. o re-insert também os pula — senão a versão ANTIGA do servidor sobrescreveria a
+     *     edição que o usuário acabou de fazer, e a tela "voltaria no tempo" sozinha.
+     *
+     * Enquanto está na fila, o LOCAL é a verdade. Quando o envio conclui, o alvo sai da fila
+     * e volta a ser sobrescrito normalmente pelo servidor — que é a autoridade ([REGRA]).
      */
-    suspend fun save(programas: List<ProgramDto>) {
+    suspend fun save(programas: List<ProgramDto>, pendentes: Set<String> = emptySet()) {
         val dono = uid()
         qPrograma.transaction {
-            qPrograma.limparAgenda(dono)
-            qTreino.limparTreinos(dono)
-            qPrograma.limparProgramas(dono)
+            if (pendentes.isEmpty()) {
+                qPrograma.limparAgenda(dono)
+                qTreino.limparTreinos(dono)
+                qPrograma.limparProgramas(dono)
+            } else {
+                val lista = pendentes.toList()
+                qPrograma.limparAgendaExceto(dono, lista)
+                qTreino.limparTreinosExceto(dono, lista, lista)   // id OU programId pendente
+                qPrograma.limparProgramasExceto(dono, lista)
+            }
 
             programas.forEach { p ->
                 val programaId = p.id ?: return@forEach
+                if (programaId in pendentes) return@forEach   // local vence enquanto pendente
                 qPrograma.salvarPrograma(
                     id = programaId,
                     uid = dono,
@@ -84,6 +102,7 @@ class ProgramLocalDataSource(
                 }
                 p.workouts.forEach { w ->
                     val treinoId = w.id ?: return@forEach
+                    if (treinoId in pendentes) return@forEach   // idem: não sobrescreve pendente
                     qTreino.salvarTreino(
                         id = treinoId,
                         uid = dono,
@@ -120,6 +139,70 @@ class ProgramLocalDataSource(
     suspend fun read(): List<ProgramDto> {
         val dono = uid()
         return qPrograma.observarProgramas(dono).executeAsList().map { montarPrograma(it, dono) }
+    }
+
+    // ---- escrita OTIMISTA (B.3): o usuário mexeu, grava já; o outbox leva à rede depois ----
+
+    /** Programa criado localmente (id gerado no cliente — B.1 fez o servidor aceitá-lo). */
+    suspend fun criarPrograma(dto: ProgramDto) {
+        val dono = uid()
+        val id = dto.id ?: return
+        qPrograma.salvarPrograma(
+            id = id,
+            uid = dono,
+            name = dto.name,
+            origin = dto.origin.name,
+            daysPerWeek = dto.daysPerWeek.toLong(),
+            split = dto.split,
+            rationale = dto.rationale,
+            locked = if (dto.locked) 1L else 0L,
+            durationWeeks = dto.durationWeeks.toLong(),
+            startedAt = dto.startedAt,
+            currentWeek = dto.currentWeek.toLong(),
+            updatedAt = dto.updatedAt,
+        )
+    }
+
+    /**
+     * @param carimbo ISO do momento da edição — vai para `updatedAt`, que é a coluna de
+     * ordenação da lista. Sem ele o programa renomeado não sobe para o topo e o usuário acha
+     * que nada aconteceu. Vem de fora porque [REGRA] o cliente não usa o próprio relógio para
+     * LÓGICA; aqui é só ordenação de exibição, e o servidor reescreve no próximo sync.
+     */
+    suspend fun renomearPrograma(id: String, nome: String, carimbo: String?) {
+        qPrograma.renomearPrograma(name = nome, updatedAt = carimbo, id = id, uid = uid())
+    }
+
+    /** Exclusão em cascata: sem isto os treinos do programa ficam órfãos e invisíveis no banco. */
+    suspend fun excluirPrograma(id: String) {
+        val dono = uid()
+        qPrograma.transaction {
+            qPrograma.limparAgendaDoPrograma(id, dono)
+            qPrograma.excluirTreinosDoPrograma(id, dono)
+            qPrograma.excluirPrograma(id, dono)
+        }
+    }
+
+    suspend fun definirAgenda(programaId: String, agenda: List<ScheduleEntry>) {
+        val dono = uid()
+        qPrograma.transaction {
+            qPrograma.limparAgendaDoPrograma(programaId, dono)
+            agenda.forEach { e ->
+                qPrograma.salvarAgenda(
+                    programId = programaId,
+                    workoutId = e.workoutId,
+                    uid = dono,
+                    dayOfWeek = e.dayOfWeek.toLong(),
+                )
+            }
+        }
+    }
+
+    /** Programa único, para reconstruir o DTO que a UI espera de volta após uma mutação local. */
+    suspend fun lerPrograma(id: String): ProgramDto? {
+        val dono = uid()
+        val linha = qPrograma.observarPrograma(id, dono).executeAsOneOrNull() ?: return null
+        return montarPrograma(linha, dono)
     }
 
     /** Detalhe de um treino (usado pelo cache do workout:data). */

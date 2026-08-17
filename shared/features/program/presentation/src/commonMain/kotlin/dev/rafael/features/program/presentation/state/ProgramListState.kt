@@ -1,6 +1,7 @@
 package dev.rafael.features.program.presentation.state
 
 import dev.rafael.core.result.AppError
+import dev.rafael.features.program.domain.model.PendenciaDeSync
 import dev.rafael.features.program.domain.model.Program
 
 /**
@@ -27,7 +28,16 @@ data class ProgramListState(
      */
     val sincronizouAlgumaVez: Boolean = false,
     val createdId: String? = null,   // sinaliza navegação pro detalhe do programa recém-criado
+    /**
+     * O que ainda não subiu (ARCH #30, B.4), por id. Com escrita otimista o usuário não tem
+     * como distinguir "salvo no servidor" de "salvo só aqui" — o selo é o que torna o
+     * otimismo honesto.
+     */
+    val pendencias: Set<PendenciaDeSync> = emptySet(),
 ) {
+    fun pendenciaDe(programId: String?): PendenciaDeSync? =
+        programId?.let { id -> pendencias.firstOrNull { it.alvoId == id } }
+
     /** Vazio porque nunca sincronizou neste aparelho — não porque o usuário não tem programas. */
     val vazioPorFaltaDeSync: Boolean get() = programs.isEmpty() && erroSync != null && !sincronizouAlgumaVez
 }

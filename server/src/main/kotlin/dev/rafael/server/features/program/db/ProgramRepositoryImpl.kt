@@ -113,9 +113,26 @@ class ProgramRepositoryImpl : ProgramRepository {
         row.toProgram(readProgramWorkouts(userId, programId))
     }
 
+    /**
+     * IDEMPOTENTE quando `program.id` vem preenchido (outbox, ARCH #30) — ver a justificativa
+     * completa em `WorkoutRepositoryImpl.create`. Resumo: uma fila com retry vai reenviar um
+     * POST cuja resposta se perdeu, e sem id do cliente isso duplicaria o programa.
+     *
+     * `Uuid.NIL` = "gere você", que é o caminho de sempre (motor e criação online).
+     */
     override suspend fun createForUser(userId: Uuid, program: Program): AppResult<Program> = dbQuery {
         val ts = now()
-        val programId = Uuid.random()
+        val programId = if (program.id == Uuid.NIL) Uuid.random() else program.id
+        val jaExiste = ProgramsTable.selectAll()
+            .where { (ProgramsTable.id eq programId) and (ProgramsTable.userId eq userId) }
+            .any()
+        if (jaExiste) {
+            // Reenvio do mesmo id: devolve o que já está lá, sem recriar treinos.
+            return@dbQuery ProgramsTable.selectAll()
+                .where { ProgramsTable.id eq programId }
+                .single()
+                .toProgram(readProgramWorkouts(userId, programId))
+        }
         ProgramsTable.insert {
             it[id] = programId
             it[this.userId] = userId

@@ -22,6 +22,13 @@ class WorkoutLocalDataSource(
     private val tokenProvider: TokenProvider,
 ) {
     private val q = db.workoutQueries
+
+    /**
+     * Sim, a feature de treino escreve na tabela de agenda. As TABELAS são do `core:database`,
+     * não da feature — quem não pode depender de quem é módulo, não linha de SQL. E o inverso
+     * já acontecia: o sync de programas grava em `workout`.
+     */
+    private val qAgenda = db.programQueries
     private val json = Json { ignoreUnknownKeys = true }
     private val exerciciosSerializer = ListSerializer(WorkoutExerciseDto.serializer())
 
@@ -50,6 +57,34 @@ class WorkoutLocalDataSource(
             lockedExerciseCount = dto.lockedExerciseCount.toLong(),
             exerciseCount = dto.exercises.size.toLong(),
             exercisesJson = json.encodeToString(exerciciosSerializer, dto.exercises),
+        )
+    }
+
+    /** Exclusão otimista (B.3): some da tela na hora, o DELETE sai pela fila. */
+    suspend fun excluir(id: String) {
+        val dono = uid()
+        q.transaction {
+            qAgenda.excluirDaAgenda(id, dono)   // senão fica entrada órfã apontando p/ nada
+            q.excluirTreino(id, dono)
+        }
+    }
+
+    /**
+     * Posiciona o treino no dia da semana, LOCALMENTE.
+     *
+     * Sem isto o treino criado offline existe na tabela `workout` mas não aparece na tela de
+     * programa: a visão de semana monta os 7 dias a partir de `program_schedule` e mostra
+     * "Descanso" onde não há entrada. Era o que acontecia — o treino sumia da vista mesmo
+     * estando salvo, que é pior que um erro visível.
+     *
+     * Online isto é feito pelo servidor ao receber o POST; aqui é a cópia otimista.
+     */
+    suspend fun agendar(programId: String, workoutId: String, dayOfWeek: Int) {
+        qAgenda.salvarAgenda(
+            programId = programId,
+            workoutId = workoutId,
+            uid = uid(),
+            dayOfWeek = dayOfWeek.toLong(),
         )
     }
 
