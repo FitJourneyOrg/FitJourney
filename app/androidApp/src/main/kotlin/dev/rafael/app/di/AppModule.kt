@@ -3,6 +3,9 @@ package dev.rafael.app.di
 import dev.rafael.app.data.session.SessionApi
 import dev.rafael.app.data.stats.StatsApi
 import dev.rafael.app.data.stats.Stats
+import dev.rafael.app.data.achievements.Achievements
+import dev.rafael.app.data.achievements.AchievementsApi
+import dev.rafael.app.data.achievements.AchievementsRepository
 import dev.rafael.app.data.stats.StatsRepository
 import dev.rafael.app.data.sync.SyncScheduler
 import dev.rafael.core.database.SyncStamps
@@ -17,6 +20,7 @@ import org.koin.android.ext.koin.androidContext
 import dev.rafael.app.data.session.HistoricoDeSessoes
 import dev.rafael.app.data.session.SessionSync
 import dev.rafael.app.screens.home.HomeViewModel
+import dev.rafael.app.screens.achievements.AchievementsViewModel
 import dev.rafael.app.screens.progress.ProgressViewModel
 import dev.rafael.app.screens.paywall.PaywallViewModel
 import dev.rafael.app.screens.reveal.ProgramRevealViewModel
@@ -76,12 +80,17 @@ val appModule = module {
     single { SessionApi(get()) }
     single { StatsApi(get()) }              // XP/nível/streak (ARCH #16)
     single<Stats> { StatsRepository(get(), get(), get(), get()) }   // api + db + TokenProvider + SyncStamps
+
+    // Conquistas (ARCH #16) — mesmo desenho do Stats: cache local + sync de fundo.
+    single { AchievementsApi(get()) }
+    single<Achievements> { AchievementsRepository(get(), get(), get(), get()) }
     single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
     single<HistoricoDeSessoes> { SessionSync(get(), get(), get(), get(), get()) }   // + SyncStamps
 
     viewModelOf(::SplashViewModel)   // injeta AuthRepository + ProfileRepository + ExerciseRepository + CoroutineScope
     viewModelOf(::HomeViewModel)     // injeta AuthRepository (logout)
     viewModelOf(::ProgressViewModel) // histórico offline-first + stats
+    viewModelOf(::AchievementsViewModel)   // conquistas offline-first
     viewModelOf(::ProgramRevealViewModel)   // injeta ProgramRepository (revelação)
     viewModelOf(::PaywallViewModel)          // injeta Billing (página de assinatura)
     viewModel { (workoutId: String) -> WorkoutSessionViewModel(workoutId, get(), get(), get()) }   // execução

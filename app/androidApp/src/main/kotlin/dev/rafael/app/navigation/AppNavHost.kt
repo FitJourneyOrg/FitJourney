@@ -13,6 +13,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import dev.rafael.app.screens.placeholder.EmBreveScreen
+import dev.rafael.app.screens.achievements.AchievementsScreen
 import dev.rafael.app.screens.progress.ProgressScreen
 import dev.rafael.core.network.SessionExpiryBus
 import dev.rafael.features.auth.domain.repository.AuthRepository
@@ -245,7 +246,10 @@ fun AppNavHost() {
         composable<AppRoute.Grupos> {
             EmBreveScreen("Grupos", "Treine com amigos, registre check-ins e dispute o ranking.")
         }
-        composable<AppRoute.Progresso> { ProgressScreen() }
+        composable<AppRoute.Progresso> {
+            ProgressScreen(onOpenConquistas = { nav.navigate(AppRoute.Conquistas) })
+        }
+        composable<AppRoute.Conquistas> { AchievementsScreen(onBack = { nav.popBackStack() }) }
         composable<AppRoute.Perfil> {
             EmBreveScreen("Perfil", "Seus dados, plano e configurações.")
         }

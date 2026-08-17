@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CloudQueue
 import androidx.compose.material3.*
@@ -20,7 +22,10 @@ import dev.rafael.app.ui.ShimmerList
 import org.koin.androidx.compose.koinViewModel
 
 @Composable
-fun ProgressScreen(viewModel: ProgressViewModel = koinViewModel()) {
+fun ProgressScreen(
+    onOpenConquistas: () -> Unit,
+    viewModel: ProgressViewModel = koinViewModel(),
+) {
     val state by viewModel.state.collectAsState()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.sincronizar() }
 
@@ -34,8 +39,41 @@ fun ProgressScreen(viewModel: ProgressViewModel = koinViewModel()) {
                 Metrica("Nesta semana", "${s.sessionsThisWeek}", Modifier.weight(1f))
                 Metrica("Sequência", "${s.streakDays}", Modifier.weight(1f))
             }
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(12.dp))
         }
+
+        // Porta para as conquistas (ARCH #16). Fica aqui, e não como aba, porque conquista é
+        // consequência do progresso — quem abre esta tela já está olhando a própria evolução.
+        // `tertiary` (lime) é permitido: recompensa do perfil individual.
+        Card(
+            onClick = onOpenConquistas,
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.tertiary.copy(alpha = 0.12f),
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            Row(
+                Modifier.padding(16.dp).fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Star,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.tertiary,
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text("Conquistas", fontWeight = FontWeight.Bold)
+                }
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+        Spacer(Modifier.height(20.dp))
 
         Text(
             "HISTÓRICO",
