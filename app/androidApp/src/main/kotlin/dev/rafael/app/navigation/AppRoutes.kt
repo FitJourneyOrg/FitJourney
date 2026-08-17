@@ -13,6 +13,9 @@ sealed interface AppRoute {
     // Abas ainda sem implementação (placeholder) — Grupos é Fase 6, Progresso é Fase 5 (#16).
     @Serializable data object Grupos : AppRoute
     @Serializable data object Progresso : AppRoute
+
+    /** Conquistas (ARCH #16). Tela própria, alcançada pelo Progresso — não é aba. */
+    @Serializable data object Conquistas : AppRoute
     @Serializable data object Perfil : AppRoute
 
     // ARCH #27: "Meus treinos" (lista plana) virou "Meus Programas" (programas com
