@@ -26,7 +26,10 @@ import dev.rafael.server.features.workout.services.WorkoutService
 import dev.rafael.server.features.session.db.SessionRepository
 import dev.rafael.server.features.session.db.SessionRepositoryImpl
 import dev.rafael.server.features.session.services.SessionService
+import dev.rafael.server.features.stats.AchievementService
 import dev.rafael.server.features.stats.StatsService
+import dev.rafael.server.features.stats.db.AchievementRepository
+import dev.rafael.server.features.stats.db.AchievementRepositoryImpl
 import org.koin.dsl.module
 
 val appModule = module {
@@ -64,4 +67,9 @@ val appModule = module {
     single<SessionRepository> { SessionRepositoryImpl() }
     single { SessionService(get(), get()) }   // userService + repo
     single { StatsService(get(), get(), get()) }   // userService + sessionRepo + programService (ARCH #16)
+
+    // Conquistas (ARCH #16). Reusa o StatsService em vez de recalcular sessoes/streak/nivel:
+    // duas contas do mesmo numero acabariam divergindo.
+    single<AchievementRepository> { AchievementRepositoryImpl() }
+    single { AchievementService(get(), get(), get()) }   // userService + statsService + repo
 }
