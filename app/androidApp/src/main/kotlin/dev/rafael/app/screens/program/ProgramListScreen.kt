@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.ui.erroDoCampo
 import dev.rafael.contract.error.ErrorFields
 import dev.rafael.core.result.AppError
+import dev.rafael.features.program.domain.model.PendenciaDeSync
 import dev.rafael.features.program.presentation.state.ProgramListEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramListViewModel
 import dev.rafael.app.ui.ErroDeTela
@@ -95,12 +96,16 @@ fun ProgramListScreen(
                     else ->
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(state.programs) { p ->
+                                val pendencia = state.pendenciaDe(p.id)
                                 ListItem(
                                     headlineContent = { Text(p.name) },
                                     supportingContent = {
                                         val base = "${p.workouts.size} treinos"
                                         Text(if (p.daysPerWeek > 0) "$base · Semana ${p.currentWeek}/${p.durationWeeks}" else base)
                                     },
+                                    // ARCH #30/B.4: escrita otimista sem selo é desonesta — o
+                                    // usuário não teria como saber que o dado só existe aqui.
+                                    trailingContent = pendencia?.let { { SeloDeSync(it) } },
                                     modifier = Modifier.clickable { p.id?.let(onOpenProgram) },
                                 )
                             }
@@ -142,3 +147,34 @@ private fun CreateProgramDialog(
     )
 }
 
+
+/**
+ * Selo de sincronização (ARCH #30, B.4).
+ *
+ * Dois estados, com pesos diferentes de propósito:
+ *  - AGUARDANDO: discreto. É o caso normal do offline-first — some sozinho quando a rede
+ *    volta, e alarmar o usuário sobre algo que se resolve sem ele seria ruído.
+ *  - FALHA PERMANENTE: em `error`. O servidor recusou, ninguém vai tentar de novo, e sem
+ *    destaque o usuário seguiria acreditando que salvou.
+ *
+ * [REGRA] Nada de `lime` aqui: a cor é exclusiva das recompensas do perfil individual (#16).
+ */
+@Composable
+private fun SeloDeSync(pendencia: PendenciaDeSync) {
+    if (pendencia.aguardando) {
+        AssistChip(
+            onClick = {},
+            enabled = false,
+            label = { Text("Pendente", style = MaterialTheme.typography.labelSmall) },
+        )
+    } else {
+        AssistChip(
+            onClick = {},
+            enabled = false,
+            label = { Text("Não sincronizou", style = MaterialTheme.typography.labelSmall) },
+            colors = AssistChipDefaults.assistChipColors(
+                disabledLabelColor = MaterialTheme.colorScheme.error,
+            ),
+        )
+    }
+}

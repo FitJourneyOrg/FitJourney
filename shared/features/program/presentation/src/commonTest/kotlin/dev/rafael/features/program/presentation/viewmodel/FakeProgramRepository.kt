@@ -31,6 +31,12 @@ class FakeProgramRepository(
 
     override fun observePrograms(): kotlinx.coroutines.flow.Flow<List<Program>> = local
 
+    /** Fila do outbox simulada (ARCH #30, B.4) — o teste empurra pendências e vê o selo. */
+    val pendentes =
+        kotlinx.coroutines.flow.MutableStateFlow<Set<dev.rafael.features.program.domain.model.PendenciaDeSync>>(emptySet())
+
+    override fun observarPendentes() = pendentes
+
     /** Simula "já baixou neste aparelho, com esta conta" (carimbo persistido). */
     var sincronizouNesteAparelho: Boolean = false
 

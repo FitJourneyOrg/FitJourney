@@ -26,10 +26,15 @@ class ProgramDataSource(private val client: HttpClient) {
     suspend fun generate(): ProgramDto =
         client.post("$base/generate").body()
 
-    suspend fun createManual(name: String): ProgramDto =
+    /**
+     * @param id gerado no CLIENTE quando a criação veio do outbox (ARCH #30). É o que torna o
+     * POST idempotente: reenviar após uma resposta perdida devolve o programa que já existe em
+     * vez de criar um segundo. Null = o servidor gera, como sempre.
+     */
+    suspend fun createManual(name: String, id: String? = null): ProgramDto =
         client.post(base) {
             contentType(ContentType.Application.Json)
-            setBody(CreateManualProgramRequest(name))
+            setBody(CreateManualProgramRequest(name, id))
         }.body()
 
     suspend fun rename(id: String, name: String): ProgramDto =

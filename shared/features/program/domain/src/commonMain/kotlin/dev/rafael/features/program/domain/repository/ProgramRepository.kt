@@ -2,6 +2,7 @@ package dev.rafael.features.program.domain.repository
 
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.program.domain.model.Program
+import dev.rafael.features.program.domain.model.PendenciaDeSync
 import dev.rafael.features.program.domain.model.ProgramScheduleEntry
 import kotlinx.coroutines.flow.Flow
 
@@ -36,6 +37,16 @@ interface ProgramRepository {
      * já que as mutações daqui invalidam sozinhas.
      */
     fun invalidate()
+
+    /**
+     * O que ainda NÃO chegou ao servidor (ARCH #30, B.4): ids de programa/treino na fila.
+     *
+     * Está no contrato de DOMÍNIO, e não vazando o Outbox para a tela, porque a presentation
+     * não pode enxergar `core:database` ([REGRA] dependência de mão única). O que a tela
+     * precisa saber é "isto aqui já subiu?", que é uma pergunta de domínio — o mecanismo
+     * (tabela outbox, WorkManager) continua sendo detalhe da camada de dados.
+     */
+    fun observarPendentes(): Flow<Set<PendenciaDeSync>>
 
     suspend fun generate(): AppResult<Program>                     // POST /programs/generate
     suspend fun createManual(name: String): AppResult<Program>     // POST /programs

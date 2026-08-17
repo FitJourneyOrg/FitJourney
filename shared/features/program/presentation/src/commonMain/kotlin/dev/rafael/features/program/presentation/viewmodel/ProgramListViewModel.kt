@@ -28,6 +28,12 @@ class ProgramListViewModel(
             .onEach { lista -> _state.update { it.copy(programs = lista, isLoading = false) } }
             .launchIn(viewModelScope)
 
+        // Selo de pendente: reativo, porque a fila esvazia sozinha quando o worker roda e o
+        // selo tem que sumir da tela sem o usuário fazer nada.
+        repository.observarPendentes()
+            .onEach { p -> _state.update { it.copy(pendencias = p) } }
+            .launchIn(viewModelScope)
+
         // Carimbo persistido: responde "já baixei alguma vez aqui?" mesmo em cold start
         // offline, quando nenhum sync desta sessão teve chance de acontecer.
         viewModelScope.launch {
