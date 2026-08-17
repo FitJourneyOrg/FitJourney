@@ -56,11 +56,13 @@ class ProgramService(
     }
 
     /** Cria um programa vazio (sem motor) só pra abrigar treino avulso. Não conta no teto. */
-    suspend fun createManual(userId: Uuid, name: String): AppResult<ProgramDto> {
+    /** @param id opcional — vem do outbox do cliente (ARCH #30) e torna a criação idempotente. */
+    suspend fun createManual(userId: Uuid, name: String, id: String? = null): AppResult<ProgramDto> {
         if (name.isBlank()) return AppError.Validation("Nome do programa é obrigatório", mapOf(ErrorFields.NAME to "Nome do programa é obrigatório")).asFailure()
         val ts = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+        val idDoCliente = id?.let { runCatching { Uuid.parse(it) }.getOrNull() } ?: Uuid.NIL
         val shell = Program(
-            id = Uuid.NIL, userId = userId, name = name, origin = WorkoutOrigin.MANUAL,
+            id = idDoCliente, userId = userId, name = name, origin = WorkoutOrigin.MANUAL,
             daysPerWeek = 0, split = "Manual", rationale = "", locked = false,
             workouts = emptyList(), createdAt = ts, updatedAt = ts,
             durationWeeks = PROGRAM_WEEKS, startedAt = ts,

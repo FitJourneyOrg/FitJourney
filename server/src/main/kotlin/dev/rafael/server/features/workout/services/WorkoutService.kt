@@ -7,6 +7,7 @@ import dev.rafael.contract.error.ErrorFields
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
+import dev.rafael.core.result.asSuccess
 import dev.rafael.core.result.flatMap
 import dev.rafael.core.result.getOrNull
 import dev.rafael.core.result.map
@@ -41,7 +42,12 @@ class WorkoutService(
         validate(dto)?.let { return it.asFailure() }
         validateExercisesExist(dto)?.let { return it.asFailure() }
         return userService.findOrCreate(firebaseUid, email).flatMap { user ->
-            repository.create(user.id, dto.toDomain(), programId, dayOfWeek).map { it.toDto() }
+            repository.create(user.id, dto.toDomain(), programId, dayOfWeek).flatMap { criado ->
+                // null = id do cliente colidiu com treino de OUTRO usuário. Não é erro de
+                // servidor (500) nem "não encontrado": é conflito de identificador.
+                criado?.toDto()?.asSuccess()
+                    ?: AppError.Conflict("Já existe um treino com este identificador.").asFailure()
+            }
         }
     }
 

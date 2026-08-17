@@ -97,7 +97,7 @@ fun Route.programRoutes(
                 // GATE POR TETO (ARCH #27) — política pura (ProgramLimits).
                 programService.counts(user.id).flatMap { c ->
                     ProgramLimits.gate(c, user.isPremium, ProgramLimits.Kind.MANUAL)
-                        .flatMap { programService.createManual(user.id, body.name) }
+                        .flatMap { programService.createManual(user.id, body.name, body.id) }
                 }
             }
             call.respondResult(result)

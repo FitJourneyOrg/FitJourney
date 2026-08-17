@@ -18,8 +18,18 @@ VALUES (?, ?, ?, ?);
 limparProgramas:
 DELETE FROM program WHERE uid = ?;
 
+-- Limpeza que PRESERVA o que está na fila do outbox (ARCH #30, B.3).
+-- O GET /programs devolve a verdade do SERVIDOR, e o servidor ainda não sabe do que foi
+-- criado offline. Sem esta exceção, o primeiro sync apagaria o treino/programa recém-criado
+-- e o usuário veria sumir da tela — sem erro nenhum, que é o pior tipo de perda de dado.
+limparProgramasExceto:
+DELETE FROM program WHERE uid = ? AND id NOT IN ?;
+
 limparAgenda:
 DELETE FROM program_schedule WHERE uid = ?;
+
+limparAgendaExceto:
+DELETE FROM program_schedule WHERE uid = ? AND programId NOT IN ?;
 
 -- ---------- leitura ----------
 
@@ -44,3 +54,21 @@ LIMIT 1;
 
 contarProgramas:
 SELECT COUNT(*) FROM program WHERE uid = ?;
+
+-- ---------- escrita OTIMISTA (B.3) ----------
+
+renomearPrograma:
+UPDATE program SET name = ?, updatedAt = ? WHERE id = ? AND uid = ?;
+
+excluirPrograma:
+DELETE FROM program WHERE id = ? AND uid = ?;
+
+limparAgendaDoPrograma:
+DELETE FROM program_schedule WHERE programId = ? AND uid = ?;
+
+excluirTreinosDoPrograma:
+DELETE FROM workout WHERE programId = ? AND uid = ?;
+
+-- Excluir treino tem de tirá-lo da agenda também, senão sobra entrada apontando p/ nada.
+excluirDaAgenda:
+DELETE FROM program_schedule WHERE workoutId = ? AND uid = ?;

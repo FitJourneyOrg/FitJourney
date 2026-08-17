@@ -12,5 +12,6 @@ val programDataModule: Module = module {
     single { ProgramDataSource(client = get<HttpClient>()) }
     single { ProgramLocalDataSource(get(), get()) }   // db + TokenProvider (cache por uid)
     // 3o get() = SyncStamps: carimbo de sync persistido, chaveado por uid
-    single<ProgramRepository> { ProgramRepositoryImpl(get(), get(), get()) }
+    // remote + local + SyncStamps + Outbox + AgendadorDeSync + ProcessadorDeOutbox + Clock
+    single<ProgramRepository> { ProgramRepositoryImpl(get(), get(), get(), get(), get(), get(), get()) }
 }
