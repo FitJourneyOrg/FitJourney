@@ -9,6 +9,21 @@ INSERT OR REPLACE INTO workout(
 limparTreinos:
 DELETE FROM workout WHERE uid = ?;
 
+-- Ver limparProgramasExceto: o sync não pode apagar o que ainda não subiu.
+--
+-- DUAS condições, não uma. A segunda (`programId NOT IN`) cobre o caso que a primeira deixa
+-- passar: renomear um PROGRAMA offline torna o programa pendente, e o save() então não o
+-- reescreve — nem aos treinos dele, que vêm aninhados na resposta. Sem a segunda cláusula os
+-- treinos seriam apagados e nunca reinseridos, e o programa apareceria vazio na tela.
+-- A mesma lista é ligada nos dois lugares (mistura ids de programa e de treino de propósito).
+--
+-- O `IS NULL` não é defensivo, é obrigatório: programId é NULLABLE (treino avulso legado) e
+-- em SQL `NULL NOT IN ('a')` vale NULL, não TRUE. Sem ele nenhum treino avulso seria apagado
+-- pelo sync — nunca — e a tabela acumularia órfão de programa excluído em outro aparelho.
+limparTreinosExceto:
+DELETE FROM workout
+WHERE uid = ? AND id NOT IN ? AND (programId IS NULL OR programId NOT IN ?);
+
 observarTreino:
 SELECT * FROM workout WHERE id = ? AND uid = ?;
 
@@ -17,3 +32,9 @@ SELECT * FROM workout WHERE programId = ? AND uid = ? ORDER BY name;
 
 lerTreino:
 SELECT * FROM workout WHERE id = ? AND uid = ?;
+
+-- ---------- escrita OTIMISTA (B.3) ----------
+-- O usuário mexeu; grava já e enfileira. A tela reage ao Flow antes de qualquer rede.
+
+excluirTreino:
+DELETE FROM workout WHERE id = ? AND uid = ?;
