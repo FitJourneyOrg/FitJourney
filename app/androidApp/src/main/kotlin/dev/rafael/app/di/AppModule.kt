@@ -6,6 +6,10 @@ import dev.rafael.app.data.stats.Stats
 import dev.rafael.app.data.stats.StatsRepository
 import dev.rafael.app.data.sync.SyncScheduler
 import dev.rafael.core.database.SyncStamps
+import dev.rafael.core.database.outbox.AgendadorDeSync
+import dev.rafael.core.database.outbox.ProcessadorDeOutbox
+import dev.rafael.features.program.data.ExecutorDePrograma
+import dev.rafael.features.workout.data.ExecutorDeTreino
 import dev.rafael.core.database.outbox.Outbox
 import kotlin.time.Clock
 import dev.rafael.core.network.TokenProvider
@@ -47,6 +51,26 @@ val appModule = module {
     // FILA DE ESCRITAS pendentes (ARCH #30, fatia B.2). Mesmo motivo do SyncStamps para
     // morar aqui: é o único ponto que vê o banco e o TokenProvider ao mesmo tempo.
     single { Outbox(db = get(), uidAtual = { get<TokenProvider>().currentUid() }) }
+
+    // Gatilho de envio (B.3/B.4): o repositório enfileira e chama agendar(); quem acorda o
+    // processo quando a rede volta é o WorkManager, que só existe no Android — por isso os
+    // repositórios (KMP) enxergam apenas a interface.
+    single<AgendadorDeSync> { AgendadorDeSync { get<SyncScheduler>().agendarAgora() } }
+
+    // Executores: um por feature, porque são eles que conhecem os DataSources. O processador
+    // recebe a lista e roteia por tipo — adicionar operação nova não toca em core:database.
+    //
+    // A lista é montada AQUI, e não registrada como `single<List<ExecutorDeOperacao>>`: Koin
+    // resolvendo tipo genérico de coleção é o tipo de wiring que falha em runtime, dentro de um
+    // worker, sem stack visível. Explícito custa uma linha e falha na cara.
+    single { ExecutorDeTreino(get(), get()) }
+    single { ExecutorDePrograma(get()) }
+    single {
+        ProcessadorDeOutbox(
+            outbox = get<Outbox>(),
+            executores = listOf(get<ExecutorDeTreino>(), get<ExecutorDePrograma>()),
+        )
+    }
 
     // Sessão de treino (Fase 5): remote + sync offline-first (outbox local).
     single { SessionApi(get()) }
