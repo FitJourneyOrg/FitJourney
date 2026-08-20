@@ -2,7 +2,6 @@ package dev.rafael.app.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.outlined.BarChart
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.outlined.Group
@@ -19,7 +18,13 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import kotlin.reflect.KClass
 
-/** As 5 abas do app. `route` é a rota-raiz de cada aba. */
+/**
+ * As 4 abas do app. `route` é a rota-raiz de cada aba.
+ *
+ * Eram cinco: **Perfil saiu** (ARCH #34) e virou item do menu lateral. As abas são para tarefa
+ * frequente; perfil e configurações são destino secundário, e manter os dois conjuntos
+ * disjuntos é o que permite bottom bar e drawer conviverem sem disputar o mesmo destino.
+ */
 enum class BottomTab(
     val label: String,
     val icon: ImageVector,
@@ -30,7 +35,6 @@ enum class BottomTab(
     TREINO("Treino", Icons.Outlined.FitnessCenter, AppRoute.Programs, AppRoute.Programs::class),
     GRUPOS("Grupos", Icons.Outlined.Group, AppRoute.Grupos, AppRoute.Grupos::class),
     PROGRESSO("Progresso", Icons.Outlined.BarChart, AppRoute.Progresso, AppRoute.Progresso::class),
-    PERFIL("Perfil", Icons.Filled.Person, AppRoute.Perfil, AppRoute.Perfil::class),
 }
 
 /**
