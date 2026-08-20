@@ -6,6 +6,12 @@ import dev.rafael.app.data.stats.Stats
 import dev.rafael.app.data.achievements.Achievements
 import dev.rafael.app.data.achievements.AchievementsApi
 import dev.rafael.app.data.achievements.AchievementsRepository
+import dev.rafael.app.data.me.Me
+import dev.rafael.app.data.me.MeApi
+import dev.rafael.app.data.me.MeRepository
+import dev.rafael.app.screens.conta.ContaViewModel
+import dev.rafael.app.screens.menu.MenuViewModel
+import dev.rafael.app.screens.perfil.PerfilViewModel
 import dev.rafael.app.data.stats.StatsRepository
 import dev.rafael.app.data.sync.SyncScheduler
 import dev.rafael.core.database.SyncStamps
@@ -84,11 +90,19 @@ val appModule = module {
     // Conquistas (ARCH #16) — mesmo desenho do Stats: cache local + sync de fundo.
     single { AchievementsApi(get()) }
     single<Achievements> { AchievementsRepository(get(), get(), get(), get()) }
+
+    // Usuário: nome e plano (V35, ARCH #33/#34). Reusa o MeDataSource de auth:data em vez de
+    // repetir as rotas de /me — quem é dono delas continua sendo ele.
+    single { MeApi(get()) }
+    single<Me> { MeRepository(get(), get(), get(), get()) }
     single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
     single<HistoricoDeSessoes> { SessionSync(get(), get(), get(), get(), get()) }   // + SyncStamps
 
     viewModelOf(::SplashViewModel)   // injeta AuthRepository + ProfileRepository + ExerciseRepository + CoroutineScope
-    viewModelOf(::HomeViewModel)     // injeta AuthRepository (logout)
+    viewModelOf(::HomeViewModel)     // treino de hoje (não conhece mais sessão — ARCH #34)
+    viewModelOf(::MenuViewModel)     // cabeçalho do menu lateral: nome + nível, do cache
+    viewModelOf(::PerfilViewModel)   // perfil: nome, nível, conquistas
+    viewModelOf(::ContaViewModel)    // conta: renomear (PATCH /me) e sair
     viewModelOf(::ProgressViewModel) // histórico offline-first + stats
     viewModelOf(::AchievementsViewModel)   // conquistas offline-first
     viewModelOf(::ProgramRevealViewModel)   // injeta ProgramRepository (revelação)

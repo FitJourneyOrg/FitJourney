@@ -1,11 +1,22 @@
 package dev.rafael.app.navigation
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import kotlinx.coroutines.launch
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -20,10 +31,13 @@ import dev.rafael.features.auth.domain.repository.AuthRepository
 import dev.rafael.features.program.domain.repository.ProgramRepository
 import org.koin.compose.koinInject
 import dev.rafael.app.screens.authentication.LoginScreen
+import dev.rafael.app.screens.conta.ContaScreen
 import dev.rafael.app.screens.exercise.ExerciseDetailScreen
 import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
 import dev.rafael.app.screens.home.HomeScreen
+import dev.rafael.app.screens.menu.MenuLateral
 import dev.rafael.app.screens.onboarding.QuizScreen
+import dev.rafael.app.screens.perfil.PerfilScreen
 import dev.rafael.app.screens.program.ProgramDetailScreen
 import dev.rafael.app.screens.program.ProgramGenerateScreen
 import dev.rafael.app.screens.program.ProgramListScreen
@@ -35,6 +49,7 @@ import dev.rafael.app.screens.splash.SplashScreen
 import dev.rafael.app.screens.workout.WorkoutDetailScreen
 import dev.rafael.app.screens.workout.WorkoutFormScreen
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppNavHost() {
     val nav = rememberNavController()
@@ -66,7 +81,50 @@ fun AppNavHost() {
         }
     }
 
+    // MENU LATERAL (ARCH #34). Fica AQUI, e não dentro de uma tela, por dois motivos:
+    // é global — abre em qualquer tela-raiz, sem obrigar a voltar para a Home — e precisa do
+    // NavController, que é desta camada.
+    //
+    // `gesturesEnabled` acompanha `mostrarAbas`: em execução de treino ou formulário o usuário
+    // está numa TAREFA, e um arrasto lateral que abre menu no meio dela é acidente.
+    val drawer = rememberDrawerState(DrawerValue.Closed)
+    val escopo = rememberCoroutineScope()
+    fun navegarDoMenu(rota: AppRoute) {
+        escopo.launch { drawer.close() }
+        nav.navigate(rota) { launchSingleTop = true }
+    }
+
+    ModalNavigationDrawer(
+        drawerState = drawer,
+        gesturesEnabled = mostrarAbas,
+        drawerContent = {
+            MenuLateral(
+                aberto = drawer.isOpen,
+                onPerfil = { navegarDoMenu(AppRoute.Perfil()) },
+                onExercicios = { navegarDoMenu(AppRoute.Library) },
+                onWiki = { navegarDoMenu(AppRoute.Wiki) },
+                onDuvidas = { navegarDoMenu(AppRoute.Duvidas) },
+                onConta = { navegarDoMenu(AppRoute.Conta) },
+                // Sair não navega para uma rota: abre a confirmação, que mora na tela de conta
+                // (um único lugar decide o que "sair" faz — inclusive limpar o cache do
+                // onboarding antes do signOut).
+                onSair = { navegarDoMenu(AppRoute.Conta) },
+            )
+        },
+    ) {
     Scaffold(
+        topBar = {
+            if (mostrarAbas) {
+                TopAppBar(
+                    title = {},
+                    navigationIcon = {
+                        IconButton(onClick = { escopo.launch { drawer.open() } }) {
+                            Icon(Icons.Filled.Menu, contentDescription = "Abrir menu")
+                        }
+                    },
+                )
+            }
+        },
         bottomBar = { if (mostrarAbas) FitJourneyBottomBar(nav) },
     ) { padding ->
     NavHost(
@@ -149,12 +207,6 @@ fun AppNavHost() {
                 onStartWorkout = { id -> nav.navigate(AppRoute.WorkoutSession(id)) },
                 onOpenGroups = { nav.navigate(AppRoute.Grupos) },
                 onOpenProgress = { nav.navigate(AppRoute.Progresso) },
-                onLoggedOut = {
-                    nav.navigate(AppRoute.Login) {
-                        popUpTo(AppRoute.Home) { inclusive = true }  // limpa o back stack
-                        launchSingleTop = true
-                    }
-                },
             )
         }
 
@@ -250,9 +302,38 @@ fun AppNavHost() {
             ProgressScreen(onOpenConquistas = { nav.navigate(AppRoute.Conquistas) })
         }
         composable<AppRoute.Conquistas> { AchievementsScreen(onBack = { nav.popBackStack() }) }
-        composable<AppRoute.Perfil> {
-            EmBreveScreen("Perfil", "Seus dados, plano e configurações.")
+
+        // ---- Perfil e conta (ARCH #34) ----
+
+        composable<AppRoute.Perfil> { entry ->
+            val rota: AppRoute.Perfil = entry.toRoute()
+            PerfilScreen(
+                onBack = { nav.popBackStack() },
+                onEditar = { nav.navigate(AppRoute.Conta) },
+                onVerConquistas = { nav.navigate(AppRoute.Conquistas) },
+                // Na A.0 só existe o próprio perfil; a A.1 compara com o uid da sessão.
+                souEu = rota.userId == null,
+            )
         }
+        composable<AppRoute.Conta> {
+            ContaScreen(
+                onBack = { nav.popBackStack() },
+                onSaiu = {
+                    nav.navigate(AppRoute.Login) {
+                        popUpTo(0) { inclusive = true }   // não dá pra "voltar" pra sessão encerrada
+                        launchSingleTop = true
+                    }
+                },
+            )
+        }
+
+        composable<AppRoute.Wiki> {
+            EmBreveScreen("Wiki fitness", "Conteúdo sobre treino, técnica e recuperação. Chega na Fase 8.")
+        }
+        composable<AppRoute.Duvidas> {
+            EmBreveScreen("Dúvidas frequentes", "As perguntas mais comuns sobre o app e os treinos.")
+        }
+    }
     }
     }
 }
