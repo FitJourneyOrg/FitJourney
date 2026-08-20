@@ -25,21 +25,41 @@ class UserRepositoryImpl : UserRepository {
                 ?.toUser()
         }
 
-    override suspend fun create(firebaseUid: String, email: String?): AppResult<User> =
+    override suspend fun create(
+        id: Uuid,
+        firebaseUid: String,
+        email: String?,
+        displayName: String,
+    ): AppResult<User> =
         dbQuery {
-            val newId = Uuid.random()
             UsersTable.insert {
-                it[UsersTable.id] = newId
+                it[UsersTable.id] = id
                 it[UsersTable.firebaseUid] = firebaseUid
                 it[UsersTable.email] = email
                 it[UsersTable.isPremium] = false
+                it[UsersTable.displayName] = displayName
             }
-            User(id = newId, firebaseUid = firebaseUid, email = email, false)
+            User(
+                id = id,
+                firebaseUid = firebaseUid,
+                email = email,
+                isPremium = false,
+                displayName = displayName,
+            )
         }
 
     override suspend fun setPremium(userId: Uuid, premium: Boolean): AppResult<User?> =
         dbQuery {
             val n = UsersTable.update({ UsersTable.id eq userId }) { it[isPremium] = premium }
+            if (n == 0) null
+            else UsersTable.selectAll().where { UsersTable.id eq userId }.single().toUser()
+        }
+
+    override suspend fun updateDisplayName(userId: Uuid, displayName: String): AppResult<User?> =
+        dbQuery {
+            val n = UsersTable.update({ UsersTable.id eq userId }) {
+                it[UsersTable.displayName] = displayName
+            }
             if (n == 0) null
             else UsersTable.selectAll().where { UsersTable.id eq userId }.single().toUser()
         }
@@ -58,5 +78,6 @@ private fun ResultRow.toUser(): User = User(
     id = this[UsersTable.id],
     firebaseUid = this[UsersTable.firebaseUid],
     email = this[UsersTable.email],
-    isPremium = this[UsersTable.isPremium],   // <- novo
+    isPremium = this[UsersTable.isPremium],
+    displayName = this[UsersTable.displayName],
 )

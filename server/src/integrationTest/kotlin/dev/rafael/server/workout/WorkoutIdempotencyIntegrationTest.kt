@@ -72,6 +72,7 @@ class WorkoutIdempotencyIntegrationTest {
                     it[UsersTable.id] = id
                     it[firebaseUid] = uid
                     it[email] = "$uid@teste.local"
+                    it[displayName] = uid   // V35: NOT NULL, CHECK de 2..30
                 }
             }
             val ts = LocalDateTime(2026, 8, 15, 10, 0)

@@ -56,6 +56,8 @@ class AchievementGrantIntegrationTest {
                 it[UsersTable.id] = id
                 it[firebaseUid] = "uid-$id"
                 it[email] = "$id@teste.local"
+                // V35: NOT NULL com CHECK de 2..30. O uid inteiro estouraria o VARCHAR(30).
+                it[displayName] = "Atleta-" + id.toString().replace("-", "").take(6)
             }
         }
         return id
@@ -71,7 +73,7 @@ class AchievementGrantIntegrationTest {
             driverClassName = "org.postgresql.Driver"
             isAutoCommit = false
         }.let(::HikariDataSource)
-        Migrations.run(ds)   // inclui V34
+        Migrations.run(ds)   // inclui V34 e V35
         Database.connect(ds)
 
     }

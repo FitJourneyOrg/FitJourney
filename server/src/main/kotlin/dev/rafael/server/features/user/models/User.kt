@@ -8,5 +8,7 @@ data class User(
     val id: Uuid,
     val firebaseUid: String,
     val email: String?,
-    val isPremium: Boolean,   // <- novo
+    val isPremium: Boolean,
+    /** V35 (#33). Sempre presente — a coluna é NOT NULL e o nome nasce junto com a linha. */
+    val displayName: String,
 )
