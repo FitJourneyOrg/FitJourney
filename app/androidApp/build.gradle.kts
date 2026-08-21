@@ -10,7 +10,19 @@ plugins {
 
 kotlin {
     compilerOptions {
-        jvmTarget = JvmTarget.JVM_11
+        /**
+         * 17 para ALINHAR com os módulos compartilhados, que usam `jvmToolchain(17)` pelos
+         * convention plugins.
+         *
+         * Estava em 11, e a divergência tinha uma consequência que ninguém escolheu: nenhuma
+         * função `inline` do core podia ser chamada daqui. `AppResult.map`/`flatMap`, que são o
+         * idioma do projeto, falhavam com "Cannot inline bytecode built with JVM target 17".
+         * O `StatsRepository` já usava `when` por causa disso — parecia estilo, era restrição.
+         *
+         * Java 17 como language level no Android é suportado desde o AGP 8, e o AGP 9 já exige
+         * JDK 17 para compilar. Não muda o que é preciso instalar; muda o bytecode gerado.
+         */
+        jvmTarget = JvmTarget.JVM_17
     }
 }
 dependencies {
@@ -106,7 +118,9 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // Acompanha o jvmTarget acima — os dois têm de andar juntos, senão o Kotlin gera 17 e
+        // o Java do módulo continua em 11.
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }

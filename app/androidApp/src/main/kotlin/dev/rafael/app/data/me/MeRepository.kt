@@ -7,6 +7,7 @@ import dev.rafael.core.database.FitJourneyDatabase
 import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.TokenProvider
 import dev.rafael.core.result.AppResult
+import dev.rafael.core.result.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -63,20 +64,12 @@ class MeRepository(
      * O servidor devolve o `UserDto` já normalizado — é ELE que vai pro cache, não o texto que
      * o usuário digitou. Gravar o digitado faria a tela mostrar "Rafael  Souza" com dois
      * espaços até o próximo sync, e aí o nome mudaria sozinho na cara do usuário.
-     *
-     * `when` em vez do `map` do `AppResult`: o módulo `app` compila com **jvmTarget 11** e os
-     * módulos compartilhados com 17, então inlinar `map`/`flatMap` daqui não compila. Mesmo
-     * motivo pelo qual `StatsRepository` também usa `when`. É defeito de build, não de estilo —
-     * ver o débito registrado.
      */
     override suspend fun renomear(nome: String): AppResult<String> =
-        when (val r = api.renomear(nome)) {
-            is AppResult.Success -> {
-                gravar(r.value)
-                stamps.marcar(SyncStamps.ME)
-                AppResult.Success(r.value.displayName)
-            }
-            is AppResult.Failure -> r
+        api.renomear(nome).map { atualizado ->
+            gravar(atualizado)
+            stamps.marcar(SyncStamps.ME)
+            atualizado.displayName
         }
 
     private suspend fun gravar(dto: UserDto) {
