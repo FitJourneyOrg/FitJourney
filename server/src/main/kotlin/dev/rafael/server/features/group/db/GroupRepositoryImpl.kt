@@ -10,8 +10,10 @@ import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.server.features.group.models.Group
 import dev.rafael.server.features.group.services.GroupPolicy
+import dev.rafael.server.features.user.db.UsersTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.exposed.v1.core.ResultRow
@@ -19,10 +21,14 @@ import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.jdbc.batchInsert
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
+import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -114,6 +120,124 @@ class GroupRepositoryImpl : GroupRepository {
         }
     }
 
+    // ---- fatia A.2 ----
+
+    override suspend fun findByCode(code: String): AppResult<Group?> = dbQuery {
+        transaction {
+            // `uppercase()` porque ninguém digita código em maiúscula, e recusar por causa disso
+            // seria hostil com quem está justamente tentando entrar.
+            val linha = GroupsTable.selectAll()
+                .where { GroupsTable.code eq code.trim().uppercase() }
+                .singleOrNull() ?: return@transaction null
+            val id = linha[GroupsTable.id]
+            linha.toGroup(regrasDe(listOf(id))[id].orEmpty(), contagensDe(listOf(id))[id] ?: 0)
+        }
+    }
+
+    override suspend fun join(groupId: Uuid, userId: Uuid): AppResult<Unit> = dbQuery {
+        transaction {
+            // IDEMPOTENTE: dois toques no botão (ou um retry de rede) não podem virar erro na
+            // cara de quem já entrou. Mesma escolha do `POST /sessions` (#30).
+            GroupMembersTable.insertIgnore {
+                it[GroupMembersTable.groupId] = groupId
+                it[GroupMembersTable.userId] = userId
+                it[role] = MemberRole.MEMBRO.name
+                it[joinedAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
+            }
+        }
+        Unit
+    }
+
+    override suspend fun leave(groupId: Uuid, userId: Uuid): AppResult<Unit> = dbQuery {
+        transaction {
+            // Só o VÍNCULO sai. Os check-ins ficam no histórico do grupo (2.6): apagá-los
+            // reescreveria o passado de um desafio que outras pessoas disputaram.
+            GroupMembersTable.deleteWhere {
+                (GroupMembersTable.groupId eq groupId) and (GroupMembersTable.userId eq userId)
+            }
+        }
+        Unit
+    }
+
+    override suspend fun setRole(groupId: Uuid, userId: Uuid, role: String): AppResult<Unit> = dbQuery {
+        transaction {
+            GroupMembersTable.update({
+                (GroupMembersTable.groupId eq groupId) and (GroupMembersTable.userId eq userId)
+            }) { it[GroupMembersTable.role] = role }
+        }
+        Unit
+    }
+
+    override suspend fun members(groupId: Uuid): AppResult<List<GroupMemberRow>> = dbQuery {
+        transaction {
+            (GroupMembersTable innerJoin UsersTable)
+                .selectAll()
+                .where { GroupMembersTable.groupId eq groupId }
+                .orderBy(GroupMembersTable.joinedAt to SortOrder.ASC)   // mais antigo primeiro (2.12)
+                .map {
+                    GroupMemberRow(
+                        userId = it[GroupMembersTable.userId],
+                        displayName = it[UsersTable.displayName],
+                        role = it[GroupMembersTable.role],
+                        joinedAt = it[GroupMembersTable.joinedAt],
+                    )
+                }
+        }
+    }
+
+    override suspend fun createInvite(
+        token: Uuid,
+        groupId: Uuid,
+        createdBy: Uuid,
+        expiresAt: LocalDateTime,
+        agora: LocalDateTime,
+    ): AppResult<Unit> = dbQuery {
+        transaction {
+            // Revoga o anterior na MESMA transação: um convite ativo por grupo. Se fossem duas
+            // operações, uma falha no meio deixaria dois links válidos — e "revogar o link"
+            // deixaria de significar o que promete.
+            revogarAtivos(groupId, agora)
+            GroupInvitesTable.insert {
+                it[GroupInvitesTable.token] = token
+                it[GroupInvitesTable.groupId] = groupId
+                it[GroupInvitesTable.createdBy] = createdBy
+                it[createdAt] = agora
+                it[GroupInvitesTable.expiresAt] = expiresAt
+            }
+        }
+        Unit
+    }
+
+    override suspend fun findInvite(token: Uuid): AppResult<InviteRow?> = dbQuery {
+        transaction {
+            GroupInvitesTable.selectAll()
+                .where { GroupInvitesTable.token eq token }
+                .singleOrNull()
+                ?.toInvite()
+        }
+    }
+
+    override suspend fun activeInvite(groupId: Uuid): AppResult<InviteRow?> = dbQuery {
+        transaction {
+            GroupInvitesTable.selectAll()
+                .where { (GroupInvitesTable.groupId eq groupId) and GroupInvitesTable.revokedAt.isNull() }
+                .orderBy(GroupInvitesTable.createdAt to SortOrder.DESC)
+                .firstOrNull()
+                ?.toInvite()
+        }
+    }
+
+    override suspend fun revokeInvites(groupId: Uuid, agora: LocalDateTime): AppResult<Unit> = dbQuery {
+        transaction { revogarAtivos(groupId, agora) }
+        Unit
+    }
+
+    private fun revogarAtivos(groupId: Uuid, agora: LocalDateTime) {
+        GroupInvitesTable.update({
+            (GroupInvitesTable.groupId eq groupId) and GroupInvitesTable.revokedAt.isNull()
+        }) { it[revokedAt] = agora }
+    }
+
     /**
      * Regras e contagens vêm em UMA consulta para a lista inteira, não uma por grupo. Com 5
      * grupos seriam 11 consultas — o N+1 clássico, e a lista de grupos é a primeira tela da aba.
@@ -165,6 +289,13 @@ class GroupRepositoryImpl : GroupRepository {
  * causa dela seria desproporcional. Mesma decisão do `achievement_id` (#32).
  */
 private fun String.paraRegra(): GroupRule? = runCatching { GroupRule.valueOf(this) }.getOrNull()
+
+private fun ResultRow.toInvite() = InviteRow(
+    token = this[GroupInvitesTable.token],
+    groupId = this[GroupInvitesTable.groupId],
+    expiresAt = this[GroupInvitesTable.expiresAt],
+    revokedAt = this[GroupInvitesTable.revokedAt],
+)
 
 private fun ResultRow.toGroup(regras: Set<GroupRule>, membros: Int) = Group(
     id = this[GroupsTable.id],
