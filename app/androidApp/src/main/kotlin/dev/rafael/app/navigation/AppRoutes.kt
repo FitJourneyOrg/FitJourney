@@ -10,8 +10,13 @@ sealed interface AppRoute {
     @Serializable data object Library : AppRoute
     @Serializable data class ExerciseDetail(val id: String) : AppRoute
 
-    // Abas ainda sem implementação (placeholder) — Grupos é Fase 6, Progresso é Fase 5 (#16).
     @Serializable data object Grupos : AppRoute
+    @Serializable data object GrupoNovo : AppRoute
+
+    /** Entrar num desafio. `inviteToken` != null = chegou por link; null = vai digitar o código. */
+    @Serializable data class GrupoEntrar(val inviteToken: String? = null) : AppRoute
+
+    // Aba ainda sem implementação (placeholder) — Progresso é Fase 5 (#16).
     @Serializable data object Progresso : AppRoute
 
     /** Conquistas (ARCH #16). Tela própria, alcançada pelo Progresso — não é aba. */

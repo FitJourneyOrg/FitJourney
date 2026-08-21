@@ -9,7 +9,13 @@ import dev.rafael.app.data.achievements.AchievementsRepository
 import dev.rafael.app.data.me.Me
 import dev.rafael.app.data.me.MeApi
 import dev.rafael.app.data.me.MeRepository
+import dev.rafael.app.data.groups.Groups
+import dev.rafael.app.data.groups.GroupsApi
+import dev.rafael.app.data.groups.GroupsRepository
 import dev.rafael.app.screens.conta.ContaViewModel
+import dev.rafael.app.screens.grupos.EntrarViewModel
+import dev.rafael.app.screens.grupos.GrupoFormViewModel
+import dev.rafael.app.screens.grupos.GruposViewModel
 import dev.rafael.app.screens.menu.MenuViewModel
 import dev.rafael.app.screens.perfil.PerfilViewModel
 import dev.rafael.app.data.stats.StatsRepository
@@ -95,6 +101,11 @@ val appModule = module {
     // repetir as rotas de /me — quem é dono delas continua sendo ele.
     single { MeApi(get()) }
     single<Me> { MeRepository(get(), get(), get(), get()) }
+
+    // Grupos (Fase 6, ARCH #33). Leitura cache-first; escrita online-only, porque o código e o
+    // estado do grupo são do servidor — um grupo otimista local não teria nem um nem outro.
+    single { GroupsApi(get()) }
+    single<Groups> { GroupsRepository(get(), get(), get(), get()) }
     single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
     single<HistoricoDeSessoes> { SessionSync(get(), get(), get(), get(), get()) }   // + SyncStamps
 
@@ -103,6 +114,9 @@ val appModule = module {
     viewModelOf(::MenuViewModel)     // cabeçalho do menu lateral: nome + nível, do cache
     viewModelOf(::PerfilViewModel)   // perfil: nome, nível, conquistas
     viewModelOf(::ContaViewModel)    // conta: renomear (PATCH /me) e sair
+    viewModelOf(::GruposViewModel)   // aba Grupos: lista cache-first
+    viewModelOf(::GrupoFormViewModel)   // criar desafio
+    viewModelOf(::EntrarViewModel)      // entrar por código ou link, com preview
     viewModelOf(::ProgressViewModel) // histórico offline-first + stats
     viewModelOf(::AchievementsViewModel)   // conquistas offline-first
     viewModelOf(::ProgramRevealViewModel)   // injeta ProgramRepository (revelação)

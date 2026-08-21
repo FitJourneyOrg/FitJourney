@@ -15,6 +15,19 @@ import kotlin.time.Instant
  * @param agora relógio do SERVIDOR ([REGRA]).
  * @param meuPapel papel de quem pediu; null quando não é membro.
  */
+/**
+ * Banner PADRÃO, servido pela rota estática `/media` (a mesma dos gifs de exercício).
+ *
+ * O padrão é resolvido AQUI e não gravado em `groups.banner_url`: guardado, todo grupo antigo
+ * apontaria para um arquivo inexistente no dia em que a imagem mudasse de nome. Derivado,
+ * "tem banner próprio?" é simplesmente `banner_url != null` — e trocar o padrão é uma linha.
+ *
+ * A substituição pelo usuário é upload, e upload é a fatia B (junto da foto de check-in).
+ *
+ * DÉBITO: o arquivo ainda não existe. Ver FitJourney_DEBITOS.md.
+ */
+const val BANNER_PADRAO = "/media/banners/default.jpg"
+
 fun Group.toDto(agora: Instant, meuPapel: MemberRole?): GroupDto = GroupDto(
     id = id.toString(),
     code = code,
@@ -26,7 +39,7 @@ fun Group.toDto(agora: Instant, meuPapel: MemberRole?): GroupDto = GroupDto(
     endDate = endDate.toString(),
     timezone = timezone.id,
     rules = rules.sortedBy { it.name },   // ordem estável: sem isso a lista dança entre respostas
-    bannerUrl = bannerUrl,
+    bannerUrl = bannerUrl ?: BANNER_PADRAO,
     state = GroupPolicy.estado(startDate, endDate, agora, timezone),
     memberCount = memberCount,
     myRole = meuPapel,
