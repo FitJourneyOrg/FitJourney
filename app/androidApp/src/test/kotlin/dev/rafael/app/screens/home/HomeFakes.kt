@@ -10,6 +10,7 @@ import dev.rafael.features.auth.domain.model.AuthUser
 import dev.rafael.features.auth.domain.repository.AuthRepository
 import dev.rafael.features.profile.domain.model.Profile
 import dev.rafael.features.profile.domain.repository.ProfileRepository
+import dev.rafael.features.program.domain.model.PendenciaDeSync
 import dev.rafael.features.program.domain.model.Program
 import dev.rafael.features.program.domain.model.ProgramScheduleEntry
 import dev.rafael.features.program.domain.model.ProgramWorkout
@@ -65,7 +66,15 @@ class FakeProgramas(
     /** Banco LOCAL simulado — separado de `resultadoList` (a rede), como no fake de program. */
     val locais = MutableStateFlow<List<Program>>(emptyList())
 
+    /**
+     * Fila de saída simulada (ARCH #30, B.4). `MutableStateFlow` para o teste poder EMITIR
+     * depois: é assim que se simula "o usuário criou offline" e "a pendência subiu", que é
+     * justamente onde o selo de pendente errou na bateria manual da fatia B.
+     */
+    val pendentes = MutableStateFlow<Set<PendenciaDeSync>>(emptySet())
+
     override fun observePrograms(): Flow<List<Program>> = locais
+    override fun observarPendentes(): Flow<Set<PendenciaDeSync>> = pendentes
     override suspend fun jaSincronizou(): Boolean = sincronizouNesteAparelho
     override suspend fun list(): AppResult<List<Program>> = resultadoList
     override suspend fun refresh(): AppResult<List<Program>> = resultadoList

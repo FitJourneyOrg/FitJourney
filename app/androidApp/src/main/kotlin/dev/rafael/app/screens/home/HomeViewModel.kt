@@ -7,8 +7,6 @@ import dev.rafael.app.data.stats.Stats
 import dev.rafael.contract.stats.UserStatsDto
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
-import dev.rafael.features.auth.domain.repository.AuthRepository
-import dev.rafael.features.profile.domain.repository.ProfileRepository
 import dev.rafael.features.program.domain.model.Program
 import dev.rafael.features.program.domain.repository.ProgramRepository
 import dev.rafael.features.workout.domain.repository.WorkoutRepository
@@ -60,7 +58,11 @@ data class HomeState(
 )
 
 /**
- * VM do hub (Home): resolve o TREINO DE HOJE e cuida do logout.
+ * VM do hub (Home): resolve o TREINO DE HOJE.
+ *
+ * Cuidava também do logout, e por isso dependia de `AuthRepository` e `ProfileRepository` — as
+ * duas únicas coisas que a Home sabia sobre autenticação. Com o `Sair` indo para o menu lateral
+ * (ARCH #34), as duas saíram daqui: a Home não conhece mais sessão.
  *
  * Como o "hoje" é resolvido: o programa guarda `schedule` (workoutId → dayOfWeek, 1=Seg..7=Dom).
  * Comparamos com o dia da semana local do aparelho — aqui o relógio do cliente é aceitável
@@ -68,8 +70,6 @@ data class HomeState(
  * Sem treino agendado para hoje = dia de descanso (descanso é implícito, ARCH #22).
  */
 class HomeViewModel(
-    private val auth: AuthRepository,
-    private val profile: ProfileRepository,
     private val programs: ProgramRepository,
     private val workouts: WorkoutRepository,
     private val stats: Stats,
@@ -84,9 +84,6 @@ class HomeViewModel(
      */
     private val clock: Clock = Clock.System,
 ) : ViewModel() {
-
-    private val _loggedOut = MutableStateFlow(false)
-    val loggedOut: StateFlow<Boolean> = _loggedOut.asStateFlow()
 
     private val _state = MutableStateFlow(HomeState())
     val state: StateFlow<HomeState> = _state.asStateFlow()
@@ -195,14 +192,6 @@ class HomeViewModel(
             // Progresso e o SyncWorker. Aqui só sobe pendência e atualiza o XP.
             sessions.flush()
             stats.sincronizar()   // grava as stats no cache; o Flow re-emite
-        }
-    }
-
-    fun logout() {
-        viewModelScope.launch {
-            profile.clearOnboardingCache()   // evita o próximo cadastro herdar o 'true' e cair na Home
-            auth.signOut()                   // limpa a sessão + invalida o token cacheado do Ktor
-            _loggedOut.value = true
         }
     }
 

@@ -19,12 +19,21 @@ import kotlin.uuid.Uuid
 
 class SessionServiceTest {
 
-    private val user = User(id = Uuid.random(), firebaseUid = "fb", email = null, isPremium = false)
+    private val user = User(
+        id = Uuid.random(),
+        firebaseUid = "fb",
+        email = null,
+        isPremium = false,
+        displayName = "Atleta-teste",
+    )
 
     private inner class FakeUserRepo : UserRepository {
         override suspend fun findByFirebaseUid(firebaseUid: String) = AppResult.Success<User?>(user)
-        override suspend fun create(firebaseUid: String, email: String?) = AppResult.Success(user)
+        override suspend fun create(id: Uuid, firebaseUid: String, email: String?, displayName: String) =
+            AppResult.Success(user)
         override suspend fun setPremium(userId: Uuid, premium: Boolean) = AppResult.Success<User?>(user)
+        override suspend fun updateDisplayName(userId: Uuid, displayName: String) =
+            AppResult.Success<User?>(user)
     }
 
     private class FakeSessionRepo : SessionRepository {

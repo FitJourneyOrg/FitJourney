@@ -96,6 +96,9 @@ class SyncStamps(
         const val CATALOGO = "exercises"
         const val STATS = "stats"
 
+        /** `/me` — nome e plano (V35, ARCH #33). */
+        const val ME = "me"
+
         /** Mesma janela do STATS: as duas telas mostram o mesmo progresso (ARCH #16). */
         const val CONQUISTAS = "achievements"
         const val HISTORICO = "sessions"
