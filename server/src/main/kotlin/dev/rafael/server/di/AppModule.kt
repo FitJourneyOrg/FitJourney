@@ -72,4 +72,10 @@ val appModule = module {
     // duas contas do mesmo numero acabariam divergindo.
     single<AchievementRepository> { AchievementRepositoryImpl() }
     single { AchievementService(get(), get(), get()) }   // userService + statsService + repo
+
+    // Grupos (Fase 6, ARCH #33). Sem coluna `status`: o estado sai do GroupPolicy a cada leitura.
+    single<dev.rafael.server.features.group.db.GroupRepository> {
+        dev.rafael.server.features.group.db.GroupRepositoryImpl()
+    }
+    single { dev.rafael.server.features.group.services.GroupService(get(), get()) }
 }
