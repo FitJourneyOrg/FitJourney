@@ -16,7 +16,23 @@ sealed interface AppRoute {
 
     /** Conquistas (ARCH #16). Tela própria, alcançada pelo Progresso — não é aba. */
     @Serializable data object Conquistas : AppRoute
-    @Serializable data object Perfil : AppRoute
+
+    /**
+     * Perfil PÚBLICO (ARCH #34). `userId = null` significa "o meu".
+     *
+     * O parâmetro já nasce aqui, mesmo que na fatia A.0 só o próprio perfil seja alcançável:
+     * é ele que garante que a tela seja escrita para renderizar QUALQUER pessoa desde o
+     * primeiro dia. Uma tela nascida "só minha" acumula suposições que depois viram vazamento
+     * quando alguém a aponta para outro usuário.
+     */
+    @Serializable data class Perfil(val userId: String? = null) : AppRoute
+
+    /** Configurações da conta (ARCH #34): privada, nunca renderiza outra pessoa. */
+    @Serializable data object Conta : AppRoute
+
+    /** Itens do menu que ainda não existem — abrem EmBreve com o selo da fase. */
+    @Serializable data object Wiki : AppRoute
+    @Serializable data object Duvidas : AppRoute
 
     // ARCH #27: "Meus treinos" (lista plana) virou "Meus Programas" (programas com
     // treinos aninhados). Workout.* continua existindo, mas Create agora exige programId

@@ -53,8 +53,6 @@ class HomeViewModelTest {
         treinos: FakeTreinos = FakeTreinos(),
         clock: Clock = segunda,
     ) = HomeViewModel(
-        auth = FakeAuth(),
-        profile = FakePerfil(),
         programs = programas,
         workouts = treinos,
         stats = stats,
@@ -217,24 +215,6 @@ class HomeViewModelTest {
         assertTrue(viewModel.state.value.erroSync is AppError.Connection)
     }
 
-    // ---- logout ----
-
-    @Test
-    fun `logout limpa o cache de onboarding antes de sair`() = runTest(dispatcher) {
-        // Ordem importa: sem limpar, o próximo cadastro herda o `true` e pula o quiz.
-        val perfil = FakePerfil()
-        val auth = FakeAuth()
-        val viewModel = HomeViewModel(
-            auth = auth, profile = perfil, programs = FakeProgramas(), workouts = FakeTreinos(),
-            stats = FakeStats(), sessions = FakeHistorico(), clock = segunda,
-        )
-        advanceUntilIdle()
-
-        viewModel.logout()
-        advanceUntilIdle()
-
-        assertTrue(perfil.limpouCache)
-        assertTrue(auth.deslogou)
-        assertTrue(viewModel.loggedOut.value)
-    }
+    // O logout saiu daqui: mudou de casa para a tela de conta (ARCH #34). O teste foi junto —
+    // ver `ContaViewModelTest.sair limpa o cache de onboarding antes de deslogar`.
 }

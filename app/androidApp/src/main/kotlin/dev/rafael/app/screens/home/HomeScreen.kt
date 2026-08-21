@@ -44,36 +44,19 @@ fun HomeScreen(
     onStartWorkout: (String) -> Unit,
     onOpenGroups: () -> Unit,
     onOpenProgress: () -> Unit,
-    onLoggedOut: () -> Unit,
     viewModel: HomeViewModel = koinViewModel(),
 ) {
-    val loggedOut by viewModel.loggedOut.collectAsState()
     val state by viewModel.state.collectAsState()
-    var showLogoutConfirm by remember { mutableStateOf(false) }
 
-    LaunchedEffect(loggedOut) { if (loggedOut) onLoggedOut() }
     // recarrega ao voltar (o treino pode ter sido executado/alterado)
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.load() }
-
-    if (showLogoutConfirm) {
-        AlertDialog(
-            onDismissRequest = { showLogoutConfirm = false },
-            title = { Text("Sair da conta?") },
-            text = { Text("Você precisará entrar de novo para acessar seus programas.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showLogoutConfirm = false
-                    viewModel.logout()
-                }) { Text("Sair") }
-            },
-            dismissButton = { TextButton(onClick = { showLogoutConfirm = false }) { Text("Cancelar") } },
-        )
-    }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp),
     ) {
-        Saudacao(onLogoutClick = { showLogoutConfirm = true })
+        // O "Sair" saiu daqui (ARCH #34): virou item do rodapé do menu lateral, que é onde as
+        // pessoas procuram. A saudação voltou a ser só saudação.
+        Saudacao()
         Spacer(Modifier.height(16.dp))
 
         // Faixa de recompensa (ARCH #16) — lime é EXCLUSIVO do perfil individual.
@@ -128,7 +111,7 @@ fun HomeScreen(
 }
 
 @Composable
-private fun Saudacao(onLogoutClick: () -> Unit) {
+private fun Saudacao() {
     val hoje = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
     val dias = listOf("seg", "ter", "qua", "qui", "sex", "sáb", "dom")
     val meses = listOf("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
@@ -146,7 +129,6 @@ private fun Saudacao(onLogoutClick: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        TextButton(onClick = onLogoutClick) { Text("Sair") }
     }
 }
 
