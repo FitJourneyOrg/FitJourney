@@ -3,14 +3,18 @@ package dev.rafael.server.features.group.services
 import dev.rafael.contract.group.CreateGroupRequest
 import dev.rafael.contract.group.GroupRule
 import dev.rafael.contract.group.GroupState
+import dev.rafael.contract.group.JoinBlock
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.atStartOfDayIn
 import kotlinx.datetime.toLocalDateTime
 import kotlin.random.Random
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
 /**
@@ -55,6 +59,41 @@ object GroupPolicy {
             hoje > fim -> GroupState.ENCERRADO
             else -> GroupState.ATIVO
         }
+    }
+
+    /** Prazo do link de convite (2.13). O teto real é o início do grupo — ver [validadeDoConvite]. */
+    val PRAZO_DO_CONVITE: Duration = 7.days
+
+    /**
+     * Quando o link de convite vence: o **menor** entre 7 dias e o instante em que o grupo
+     * começa (2.13 + 2-B.0).
+     *
+     * O início é o teto real porque depois dele a entrada fecha de qualquer jeito. Um link que
+     * "funciona" e leva a uma recusa é pior que um link vencido — o vencido ao menos explica o
+     * que houve, enquanto o outro parece defeito do app.
+     */
+    fun validadeDoConvite(agora: Instant, inicio: LocalDate, fuso: TimeZone): Instant {
+        val comecoDoGrupo = inicio.atStartOfDayIn(fuso)
+        return minOf(agora + PRAZO_DO_CONVITE, comecoDoGrupo)
+    }
+
+    /**
+     * Dá para entrar neste grupo AGORA? Devolve o impedimento, ou `null` se pode.
+     *
+     * Função pura e única: a mesma resposta serve a tela de preview (que desabilita o botão) e
+     * a rota de entrada (que recusa). Duas implementações — uma para exibir, outra para
+     * decidir — divergiriam, e a que estaria errada seria justamente a que o usuário vê.
+     */
+    fun impedimentoParaEntrar(
+        estado: GroupState,
+        membros: Int,
+        jaEMembro: Boolean,
+    ): JoinBlock? = when {
+        jaEMembro -> JoinBlock.JA_E_MEMBRO
+        estado == GroupState.ATIVO -> JoinBlock.JA_COMECOU
+        estado == GroupState.ENCERRADO -> JoinBlock.ENCERRADO
+        membros >= MAX_MEMBROS -> JoinBlock.LOTADO
+        else -> null
     }
 
     /**

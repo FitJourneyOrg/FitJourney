@@ -58,3 +58,17 @@ object GroupRulesTable : Table("group_rules") {
 
     override val primaryKey = PrimaryKey(groupId, rule)
 }
+
+/** Espelha `V37__create_group_invites.sql` (fatia A.2). */
+object GroupInvitesTable : Table("group_invites") {
+    val token = uuid("token")
+    val groupId = uuid("group_id").references(GroupsTable.id)
+    val createdBy = uuid("created_by").references(UsersTable.id)
+    val createdAt = datetime("created_at")
+    val expiresAt = datetime("expires_at")
+
+    /** Revogação é ANULAÇÃO, não exclusão: a linha responde "por que aquele link parou?". */
+    val revokedAt = datetime("revoked_at").nullable()
+
+    override val primaryKey = PrimaryKey(token)
+}

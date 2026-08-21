@@ -3,6 +3,7 @@ package dev.rafael.server.features.group.services
 import dev.rafael.contract.group.CreateGroupRequest
 import dev.rafael.contract.group.GroupRule
 import dev.rafael.contract.group.GroupState
+import dev.rafael.contract.group.JoinBlock
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import kotlinx.datetime.LocalDate
@@ -222,6 +223,66 @@ class GroupPolicyTest {
             hoje,
         )
         assertTrue(r is AppResult.Success)
+    }
+
+    // ---- entrada (fatia A.2) ----
+
+    @Test
+    fun `so da para entrar com o grupo AGENDADO`() {
+        // AGENDADO é a ÚNICA janela de entrada (2-B). Depois que começa, quem está fora fica
+        // fora — e é por isso que a validação da criação exige início a partir de amanhã.
+        assertEquals(null, GroupPolicy.impedimentoParaEntrar(GroupState.AGENDADO, membros = 3, jaEMembro = false))
+        assertEquals(
+            JoinBlock.JA_COMECOU,
+            GroupPolicy.impedimentoParaEntrar(GroupState.ATIVO, membros = 3, jaEMembro = false),
+        )
+        assertEquals(
+            JoinBlock.ENCERRADO,
+            GroupPolicy.impedimentoParaEntrar(GroupState.ENCERRADO, membros = 3, jaEMembro = false),
+        )
+    }
+
+    @Test
+    fun `o teto de 50 fecha a entrada`() {
+        assertEquals(
+            null,
+            GroupPolicy.impedimentoParaEntrar(GroupState.AGENDADO, GroupPolicy.MAX_MEMBROS - 1, false),
+        )
+        assertEquals(
+            JoinBlock.LOTADO,
+            GroupPolicy.impedimentoParaEntrar(GroupState.AGENDADO, GroupPolicy.MAX_MEMBROS, false),
+        )
+    }
+
+    @Test
+    fun `ja ser membro vence os outros impedimentos`() {
+        // Quem já está dentro e toca no link de novo tem de ver "você já participa", não
+        // "lotado" nem "já começou" — a mensagem certa é sobre ELE, não sobre o grupo.
+        assertEquals(
+            JoinBlock.JA_E_MEMBRO,
+            GroupPolicy.impedimentoParaEntrar(GroupState.ATIVO, GroupPolicy.MAX_MEMBROS, jaEMembro = true),
+        )
+    }
+
+    // ---- validade do convite ----
+
+    @Test
+    fun `o convite vale 7 dias quando o grupo comeca depois disso`() {
+        val agora = momento("2026-09-01T12:00:00Z")
+        val validade = GroupPolicy.validadeDoConvite(agora, LocalDate.parse("2026-10-01"), sp)
+
+        assertEquals(momento("2026-09-08T12:00:00Z"), validade)
+    }
+
+    @Test
+    fun `o convite vence no INICIO quando o grupo comeca antes dos 7 dias`() {
+        // Um link que "funciona" e leva a uma recusa é pior que um link vencido: o vencido
+        // explica o que houve, o outro parece defeito do app.
+        val agora = momento("2026-09-01T12:00:00Z")
+        val validade = GroupPolicy.validadeDoConvite(agora, LocalDate.parse("2026-09-03"), sp)
+
+        // 03/09 00:00 em São Paulo = 03/09 03:00Z
+        assertEquals(momento("2026-09-03T03:00:00Z"), validade)
     }
 
     @Test

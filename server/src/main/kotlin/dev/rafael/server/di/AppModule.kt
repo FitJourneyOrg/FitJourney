@@ -78,4 +78,5 @@ val appModule = module {
         dev.rafael.server.features.group.db.GroupRepositoryImpl()
     }
     single { dev.rafael.server.features.group.services.GroupService(get(), get()) }
+    single { dev.rafael.server.features.group.services.GroupMembershipService(get(), get()) }
 }
