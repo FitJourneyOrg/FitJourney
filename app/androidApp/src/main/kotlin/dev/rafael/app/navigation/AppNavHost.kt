@@ -34,6 +34,9 @@ import dev.rafael.app.screens.authentication.LoginScreen
 import dev.rafael.app.screens.conta.ContaScreen
 import dev.rafael.app.screens.exercise.ExerciseDetailScreen
 import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
+import dev.rafael.app.screens.grupos.EntrarScreen
+import dev.rafael.app.screens.grupos.GrupoFormScreen
+import dev.rafael.app.screens.grupos.GruposScreen
 import dev.rafael.app.screens.home.HomeScreen
 import dev.rafael.app.screens.menu.MenuLateral
 import dev.rafael.app.screens.onboarding.QuizScreen
@@ -294,10 +297,32 @@ fun AppNavHost() {
             WorkoutSessionScreen(workoutId = route.id, onDone = { nav.popBackStack() })
         }
 
-        // ---- Abas ainda não implementadas ----
+        // ---- Grupos (Fase 6, ARCH #33) ----
+
         composable<AppRoute.Grupos> {
-            EmBreveScreen("Grupos", "Treine com amigos, registre check-ins e dispute o ranking.")
+            GruposScreen(
+                onCriar = { nav.navigate(AppRoute.GrupoNovo) },
+                onEntrarPorCodigo = { nav.navigate(AppRoute.GrupoEntrar()) },
+            )
         }
+        composable<AppRoute.GrupoNovo> {
+            GrupoFormScreen(
+                onBack = { nav.popBackStack() },
+                // Sai da pilha ao criar: voltar para o formulário depois do grupo criado
+                // convidaria a criar o mesmo desafio duas vezes.
+                onCriado = { nav.popBackStack() },
+            )
+        }
+        composable<AppRoute.GrupoEntrar> { entry ->
+            val rota: AppRoute.GrupoEntrar = entry.toRoute()
+            EntrarScreen(
+                inviteToken = rota.inviteToken,
+                onBack = { nav.popBackStack() },
+                onEntrou = { nav.popBackStack() },
+            )
+        }
+
+        // ---- Abas ainda não implementadas ----
         composable<AppRoute.Progresso> {
             ProgressScreen(onOpenConquistas = { nav.navigate(AppRoute.Conquistas) })
         }

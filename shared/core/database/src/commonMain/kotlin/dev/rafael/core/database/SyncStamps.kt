@@ -99,6 +99,9 @@ class SyncStamps(
         /** `/me` — nome e plano (V35, ARCH #33). */
         const val ME = "me"
 
+        /** Meus grupos (Fase 6, ARCH #33). */
+        const val GRUPOS = "groups"
+
         /** Mesma janela do STATS: as duas telas mostram o mesmo progresso (ARCH #16). */
         const val CONQUISTAS = "achievements"
         const val HISTORICO = "sessions"
