@@ -56,6 +56,11 @@ class MeRepository(
         }
 
     override suspend fun sincronizar(forcar: Boolean) {
+        // SEM SESSÃO não se sincroniza. Sem esta guarda, qualquer tela viva depois do logout
+        // dispara um GET que volta 401 — e 401 acorda o SessionExpiryBus, que força navegação
+        // para o Login. Foi assim que "sair da conta" virou uma tela travada e um pulo tardio
+        // para o Login quando o menu reabria.
+        if (tokenProvider.currentUid() == null) return
         if (!forcar && stamps.fresco(SyncStamps.ME, TTL_MS)) return
         when (val r = api.get()) {
             is AppResult.Success -> {

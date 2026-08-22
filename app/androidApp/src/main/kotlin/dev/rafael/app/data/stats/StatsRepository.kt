@@ -65,6 +65,7 @@ class StatsRepository(
      * @param forcar ignora o TTL. Use quando você SABE que o XP mudou (pendência sincronizada).
      */
     override suspend fun sincronizar(forcar: Boolean) {
+        if (tokenProvider.currentUid() == null) return   // sem sessão, sincronizar só produz 401
         // O carimbo é chaveado por uid, então trocar de conta já não reaproveita nada —
         // não precisa mais comparar o dono na mão.
         if (!forcar && stamps.fresco(SyncStamps.STATS, TTL_MS)) return

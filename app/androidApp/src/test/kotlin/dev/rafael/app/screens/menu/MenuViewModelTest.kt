@@ -3,6 +3,7 @@ package dev.rafael.app.screens.menu
 import dev.rafael.app.data.me.Me
 import dev.rafael.app.data.sessao.SairDaConta
 import dev.rafael.app.data.stats.Stats
+import dev.rafael.core.network.TokenProvider
 import dev.rafael.app.screens.home.FakeAuth
 import dev.rafael.app.screens.home.FakePerfil
 import dev.rafael.contract.stats.UserStatsDto
@@ -23,6 +24,8 @@ import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * REGRESSÃO do "?" eterno no cabeçalho do menu (encontrado na bateria manual da A.0).
@@ -64,6 +67,13 @@ class MenuViewModelTest {
     /** O logout não é o assunto destes testes — reusa os dublês da Home. */
     private fun sair() = SairDaConta(FakeAuth(), FakePerfil())
 
+    /** Compartilha o MESMO fluxo de uid do [FakeMe]: no app real, a fonte também é uma só. */
+    private class FakeToken(private val uid: MutableStateFlow<String?>) : TokenProvider {
+        override suspend fun currentToken(): String? = uid.value?.let { "token-$it" }
+        override suspend fun currentUid(): String? = uid.value
+        override fun uidFlow(): Flow<String?> = uid
+    }
+
     private class FakeStats : Stats {
         val valores = MutableStateFlow<UserStatsDto?>(null)
         override fun observar(): Flow<UserStatsDto?> = valores
@@ -78,7 +88,7 @@ class MenuViewModelTest {
         // o `TokenProvider.uidFlow()`, e este teste cobra isso: NINGUÉM chama nada aqui além
         // de logar.
         val me = FakeMe()                       // ninguém logado ainda
-        val viewModel = MenuViewModel(me, FakeStats(), sair())
+        val viewModel = MenuViewModel(me, FakeStats(), sair(), FakeToken(me.uid))
 
         // `stateIn(..., WhileSubscribed)` só liga o upstream quando ALGUÉM coleta. Na tela quem
         // faz isso é o `collectAsStateWithLifecycle`; aqui tem de ser explícito, senão o
@@ -102,7 +112,7 @@ class MenuViewModelTest {
     fun `trocar de conta troca o que a tela mostra`() = runTest(dispatcher) {
         // O outro lado da mesma moeda: sair não pode deixar o nome do usuário anterior na tela.
         val me = FakeMe()
-        val viewModel = MenuViewModel(me, FakeStats(), sair())
+        val viewModel = MenuViewModel(me, FakeStats(), sair(), FakeToken(me.uid))
         backgroundScope.launch { viewModel.state.collect { } }
         me.uid.value = "u1"
         advanceUntilIdle()
@@ -115,10 +125,32 @@ class MenuViewModelTest {
     }
 
     @Test
+    fun `sair DUAS vezes dispara DUAS vezes`() = runTest(dispatcher) {
+        // REGRESSÃO: este ViewModel vive enquanto a Activity viver e atravessa logout e login
+        // sem ser recriado. `saiu` é EVENTO modelado como estado — sem consumo, ficava `true`
+        // para sempre depois do primeiro logout, o `LaunchedEffect(saiu)` da tela não
+        // redisparava, e o segundo "Sair" simplesmente não fazia nada: menu travado aberto.
+        val me = FakeMe()
+        val viewModel = MenuViewModel(me, FakeStats(), sair(), FakeToken(me.uid))
+        backgroundScope.launch { viewModel.saiu.collect { } }
+
+        viewModel.sair()
+        advanceUntilIdle()
+        assertTrue(viewModel.saiu.value, "primeira saída")
+
+        viewModel.consumirSaida()               // a tela navegou e consumiu
+        assertFalse(viewModel.saiu.value)
+
+        viewModel.sair()                        // login de outra conta, e sair de novo
+        advanceUntilIdle()
+        assertTrue(viewModel.saiu.value, "a segunda saída também tem de disparar")
+    }
+
+    @Test
     fun `abrir o menu pede sync`() = runTest(dispatcher) {
         // Continua valendo: a chave se resolve sozinha, mas alguém tem de pedir o dado NOVO.
         val me = FakeMe()
-        val viewModel = MenuViewModel(me, FakeStats(), sair())
+        val viewModel = MenuViewModel(me, FakeStats(), sair(), FakeToken(me.uid))
         advanceUntilIdle()
 
         viewModel.aoAbrir()

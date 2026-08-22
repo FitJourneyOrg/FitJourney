@@ -39,6 +39,7 @@ import dev.rafael.app.screens.grupos.GrupoFormScreen
 import dev.rafael.app.screens.grupos.GruposScreen
 import dev.rafael.app.screens.home.HomeScreen
 import dev.rafael.app.screens.menu.MenuLateral
+import dev.rafael.app.screens.onboarding.NomeScreen
 import dev.rafael.app.screens.onboarding.QuizScreen
 import dev.rafael.app.screens.perfil.PerfilScreen
 import dev.rafael.app.screens.program.ProgramDetailScreen
@@ -153,6 +154,14 @@ fun AppNavHost() {
             LoginScreen(onLoggedIn = {
                 nav.navigate(AppRoute.Splash) {
                     popUpTo(AppRoute.Login) { inclusive = true }
+                }
+            })
+        }
+
+        composable<AppRoute.Nome> {
+            NomeScreen(onPronto = {
+                nav.navigate(AppRoute.Quiz) {
+                    popUpTo(AppRoute.Nome) { inclusive = true }   // não dá pra "voltar" pro nome
                 }
             })
         }
@@ -347,6 +356,9 @@ fun AppNavHost() {
             ContaScreen(
                 onBack = { nav.popBackStack() },
                 onSaiu = {
+                    // Fecha o menu junto: sair com o drawer aberto deixava um painel sem dono
+                    // por cima da tela de login.
+                    escopo.launch { drawer.close() }
                     nav.navigate(AppRoute.Login) {
                         popUpTo(0) { inclusive = true }   // não dá pra "voltar" pra sessão encerrada
                         launchSingleTop = true

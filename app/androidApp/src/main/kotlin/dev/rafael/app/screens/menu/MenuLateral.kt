@@ -1,13 +1,17 @@
 package dev.rafael.app.screens.menu
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -32,11 +36,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rafael.app.ui.AvatarInicial
 import dev.rafael.app.ui.DialogoDeSaida
+import dev.rafael.app.ui.shimmer
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -70,8 +76,12 @@ fun MenuLateral(
     val saiu by viewModel.saiu.collectAsStateWithLifecycle()
     var confirmarSaida by remember { mutableStateOf(false) }
 
-    LaunchedEffect(aberto) { if (aberto) viewModel.aoAbrir() }
-    LaunchedEffect(saiu) { if (saiu) onSaiu() }
+    // Só sincroniza com sessão viva: pedir dado sem token volta 401, e 401 acorda o
+    // SessionExpiryBus, que força navegação para o Login.
+    LaunchedEffect(aberto, state.semSessao) { if (aberto && !state.semSessao) viewModel.aoAbrir() }
+    // CONSOME o evento: sem isso, `saiu` fica true para sempre e a SEGUNDA saída não dispara,
+    // porque este ViewModel atravessa logout e login sem ser recriado.
+    LaunchedEffect(saiu) { if (saiu) { onSaiu(); viewModel.consumirSaida() } }
 
     if (confirmarSaida) {
         DialogoDeSaida(
@@ -92,22 +102,33 @@ fun MenuLateral(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                AvatarInicial(nome = state.nome, id = state.id, tamanho = 44.dp)
-                Column {
-                    Text(
-                        // Antes do primeiro sync da vida o cache está vazio. "Você" é neutro e
-                        // some em milissegundos — melhor que um esqueleto piscando no cabeçalho.
-                        state.nome.ifBlank { "Você" },
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    val nivel = state.nivel
-                    if (nivel != null) {
-                        Text(
-                            "Nível $nivel",
-                            style = MaterialTheme.typography.bodySmall,
-                            // lime: é recompensa do perfil individual ([REGRA] ARCH #16).
-                            color = MaterialTheme.colorScheme.tertiary,
-                        )
+                // ESQUELETO enquanto não há dado. Na primeira instalação o cache está vazio e o
+                // nome chega ~1s depois, com a rede. A versão anterior mostrava "?" e "Você" —
+                // que PARECEM dado, e por um segundo o app afirmava que o usuário se chama
+                // "Você". Esqueleto não afirma nada, que é a verdade nesse instante.
+                if (state.semSessao) {
+                    // Saiu da conta com o menu aberto. Não há dado e não vai haver — esqueleto
+                    // aqui seria um carregamento que nunca termina.
+                    Spacer(Modifier.height(44.dp))
+                } else if (state.nome.isBlank()) {
+                    Box(Modifier.size(44.dp).clip(CircleShape).shimmer())
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Box(Modifier.width(120.dp).height(14.dp).shimmer(RoundedCornerShape(4.dp)))
+                        Box(Modifier.width(64.dp).height(11.dp).shimmer(RoundedCornerShape(4.dp)))
+                    }
+                } else {
+                    AvatarInicial(nome = state.nome, id = state.id, tamanho = 44.dp)
+                    Column {
+                        Text(state.nome, style = MaterialTheme.typography.titleSmall)
+                        val nivel = state.nivel
+                        if (nivel != null) {
+                            Text(
+                                "Nível $nivel",
+                                style = MaterialTheme.typography.bodySmall,
+                                // lime: é recompensa do perfil individual ([REGRA] ARCH #16).
+                                color = MaterialTheme.colorScheme.tertiary,
+                            )
+                        }
                     }
                 }
             }

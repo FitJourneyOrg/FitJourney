@@ -60,6 +60,7 @@ class GroupsRepository(
         }
 
     override suspend fun sincronizar(forcar: Boolean) {
+        if (tokenProvider.currentUid() == null) return   // sem sessão, sincronizar só produz 401
         if (!forcar && stamps.fresco(SyncStamps.GRUPOS, TTL_MS)) return
         when (val r = api.listar()) {
             is AppResult.Success -> {

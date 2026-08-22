@@ -64,6 +64,7 @@ class AchievementsRepository(
      * que a desbloqueou — o usuário leria como bug.
      */
     override suspend fun sincronizar(forcar: Boolean) {
+        if (tokenProvider.currentUid() == null) return   // sem sessão, sincronizar só produz 401
         if (!forcar && stamps.fresco(SyncStamps.CONQUISTAS, TTL_MS)) return
         val k = chave()
         when (val r = api.get()) {
