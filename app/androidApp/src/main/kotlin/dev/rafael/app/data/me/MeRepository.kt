@@ -37,9 +37,15 @@ class MeRepository(
     /** Chave POR USUÁRIO: sem isso, trocar de conta mostraria o nome da conta anterior. */
     private suspend fun chave(): String = "me:${tokenProvider.currentUid() ?: ""}"
 
+    /**
+     * Re-chaveia quando a SESSÃO muda, e não uma vez no início da coleta.
+     *
+     * A versão anterior resolvia a chave uma só vez; quem coletasse antes do login ficava preso
+     * ao uid nulo para sempre — foi o cabeçalho do menu eternamente em "?".
+     */
     override fun observar(): Flow<UserDto?> =
-        flow { emit(chave()) }.flatMapLatest { k ->
-            cache.get(k)
+        tokenProvider.uidFlow().flatMapLatest { uid ->
+            cache.get("me:${uid ?: ""}")
                 .asFlow()
                 .mapToOneOrNull(Dispatchers.Default)
                 .map { payload ->

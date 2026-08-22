@@ -12,6 +12,7 @@ import dev.rafael.app.data.me.MeRepository
 import dev.rafael.app.data.groups.Groups
 import dev.rafael.app.data.groups.GroupsApi
 import dev.rafael.app.data.groups.GroupsRepository
+import dev.rafael.app.data.sessao.SairDaConta
 import dev.rafael.app.screens.conta.ContaViewModel
 import dev.rafael.app.screens.grupos.EntrarViewModel
 import dev.rafael.app.screens.grupos.GrupoFormViewModel
@@ -104,6 +105,10 @@ val appModule = module {
 
     // Grupos (Fase 6, ARCH #33). Leitura cache-first; escrita online-only, porque o código e o
     // estado do grupo são do servidor — um grupo otimista local não teria nem um nem outro.
+    // Sair da conta: UM dono da sequência (limpar onboarding ANTES do signOut), duas portas —
+    // o rodapé do menu lateral e a tela de conta.
+    single { SairDaConta(get(), get()) }
+
     single { GroupsApi(get()) }
     single<Groups> { GroupsRepository(get(), get(), get(), get()) }
     single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background

@@ -46,9 +46,10 @@ class GroupsRepository(
     /** Chave POR USUÁRIO: sem isso, trocar de conta mostraria os grupos da conta anterior. */
     private suspend fun chave(): String = "groups:${tokenProvider.currentUid() ?: ""}"
 
+    /** Re-chaveia quando a SESSÃO muda — ver `TokenProvider.uidFlow`. */
     override fun observar(): Flow<List<GroupDto>> =
-        flow { emit(chave()) }.flatMapLatest { k ->
-            cache.get(k)
+        tokenProvider.uidFlow().flatMapLatest { uid ->
+            cache.get("groups:${uid ?: ""}")
                 .asFlow()
                 .mapToOneOrNull(Dispatchers.Default)
                 .map { payload ->
