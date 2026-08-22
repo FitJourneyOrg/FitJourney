@@ -40,8 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.app.ui.erroDoCampo
+import dev.rafael.app.ui.erroGeral
 import dev.rafael.contract.group.GroupRule
-import dev.rafael.core.result.AppError
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -159,11 +159,12 @@ fun GrupoFormScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            // Erro que não é de campo (sem rede, 500) fala do formulário inteiro.
-            val erro = state.erro
-            if (erro != null && erro !is AppError.Validation) {
+            // Erro que os campos NÃO cobrem: sem rede, 500, ou uma validação de algo que este
+            // formulário não desenha (o fuso, por exemplo). Sem isto, a recusa some e o usuário
+            // fica com um botão que não faz nada.
+            state.erro.erroGeral(CAMPOS_VISIVEIS)?.let {
                 Spacer(Modifier.height(12.dp))
-                ErroInline(erro)
+                ErroInline(it)
             }
 
             Spacer(Modifier.height(24.dp))
@@ -179,6 +180,12 @@ fun GrupoFormScreen(
         }
     }
 }
+
+/**
+ * Os campos que ESTA tela desenha. O que o servidor recusar fora desta lista precisa aparecer
+ * em algum lugar — ver `erroGeral`.
+ */
+private val CAMPOS_VISIVEIS = setOf("title", "description", "startDate", "endDate", "rules")
 
 private enum class CampoDeData { INICIO, FIM }
 
