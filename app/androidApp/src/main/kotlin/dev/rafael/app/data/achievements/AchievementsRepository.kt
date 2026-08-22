@@ -42,9 +42,10 @@ class AchievementsRepository(
 
     private suspend fun chave(): String = "achievements:${tokenProvider.currentUid() ?: ""}"
 
+    /** Re-chaveia quando a SESSÃO muda — ver `TokenProvider.uidFlow`. */
     override fun observar(): Flow<List<AchievementDto>> =
-        flow { emit(chave()) }.flatMapLatest { k ->
-            cache.get(k)
+        tokenProvider.uidFlow().flatMapLatest { uid ->
+            cache.get("achievements:${uid ?: ""}")
                 .asFlow()
                 .mapToOneOrNull(Dispatchers.Default)
                 .map { payload ->

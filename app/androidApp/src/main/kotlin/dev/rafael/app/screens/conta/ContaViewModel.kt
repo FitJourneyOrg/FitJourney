@@ -3,10 +3,9 @@ package dev.rafael.app.screens.conta
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.app.data.me.Me
+import dev.rafael.app.data.sessao.SairDaConta
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
-import dev.rafael.features.auth.domain.repository.AuthRepository
-import dev.rafael.features.profile.domain.repository.ProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,14 +28,12 @@ data class ContaState(
 /**
  * CONFIGURAÇÕES DA CONTA (ARCH #34) — privada, nunca renderiza outra pessoa.
  *
- * Também é a nova casa do LOGOUT. Ele morava no `HomeViewModel`, que só dependia de
- * `AuthRepository` e `ProfileRepository` por causa dele; com a mudança, a Home deixou de
- * conhecer autenticação e ficou só com o "treino de hoje".
+ * O LOGOUT saiu do `HomeViewModel` (que só conhecia autenticação por causa dele) e hoje mora em
+ * [SairDaConta], compartilhado com o menu lateral: um dono da sequência, duas portas.
  */
 class ContaViewModel(
     private val me: Me,
-    private val auth: AuthRepository,
-    private val profile: ProfileRepository,
+    private val sairDaConta: SairDaConta,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ContaState())
@@ -104,10 +101,7 @@ class ContaViewModel(
 
     fun sair() {
         viewModelScope.launch {
-            // ORDEM IMPORTA: sem limpar, o próximo cadastro herda o `onboardingCompleted = true`
-            // e cai direto na Home, pulando o quiz.
-            profile.clearOnboardingCache()
-            auth.signOut()
+            sairDaConta()
             _saiu.value = true
         }
     }

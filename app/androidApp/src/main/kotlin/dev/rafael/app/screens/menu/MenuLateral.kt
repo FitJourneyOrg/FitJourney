@@ -27,12 +27,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rafael.app.ui.AvatarInicial
+import dev.rafael.app.ui.DialogoDeSaida
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -54,17 +58,27 @@ fun MenuLateral(
      * uid nulo — foi o defeito do "?" eterno.
      */
     aberto: Boolean,
+    onSaiu: () -> Unit,
     onPerfil: () -> Unit,
     onExercicios: () -> Unit,
     onWiki: () -> Unit,
     onDuvidas: () -> Unit,
     onConta: () -> Unit,
-    onSair: () -> Unit,
     viewModel: MenuViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val saiu by viewModel.saiu.collectAsStateWithLifecycle()
+    var confirmarSaida by remember { mutableStateOf(false) }
 
     LaunchedEffect(aberto) { if (aberto) viewModel.aoAbrir() }
+    LaunchedEffect(saiu) { if (saiu) onSaiu() }
+
+    if (confirmarSaida) {
+        DialogoDeSaida(
+            onConfirmar = { confirmarSaida = false; viewModel.sair() },
+            onCancelar = { confirmarSaida = false },
+        )
+    }
 
     ModalDrawerSheet(modifier = Modifier.width(288.dp)) {
         Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -118,9 +132,11 @@ fun MenuLateral(
             HorizontalDivider(Modifier.padding(horizontal = 16.dp))
             Spacer(Modifier.height(8.dp))
 
-            // SAIR no rodapé. Morava num ícone ao lado da saudação da Home — lugar onde
-            // ninguém procura, e que obrigava a voltar para a Home só para sair.
-            ItemDoMenu("Sair", Icons.AutoMirrored.Outlined.Logout, onSair)
+            // SAIR no rodapé, e ele SAI. Na primeira versão este item navegava para
+            // Configurações, porque a sequência de logout só existia lá — eu tinha protegido a
+            // regra empurrando o usuário. Um item chamado "Sair" que leva a outra tela mente
+            // sobre o que faz.
+            ItemDoMenu(rotulo = "Sair", icone = Icons.AutoMirrored.Outlined.Logout, onClick = {confirmarSaida = true})
             Spacer(Modifier.height(16.dp))
         }
     }

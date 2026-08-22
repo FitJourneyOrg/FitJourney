@@ -103,15 +103,18 @@ fun AppNavHost() {
         drawerContent = {
             MenuLateral(
                 aberto = drawer.isOpen,
+                onSaiu = {
+                    escopo.launch { drawer.close() }
+                    nav.navigate(AppRoute.Login) {
+                        popUpTo(0) { inclusive = true }   // sessão encerrada não tem "voltar"
+                        launchSingleTop = true
+                    }
+                },
                 onPerfil = { navegarDoMenu(AppRoute.Perfil()) },
                 onExercicios = { navegarDoMenu(AppRoute.Library) },
                 onWiki = { navegarDoMenu(AppRoute.Wiki) },
                 onDuvidas = { navegarDoMenu(AppRoute.Duvidas) },
                 onConta = { navegarDoMenu(AppRoute.Conta) },
-                // Sair não navega para uma rota: abre a confirmação, que mora na tela de conta
-                // (um único lugar decide o que "sair" faz — inclusive limpar o cache do
-                // onboarding antes do signOut).
-                onSair = { navegarDoMenu(AppRoute.Conta) },
             )
         },
     ) {

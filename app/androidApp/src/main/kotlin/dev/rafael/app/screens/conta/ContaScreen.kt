@@ -37,6 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.rafael.app.ui.DialogoDeSaida
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.app.ui.erroDoCampo
 import dev.rafael.core.result.AppError
@@ -62,19 +63,9 @@ fun ContaScreen(
     LaunchedEffect(saiu) { if (saiu) onSaiu() }
 
     if (confirmarSaida) {
-        AlertDialog(
-            onDismissRequest = { confirmarSaida = false },
-            title = { Text("Sair da conta?") },
-            text = { Text("Você precisará entrar de novo para acessar seus programas.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    confirmarSaida = false
-                    viewModel.sair()
-                }) { Text("Sair") }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmarSaida = false }) { Text("Cancelar") }
-            },
+        DialogoDeSaida(
+            onConfirmar = { confirmarSaida = false; viewModel.sair() },
+            onCancelar = { confirmarSaida = false },
         )
     }
 

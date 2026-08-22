@@ -41,9 +41,10 @@ class StatsRepository(
     private suspend fun chave(): String = "stats:${tokenProvider.currentUid() ?: ""}"
 
     /** Último XP/nível/streak conhecido. Nunca falha; null só antes do primeiro sync da vida. */
+    /** Re-chaveia quando a SESSÃO muda — ver `TokenProvider.uidFlow`. */
     override fun observar(): Flow<UserStatsDto?> =
-        flow { emit(chave()) }.flatMapLatest { k ->
-            cache.get(k)
+        tokenProvider.uidFlow().flatMapLatest { uid ->
+            cache.get("stats:${uid ?: ""}")
                 .asFlow()
                 .mapToOneOrNull(Dispatchers.Default)
                 .map { payload ->
