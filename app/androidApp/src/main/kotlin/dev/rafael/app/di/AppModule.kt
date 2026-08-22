@@ -17,6 +17,7 @@ import dev.rafael.app.screens.conta.ContaViewModel
 import dev.rafael.app.screens.grupos.EntrarViewModel
 import dev.rafael.app.screens.grupos.GrupoFormViewModel
 import dev.rafael.app.screens.grupos.GruposViewModel
+import dev.rafael.app.screens.onboarding.NomeViewModel
 import dev.rafael.app.screens.menu.MenuViewModel
 import dev.rafael.app.screens.perfil.PerfilViewModel
 import dev.rafael.app.data.stats.StatsRepository
@@ -119,6 +120,7 @@ val appModule = module {
     viewModelOf(::MenuViewModel)     // cabeçalho do menu lateral: nome + nível, do cache
     viewModelOf(::PerfilViewModel)   // perfil: nome, nível, conquistas
     viewModelOf(::ContaViewModel)    // conta: renomear (PATCH /me) e sair
+    viewModelOf(::NomeViewModel)     // 1º passo do onboarding: confirmar o nome (1-A.2)
     viewModelOf(::GruposViewModel)   // aba Grupos: lista cache-first
     viewModelOf(::GrupoFormViewModel)   // criar desafio
     viewModelOf(::EntrarViewModel)      // entrar por código ou link, com preview

@@ -5,6 +5,14 @@ import kotlinx.serialization.Serializable
 sealed interface AppRoute {
     @Serializable data object Splash : AppRoute
     @Serializable data object Login : AppRoute
+    /**
+     * Primeiro passo do onboarding: confirmar o nome (decisão 1-A.2).
+     *
+     * Antes do Quiz, e não dentro dele: o quiz escreve em `profiles` e o nome mora em `users`,
+     * via `PATCH /me`. Um passo dentro do quiz faria `profile` depender de `auth` — [REGRA]
+     * feature nunca depende de feature.
+     */
+    @Serializable data object Nome : AppRoute
     @Serializable data object Quiz : AppRoute
     @Serializable data object Home : AppRoute
     @Serializable data object Library : AppRoute

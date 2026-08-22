@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.rafael.app.data.me.Me
 import dev.rafael.app.data.sessao.SairDaConta
 import dev.rafael.app.data.stats.Stats
+import dev.rafael.core.network.TokenProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -17,6 +18,14 @@ data class MenuState(
     val id: String = "",
     val nome: String = "",
     val nivel: Int? = null,
+    /**
+     * Não há ninguém logado.
+     *
+     * Distinto de "logado e o nome ainda não chegou": o primeiro não vai chegar nunca, e
+     * mostrar esqueleto ali seria um carregamento infinito. Foi o que aconteceu ao sair da
+     * conta com o menu aberto.
+     */
+    val semSessao: Boolean = false,
 )
 
 /**
@@ -36,17 +45,34 @@ class MenuViewModel(
     private val me: Me,
     private val stats: Stats,
     private val sairDaConta: SairDaConta,
+    tokenProvider: TokenProvider,
 ) : ViewModel() {
 
+    /**
+     * EVENTO de saída — precisa ser CONSUMIDO (ver [consumirSaida]).
+     *
+     * Este ViewModel vive enquanto a Activity viver, e atravessa logout e login sem ser
+     * recriado. Sem o consumo, o valor ficava `true` para sempre depois do primeiro logout: no
+     * segundo, o valor não mudava, o `LaunchedEffect(saiu)` não redisparava, e o app
+     * simplesmente não saía — menu travado aberto.
+     *
+     * É a mesma armadilha que o `ErroEmSnackbar` já documenta ("sem limpar o erro no state, o
+     * snackbar reaparece a cada recomposição"), só que na direção oposta: aqui o que sobra não
+     * é o efeito repetido, é o efeito que nunca mais acontece.
+     */
     private val _saiu = MutableStateFlow(false)
     val saiu: StateFlow<Boolean> = _saiu.asStateFlow()
 
+    /** Chame DEPOIS de tratar a saída. Sem isto, a próxima saída não dispara. */
+    fun consumirSaida() { _saiu.value = false }
+
     val state: StateFlow<MenuState> =
-        combine(me.observar(), stats.observar()) { usuario, progresso ->
+        combine(me.observar(), stats.observar(), tokenProvider.uidFlow()) { usuario, progresso, uid ->
             MenuState(
                 id = usuario?.id.orEmpty(),
                 nome = usuario?.displayName.orEmpty(),
                 nivel = progresso?.level,
+                semSessao = uid == null,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MenuState())
 

@@ -2,6 +2,7 @@ package dev.rafael.app.screens.grupos
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,10 +10,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
@@ -64,6 +68,15 @@ fun GrupoFormScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var escolhendo by remember { mutableStateOf<CampoDeData?>(null) }
+    var escolhendoFuso by remember { mutableStateOf(false) }
+
+    if (escolhendoFuso) {
+        SeletorDeFuso(
+            atual = state.fuso,
+            onEscolher = { viewModel.aoEscolherFuso(it); escolhendoFuso = false },
+            onFechar = { escolhendoFuso = false },
+        )
+    }
 
     LaunchedEffect(state.criadoId) { if (state.criadoId != null) onCriado() }
 
@@ -129,9 +142,17 @@ fun GrupoFormScreen(
             Data("Termina em", state.fim, state.erro.erroDoCampo("endDate")) {
                 escolhendo = CampoDeData.FIM
             }
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(onClick = { escolhendoFuso = true }, modifier = Modifier.fillMaxWidth()) {
+                Text("Fuso: ${state.fuso}")
+            }
+            state.erro.erroDoCampo("timezone")?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+            }
             Spacer(Modifier.height(4.dp))
             Text(
-                "Fuso do desafio: ${state.fuso}. O dia vira nesse fuso para todo mundo.",
+                "O dia vira nesse fuso para todo mundo, inclusive para quem estiver em outro país.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -185,7 +206,7 @@ fun GrupoFormScreen(
  * Os campos que ESTA tela desenha. O que o servidor recusar fora desta lista precisa aparecer
  * em algum lugar — ver `erroGeral`.
  */
-private val CAMPOS_VISIVEIS = setOf("title", "description", "startDate", "endDate", "rules")
+private val CAMPOS_VISIVEIS = setOf("title", "description", "startDate", "endDate", "rules", "timezone")
 
 private enum class CampoDeData { INICIO, FIM }
 
@@ -213,6 +234,66 @@ private fun Regra(
         selected = regra in marcadas,
         onClick = { onAlternar(regra) },
         label = { Text(rotulo) },
+    )
+}
+
+/**
+ * Escolha do fuso do desafio.
+ *
+ * A lista vem do PRÓPRIO SISTEMA (`TimeZone.availableZoneIds`), não de uma lista curada no app:
+ * uma lista nossa envelheceria a cada mudança de fuso no mundo — e elas acontecem — enquanto a
+ * do sistema chega pelas atualizações do Android.
+ *
+ * Filtra o que tem barra: são os identificadores de REGIÃO. Os demais (`GMT`, `EST`, e os
+ * offsets) ou são redundantes ou são justamente o que o servidor recusa, porque offset cravado
+ * erra a virada do dia no horário de verão. Melhor não oferecer do que oferecer e recusar.
+ *
+ * O fuso do aparelho aparece PRIMEIRO: é a escolha certa em quase todos os casos, e quem está
+ * viajando é quem precisa procurar.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SeletorDeFuso(atual: String, onEscolher: (String) -> Unit, onFechar: () -> Unit) {
+    var busca by remember { mutableStateOf("") }
+    val zonas = remember {
+        val todas = TimeZone.availableZoneIds.filter { '/' in it }.sorted()
+        val doAparelho = TimeZone.currentSystemDefault().id
+        listOf(doAparelho) + todas.filterNot { it == doAparelho }
+    }
+    val filtradas = remember(busca) {
+        if (busca.isBlank()) zonas else zonas.filter { it.contains(busca.trim(), ignoreCase = true) }
+    }
+
+    AlertDialog(
+        onDismissRequest = onFechar,
+        title = { Text("Fuso do desafio") },
+        text = {
+            Column {
+                OutlinedTextField(
+                    value = busca,
+                    onValueChange = { busca = it },
+                    label = { Text("Procurar (ex.: Sao_Paulo)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Spacer(Modifier.height(10.dp))
+                LazyColumn(Modifier.height(280.dp)) {
+                    items(filtradas, key = { it }) { zona ->
+                        Text(
+                            zona,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = if (zona == atual) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onEscolher(zona) }
+                                .padding(vertical = 10.dp),
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onFechar) { Text("Fechar") } },
     )
 }
 
