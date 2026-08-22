@@ -180,25 +180,27 @@ object GroupPolicy {
     )
 
     /**
-     * Fuso NOMEADO, nunca offset fixo.
+     * Fuso NOMEADO, nunca OFFSET NUMÉRICO.
      *
-     * `TimeZone.of()` sozinho **não** basta: ele aceita `-03:00` e devolve um
-     * `FixedOffsetTimeZone` sem reclamar. Um grupo criado com `-03:00` funcionaria até o
-     * primeiro domingo de horário de verão e então erraria a virada do dia em uma hora —
-     * calado, meses depois, num check-in feito às 23h30 que cairia no dia seguinte.
+     * `TimeZone.of()` sozinho não basta: aceita `-03:00` e devolve um `FixedOffsetTimeZone` sem
+     * reclamar. Um grupo criado assim funcionaria até o primeiro domingo de horário de verão e
+     * então erraria a virada do dia em uma hora — calado, meses depois, num check-in das 23h30
+     * que cairia no dia seguinte e sumiria do ranking.
      *
-     * A regra: ou é `UTC`, ou tem barra. Todo identificador IANA de região é `Área/Cidade`, e
-     * `UTC` é legítimo porque não tem horário de verão — que é justamente o problema de que a
-     * regra protege.
-     *
-     * Descoberto pelo teste `offset no lugar de IANA e recusado`, que reprovou a primeira
-     * versão desta validação.
+     * **A regra recusa o que é offset, e não "o que não tem barra".** A primeira versão exigia
+     * `UTC` ou barra, e recusou `GMT` — que o próprio emulador reporta como fuso do aparelho, e
+     * que é nomeado e **sem horário de verão**, ou seja, imune ao problema. Validação estrita
+     * demais bloqueia o usuário honesto sem impedir nada: é o mesmo erro que a ideia do EXIF
+     * cometia (ver ARCH #33).
      */
     private fun fusoValido(bruto: String): TimeZone? {
         val id = bruto.trim()
-        if (id != "UTC" && '/' !in id) return null
+        if (OFFSET.matches(id)) return null
         return runCatching { TimeZone.of(id) }.getOrNull()
     }
+
+    /** `-03:00`, `+05:30`, `UTC-3`, `GMT+2` — tudo que é deslocamento cravado, não lugar. */
+    private val OFFSET = Regex("^(UTC|GMT|Z)?[+-].*$|^[+-].*$")
 
     private val ESPACOS = Regex("\\s+")
 

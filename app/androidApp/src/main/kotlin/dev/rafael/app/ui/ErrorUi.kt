@@ -178,6 +178,25 @@ fun AppError?.erroDoCampo(campo: String): String? =
     (this as? AppError.Validation)?.fieldErrors?.get(campo)
 
 /**
+ * O erro AINDA PRECISA SER MOSTRADO depois que os campos visíveis já se marcaram?
+ *
+ * Devolve o erro quando ele não é de validação (aí é sempre da tela inteira) **ou** quando é de
+ * validação mas nenhuma das suas chaves corresponde a um campo que a tela desenha. Null quando
+ * os campos já deram conta.
+ *
+ * POR QUE existe: um formulário que só chama [erroDoCampo] engole a recusa cujo campo ele não
+ * mostra. Aconteceu no formulário de grupo — o servidor recusou por `timezone`, que ali é texto
+ * e não campo, e o usuário ficou com um botão que não fazia nada e nenhuma explicação. O pior
+ * tipo de erro é o que não aparece.
+ */
+fun AppError?.erroGeral(camposVisiveis: Set<String>): AppError? {
+    val erro = this ?: return null
+    if (erro !is AppError.Validation) return erro
+    val cobertos = erro.fieldErrors.keys.any { it in camposVisiveis }
+    return if (cobertos) null else erro
+}
+
+/**
  * O aparelho tem internet AGORA? Rechecado a cada erro novo (`key`), porque entre um erro e
  * outro o usuário pode ter ligado o wifi. Só leitura — não pede permissão em runtime.
  */

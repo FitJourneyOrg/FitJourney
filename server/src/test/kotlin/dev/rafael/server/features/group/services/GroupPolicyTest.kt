@@ -202,10 +202,16 @@ class GroupPolicyTest {
     }
 
     @Test
-    fun `UTC e aceito`() {
-        // Legítimo, e não cai na armadilha do offset: UTC não tem horário de verão, que é
-        // exatamente o problema de que a regra protege.
-        assertTrue(GroupPolicy.validarCriacao(pedido(fuso = "UTC"), hoje) is AppResult.Success)
+    fun `fusos nomeados sem horario de verao sao aceitos`() {
+        // A PRIMEIRA versão desta regra exigia "UTC ou barra" e recusava `GMT` — que é o fuso
+        // que o emulador reporta. Validação estrita demais bloqueia o usuário honesto sem
+        // impedir nada: o que quebra sob horário de verão é OFFSET, não ausência de barra.
+        listOf("UTC", "GMT", "America/Sao_Paulo", "Europe/Lisbon").forEach { fuso ->
+            assertTrue(
+                GroupPolicy.validarCriacao(pedido(fuso = fuso), hoje) is AppResult.Success,
+                "'$fuso' é fuso nomeado legítimo",
+            )
+        }
     }
 
     @Test

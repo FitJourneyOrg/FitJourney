@@ -23,8 +23,10 @@ import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -45,6 +47,7 @@ import org.koin.androidx.compose.koinViewModel
  * A aba Grupos (ARCH #33, fatia A.3). Cache-first: a lista pinta no primeiro frame, offline
  * inclusive; o sync de fundo só atualiza.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GruposScreen(
     onCriar: () -> Unit,
@@ -72,7 +75,11 @@ fun GruposScreen(
             when {
                 state.carregando && state.vazio -> Esqueleto()
                 state.vazio -> Vazio(state.jaSincronizou, onCriar, onEntrarPorCodigo)
-                else -> LazyColumn(
+                else -> PullToRefreshBox(
+                    isRefreshing = state.atualizando,
+                    onRefresh = viewModel::atualizar,
+                ) {
+                LazyColumn(
                     Modifier.fillMaxSize(),
                     contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -85,6 +92,7 @@ fun GruposScreen(
                     // O cartão ainda não abre nada: a tela de detalhe e a gerência de membros
                     // são a fatia A.4. Preferi um cartão que informa a um cartão que promete.
                     items(state.grupos, key = { it.id }) { grupo -> CartaoDeGrupo(grupo) }
+                }
                 }
             }
         }

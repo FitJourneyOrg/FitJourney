@@ -114,7 +114,13 @@ class GroupsRepository(
     }
 
     private companion object {
-        /** 5 min, como programas: a lista muda por ação do usuário, e essas já forçam o sync. */
+        /**
+         * 5 min — mas a TELA ignora este TTL ao entrar (ver `GruposViewModel.carregar`).
+         *
+         * Ele sobrou como rede de segurança para chamadas de fundo futuras (o `SyncWorker`, por
+         * exemplo). Para a lista de grupos ele não serve como frescor: a contagem de membros
+         * muda por ação de OUTRAS pessoas, e aí atrasar cinco minutos é atraso, não economia.
+         */
         const val TTL_MS = 5 * 60 * 1000L
     }
 }
