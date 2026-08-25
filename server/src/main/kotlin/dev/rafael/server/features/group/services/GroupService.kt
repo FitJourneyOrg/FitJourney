@@ -13,7 +13,9 @@ import dev.rafael.core.result.map
 import dev.rafael.server.features.group.db.GroupRepository
 import dev.rafael.server.features.group.db.NovoGrupo
 import dev.rafael.server.features.group.models.toDto
+import dev.rafael.server.features.checkin.services.CheckInPolicy
 import dev.rafael.server.features.user.services.UserService
+import kotlinx.datetime.LocalDate
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
@@ -24,9 +26,22 @@ import kotlin.uuid.Uuid
  * membro. A tela de preview do convite, que é a única leitura pública da fase (2-B.0), chega
  * junto com a entrada; até lá, grupo é assunto de quem está dentro.
  */
+/**
+ * O que o grupo precisa saber sobre check-in — e **só isso**.
+ *
+ * `fun interface` e não o `CheckInRepository` inteiro: o grupo faz uma pergunta pontual, e receber
+ * o repositório de outra feature daria a ele acesso a criar, apagar e listar check-ins. A porta
+ * estreita mantém a dependência visível no construtor e trivial de dublar no teste.
+ */
+fun interface CheckInDeHoje {
+    /** O id do check-in de [userId] neste grupo no [dia], ou `null`. */
+    suspend fun idDe(groupId: Uuid, userId: Uuid, dia: LocalDate): Uuid?
+}
+
 class GroupService(
     private val userService: UserService,
     private val repository: GroupRepository,
+    private val checkInDeHoje: CheckInDeHoje = CheckInDeHoje { _, _, _ -> null },
     private val clock: Clock = Clock.System,
 ) {
 
@@ -89,8 +104,16 @@ class GroupService(
             repository.roleOf(id, user.id).flatMap { papel ->
                 if (papel == null) return@flatMap AppError.NotFound("Grupo não encontrado").asFailure()
                 repository.findById(id).flatMap { grupo ->
-                    grupo?.toDto(clock.now(), papel.paraPapel())?.let { AppResult.Success(it) }
-                        ?: AppError.NotFound("Grupo não encontrado").asFailure()
+                    if (grupo == null) return@flatMap AppError.NotFound("Grupo não encontrado").asFailure()
+                    val agora = clock.now()
+                    // "Hoje" no fuso do GRUPO (4.6) — a mesma conta do check-in, e por isso ela
+                    // mora numa política só. Se cada lado calculasse o seu, um deles ficaria para
+                    // trás no dia em que a regra mudasse.
+                    val hoje = CheckInPolicy.diaDoGrupo(agora, grupo.timezone)
+                    val meuCheckIn = checkInDeHoje.idDe(grupo.id, user.id, hoje)
+                    AppResult.Success(
+                        grupo.toDto(agora, papel.paraPapel(), meuCheckIn?.toString()),
+                    )
                 }
             }
         }

@@ -77,6 +77,24 @@ val appModule = module {
     single<dev.rafael.server.features.group.db.GroupRepository> {
         dev.rafael.server.features.group.db.GroupRepositoryImpl()
     }
-    single { dev.rafael.server.features.group.services.GroupService(get(), get()) }
+    // A porta estreita entre grupo e check-in: o detalhe do grupo precisa saber se JÁ FIZ hoje
+    // para não oferecer um botão que vai ser recusado. Só esta pergunta atravessa a fronteira.
+    single<dev.rafael.server.features.group.services.CheckInDeHoje> {
+        val checkIns = get<dev.rafael.server.features.checkin.db.CheckInRepository>()
+        dev.rafael.server.features.group.services.CheckInDeHoje { grupo, usuario, dia ->
+            (checkIns.doDia(grupo, usuario, dia) as? dev.rafael.core.result.AppResult.Success)?.value
+        }
+    }
+    single { dev.rafael.server.features.group.services.GroupService(get(), get(), get()) }
     single { dev.rafael.server.features.group.services.GroupMembershipService(get(), get()) }
+
+    // Check-in (fatia B). O `ArmazenamentoDeMidia` vem do `midiaModule`, que é separado porque
+    // precisa da pasta resolvida a partir da configuração do Ktor.
+    single<dev.rafael.server.features.checkin.db.CheckInRepository> {
+        dev.rafael.server.features.checkin.db.CheckInRepositoryImpl()
+    }
+    single {
+        // userService + groupRepository + checkInRepository + armazenamento
+        dev.rafael.server.features.checkin.services.CheckInService(get(), get(), get(), get())
+    }
 }

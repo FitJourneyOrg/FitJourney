@@ -65,6 +65,22 @@ data class GroupDto(
     val memberCount: Int,
     /** Papel de QUEM PEDIU. Null quando o pedinte não é membro (preview do convite, A.2). */
     val myRole: MemberRole? = null,
+
+    /**
+     * O id do MEU check-in de HOJE neste grupo, ou `null` se ainda não fiz (fatia B).
+     *
+     * Derivado no servidor, como o [state] e o `canDelete`: "hoje" depende do fuso do GRUPO e do
+     * relógio do SERVIDOR (4.6), e o cliente não tem nenhum dos dois.
+     *
+     * Existe para a tela **não oferecer** o check-in quando ele já foi feito. Sem isso, a pessoa
+     * tira a foto, espera o GPS, edita o texto, envia — e só aí descobre que o dia já estava
+     * usado. Descobrir depois do trabalho é o mesmo defeito do botão de convidar num desafio já
+     * começado: oferecer e desmentir.
+     *
+     * Id e não booleano pelo mesmo motivo do `role` (2.17): com o id, a tela pode levar direto ao
+     * item no feed sem uma segunda pergunta.
+     */
+    val myCheckInToday: String? = null,
 )
 
 /**
