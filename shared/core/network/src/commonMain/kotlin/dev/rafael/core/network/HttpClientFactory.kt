@@ -15,7 +15,24 @@ import io.ktor.serialization.kotlinx.json.json
 import kotlinx.serialization.json.Json
 
 object HttpClientFactory {
-    const val BASE_URL = "http://10.0.2.2:8080"
+
+    /**
+     * Onde o servidor está. **Configurável no build**, não fixo no código.
+     *
+     * `10.0.2.2` é um apelido de NAT que só existe **dentro do emulador** — no aparelho físico ele
+     * não resolve, e a falha chega ao app como "o servidor não respondeu", que é verdade e não
+     * ajuda em nada. Como o endereço muda conforme onde o app roda (emulador, aparelho na mesma
+     * rede, produção), ele não pode ser uma constante compilada.
+     *
+     * Quem define é o `androidApp`, no `onCreate`, a partir do `BuildConfig` — que por sua vez sai
+     * de uma propriedade Gradle. Assim trocar de aparelho é uma linha no `gradle.properties`, e
+     * não uma edição em código compartilhado que entraria num commit por engano.
+     *
+     * `var` incomoda, e com razão: é estado global mutável. O que segura isso é ser escrito **uma
+     * vez só, na inicialização**, antes de qualquer requisição. Ver DEBITOS: o certo é injetar a
+     * base pelo Koin, e isso mexe em todas as classes `*Api`.
+     */
+    var BASE_URL: String = "http://10.0.2.2:8080"
 
     fun create(
         engine: HttpClientEngine,
