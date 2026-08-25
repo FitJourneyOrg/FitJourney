@@ -52,6 +52,7 @@ import org.koin.androidx.compose.koinViewModel
 fun GruposScreen(
     onCriar: () -> Unit,
     onEntrarPorCodigo: () -> Unit,
+    onAbrirGrupo: (String) -> Unit,
     viewModel: GruposViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -89,9 +90,9 @@ fun GruposScreen(
                             Text("Entrar com um código")
                         }
                     }
-                    // O cartão ainda não abre nada: a tela de detalhe e a gerência de membros
-                    // são a fatia A.4. Preferi um cartão que informa a um cartão que promete.
-                    items(state.grupos, key = { it.id }) { grupo -> CartaoDeGrupo(grupo) }
+                    items(state.grupos, key = { it.id }) { grupo ->
+                        CartaoDeGrupo(grupo) { onAbrirGrupo(grupo.id) }
+                    }
                 }
                 }
             }
@@ -100,12 +101,13 @@ fun GruposScreen(
 }
 
 @Composable
-private fun CartaoDeGrupo(grupo: GroupDto) {
+private fun CartaoDeGrupo(grupo: GroupDto, onClick: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable(onClick = onClick)
             .padding(14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -140,16 +142,28 @@ private fun Selo(estado: GroupState) {
     Text(texto, style = MaterialTheme.typography.labelSmall, color = cor)
 }
 
+/**
+ * Esqueleto com a FORMA do cartão real — título largo em cima, linha menor embaixo — e não
+ * blocos genéricos. Assim a lista não "salta" quando o conteúdo chega: o espaço já está
+ * reservado no lugar certo.
+ */
 @Composable
 private fun Esqueleto() {
     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Box(Modifier.fillMaxWidth().height(40.dp).shimmer(RoundedCornerShape(20.dp)))
+        Spacer(Modifier.height(2.dp))
         repeat(3) {
-            Box(
+            Column(
                 Modifier
                     .fillMaxWidth()
-                    .height(72.dp)
-                    .shimmer(RoundedCornerShape(12.dp)),
-            )
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(14.dp),
+            ) {
+                Box(Modifier.fillMaxWidth(0.55f).height(16.dp).shimmer(RoundedCornerShape(4.dp)))
+                Spacer(Modifier.height(8.dp))
+                Box(Modifier.fillMaxWidth(0.75f).height(12.dp).shimmer(RoundedCornerShape(4.dp)))
+            }
         }
     }
 }
