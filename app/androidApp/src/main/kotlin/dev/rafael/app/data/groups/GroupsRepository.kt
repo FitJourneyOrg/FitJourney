@@ -5,6 +5,7 @@ import app.cash.sqldelight.coroutines.mapToOneOrNull
 import dev.rafael.contract.group.CreateGroupRequest
 import dev.rafael.contract.group.GroupDto
 import dev.rafael.contract.group.GroupInviteDto
+import dev.rafael.contract.group.GroupMemberDto
 import dev.rafael.contract.group.GroupPreviewDto
 import dev.rafael.core.database.FitJourneyDatabase
 import dev.rafael.core.database.SyncStamps
@@ -84,6 +85,18 @@ class GroupsRepository(
 
     override suspend fun entrarPorConvite(token: String): AppResult<GroupDto> =
         api.entrarPorConvite(token).map { it.also { aposMutacao() } }
+
+    /**
+     * Vai direto ao servidor, sem passar pelo cache.
+     *
+     * A lista em cache tem o grupo, mas o **estado** dele é derivado do relógio do servidor e
+     * envelhece: um grupo cacheado como `AGENDADO` pode já estar `ATIVO`. Na tela de detalhe,
+     * onde as ações dependem do estado, servir o valor antigo ofereceria um botão que o
+     * servidor recusaria.
+     */
+    override suspend fun porId(groupId: String): AppResult<GroupDto> = api.porId(groupId)
+
+    override suspend fun membros(groupId: String): AppResult<List<GroupMemberDto>> = api.membros(groupId)
 
     override suspend fun sair(groupId: String): AppResult<Unit> =
         api.sair(groupId).map { aposMutacao() }

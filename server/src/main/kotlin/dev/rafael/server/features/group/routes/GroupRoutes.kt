@@ -82,6 +82,12 @@ fun Route.groupMembershipRoutes(service: GroupMembershipService) {
             call.respondResult(service.entrarPorConvite(p.uid, p.email, call.parameters["token"].orEmpty()))
         }
 
+        /** Quem está no grupo. Só para membros — o `comMembro` do service recusa com 404. */
+        get("/groups/{id}/members") {
+            val p = call.principal<FirebaseUser>()!!
+            call.respondResult(service.membros(p.uid, p.email, call.parameters["id"].orEmpty()))
+        }
+
         post("/groups/{id}/leave") {
             val p = call.principal<FirebaseUser>()!!
             call.respondResult(service.sair(p.uid, p.email, call.parameters["id"].orEmpty()))

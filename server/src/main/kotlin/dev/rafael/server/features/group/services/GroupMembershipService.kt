@@ -2,6 +2,7 @@ package dev.rafael.server.features.group.services
 
 import dev.rafael.contract.group.GroupDto
 import dev.rafael.contract.group.GroupInviteDto
+import dev.rafael.contract.group.GroupMemberDto
 import dev.rafael.contract.group.GroupPreviewDto
 import dev.rafael.contract.group.JoinBlock
 import dev.rafael.contract.group.MemberRole
@@ -74,6 +75,29 @@ class GroupMembershipService(
             }
         }
 
+    /**
+     * Membros do grupo — **só para quem está dentro**.
+     *
+     * Devolve nome e papel, nunca e-mail ([REGRA] #33) nem XP ou histórico individual (9.3):
+     * um membro vê do outro apenas o que é do grupo. Ordenado do mais antigo para o mais novo,
+     * que é a ordem da reivindicação de admin (2.12).
+     */
+    suspend fun membros(firebaseUid: String, email: String?, groupId: String): AppResult<List<GroupMemberDto>> =
+        comMembro(firebaseUid, email, groupId) { id, _, _ ->
+            repository.members(id).flatMap { linhas ->
+                AppResult.Success(
+                    linhas.map {
+                        GroupMemberDto(
+                            userId = it.userId.toString(),
+                            displayName = it.displayName,
+                            role = it.role.paraPapel(),
+                            joinedAt = it.joinedAt.toString(),
+                        )
+                    },
+                )
+            }
+        }
+
     /** Entrar pelo CÓDIGO digitado. */
     suspend fun entrarPorCodigo(firebaseUid: String, email: String?, code: String): AppResult<GroupDto> =
         userService.findOrCreate(firebaseUid, email).flatMap { user ->
@@ -105,15 +129,28 @@ class GroupMembershipService(
      * O admin só sai depois de transferir o cargo (2.5). A alternativa — promover alguém
      * automaticamente — decidiria pelo grupo quem manda, e essa é a decisão mais política que
      * existe ali dentro.
+     *
+     * **Exceção: o admin SOZINHO sai, e o desafio vai junto (2.5-A).** A regra 2.5 sem esta
+     * exceção era um beco sem saída, e não num caso de borda: todo desafio nasce com uma pessoa
+     * só. Quem criasse um e desistisse antes de convidar alguém não podia sair (precisa
+     * transferir) nem transferir (não há para quem), e ficava com ele na lista para sempre.
+     *
+     * Grupo de uma pessoa que sai é grupo de zero pessoas, e "grupo sem admin não existe nem por
+     * um instante" já diz o que fazer com ele. Por isso a exclusão é consequência do sair, e não
+     * um botão separado: um "excluir desafio" seria uma segunda porta para o mesmo estado, e uma
+     * que ainda precisaria decidir o que fazer quando há membros e check-ins.
      */
     suspend fun sair(firebaseUid: String, email: String?, groupId: String): AppResult<Unit> =
         comMembro(firebaseUid, email, groupId) { id, user, papel ->
-            if (papel == MemberRole.ADMIN) {
-                return@comMembro AppError.Conflict(
-                    "Transfira o cargo de admin antes de sair do grupo.",
-                ).asFailure()
+            if (papel != MemberRole.ADMIN) return@comMembro repository.leave(id, user)
+
+            repository.deleteIfSoleMember(id, user).flatMap { apagou ->
+                // `false` = entrou alguém entre o pedido e a exclusão (o grupo pode estar
+                // AGENDADO, com o código circulando). Agora há para quem transferir, e a recusa
+                // de 2.5 volta a ser a resposta certa.
+                if (apagou) Unit.asSuccess()
+                else AppError.Conflict("Transfira o cargo de admin antes de sair do grupo.").asFailure()
             }
-            repository.leave(id, user)
         }
 
     /** EXPULSAR — só o admin (2.4), e ninguém expulsa a si mesmo (para isso existe o sair). */
@@ -209,7 +246,10 @@ class GroupMembershipService(
                 return@flatMap AppResult.Success(grupo.toDto(agora, papel.paraPapel()))
             }
             if (impedimento != null) {
-                return@flatMap AppError.Conflict(impedimento.name).asFailure()
+                // O NOME DO ENUM não é frase. Antes isto mandava `impedimento.name` como
+                // mensagem, e um "JA_COMECOU" cru chegava a um passo de aparecer na tela.
+                // A frase vai na `message`, e o enum vai no `code`, que é onde ele serve.
+                return@flatMap AppError.Conflict(impedimento.frase(), impedimento.name).asFailure()
             }
             repository.join(grupo.id, userId).flatMap {
                 // Relê para o memberCount sair certo: o grupo em mãos foi lido ANTES da entrada.
@@ -271,6 +311,25 @@ class GroupMembershipService(
                 bloco(id, user.id, papel.paraPapel())
             }
         }
+
+    /**
+     * Frase de recusa para o caminho de ENTRADA.
+     *
+     * Isto só é alcançado numa corrida: o preview disse "dá para entrar", a pessoa tocou, e entre
+     * um e outro o desafio começou ou lotou. O caminho comum é o botão desabilitado no preview,
+     * onde a frase é escrita no cliente a partir de `blockedReason` (#31).
+     *
+     * Existir texto nos dois lugares é o preço de o 409 não ter vocabulário próprio ainda — ver
+     * DEBITOS. Enquanto isso, `code` já vai no envelope: o dia que a tela quiser escrever sozinha,
+     * ela tem o motivo sem precisar comparar string.
+     */
+    private fun JoinBlock.frase(): String = when (this) {
+        JoinBlock.JA_COMECOU -> "Este desafio já começou — a entrada fecha quando ele começa."
+        JoinBlock.ENCERRADO -> "Este desafio já terminou."
+        JoinBlock.LOTADO -> "Este desafio já tem ${GroupPolicy.MAX_MEMBROS} participantes."
+        JoinBlock.JA_E_MEMBRO -> "Você já participa deste desafio."
+        JoinBlock.CONVITE_INVALIDO -> "Este link expirou ou foi revogado. Peça o código do desafio."
+    }
 
     private fun <T> naoEncontrado(): AppResult<T> = AppError.NotFound("Grupo não encontrado").asFailure()
     private fun <T> semPermissao(): AppResult<T> = AppError.Forbidden("Só o admin do grupo pode fazer isso.").asFailure()
