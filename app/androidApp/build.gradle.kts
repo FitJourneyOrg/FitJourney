@@ -10,7 +10,19 @@ plugins {
 
 kotlin {
     compilerOptions {
-        jvmTarget = JvmTarget.JVM_11
+        /**
+         * 17 para ALINHAR com os módulos compartilhados, que usam `jvmToolchain(17)` pelos
+         * convention plugins.
+         *
+         * Estava em 11, e a divergência tinha uma consequência que ninguém escolheu: nenhuma
+         * função `inline` do core podia ser chamada daqui. `AppResult.map`/`flatMap`, que são o
+         * idioma do projeto, falhavam com "Cannot inline bytecode built with JVM target 17".
+         * O `StatsRepository` já usava `when` por causa disso — parecia estilo, era restrição.
+         *
+         * Java 17 como language level no Android é suportado desde o AGP 8, e o AGP 9 já exige
+         * JDK 17 para compilar. Não muda o que é preciso instalar; muda o bytecode gerado.
+         */
+        jvmTarget = JvmTarget.JVM_17
     }
 }
 dependencies {
@@ -28,6 +40,7 @@ dependencies {
     // Coil 3 — carregamento async de imagem (thumbs de exercício) + fetcher de rede
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.coil.network.ktor3)   // fotos de check-in: rota autenticada (fatia B)
 
     // Media3 / ExoPlayer — mp4 em loop mudo no detalhe do exercício
     implementation(libs.androidx.media3.exoplayer)
@@ -35,6 +48,18 @@ dependencies {
 
     // WorkManager — reenvia a outbox quando a rede volta (mesmo com o app fechado)
     implementation(libs.androidx.work.runtime)
+
+    // CameraX — foto do check-in tirada DENTRO do app (4.4)
+    implementation(libs.androidx.camera.core)
+    implementation(libs.androidx.camera.camera2)
+    implementation(libs.androidx.camera.lifecycle)
+    implementation(libs.androidx.camera.view)
+
+    // Localização do check-in (5.2). O Geocoder é da plataforma, não precisa de dependência.
+    implementation(libs.playServices.location)
+
+    // Upload multipart do check-in. Base64 em JSON infla 33% e some com o Content-Type da parte.
+    implementation(libs.ktor.client.contentNegotiation)
 
     // icones
     implementation("androidx.compose.material:material-icons-core")
@@ -94,7 +119,26 @@ android {
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1
         versionName = "1.0"
+
+        /**
+         * Onde o app procura o servidor.
+         *
+         * Default `10.0.2.2` — o apelido de NAT do EMULADOR. Para rodar em aparelho físico, o
+         * endereço tem que ser o IP da máquina na rede local; basta pôr no `gradle.properties`
+         * (que é local e não vai para o git):
+         *
+         *     apiBaseUrl=http://192.168.0.10:8080
+         *
+         * Fica no build e não em código compartilhado de propósito: assim trocar de aparelho não
+         * produz uma alteração em `HttpClientFactory` que entra num commit por engano.
+         */
+        buildConfigField(
+            "String",
+            "API_BASE_URL",
+            "\"${providers.gradleProperty("apiBaseUrl").getOrElse("http://10.0.2.2:8080")}\"",
+        )
     }
+    buildFeatures { buildConfig = true }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
@@ -106,7 +150,9 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        // Acompanha o jvmTarget acima — os dois têm de andar juntos, senão o Kotlin gera 17 e
+        // o Java do módulo continua em 11.
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
 }

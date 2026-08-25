@@ -1,13 +1,17 @@
 package dev.rafael.app.screens.menu
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -27,12 +31,18 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rafael.app.ui.AvatarInicial
+import dev.rafael.app.ui.DialogoDeSaida
+import dev.rafael.app.ui.shimmer
 import org.koin.androidx.compose.koinViewModel
 
 /**
@@ -54,17 +64,31 @@ fun MenuLateral(
      * uid nulo — foi o defeito do "?" eterno.
      */
     aberto: Boolean,
+    onSaiu: () -> Unit,
     onPerfil: () -> Unit,
     onExercicios: () -> Unit,
     onWiki: () -> Unit,
     onDuvidas: () -> Unit,
     onConta: () -> Unit,
-    onSair: () -> Unit,
     viewModel: MenuViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val saiu by viewModel.saiu.collectAsStateWithLifecycle()
+    var confirmarSaida by remember { mutableStateOf(false) }
 
-    LaunchedEffect(aberto) { if (aberto) viewModel.aoAbrir() }
+    // Só sincroniza com sessão viva: pedir dado sem token volta 401, e 401 acorda o
+    // SessionExpiryBus, que força navegação para o Login.
+    LaunchedEffect(aberto, state.semSessao) { if (aberto && !state.semSessao) viewModel.aoAbrir() }
+    // CONSOME o evento: sem isso, `saiu` fica true para sempre e a SEGUNDA saída não dispara,
+    // porque este ViewModel atravessa logout e login sem ser recriado.
+    LaunchedEffect(saiu) { if (saiu) { onSaiu(); viewModel.consumirSaida() } }
+
+    if (confirmarSaida) {
+        DialogoDeSaida(
+            onConfirmar = { confirmarSaida = false; viewModel.sair() },
+            onCancelar = { confirmarSaida = false },
+        )
+    }
 
     ModalDrawerSheet(modifier = Modifier.width(288.dp)) {
         Column(Modifier.verticalScroll(rememberScrollState())) {
@@ -78,22 +102,33 @@ fun MenuLateral(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                AvatarInicial(nome = state.nome, id = state.id, tamanho = 44.dp)
-                Column {
-                    Text(
-                        // Antes do primeiro sync da vida o cache está vazio. "Você" é neutro e
-                        // some em milissegundos — melhor que um esqueleto piscando no cabeçalho.
-                        state.nome.ifBlank { "Você" },
-                        style = MaterialTheme.typography.titleSmall,
-                    )
-                    val nivel = state.nivel
-                    if (nivel != null) {
-                        Text(
-                            "Nível $nivel",
-                            style = MaterialTheme.typography.bodySmall,
-                            // lime: é recompensa do perfil individual ([REGRA] ARCH #16).
-                            color = MaterialTheme.colorScheme.tertiary,
-                        )
+                // ESQUELETO enquanto não há dado. Na primeira instalação o cache está vazio e o
+                // nome chega ~1s depois, com a rede. A versão anterior mostrava "?" e "Você" —
+                // que PARECEM dado, e por um segundo o app afirmava que o usuário se chama
+                // "Você". Esqueleto não afirma nada, que é a verdade nesse instante.
+                if (state.semSessao) {
+                    // Saiu da conta com o menu aberto. Não há dado e não vai haver — esqueleto
+                    // aqui seria um carregamento que nunca termina.
+                    Spacer(Modifier.height(44.dp))
+                } else if (state.nome.isBlank()) {
+                    Box(Modifier.size(44.dp).clip(CircleShape).shimmer())
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Box(Modifier.width(120.dp).height(14.dp).shimmer(RoundedCornerShape(4.dp)))
+                        Box(Modifier.width(64.dp).height(11.dp).shimmer(RoundedCornerShape(4.dp)))
+                    }
+                } else {
+                    AvatarInicial(nome = state.nome, id = state.id, tamanho = 44.dp)
+                    Column {
+                        Text(state.nome, style = MaterialTheme.typography.titleSmall)
+                        val nivel = state.nivel
+                        if (nivel != null) {
+                            Text(
+                                "Nível $nivel",
+                                style = MaterialTheme.typography.bodySmall,
+                                // lime: é recompensa do perfil individual ([REGRA] ARCH #16).
+                                color = MaterialTheme.colorScheme.tertiary,
+                            )
+                        }
                     }
                 }
             }
@@ -118,9 +153,11 @@ fun MenuLateral(
             HorizontalDivider(Modifier.padding(horizontal = 16.dp))
             Spacer(Modifier.height(8.dp))
 
-            // SAIR no rodapé. Morava num ícone ao lado da saudação da Home — lugar onde
-            // ninguém procura, e que obrigava a voltar para a Home só para sair.
-            ItemDoMenu("Sair", Icons.AutoMirrored.Outlined.Logout, onSair)
+            // SAIR no rodapé, e ele SAI. Na primeira versão este item navegava para
+            // Configurações, porque a sequência de logout só existia lá — eu tinha protegido a
+            // regra empurrando o usuário. Um item chamado "Sair" que leva a outra tela mente
+            // sobre o que faz.
+            ItemDoMenu(rotulo = "Sair", icone = Icons.AutoMirrored.Outlined.Logout, onClick = {confirmarSaida = true})
             Spacer(Modifier.height(16.dp))
         }
     }

@@ -1,6 +1,7 @@
 package dev.rafael.app.screens.conta
 
 import dev.rafael.app.data.me.Me
+import dev.rafael.app.data.sessao.SairDaConta
 import dev.rafael.app.screens.home.FakeAuth
 import dev.rafael.app.screens.home.FakePerfil
 import dev.rafael.contract.user.UserDto
@@ -57,7 +58,7 @@ class ContaViewModelTest {
         }
     }
 
-    private fun vm(me: FakeMe = FakeMe()) = ContaViewModel(me, FakeAuth(), FakePerfil())
+    private fun vm(me: FakeMe = FakeMe()) = ContaViewModel(me, SairDaConta(FakeAuth(), FakePerfil()))
 
     @Test
     fun `mostra o nome vindo do cache`() = runTest(dispatcher) {
@@ -163,7 +164,7 @@ class ContaViewModelTest {
         // (teste migrado da HomeViewModelTest — o logout mudou de casa no ARCH #34)
         val perfil = FakePerfil()
         val auth = FakeAuth()
-        val viewModel = ContaViewModel(FakeMe(), auth, perfil)
+        val viewModel = ContaViewModel(FakeMe(), SairDaConta(auth, perfil))
         advanceUntilIdle()
 
         viewModel.sair()

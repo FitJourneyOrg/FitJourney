@@ -15,7 +15,12 @@ import io.ktor.http.encodeURLPathPart
  * pra a UI mostrar placeholder em vez de disparar um GET .../media/ que dá 404.
  */
 object MediaUrls {
-    const val BASE = "${HttpClientFactory.BASE_URL}/media"
+    /**
+     * `val` e não `const`: uma constante compilada capturaria o valor do `BASE_URL` **antes** de o
+     * app configurá-lo no boot, e a mídia continuaria apontando para o endereço do emulador.
+     * Calculado a cada acesso, acompanha a configuração.
+     */
+    val BASE: String get() = "${HttpClientFactory.BASE_URL}/media"
 
     fun url(ref: String): String? =
         if (ref.isBlank()) null

@@ -76,3 +76,9 @@ __pycache__/
 /tools/
 # insumo morto do scraping; o catalogo vem das migrations (V28+)
 /exercises.csv
+# fotos de check-in (fatia B) — DADO DE USUÁRIO. Nunca no git, e o backup é outro assunto:
+# diferente de gifs_exercicios/, isto não se regenera.
+#
+# SEM a barra inicial de propósito: `/uploads/` só pegaria a raiz, e num boot com working-dir em
+# `server/` a pasta nasce em `server/uploads`. Já aconteceu. Sem âncora, pega em qualquer nível.
+uploads/

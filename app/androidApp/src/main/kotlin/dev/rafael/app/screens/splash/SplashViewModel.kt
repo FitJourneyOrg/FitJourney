@@ -62,9 +62,9 @@ class SplashViewModel(
             val result = withTimeoutOrNull(5000) { profile.getProfile() }
             val dest = when (result) {
                 is AppResult.Success ->
-                    if (result.value.onboardingCompleted) AppRoute.Home else AppRoute.Quiz
+                    if (result.value.onboardingCompleted) AppRoute.Home else AppRoute.Nome
                 is AppResult.Failure ->
-                    if (result.error is AppError.NotFound) AppRoute.Quiz
+                    if (result.error is AppError.NotFound) AppRoute.Nome
                     else fallbackFromCache()          // <- rede falhou: usa cache
                 null -> fallbackFromCache()            // <- timeout: usa cache
             }
@@ -89,7 +89,7 @@ class SplashViewModel(
     private suspend fun fallbackFromCache(): AppRoute =
         when (profile.cachedOnboardingCompleted()) {
             true  -> AppRoute.Home
-            false -> AppRoute.Quiz
+            false -> AppRoute.Nome
             null  -> AppRoute.Home   // device novo + offline + nunca cacheou: sem info, chuta Home
         }
 

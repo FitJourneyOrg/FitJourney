@@ -3,13 +3,14 @@ package dev.rafael.app.screens.menu
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.app.data.me.Me
+import dev.rafael.app.data.sessao.SairDaConta
 import dev.rafael.app.data.stats.Stats
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import dev.rafael.core.network.TokenProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -17,6 +18,14 @@ data class MenuState(
     val id: String = "",
     val nome: String = "",
     val nivel: Int? = null,
+    /**
+     * Não há ninguém logado.
+     *
+     * Distinto de "logado e o nome ainda não chegou": o primeiro não vai chegar nunca, e
+     * mostrar esqueleto ali seria um carregamento infinito. Foi o que aconteceu ao sair da
+     * conta com o menu aberto.
+     */
+    val semSessao: Boolean = false,
 )
 
 /**
@@ -26,50 +35,67 @@ data class MenuState(
  * qualquer momento — se dependesse de requisição, abriria vazio no avião e o app inteiro
  * pareceria quebrado.
  *
- * ## Por que existe o [gatilho], e não um `combine` direto
- *
- * Este ViewModel é criado junto com o `AppNavHost` — o conteúdo do drawer entra em composição
- * antes de qualquer tela, inclusive antes do LOGIN. E `observar()` resolve a chave do cache
- * (`me:<uid>`) **uma vez, no início da coleta**. Criado antes do login, o uid é nulo, a chave
- * vira `"me:"` e o Flow fica preso a ela **para sempre**, porque este VM vive enquanto a
- * Activity viver. Resultado observado: cabeçalho eternamente em "?" / "Você", enquanto a tela
- * de perfil — cujo VM nasce depois do login — mostrava o nome certo.
- *
- * O [gatilho] faz a coleta REINICIAR quando o menu abre, e reiniciar é o que reavalia a chave.
- *
- * É a mesma família de defeito que o projeto já enfrentou ([REGRA] todo dado local é chaveado
- * por uid): o isolamento por conta continua correto, mas quem captura a chave cedo demais
- * captura a chave errada. Fica o débito: `Stats` e `Achievements` têm o mesmo padrão e só
- * escapam porque seus VMs nascem depois do login.
+ * Este ViewModel é criado junto com o `AppNavHost`, ou seja, **antes do login** — e vive
+ * enquanto a Activity viver. Isso já causou o cabeçalho eternamente em "?": os repositórios
+ * resolviam a chave do cache uma vez, no início da coleta, e ficavam presos ao uid nulo.
+ * A correção mora onde o defeito nascia: `TokenProvider.uidFlow()` re-chaveia quando a sessão
+ * muda, então aqui um `combine` simples basta.
  */
-@OptIn(ExperimentalCoroutinesApi::class)
 class MenuViewModel(
     private val me: Me,
     private val stats: Stats,
+    private val sairDaConta: SairDaConta,
+    tokenProvider: TokenProvider,
 ) : ViewModel() {
 
-    private val gatilho = MutableStateFlow(0)
+    /**
+     * EVENTO de saída — precisa ser CONSUMIDO (ver [consumirSaida]).
+     *
+     * Este ViewModel vive enquanto a Activity viver, e atravessa logout e login sem ser
+     * recriado. Sem o consumo, o valor ficava `true` para sempre depois do primeiro logout: no
+     * segundo, o valor não mudava, o `LaunchedEffect(saiu)` não redisparava, e o app
+     * simplesmente não saía — menu travado aberto.
+     *
+     * É a mesma armadilha que o `ErroEmSnackbar` já documenta ("sem limpar o erro no state, o
+     * snackbar reaparece a cada recomposição"), só que na direção oposta: aqui o que sobra não
+     * é o efeito repetido, é o efeito que nunca mais acontece.
+     */
+    private val _saiu = MutableStateFlow(false)
+    val saiu: StateFlow<Boolean> = _saiu.asStateFlow()
+
+    /** Chame DEPOIS de tratar a saída. Sem isto, a próxima saída não dispara. */
+    fun consumirSaida() { _saiu.value = false }
 
     val state: StateFlow<MenuState> =
-        gatilho.flatMapLatest {
-            combine(me.observar(), stats.observar()) { usuario, progresso ->
-                MenuState(
-                    id = usuario?.id.orEmpty(),
-                    nome = usuario?.displayName.orEmpty(),
-                    nivel = progresso?.level,
-                )
-            }
+        combine(me.observar(), stats.observar(), tokenProvider.uidFlow()) { usuario, progresso, uid ->
+            MenuState(
+                id = usuario?.id.orEmpty(),
+                nome = usuario?.displayName.orEmpty(),
+                nivel = progresso?.level,
+                semSessao = uid == null,
+            )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MenuState())
 
     /**
-     * Chamado quando o menu ABRE.
-     *
-     * Sem `forcar`: o TTL decide, então abrir e fechar cinco vezes não vira cinco `GET /me`.
-     * O que se repete de graça é a releitura da chave.
+     * Chamado quando o menu ABRE. Sem `forcar`: o TTL decide, então abrir e fechar cinco vezes
+     * não vira cinco `GET /me`. Nome e nível mudam por ação do próprio usuário — é o caso em
+     * que o TTL protege bem (ver a emenda da regra de frescor no Painel).
      */
     fun aoAbrir() {
-        gatilho.value++
         viewModelScope.launch { me.sincronizar() }
         viewModelScope.launch { stats.sincronizar() }
+    }
+
+    /**
+     * O "Sair" do rodapé agora SAI, em vez de navegar para Configurações.
+     *
+     * A sequência é a mesma que a tela de conta usa — [SairDaConta] é o dono. Duas portas para
+     * a mesma ação são normais; duas cópias da lógica é que seriam o problema.
+     */
+    fun sair() {
+        viewModelScope.launch {
+            sairDaConta()
+            _saiu.value = true
+        }
     }
 }

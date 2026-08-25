@@ -33,7 +33,7 @@ suspend fun mapHttpError(e: Throwable): AppError {
         HttpStatusCode.Forbidden -> AppError.Forbidden(msg ?: "Sem permissão", body?.code)
         HttpStatusCode.BadRequest -> AppError.Validation(msg ?: "Dados inválidos", body?.fieldErrors ?: emptyMap())
         HttpStatusCode.NotFound -> AppError.NotFound(msg ?: "Não encontrado")
-        HttpStatusCode.Conflict -> AppError.Conflict(msg ?: "Conflito de estado")
+        HttpStatusCode.Conflict -> AppError.Conflict(msg ?: "Conflito de estado", body?.code)
         // O servidor existe mas não está atendendo (proxy no ar, app derrubado, deploy em curso).
         // Para o cliente é indistinguível de queda de rede: mesma UI, mesmo fallback de cache.
         HttpStatusCode.BadGateway,

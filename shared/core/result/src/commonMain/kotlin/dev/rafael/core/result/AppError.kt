@@ -15,7 +15,19 @@ sealed interface AppError {
         val code: String? = null,
     ) : AppError
     data class NotFound(override val message: String = "Não encontrado") : AppError
-    data class Conflict(override val message: String = "Conflito de estado") : AppError
+    /**
+     * 409. **Regra de negócio recusando**, não dado velho.
+     *
+     * Todo 409 desta API é uma recusa deliberada — "transfira o cargo antes de sair", "o desafio
+     * já começou". Nenhum deles melhora com um retry, e é por isso que a UI não oferece um.
+     *
+     * `code` espelha o [Forbidden]: quando a tela quiser escrever a própria frase (#31), ela tem
+     * o motivo em forma de máquina em vez de comparar texto.
+     */
+    data class Conflict(
+        override val message: String = "Conflito de estado",
+        val code: String? = null,
+    ) : AppError
 
     /**
      * TRANSPORTE: não deu pra falar com o servidor — sem rede, servidor fora do ar, timeout,
