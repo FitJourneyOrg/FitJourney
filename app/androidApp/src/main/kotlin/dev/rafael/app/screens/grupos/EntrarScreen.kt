@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -30,6 +31,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -129,9 +131,14 @@ private fun Preview(preview: GroupPreviewDto, entrando: Boolean, onEntrar: () ->
             AsyncImage(
                 model = HttpClientFactory.BASE_URL.removeSuffix("/") + url,
                 contentDescription = null,
+                // PROPORÇÃO fixa, não altura fixa. Com altura cravada, a razão largura/altura
+                // muda em cada aparelho (2,3:1 num celular estreito, 2,8:1 num largo) e nenhuma
+                // imagem serve para todos sem cortar. Com `aspectRatio` + `Crop`, uma arte na
+                // MESMA proporção não é cortada em lugar nenhum — só redimensionada.
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(140.dp)
+                    .aspectRatio(BANNER_RATIO)
                     .clip(RoundedCornerShape(12.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
             )
@@ -191,6 +198,17 @@ private fun Preview(preview: GroupPreviewDto, entrando: Boolean, onEntrar: () ->
         }
     }
 }
+
+/**
+ * Proporção do banner de grupo: **2,5 : 1**.
+ *
+ * Vale para toda tela que mostrar banner (preview do convite, detalhe do grupo na A.4, cartão da
+ * lista se um dia tiver). Ter a constante aqui é o que impede duas telas divergirem e passarem a
+ * exigir duas artes diferentes da mesma imagem.
+ *
+ * Arte esperada: **1600 × 640 px**.
+ */
+const val BANNER_RATIO = 2.5f
 
 private fun GroupRule.emPortugues(): String = when (this) {
     GroupRule.FOTO -> "Uma foto, tirada na hora pelo app"

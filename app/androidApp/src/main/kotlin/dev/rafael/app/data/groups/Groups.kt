@@ -3,6 +3,7 @@ package dev.rafael.app.data.groups
 import dev.rafael.contract.group.CreateGroupRequest
 import dev.rafael.contract.group.GroupDto
 import dev.rafael.contract.group.GroupInviteDto
+import dev.rafael.contract.group.GroupMemberDto
 import dev.rafael.contract.group.GroupPreviewDto
 import dev.rafael.core.result.AppResult
 import kotlinx.coroutines.flow.Flow
@@ -33,6 +34,12 @@ interface Groups {
 
     suspend fun entrarPorCodigo(code: String): AppResult<GroupDto>
     suspend fun entrarPorConvite(token: String): AppResult<GroupDto>
+
+    /** Um grupo específico, direto do servidor. A lista em cache não serve: ela não tem membros. */
+    suspend fun porId(groupId: String): AppResult<GroupDto>
+
+    /** Quem está no grupo. Nome e papel, nunca e-mail ([REGRA] #33). */
+    suspend fun membros(groupId: String): AppResult<List<GroupMemberDto>>
 
     suspend fun sair(groupId: String): AppResult<Unit>
     suspend fun expulsar(groupId: String, userId: String): AppResult<Unit>

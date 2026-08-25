@@ -22,6 +22,8 @@ import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.inList
 import org.jetbrains.exposed.v1.core.isNull
+import org.jetbrains.exposed.v1.core.neq
+import org.jetbrains.exposed.v1.core.notExists
 import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
@@ -157,6 +159,25 @@ class GroupRepositoryImpl : GroupRepository {
             }
         }
         Unit
+    }
+
+    override suspend fun deleteIfSoleMember(groupId: Uuid, userId: Uuid): AppResult<Boolean> = dbQuery {
+        transaction {
+            // Uma instrução só. A condição "não existe outro membro" é do próprio DELETE, e não
+            // de um `if` antes dele: o grupo pode estar AGENDADO, com o código circulando, e um
+            // read-then-write deixaria alguém entrar entre a contagem e a exclusão — e perder o
+            // desafio no mesmo segundo em que entrou.
+            //
+            // O cascade de `group_members`, `group_rules` e `group_invites` é do schema (V36/V37).
+            GroupsTable.deleteWhere {
+                (GroupsTable.id eq groupId) and notExists(
+                    GroupMembersTable.selectAll().where {
+                        (GroupMembersTable.groupId eq groupId) and
+                            (GroupMembersTable.userId neq userId)
+                    },
+                )
+            } > 0
+        }
     }
 
     override suspend fun setRole(groupId: Uuid, userId: Uuid, role: String): AppResult<Unit> = dbQuery {

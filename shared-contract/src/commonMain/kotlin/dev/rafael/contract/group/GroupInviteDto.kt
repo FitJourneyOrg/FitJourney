@@ -55,6 +55,25 @@ enum class JoinBlock {
     CONVITE_INVALIDO,
 }
 
+/**
+ * Um membro do grupo, como os outros membros o veem.
+ *
+ * [REGRA] #33: **e-mail nunca atravessa a fronteira do grupo.** E decisão 9.2: um membro vê do
+ * outro apenas o que é DO GRUPO — nada de XP, nível ou histórico individual (9.3). Por isso aqui
+ * só existem identificação, papel e desde quando participa.
+ *
+ * `joinedAt` não é enfeite: é ele que ordena a fila da reivindicação de admin (2.12), com
+ * prioridade para o mais antigo.
+ */
+@Serializable
+data class GroupMemberDto(
+    val userId: String,
+    val displayName: String,
+    val role: MemberRole,
+    /** ISO-8601, relógio do servidor. */
+    val joinedAt: String,
+)
+
 /** Entrada por código digitado (2.1). O link usa o token na URL, não este corpo. */
 @Serializable
 data class JoinByCodeRequest(val code: String)

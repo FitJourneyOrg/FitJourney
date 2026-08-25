@@ -46,6 +46,20 @@ interface GroupRepository {
     /** Remove o vínculo. Os check-ins ficam no histórico do grupo (2.6) — só o vínculo sai. */
     suspend fun leave(groupId: Uuid, userId: Uuid): AppResult<Unit>
 
+    /**
+     * Apaga o grupo **se, e somente se, [userId] for o único membro**. Devolve `true` se apagou.
+     *
+     * A condição mora no `DELETE`, não num `if` antes dele, porque o grupo pode estar `AGENDADO`
+     * — com a entrada aberta e o código circulando. Ler "1 membro", decidir, e só então apagar
+     * deixa uma janela em que alguém entra pelo código e tem o desafio apagado debaixo de si.
+     * Uma cláusula só, uma decisão só, tomada pelo banco no instante da escrita.
+     *
+     * `false` significa "entrou gente no meio do caminho" — o service converte na recusa de 2.5.
+     *
+     * O cascade das filhas (`group_members`, `group_rules`, `group_invites`) é do schema (V36/V37).
+     */
+    suspend fun deleteIfSoleMember(groupId: Uuid, userId: Uuid): AppResult<Boolean>
+
     /** Troca o papel de alguém. Usado na transferência de admin (2.5). */
     suspend fun setRole(groupId: Uuid, userId: Uuid, role: String): AppResult<Unit>
 

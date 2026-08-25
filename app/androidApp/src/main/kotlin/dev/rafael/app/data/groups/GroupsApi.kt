@@ -3,6 +3,7 @@ package dev.rafael.app.data.groups
 import dev.rafael.contract.group.CreateGroupRequest
 import dev.rafael.contract.group.GroupDto
 import dev.rafael.contract.group.GroupInviteDto
+import dev.rafael.contract.group.GroupMemberDto
 import dev.rafael.contract.group.GroupPreviewDto
 import dev.rafael.contract.group.JoinByCodeRequest
 import dev.rafael.core.network.HttpClientFactory
@@ -52,6 +53,12 @@ class GroupsApi(private val client: HttpClient) {
 
     suspend fun entrarPorConvite(token: String): AppResult<GroupDto> =
         httpResult { client.post("$base/invites/$token/join").body() }
+
+    suspend fun porId(groupId: String): AppResult<GroupDto> =
+        httpResult { client.get("$base/groups/$groupId").body() }
+
+    suspend fun membros(groupId: String): AppResult<List<GroupMemberDto>> =
+        httpResult { client.get("$base/groups/$groupId/members").body() }
 
     suspend fun sair(groupId: String): AppResult<Unit> =
         httpResult { client.post("$base/groups/$groupId/leave").body() }
