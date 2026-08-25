@@ -20,9 +20,19 @@ sealed interface AppRoute {
 
     @Serializable data object Grupos : AppRoute
     @Serializable data object GrupoNovo : AppRoute
+    @Serializable data class GrupoDetalhe(val id: String) : AppRoute
 
     /** Entrar num desafio. `inviteToken` != null = chegou por link; null = vai digitar o código. */
     @Serializable data class GrupoEntrar(val inviteToken: String? = null) : AppRoute
+
+    /**
+     * Fazer check-in num grupo (fatia B).
+     *
+     * Tela própria e não diálogo no detalhe: pode envolver câmera em tela cheia, permissão de
+     * localização e edição de texto — três coisas que um `AlertDialog` faz mal, e que juntas
+     * precisam sobreviver a rotação e a ida às configurações do sistema.
+     */
+    @Serializable data class CheckIn(val groupId: String) : AppRoute
 
     // Aba ainda sem implementação (placeholder) — Progresso é Fase 5 (#16).
     @Serializable data object Progresso : AppRoute

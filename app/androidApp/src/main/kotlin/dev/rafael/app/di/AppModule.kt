@@ -15,6 +15,7 @@ import dev.rafael.app.data.groups.GroupsRepository
 import dev.rafael.app.data.sessao.SairDaConta
 import dev.rafael.app.screens.conta.ContaViewModel
 import dev.rafael.app.screens.grupos.EntrarViewModel
+import dev.rafael.app.screens.grupos.GrupoDetalheViewModel
 import dev.rafael.app.screens.grupos.GrupoFormViewModel
 import dev.rafael.app.screens.grupos.GruposViewModel
 import dev.rafael.app.screens.onboarding.NomeViewModel
@@ -112,6 +113,12 @@ val appModule = module {
 
     single { GroupsApi(get()) }
     single<Groups> { GroupsRepository(get(), get(), get(), get()) }
+
+    // Check-in (fatia B). Sem SQLDelight e sem outbox: online-only (10.1) — ver `CheckIns`.
+    single { dev.rafael.app.data.checkin.CheckInsApi(get()) }
+    single<dev.rafael.app.data.checkin.CheckIns> { dev.rafael.app.data.checkin.CheckInsRepository(get()) }
+    single { dev.rafael.app.data.checkin.Localizador(androidContext()) }
+    viewModel { dev.rafael.app.screens.checkin.CheckInViewModel(get(), get(), get()) }
     single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
     single<HistoricoDeSessoes> { SessionSync(get(), get(), get(), get(), get()) }   // + SyncStamps
 
@@ -124,6 +131,9 @@ val appModule = module {
     viewModelOf(::GruposViewModel)   // aba Grupos: lista cache-first
     viewModelOf(::GrupoFormViewModel)   // criar desafio
     viewModelOf(::EntrarViewModel)      // entrar por código ou link, com preview
+    // Detalhe do grupo: gerência de membros (A.4) + FEED de check-ins (B.5). O `viewModelOf`
+    // resolveu o `CheckIns` novo sem tocar aqui — é o que essa forma compra.
+    viewModelOf(::GrupoDetalheViewModel)
     viewModelOf(::ProgressViewModel) // histórico offline-first + stats
     viewModelOf(::AchievementsViewModel)   // conquistas offline-first
     viewModelOf(::ProgramRevealViewModel)   // injeta ProgramRepository (revelação)
