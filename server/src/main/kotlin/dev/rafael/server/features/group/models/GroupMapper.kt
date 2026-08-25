@@ -28,7 +28,16 @@ import kotlin.time.Instant
  */
 const val BANNER_PADRAO = "/media/banners/default.jpg"
 
-fun Group.toDto(agora: Instant, meuPapel: MemberRole?): GroupDto = GroupDto(
+/**
+ * @param meuCheckInHoje id do check-in de hoje de quem pediu (fatia B), ou `null`. Default `null`
+ *   porque a maioria dos caminhos — criar, listar, preview — não precisa dele: só o DETALHE usa,
+ *   que é onde o botão de check-in vive. Consultar em todos custaria uma query por grupo na lista.
+ */
+fun Group.toDto(
+    agora: Instant,
+    meuPapel: MemberRole?,
+    meuCheckInHoje: String? = null,
+): GroupDto = GroupDto(
     id = id.toString(),
     code = code,
     type = type,
@@ -43,4 +52,5 @@ fun Group.toDto(agora: Instant, meuPapel: MemberRole?): GroupDto = GroupDto(
     state = GroupPolicy.estado(startDate, endDate, agora, timezone),
     memberCount = memberCount,
     myRole = meuPapel,
+    myCheckInToday = meuCheckInHoje,
 )
