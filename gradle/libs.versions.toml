@@ -61,6 +61,8 @@ gitliveFirebase = "2.4.0"
 androidx-navigation = "2.8.4"   # Android-only (ARCH #8/#13); type-safe routes
 coil = "3.1.0"                  # carregador de imagem (thumbs de exercício)
 media3 = "1.5.1"                # ExoPlayer — mp4 em loop mudo no detalhe do exercício
+camerax = "1.4.1"               # câmera IN-APP do check-in (4.4) — sem galeria, sem app externo
+playServicesLocation = "21.3.0" # uma leitura de GPS por check-in (5.2); precisão grossa basta
 androidx-work = "2.10.0"        # WorkManager — sincroniza a outbox quando a rede volta
 # ---------------------------------------------------------------------------
 # Test
@@ -177,6 +179,10 @@ androidx-navigation-compose         = { module = "androidx.navigation:navigation
 # --- Coil 3 (imagem async no Compose) ---
 coil-compose        = { module = "io.coil-kt.coil3:coil-compose",        version.ref = "coil" }
 coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
+# Fetcher sobre o MESMO HttpClient do app (fatia B). A foto de check-in mora numa rota autenticada,
+# e o loader padrão do Coil não conhece a sessão — a requisição saía sem token e voltava 401.
+# Reusar o cliente Ktor mantém a autenticação num lugar só, em vez de duplicá-la num OkHttp à parte.
+coil-network-ktor3  = { module = "io.coil-kt.coil3:coil-network-ktor3",  version.ref = "coil" }
 
 # --- Media3 / ExoPlayer (vídeo do exercício) ---
 androidx-media3-exoplayer = { module = "androidx.media3:media3-exoplayer", version.ref = "media3" }
@@ -184,6 +190,20 @@ androidx-media3-ui        = { module = "androidx.media3:media3-ui",        versi
 
 # --- WorkManager (flush da outbox em background) ---
 androidx-work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "androidx-work" }
+
+# --- CameraX (foto do check-in, fatia B) ---
+# A 4.4 diz "foto tirada DENTRO do app, sem galeria". Com `ACTION_IMAGE_CAPTURE` quem tira a foto
+# é o app de câmera padrão do aparelho — que pode ser qualquer coisa, inclusive algo que devolva
+# imagem da galeria. A regra viraria confiança no dispositivo; com CameraX ela é verificável.
+androidx-camera-core      = { module = "androidx.camera:camera-core",      version.ref = "camerax" }
+androidx-camera-camera2   = { module = "androidx.camera:camera-camera2",   version.ref = "camerax" }
+androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "camerax" }
+androidx-camera-view      = { module = "androidx.camera:camera-view",      version.ref = "camerax" }
+
+# --- Localização (5.2) ---
+# Fused em vez de LocationManager: uma leitura só por check-in, e o fused resolve cache de
+# posição e fontes múltiplas sem nos obrigar a orquestrar provedores.
+playServices-location = { module = "com.google.android.gms:play-services-location", version.ref = "playServicesLocation" }
 
 # ===========================================================================
 # TEST

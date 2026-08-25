@@ -141,11 +141,24 @@ fun AppError.visual(
         acao = ErroAcao.VOLTAR,
     )
 
+    /**
+     * 409 aqui é REGRA RECUSANDO, não dado velho.
+     *
+     * A versão anterior dizia "Dados desatualizados — alguma coisa mudou antes de você salvar,
+     * recarregue e tente de novo" para tudo. Quando o admin tentava sair do grupo, o servidor
+     * respondia "Transfira o cargo de admin antes de sair" e a tela trocava por essa frase: nada
+     * tinha mudado, recarregar não resolvia, e a única instrução útil — transferir o cargo — era
+     * justamente a que se perdia. Mandar tentar de novo o que nunca vai passar é pior que não
+     * dizer nada.
+     *
+     * Mesmo tratamento de [AppError.Forbidden] e [AppError.Validation]: o texto do servidor
+     * chega inteiro, e a ação é NENHUMA porque não existe retry que ajude.
+     */
     is AppError.Conflict -> ErroVisual(
-        icone = Icons.Outlined.SyncProblem,
-        titulo = "Dados desatualizados",
-        texto = "Alguma coisa mudou antes de você salvar. Recarregue e tente de novo.",
-        acao = ErroAcao.TENTAR_DE_NOVO,
+        icone = Icons.Outlined.ErrorOutline,
+        titulo = "Não dá para fazer isso agora",
+        texto = message,
+        acao = ErroAcao.NENHUMA,
     )
 
     // Validação some da tela: o lugar dela é embaixo do campo (usa fieldErrors, fatia 4).
@@ -176,6 +189,25 @@ fun AppError.visual(
  */
 fun AppError?.erroDoCampo(campo: String): String? =
     (this as? AppError.Validation)?.fieldErrors?.get(campo)
+
+/**
+ * O erro AINDA PRECISA SER MOSTRADO depois que os campos visíveis já se marcaram?
+ *
+ * Devolve o erro quando ele não é de validação (aí é sempre da tela inteira) **ou** quando é de
+ * validação mas nenhuma das suas chaves corresponde a um campo que a tela desenha. Null quando
+ * os campos já deram conta.
+ *
+ * POR QUE existe: um formulário que só chama [erroDoCampo] engole a recusa cujo campo ele não
+ * mostra. Aconteceu no formulário de grupo — o servidor recusou por `timezone`, que ali é texto
+ * e não campo, e o usuário ficou com um botão que não fazia nada e nenhuma explicação. O pior
+ * tipo de erro é o que não aparece.
+ */
+fun AppError?.erroGeral(camposVisiveis: Set<String>): AppError? {
+    val erro = this ?: return null
+    if (erro !is AppError.Validation) return erro
+    val cobertos = erro.fieldErrors.keys.any { it in camposVisiveis }
+    return if (cobertos) null else erro
+}
 
 /**
  * O aparelho tem internet AGORA? Rechecado a cada erro novo (`key`), porque entre um erro e
@@ -251,7 +283,17 @@ fun ErroInline(
 ) {
     val visual = erro.visual(rememberTemRede(erro), contexto)
     Text(
-        visual.titulo,
+        // `texto` e NÃO `titulo`.
+        //
+        // O título é a CATEGORIA do erro ("Não dá para fazer isso agora", "Sem conexão"); o texto
+        // é a frase que diz o que houve e o que fazer. Numa tela de erro inteira os dois cabem, e
+        // o título orienta a leitura. Aqui, uma linha ao lado do botão que falhou, a categoria não
+        // acrescenta nada — quem tocou já sabe que falhou. O que falta é o motivo.
+        //
+        // Custou dois ciclos achar isto: primeiro o `Conflict` tinha texto fixo errado, e quando
+        // consertei a frase ela foi parar exatamente no campo que este componente descartava. O
+        // servidor vinha dizendo "Transfira o cargo de admin antes de sair" desde o começo.
+        visual.texto,
         modifier = modifier,
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodyMedium,

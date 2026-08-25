@@ -34,8 +34,14 @@ import dev.rafael.app.screens.authentication.LoginScreen
 import dev.rafael.app.screens.conta.ContaScreen
 import dev.rafael.app.screens.exercise.ExerciseDetailScreen
 import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
+import dev.rafael.app.screens.grupos.EntrarScreen
+import dev.rafael.app.screens.checkin.CheckInScreen
+import dev.rafael.app.screens.grupos.GrupoDetalheScreen
+import dev.rafael.app.screens.grupos.GrupoFormScreen
+import dev.rafael.app.screens.grupos.GruposScreen
 import dev.rafael.app.screens.home.HomeScreen
 import dev.rafael.app.screens.menu.MenuLateral
+import dev.rafael.app.screens.onboarding.NomeScreen
 import dev.rafael.app.screens.onboarding.QuizScreen
 import dev.rafael.app.screens.perfil.PerfilScreen
 import dev.rafael.app.screens.program.ProgramDetailScreen
@@ -100,15 +106,18 @@ fun AppNavHost() {
         drawerContent = {
             MenuLateral(
                 aberto = drawer.isOpen,
+                onSaiu = {
+                    escopo.launch { drawer.close() }
+                    nav.navigate(AppRoute.Login) {
+                        popUpTo(0) { inclusive = true }   // sessão encerrada não tem "voltar"
+                        launchSingleTop = true
+                    }
+                },
                 onPerfil = { navegarDoMenu(AppRoute.Perfil()) },
                 onExercicios = { navegarDoMenu(AppRoute.Library) },
                 onWiki = { navegarDoMenu(AppRoute.Wiki) },
                 onDuvidas = { navegarDoMenu(AppRoute.Duvidas) },
                 onConta = { navegarDoMenu(AppRoute.Conta) },
-                // Sair não navega para uma rota: abre a confirmação, que mora na tela de conta
-                // (um único lugar decide o que "sair" faz — inclusive limpar o cache do
-                // onboarding antes do signOut).
-                onSair = { navegarDoMenu(AppRoute.Conta) },
             )
         },
     ) {
@@ -147,6 +156,14 @@ fun AppNavHost() {
             LoginScreen(onLoggedIn = {
                 nav.navigate(AppRoute.Splash) {
                     popUpTo(AppRoute.Login) { inclusive = true }
+                }
+            })
+        }
+
+        composable<AppRoute.Nome> {
+            NomeScreen(onPronto = {
+                nav.navigate(AppRoute.Quiz) {
+                    popUpTo(AppRoute.Nome) { inclusive = true }   // não dá pra "voltar" pro nome
                 }
             })
         }
@@ -294,10 +311,51 @@ fun AppNavHost() {
             WorkoutSessionScreen(workoutId = route.id, onDone = { nav.popBackStack() })
         }
 
-        // ---- Abas ainda não implementadas ----
+        // ---- Grupos (Fase 6, ARCH #33) ----
+
         composable<AppRoute.Grupos> {
-            EmBreveScreen("Grupos", "Treine com amigos, registre check-ins e dispute o ranking.")
+            GruposScreen(
+                onCriar = { nav.navigate(AppRoute.GrupoNovo) },
+                onEntrarPorCodigo = { nav.navigate(AppRoute.GrupoEntrar()) },
+                onAbrirGrupo = { id -> nav.navigate(AppRoute.GrupoDetalhe(id)) },
+            )
         }
+        composable<AppRoute.GrupoDetalhe> { entry ->
+            val rota: AppRoute.GrupoDetalhe = entry.toRoute()
+            GrupoDetalheScreen(
+                groupId = rota.id,
+                onBack = { nav.popBackStack() },
+                onCheckIn = { nav.navigate(AppRoute.CheckIn(rota.id)) },
+            )
+        }
+        composable<AppRoute.CheckIn> { entry ->
+            val rota: AppRoute.CheckIn = entry.toRoute()
+            CheckInScreen(
+                groupId = rota.groupId,
+                onBack = { nav.popBackStack() },
+                // Volta para o detalhe, onde o feed acabou de ganhar um item — e não para a lista.
+                // Quem faz check-in quer ver o próprio check-in aparecer.
+                onPronto = { nav.popBackStack() },
+            )
+        }
+        composable<AppRoute.GrupoNovo> {
+            GrupoFormScreen(
+                onBack = { nav.popBackStack() },
+                // Sai da pilha ao criar: voltar para o formulário depois do grupo criado
+                // convidaria a criar o mesmo desafio duas vezes.
+                onCriado = { nav.popBackStack() },
+            )
+        }
+        composable<AppRoute.GrupoEntrar> { entry ->
+            val rota: AppRoute.GrupoEntrar = entry.toRoute()
+            EntrarScreen(
+                inviteToken = rota.inviteToken,
+                onBack = { nav.popBackStack() },
+                onEntrou = { nav.popBackStack() },
+            )
+        }
+
+        // ---- Abas ainda não implementadas ----
         composable<AppRoute.Progresso> {
             ProgressScreen(onOpenConquistas = { nav.navigate(AppRoute.Conquistas) })
         }
@@ -319,6 +377,9 @@ fun AppNavHost() {
             ContaScreen(
                 onBack = { nav.popBackStack() },
                 onSaiu = {
+                    // Fecha o menu junto: sair com o drawer aberto deixava um painel sem dono
+                    // por cima da tela de login.
+                    escopo.launch { drawer.close() }
                     nav.navigate(AppRoute.Login) {
                         popUpTo(0) { inclusive = true }   // não dá pra "voltar" pra sessão encerrada
                         launchSingleTop = true

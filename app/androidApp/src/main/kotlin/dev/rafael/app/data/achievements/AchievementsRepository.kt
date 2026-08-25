@@ -42,9 +42,10 @@ class AchievementsRepository(
 
     private suspend fun chave(): String = "achievements:${tokenProvider.currentUid() ?: ""}"
 
+    /** Re-chaveia quando a SESSÃO muda — ver `TokenProvider.uidFlow`. */
     override fun observar(): Flow<List<AchievementDto>> =
-        flow { emit(chave()) }.flatMapLatest { k ->
-            cache.get(k)
+        tokenProvider.uidFlow().flatMapLatest { uid ->
+            cache.get("achievements:${uid ?: ""}")
                 .asFlow()
                 .mapToOneOrNull(Dispatchers.Default)
                 .map { payload ->
@@ -63,6 +64,7 @@ class AchievementsRepository(
      * que a desbloqueou — o usuário leria como bug.
      */
     override suspend fun sincronizar(forcar: Boolean) {
+        if (tokenProvider.currentUid() == null) return   // sem sessão, sincronizar só produz 401
         if (!forcar && stamps.fresco(SyncStamps.CONQUISTAS, TTL_MS)) return
         val k = chave()
         when (val r = api.get()) {

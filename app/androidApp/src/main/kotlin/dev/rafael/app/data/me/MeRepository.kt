@@ -7,6 +7,7 @@ import dev.rafael.core.database.FitJourneyDatabase
 import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.TokenProvider
 import dev.rafael.core.result.AppResult
+import dev.rafael.core.result.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -36,9 +37,15 @@ class MeRepository(
     /** Chave POR USUÁRIO: sem isso, trocar de conta mostraria o nome da conta anterior. */
     private suspend fun chave(): String = "me:${tokenProvider.currentUid() ?: ""}"
 
+    /**
+     * Re-chaveia quando a SESSÃO muda, e não uma vez no início da coleta.
+     *
+     * A versão anterior resolvia a chave uma só vez; quem coletasse antes do login ficava preso
+     * ao uid nulo para sempre — foi o cabeçalho do menu eternamente em "?".
+     */
     override fun observar(): Flow<UserDto?> =
-        flow { emit(chave()) }.flatMapLatest { k ->
-            cache.get(k)
+        tokenProvider.uidFlow().flatMapLatest { uid ->
+            cache.get("me:${uid ?: ""}")
                 .asFlow()
                 .mapToOneOrNull(Dispatchers.Default)
                 .map { payload ->
@@ -49,6 +56,11 @@ class MeRepository(
         }
 
     override suspend fun sincronizar(forcar: Boolean) {
+        // SEM SESSÃO não se sincroniza. Sem esta guarda, qualquer tela viva depois do logout
+        // dispara um GET que volta 401 — e 401 acorda o SessionExpiryBus, que força navegação
+        // para o Login. Foi assim que "sair da conta" virou uma tela travada e um pulo tardio
+        // para o Login quando o menu reabria.
+        if (tokenProvider.currentUid() == null) return
         if (!forcar && stamps.fresco(SyncStamps.ME, TTL_MS)) return
         when (val r = api.get()) {
             is AppResult.Success -> {
@@ -63,20 +75,12 @@ class MeRepository(
      * O servidor devolve o `UserDto` já normalizado — é ELE que vai pro cache, não o texto que
      * o usuário digitou. Gravar o digitado faria a tela mostrar "Rafael  Souza" com dois
      * espaços até o próximo sync, e aí o nome mudaria sozinho na cara do usuário.
-     *
-     * `when` em vez do `map` do `AppResult`: o módulo `app` compila com **jvmTarget 11** e os
-     * módulos compartilhados com 17, então inlinar `map`/`flatMap` daqui não compila. Mesmo
-     * motivo pelo qual `StatsRepository` também usa `when`. É defeito de build, não de estilo —
-     * ver o débito registrado.
      */
     override suspend fun renomear(nome: String): AppResult<String> =
-        when (val r = api.renomear(nome)) {
-            is AppResult.Success -> {
-                gravar(r.value)
-                stamps.marcar(SyncStamps.ME)
-                AppResult.Success(r.value.displayName)
-            }
-            is AppResult.Failure -> r
+        api.renomear(nome).map { atualizado ->
+            gravar(atualizado)
+            stamps.marcar(SyncStamps.ME)
+            atualizado.displayName
         }
 
     private suspend fun gravar(dto: UserDto) {

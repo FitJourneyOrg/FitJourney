@@ -73,7 +73,17 @@ jobs:
           }
           JSON
 
-      # Compila o app inteiro (Compose/telas/ViewModels) — pega erro de compilação de UI
-      # que os testes de host NÃO cobrem (o :app:androidApp não é testado por eles).
+      # Os ViewModels do módulo de aplicação (Home, menu, perfil, conta) têm task PRÓPRIA:
+      # `testAndroidHostTest` só roda nos módulos KMP e nunca tocou nestes.
+      #
+      # POR QUE isto virou step: entre a fatia B.3 do outbox e a A.0 da Fase 6, este source set
+      # NÃO COMPILAVA — um método novo na interface `ProgramRepository` e um fake desatualizado.
+      # Os testes da Home atravessaram duas fatias e dois merges sem rodar, e ninguém percebeu,
+      # porque só rodavam quando alguém lembrava. Teste que ninguém roda não é cobertura.
+      - name: Client tests (módulo app — ViewModels)
+        run: ./gradlew :app:androidApp:testDebugUnitTest
+
+      # Compila o app inteiro (Compose/telas) — pega erro de compilação de UI, que nem os
+      # testes de host nem os do módulo app cobrem.
       - name: Build Android app (compila UI)
         run: ./gradlew :app:androidApp:assembleDebug
