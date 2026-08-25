@@ -8,6 +8,7 @@ import dev.rafael.core.result.AppError
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class GruposState(
@@ -39,7 +40,15 @@ class GruposViewModel(private val groups: Groups) : ViewModel() {
     init {
         viewModelScope.launch {
             groups.observar().collect { lista ->
-                _state.value = _state.value.copy(grupos = lista, carregando = false)
+                // NÃO mexe em `carregando`. O cache emite no primeiro frame, e emite VAZIO
+                // quando não há nada guardado — se isso encerrasse o carregamento, o esqueleto
+                // nunca apareceria e o "Nenhum desafio ainda" piscaria antes de a rede
+                // responder. Quem termina o carregamento é o SYNC.
+                //
+                // `update` e não `_state.value = _state.value.copy(...)`: este coletor e o sync
+                // escrevem no MESMO estado a partir de corrotinas diferentes. Ver o comentário
+                // em `sincronizar` — a versão com leitura-e-escrita perdia esta emissão.
+                _state.update { it.copy(grupos = lista) }
             }
         }
         // Sem sync aqui: quem dispara é a tela ao entrar (`carregar`), e o primeiro `ON_RESUME`
@@ -74,15 +83,30 @@ class GruposViewModel(private val groups: Groups) : ViewModel() {
      */
     fun atualizar() = sincronizar(forcar = true)
 
+    /**
+     * **Nunca leia-e-escreva `_state` atravessando uma suspensão.**
+     *
+     * A primeira versão fazia `_state.value = _state.value.copy(jaSincronizou = groups.jaSincronizou(), ...)`.
+     * Parece uma linha só, mas são três passos: lê `_state.value`, SUSPENDE em `jaSincronizou()`,
+     * e escreve. Na suspensão a thread principal fica livre — e é exatamente aí que o coletor do
+     * cache entrega a lista recém-gravada. A escrita seguinte usava o retrato ANTIGO e apagava os
+     * grupos que tinham acabado de chegar.
+     *
+     * O sintoma era perfeito: esqueleto rápido, "Nenhum desafio ainda" com 4 grupos no banco, e
+     * nada mais acontecia — porque não havia mais nenhuma gravação para disparar outra emissão.
+     * Sair da aba e voltar "consertava" porque criava um ViewModel novo, que lê o cache já cheio.
+     *
+     * Duas defesas: resolver o valor suspenso ANTES de tocar no estado, e `update`, que refaz o
+     * cálculo se alguém escreveu no meio.
+     */
     private fun sincronizar(forcar: Boolean) {
-        if (forcar) _state.value = _state.value.copy(atualizando = true)
+        if (forcar) _state.update { it.copy(atualizando = true) }
         viewModelScope.launch {
             groups.sincronizar(forcar)
-            _state.value = _state.value.copy(
-                jaSincronizou = groups.jaSincronizou(),
-                carregando = false,
-                atualizando = false,
-            )
+            val sincronizou = groups.jaSincronizou()
+            _state.update {
+                it.copy(jaSincronizou = sincronizou, carregando = false, atualizando = false)
+            }
         }
     }
 }
