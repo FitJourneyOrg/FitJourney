@@ -1,6 +1,11 @@
 ktor:
   deployment:
     port: "$PORT:8080"
+    # 0.0.0.0 e não localhost: em loopback só a própria máquina alcança o servidor, e um APARELHO
+    # FÍSICO na mesma rede recebe "conexão recusada" — que o app apresenta, corretamente, como
+    # "o servidor não respondeu". Com o emulador isso nunca apareceu porque `10.0.2.2` é NAT
+    # interno, não rede.
+    host: "$HOST:0.0.0.0"
   application:
     modules:
       - dev.rafael.server.ApplicationKt.module
@@ -16,3 +21,7 @@ firebase:
 # Default relativo à raiz do projeto; override via env MEDIA_DIR.
 media:
   dir: "$MEDIA_DIR:gifs_exercicios"
+  # Fotos de check-in (fatia B). PASTA SEPARADA da de exercícios, de propósito: aqui é dado de
+  # USUÁRIO — privado, servido só a membro do grupo, e purgado aos 90 dias (4.8). A de exercícios
+  # é asset estático, público e permanente. Precisa estar no .gitignore e no backup.
+  uploads: "$UPLOADS_DIR:uploads"
