@@ -141,11 +141,24 @@ fun AppError.visual(
         acao = ErroAcao.VOLTAR,
     )
 
+    /**
+     * 409 aqui é REGRA RECUSANDO, não dado velho.
+     *
+     * A versão anterior dizia "Dados desatualizados — alguma coisa mudou antes de você salvar,
+     * recarregue e tente de novo" para tudo. Quando o admin tentava sair do grupo, o servidor
+     * respondia "Transfira o cargo de admin antes de sair" e a tela trocava por essa frase: nada
+     * tinha mudado, recarregar não resolvia, e a única instrução útil — transferir o cargo — era
+     * justamente a que se perdia. Mandar tentar de novo o que nunca vai passar é pior que não
+     * dizer nada.
+     *
+     * Mesmo tratamento de [AppError.Forbidden] e [AppError.Validation]: o texto do servidor
+     * chega inteiro, e a ação é NENHUMA porque não existe retry que ajude.
+     */
     is AppError.Conflict -> ErroVisual(
-        icone = Icons.Outlined.SyncProblem,
-        titulo = "Dados desatualizados",
-        texto = "Alguma coisa mudou antes de você salvar. Recarregue e tente de novo.",
-        acao = ErroAcao.TENTAR_DE_NOVO,
+        icone = Icons.Outlined.ErrorOutline,
+        titulo = "Não dá para fazer isso agora",
+        texto = message,
+        acao = ErroAcao.NENHUMA,
     )
 
     // Validação some da tela: o lugar dela é embaixo do campo (usa fieldErrors, fatia 4).
@@ -270,7 +283,17 @@ fun ErroInline(
 ) {
     val visual = erro.visual(rememberTemRede(erro), contexto)
     Text(
-        visual.titulo,
+        // `texto` e NÃO `titulo`.
+        //
+        // O título é a CATEGORIA do erro ("Não dá para fazer isso agora", "Sem conexão"); o texto
+        // é a frase que diz o que houve e o que fazer. Numa tela de erro inteira os dois cabem, e
+        // o título orienta a leitura. Aqui, uma linha ao lado do botão que falhou, a categoria não
+        // acrescenta nada — quem tocou já sabe que falhou. O que falta é o motivo.
+        //
+        // Custou dois ciclos achar isto: primeiro o `Conflict` tinha texto fixo errado, e quando
+        // consertei a frase ela foi parar exatamente no campo que este componente descartava. O
+        // servidor vinha dizendo "Transfira o cargo de admin antes de sair" desde o começo.
+        visual.texto,
         modifier = modifier,
         color = MaterialTheme.colorScheme.error,
         style = MaterialTheme.typography.bodyMedium,

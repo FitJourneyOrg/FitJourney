@@ -14,8 +14,10 @@ fun AppError.toHttp(): Pair<HttpStatusCode, ErrorResponse> = when (this) {
         HttpStatusCode.Forbidden to ErrorResponse(code ?: ErrorCodes.FORBIDDEN, message)
     is AppError.NotFound ->
         HttpStatusCode.NotFound to ErrorResponse(ErrorCodes.NOT_FOUND, message)
+    // `code` opcional, como no Forbidden: deixa a tela escrever a própria frase quando quiser (#31)
+    // sem obrigá-la a comparar texto.
     is AppError.Conflict ->
-        HttpStatusCode.Conflict to ErrorResponse(ErrorCodes.CONFLICT, message)
+        HttpStatusCode.Conflict to ErrorResponse(code ?: ErrorCodes.CONFLICT, message)
     // Unexpected: NÃO vaza `message`/`cause` pro cliente — genérico no fio, detalhe só no log.
     is AppError.Unexpected ->
         HttpStatusCode.InternalServerError to ErrorResponse(ErrorCodes.INTERNAL, "Erro interno")
