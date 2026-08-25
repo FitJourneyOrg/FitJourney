@@ -35,6 +35,8 @@ import dev.rafael.app.screens.conta.ContaScreen
 import dev.rafael.app.screens.exercise.ExerciseDetailScreen
 import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
 import dev.rafael.app.screens.grupos.EntrarScreen
+import dev.rafael.app.screens.checkin.CheckInScreen
+import dev.rafael.app.screens.grupos.GrupoDetalheScreen
 import dev.rafael.app.screens.grupos.GrupoFormScreen
 import dev.rafael.app.screens.grupos.GruposScreen
 import dev.rafael.app.screens.home.HomeScreen
@@ -315,6 +317,25 @@ fun AppNavHost() {
             GruposScreen(
                 onCriar = { nav.navigate(AppRoute.GrupoNovo) },
                 onEntrarPorCodigo = { nav.navigate(AppRoute.GrupoEntrar()) },
+                onAbrirGrupo = { id -> nav.navigate(AppRoute.GrupoDetalhe(id)) },
+            )
+        }
+        composable<AppRoute.GrupoDetalhe> { entry ->
+            val rota: AppRoute.GrupoDetalhe = entry.toRoute()
+            GrupoDetalheScreen(
+                groupId = rota.id,
+                onBack = { nav.popBackStack() },
+                onCheckIn = { nav.navigate(AppRoute.CheckIn(rota.id)) },
+            )
+        }
+        composable<AppRoute.CheckIn> { entry ->
+            val rota: AppRoute.CheckIn = entry.toRoute()
+            CheckInScreen(
+                groupId = rota.groupId,
+                onBack = { nav.popBackStack() },
+                // Volta para o detalhe, onde o feed acabou de ganhar um item — e não para a lista.
+                // Quem faz check-in quer ver o próprio check-in aparecer.
+                onPronto = { nav.popBackStack() },
             )
         }
         composable<AppRoute.GrupoNovo> {

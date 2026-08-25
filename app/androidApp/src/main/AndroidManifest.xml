@@ -11,6 +11,26 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Check-in (Fase 6, fatia B). Ambas são de RUNTIME: pedidas na hora, e negá-las impede o
+         check-in apenas nos grupos que exigem a regra correspondente (5.3). -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- COARSE é o PADRÃO; FINE é opcional e só é PEDIDA quando a pessoa escolhe "exatamente aqui".
+         A 5.2 arredonda a coordenada para 2 casas (~1 km) e o invariante diz que a exata NUNCA é
+         gravada — isso vale nos dois casos. O que a precisão fina muda é apenas o RÓTULO sugerido:
+         com ~1-3 km o Geocoder devolveria uma rua que pode estar a um quilômetro da certa, e um
+         texto que parece exato e está errado é pior que nenhum.
+         Declarar as duas é requisito do Android para poder pedir a fina depois; a que o app
+         solicita ao abrir a tela é a COARSE. Em escolha de privacidade o padrão pesa mais que a
+         opção, e o padrão aqui protege. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+
+    <!-- `required=false`: emulador e tablets sem câmera continuam instalando o app. Quem não tem
+         câmera simplesmente não entra em desafio que exige foto — o app inteiro não some da Play
+         Store por causa de uma regra opcional de grupo. -->
+    <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+
     <application
         android:name=".FitJourneyApp"
         android:usesCleartextTraffic="true"
