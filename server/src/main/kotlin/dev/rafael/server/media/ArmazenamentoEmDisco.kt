@@ -7,6 +7,7 @@ import dev.rafael.core.result.asSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 /**
@@ -53,6 +54,25 @@ class ArmazenamentoEmDisco(private val raiz: File) : ArmazenamentoDeMidia {
         resolver(ref)?.delete()
         Unit.asSuccess()
     }
+
+    override suspend fun listarRefs(anteriorA: Instant): AppResult<List<String>> =
+        withContext(Dispatchers.IO) {
+            runCatching {
+                val corte = anteriorA.toEpochMilliseconds()
+                raiz.walkTopDown()
+                    .filter { it.isFile && it.lastModified() < corte }
+                    // A ref é o caminho RELATIVO à raiz, com barra normal — a mesma forma que o
+                    // `guardar` devolveu e que está no banco. Sem normalizar a barra, o
+                    // recolhimento no Windows compararia `aa\bb\x.jpg` com `aa/bb/x.jpg` e
+                    // acharia que TODO arquivo é órfão.
+                    .map { it.relativeTo(raiz).path.replace(File.separatorChar, '/') }
+                    .filter { FORMATO.matches(it) }
+                    .toList()
+            }.fold(
+                onSuccess = { it.asSuccess() },
+                onFailure = { AppError.Unexpected("Falha ao listar a mídia", it).asFailure() },
+            )
+        }
 
     /** `null` quando a referência é malformada ou aponta para fora da raiz. */
     private fun resolver(ref: String): File? {
