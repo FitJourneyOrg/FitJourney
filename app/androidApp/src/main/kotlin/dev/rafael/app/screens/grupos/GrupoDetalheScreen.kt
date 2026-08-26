@@ -344,7 +344,10 @@ fun GrupoDetalheScreen(
                 Feed(
                     itens = state.feed,
                     carregando = state.carregandoFeed,
+                    temMais = state.temMais,
+                    carregandoMais = state.carregandoMais,
                     onApagar = { alvoParaApagar = it },
+                    onCarregarMais = { viewModel.carregarMais(groupId) },
                 )
 
                 Spacer(Modifier.height(24.dp))
@@ -400,7 +403,14 @@ private fun Membro(membro: GroupMemberDto, podeAgir: Boolean, onAgir: () -> Unit
  * `CheckInDto`, que não tem esses campos. A tela não teria como vazá-los nem se quisesse.
  */
 @Composable
-private fun Feed(itens: List<CheckInDto>, carregando: Boolean, onApagar: (CheckInDto) -> Unit) {
+private fun Feed(
+    itens: List<CheckInDto>,
+    carregando: Boolean,
+    temMais: Boolean,
+    carregandoMais: Boolean,
+    onApagar: (CheckInDto) -> Unit,
+    onCarregarMais: () -> Unit,
+) {
     if (carregando && itens.isEmpty()) {
         repeat(2) {
             Box(Modifier.fillMaxWidth().height(220.dp).shimmer(RoundedCornerShape(12.dp)))
@@ -419,6 +429,23 @@ private fun Feed(itens: List<CheckInDto>, carregando: Boolean, onApagar: (CheckI
     itens.forEach { item ->
         ItemDoFeed(item, onApagar)
         Spacer(Modifier.height(12.dp))
+    }
+
+    // Botão, e não rolagem infinita. O detalhe do grupo é uma `Column` com `verticalScroll`, e
+    // não uma `LazyColumn`: cada item carregado fica COMPOSTO para sempre. Com o botão, quem
+    // decide o quanto cresce é a pessoa, e o normal é parar em uma ou duas páginas.
+    //
+    // A conversão para `LazyColumn` é o caminho certo, mas mexe na tela inteira — banner, dados,
+    // participantes e feed hoje rolam juntos. Ver DEBITOS.
+    if (temMais) {
+        OutlinedButton(
+            onClick = onCarregarMais,
+            enabled = !carregandoMais,
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            if (carregandoMais) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+            else Text("Ver check-ins mais antigos")
+        }
     }
 }
 

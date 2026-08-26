@@ -26,6 +26,15 @@ data class GrupoDetalheState(
     /** O FEED (8.0): os check-ins do grupo, mais recente primeiro. */
     val feed: List<CheckInDto> = emptyList(),
     val carregandoFeed: Boolean = true,
+    val carregandoMais: Boolean = false,
+    /**
+     * A última página veio cheia, então provavelmente há mais.
+     *
+     * "Provavelmente" é o melhor que dá para saber sem uma contagem total — e contar 4.500 linhas
+     * a cada abertura de tela custaria mais do que o botão a mais que às vezes aparece e não traz
+     * nada.
+     */
+    val temMais: Boolean = false,
     val carregando: Boolean = true,
     val ocupado: Boolean = false,
     val erro: AppError? = null,
@@ -104,11 +113,60 @@ class GrupoDetalheViewModel(
             val r = checkIns.feed(groupId)
             _state.update { atual ->
                 when (r) {
-                    is AppResult.Success -> atual.copy(feed = r.value, carregandoFeed = false)
+                    is AppResult.Success -> atual.copy(
+                        feed = juntar(novos = r.value, jaCarregados = atual.feed),
+                        carregandoFeed = false,
+                        temMais = r.value.size >= PAGINA,
+                    )
                     is AppResult.Failure -> atual.copy(carregandoFeed = false)
                 }
             }
         }
+    }
+
+    /**
+     * Próxima página, usando o item mais antigo da lista como CURSOR.
+     *
+     * Cursor e não deslocamento: com item novo chegando por cima a cada 10s, `OFFSET 30` faria a
+     * segunda página repetir ou pular linhas conforme a lista cresce por cima.
+     */
+    fun carregarMais(groupId: String) {
+        val atual = _state.value
+        if (atual.carregandoMais || !atual.temMais) return
+        val cursor = atual.feed.lastOrNull()?.createdAt ?: return
+
+        _state.update { it.copy(carregandoMais = true) }
+        viewModelScope.launch {
+            val r = checkIns.feed(groupId, antesDe = cursor)
+            _state.update { estado ->
+                when (r) {
+                    is AppResult.Success -> estado.copy(
+                        feed = estado.feed + r.value,
+                        carregandoMais = false,
+                        temMais = r.value.size >= PAGINA,
+                    )
+                    is AppResult.Failure -> estado.copy(carregandoMais = false, erro = r.error)
+                }
+            }
+        }
+    }
+
+    /**
+     * Junta a página recém-buscada com o que o usuário já paginou.
+     *
+     * **Sem isto, o polling apagaria o trabalho dele a cada dez segundos.** Ele carrega três
+     * páginas, o laço de 10s busca a primeira, e a lista voltaria para 30 itens sozinha.
+     *
+     * A regra: a página fresca é AUTORIDADE sobre a janela de tempo que ela cobre — do item mais
+     * antigo dela até agora. O que já estava carregado e é mais antigo que isso permanece. Assim
+     * um check-in apagado pelo dono some de verdade (estava na janela e não voltou), e as páginas
+     * antigas não são perdidas.
+     *
+     * Página fresca vazia significa grupo sem check-in nenhum — ela é sempre a mais recente.
+     */
+    private fun juntar(novos: List<CheckInDto>, jaCarregados: List<CheckInDto>): List<CheckInDto> {
+        val corte = novos.lastOrNull()?.createdAt ?: return emptyList()
+        return novos + jaCarregados.filter { it.createdAt < corte }
     }
 
     /**
@@ -195,5 +253,8 @@ class GrupoDetalheViewModel(
 
     private companion object {
         val INTERVALO_DO_FEED = 10.seconds
+
+        /** Espelha o `PAGINA_PADRAO` do `CheckInService`. Se divergirem, o "tem mais" mente. */
+        const val PAGINA = 30
     }
 }
