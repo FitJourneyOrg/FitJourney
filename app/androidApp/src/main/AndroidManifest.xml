@@ -31,10 +31,33 @@
          Store por causa de uma regra opcional de grupo. -->
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
+    <!--
+      BACKUP DESLIGADO.
+
+      Tudo que o app guarda localmente é CÓPIA do servidor: catálogo de exercícios, programas,
+      treinos, stats, grupos. Restaurar isso não devolve nada que o primeiro sync não devolveria
+      — e devolve DADO VELHO, que o app passa a tratar como verdade.
+
+      Não é hipótese. Depois de converter as miniaturas para WebP, o aparelho continuou pedindo
+      `.png` mesmo desinstalado e reinstalado: o Android havia restaurado o banco da nuvem com as
+      refs antigas, e o catálogo nem chegou a ser sincronizado — não havia um único
+      `GET /exercises` no log do servidor.
+
+      Efeito colateral bom: "desinstalar para testar limpo" volta a significar o que promete, e
+      isso vale para toda bateria manual daqui pra frente.
+
+      O que NÃO se perde: nada que exista só no aparelho. Token e dado sensível ficam no
+      Keystore ([REGRA] de segurança) e nunca estiveram no backup; a fila do outbox é escrita
+      pendente, e se ela existir na hora da desinstalação já se perdeu de qualquer forma.
+
+      `dataExtractionRules` cobre a API 31+, onde `allowBackup` sozinho não desliga a
+      transferência direta entre aparelhos.
+    -->
     <application
         android:name=".FitJourneyApp"
         android:usesCleartextTraffic="true"
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/regras_de_extracao"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"

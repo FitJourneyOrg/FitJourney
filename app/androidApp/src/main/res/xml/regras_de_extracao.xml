@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  API 31+: `allowBackup="false"` desliga o backup em nuvem, mas NÃO a transferência direta
+  entre aparelhos. Sem este arquivo, trocar de celular restauraria o banco local — o mesmo
+  dado velho que fez o app pedir miniaturas `.png` que já não existiam.
+
+  `disableIfNoEncryptionCapabilities` não vem ao caso aqui: não há nada a proteger, há algo a
+  NÃO restaurar.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="file" />
+        <exclude domain="external" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="root" />
+        <exclude domain="database" />
+        <exclude domain="sharedpref" />
+        <exclude domain="file" />
+        <exclude domain="external" />
+    </device-transfer>
+</data-extraction-rules>
