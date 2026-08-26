@@ -72,20 +72,27 @@ class GroupService(
             }
         }
 
-    /** Grupos de que a pessoa participa. Lista vazia é resposta legítima, não erro. */
+    /**
+     * Grupos de que a pessoa participa. Lista vazia é resposta legítima, não erro.
+     *
+     * **Os papéis vêm em UMA consulta, não uma por grupo.** A versão anterior chamava `roleOf`
+     * dentro do `map`: com vinte grupos, vinte e uma consultas para montar uma tela. Não aparece
+     * com dois grupos de teste e é péssimo com vinte — e é o tipo de defeito que se multiplica
+     * sozinho, porque código novo imita o que já está no arquivo.
+     *
+     * `myCheckInToday` fica **fora** daqui de propósito: seria outra consulta por grupo, e a
+     * lista não tem botão de check-in — quem tem é o detalhe.
+     */
     suspend fun meusGrupos(firebaseUid: String, email: String?): AppResult<List<GroupDto>> =
         userService.findOrCreate(firebaseUid, email).flatMap { user ->
             val agora = clock.now()
             repository.listByMember(user.id).flatMap { grupos ->
-                // O papel vem por grupo; sem ele a tela não sabe se mostra as ações de admin.
-                val dtos = grupos.map { g ->
-                    val papel = when (val r = repository.roleOf(g.id, user.id)) {
-                        is AppResult.Success -> r.value?.paraPapel()
-                        is AppResult.Failure -> return@flatMap r
-                    }
-                    g.toDto(agora, papel)
+                repository.rolesOf(grupos.map { it.id }, user.id).flatMap { papeis ->
+                    // O papel vem por grupo; sem ele a tela não sabe se mostra as ações de admin.
+                    AppResult.Success(
+                        grupos.map { g -> g.toDto(agora, papeis[g.id]?.paraPapel()) },
+                    )
                 }
-                AppResult.Success(dtos)
             }
         }
 
