@@ -115,6 +115,17 @@ class FakeGroupRepository : GroupRepository {
     override suspend fun roleOf(groupId: Uuid, userId: Uuid): AppResult<String?> =
         membros[groupId]?.get(userId)?.role.asSuccess()
 
+    /** CONTA as chamadas: é assim que o teste prova que a lista não faz uma consulta por grupo. */
+    var chamadasDeRolesOf = 0
+        private set
+
+    override suspend fun rolesOf(groupIds: List<Uuid>, userId: Uuid): AppResult<Map<Uuid, String>> {
+        chamadasDeRolesOf++
+        return groupIds.mapNotNull { g -> membros[g]?.get(userId)?.role?.let { g to it } }
+            .toMap()
+            .asSuccess()
+    }
+
     override suspend fun findByCode(code: String): AppResult<Group?> =
         grupos.values.firstOrNull { it.code.equals(code, ignoreCase = true) }?.let(::comContagem).asSuccess()
 

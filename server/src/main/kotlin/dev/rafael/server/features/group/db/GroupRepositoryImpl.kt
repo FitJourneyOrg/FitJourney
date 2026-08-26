@@ -8,6 +8,7 @@ import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
+import dev.rafael.core.result.map
 import dev.rafael.server.features.group.models.Group
 import dev.rafael.server.features.group.services.GroupPolicy
 import dev.rafael.server.features.user.db.UsersTable
@@ -122,6 +123,15 @@ class GroupRepositoryImpl : GroupRepository {
         }
     }
 
+    override suspend fun rolesOf(groupIds: List<Uuid>, userId: Uuid): AppResult<Map<Uuid, String>> = dbQuery {
+        if (groupIds.isEmpty()) return@dbQuery emptyMap()
+        transaction {
+            GroupMembersTable.selectAll()
+                .where { (GroupMembersTable.groupId inList groupIds) and (GroupMembersTable.userId eq userId) }
+                .associate { it[GroupMembersTable.groupId] to it[GroupMembersTable.role] }
+        }
+    }
+
     // ---- fatia A.2 ----
 
     override suspend fun findByCode(code: String): AppResult<Group?> = dbQuery {
@@ -136,10 +146,10 @@ class GroupRepositoryImpl : GroupRepository {
         }
     }
 
+    /** IDEMPOTENTE: dois toques no botão (ou um retry de rede) não podem virar erro na cara de
+     *  quem já entrou. Mesma escolha do `POST /sessions` (#30). */
     override suspend fun join(groupId: Uuid, userId: Uuid): AppResult<Unit> = dbQuery {
         transaction {
-            // IDEMPOTENTE: dois toques no botão (ou um retry de rede) não podem virar erro na
-            // cara de quem já entrou. Mesma escolha do `POST /sessions` (#30).
             GroupMembersTable.insertIgnore {
                 it[GroupMembersTable.groupId] = groupId
                 it[GroupMembersTable.userId] = userId
@@ -147,19 +157,17 @@ class GroupRepositoryImpl : GroupRepository {
                 it[joinedAt] = Clock.System.now().toLocalDateTime(TimeZone.UTC)
             }
         }
-        Unit
-    }
+    }.map { }
 
+    /** Só o VÍNCULO sai. Os check-ins ficam no histórico do grupo (2.6): apagá-los reescreveria
+     *  o passado de um desafio que outras pessoas disputaram. */
     override suspend fun leave(groupId: Uuid, userId: Uuid): AppResult<Unit> = dbQuery {
         transaction {
-            // Só o VÍNCULO sai. Os check-ins ficam no histórico do grupo (2.6): apagá-los
-            // reescreveria o passado de um desafio que outras pessoas disputaram.
             GroupMembersTable.deleteWhere {
                 (GroupMembersTable.groupId eq groupId) and (GroupMembersTable.userId eq userId)
             }
         }
-        Unit
-    }
+    }.map { }
 
     override suspend fun deleteIfSoleMember(groupId: Uuid, userId: Uuid): AppResult<Boolean> = dbQuery {
         transaction {
@@ -186,8 +194,7 @@ class GroupRepositoryImpl : GroupRepository {
                 (GroupMembersTable.groupId eq groupId) and (GroupMembersTable.userId eq userId)
             }) { it[GroupMembersTable.role] = role }
         }
-        Unit
-    }
+    }.map { }
 
     override suspend fun members(groupId: Uuid): AppResult<List<GroupMemberRow>> = dbQuery {
         transaction {
@@ -226,8 +233,7 @@ class GroupRepositoryImpl : GroupRepository {
                 it[GroupInvitesTable.expiresAt] = expiresAt
             }
         }
-        Unit
-    }
+    }.map { }
 
     override suspend fun findInvite(token: Uuid): AppResult<InviteRow?> = dbQuery {
         transaction {
@@ -250,8 +256,7 @@ class GroupRepositoryImpl : GroupRepository {
 
     override suspend fun revokeInvites(groupId: Uuid, agora: LocalDateTime): AppResult<Unit> = dbQuery {
         transaction { revogarAtivos(groupId, agora) }
-        Unit
-    }
+    }.map { }
 
     private fun revogarAtivos(groupId: Uuid, agora: LocalDateTime) {
         GroupInvitesTable.update({
