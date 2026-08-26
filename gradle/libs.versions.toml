@@ -61,6 +61,7 @@ gitliveFirebase = "2.4.0"
 androidx-navigation = "2.8.4"   # Android-only (ARCH #8/#13); type-safe routes
 coil = "3.1.0"                  # carregador de imagem (thumbs de exercício)
 media3 = "1.5.1"                # ExoPlayer — mp4 em loop mudo no detalhe do exercício
+composeIcons = "1.7.3"          # ícones Material — os dois artefatos na MESMA versão
 camerax = "1.4.1"               # câmera IN-APP do check-in (4.4) — sem galeria, sem app externo
 playServicesLocation = "21.3.0" # uma leitura de GPS por check-in (5.2); precisão grossa basta
 androidx-work = "2.10.0"        # WorkManager — sincroniza a outbox quando a rede volta
@@ -175,6 +176,15 @@ material                            = { module = "com.google.android.material:ma
 
 # --- Navigation compose - deps
 androidx-navigation-compose         = { module = "androidx.navigation:navigation-compose", version.ref = "androidx-navigation" }
+
+# --- Icones do Material ---
+# Os DOIS do mesmo fornecedor (JetBrains) e na MESMA versao. Estavam declarados como
+# coordenada crua no build do app, um deles SEM VERSAO e de fornecedor diferente do outro:
+# `assembleDebug` resolvia por acaso e o lint do release nao — a resolucao falhava com
+# "Could not find androidx.compose.material:material-icons-core:" (note o `:` vazio no fim).
+# `extended` depende de `core`, mas declarar os dois deixa explicito o que a UI usa.
+composeIcons-core     = { module = "org.jetbrains.compose.material:material-icons-core",     version.ref = "composeIcons" }
+composeIcons-extended = { module = "org.jetbrains.compose.material:material-icons-extended", version.ref = "composeIcons" }
 
 # --- Coil 3 (imagem async no Compose) ---
 coil-compose        = { module = "io.coil-kt.coil3:coil-compose",        version.ref = "coil" }
