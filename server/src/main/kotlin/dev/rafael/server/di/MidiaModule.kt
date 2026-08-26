@@ -2,6 +2,7 @@ package dev.rafael.server.di
 
 import dev.rafael.server.media.ArmazenamentoDeMidia
 import dev.rafael.server.media.ArmazenamentoEmDisco
+import dev.rafael.server.media.PurgaDeMidia
 import org.koin.dsl.module
 import java.io.File
 
@@ -12,4 +13,5 @@ import java.io.File
  */
 fun midiaModule(pastaDeUploads: File) = module {
     single<ArmazenamentoDeMidia> { ArmazenamentoEmDisco(pastaDeUploads) }
+    single { PurgaDeMidia(get(), get()) }
 }

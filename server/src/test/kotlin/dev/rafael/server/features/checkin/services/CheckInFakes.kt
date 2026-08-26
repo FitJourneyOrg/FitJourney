@@ -4,12 +4,14 @@ import dev.rafael.contract.checkin.CheckInStatus
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asSuccess
 import dev.rafael.server.features.checkin.db.CheckInRepository
+import dev.rafael.server.features.checkin.db.FotoExpirada
 import dev.rafael.server.features.checkin.models.CheckIn
 import dev.rafael.server.features.checkin.models.CheckInComAutor
 import dev.rafael.server.features.checkin.models.NovoCheckIn
 import dev.rafael.server.media.ArmazenamentoDeMidia
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 /**
@@ -62,6 +64,16 @@ class FakeCheckInRepository : CheckInRepository {
         return Unit.asSuccess()
     }
 
+    // ---- purga: não exercitada por esta suíte; ver PurgaDeMidiaTest ----
+
+    override suspend fun comFotoExpirada(carenciaEmDias: Int, limite: Int) =
+        emptyList<FotoExpirada>().asSuccess()
+
+    override suspend fun marcarPurgados(ids: List<Uuid>, agora: LocalDateTime) = Unit.asSuccess()
+
+    override suspend fun refsVivas(): AppResult<Set<String>> =
+        porDia.values.mapNotNull { it.photoRef }.toSet().asSuccess()
+
     /** Nomes de quem fez, para o feed. Sem isto o dublê não teria como preencher o `displayName`. */
     val nomes = mutableMapOf<Uuid, String>()
 
@@ -108,4 +120,14 @@ class FakeArmazenamento : ArmazenamentoDeMidia {
         arquivos.remove(ref)
         return Unit.asSuccess()
     }
+
+    /**
+     * Este dublê não guarda a idade dos arquivos, então devolve tudo.
+     *
+     * Serve para esta suíte, que nunca roda a purga — quem exercita o recolhimento de órfãos é o
+     * `PurgaDeMidiaTest`, com um dublê próprio que registra o instante de cada gravação. É lá que
+     * o corte de 24h precisa ser afirmado, e não aqui.
+     */
+    override suspend fun listarRefs(anteriorA: Instant): AppResult<List<String>> =
+        arquivos.keys.toList().asSuccess()
 }

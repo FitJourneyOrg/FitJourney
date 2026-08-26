@@ -9,21 +9,31 @@ import dev.rafael.core.result.map
 import dev.rafael.server.features.checkin.models.CheckIn
 import dev.rafael.server.features.checkin.models.CheckInComAutor
 import dev.rafael.server.features.checkin.models.NovoCheckIn
+import dev.rafael.server.features.group.db.GroupsTable
 import dev.rafael.server.features.user.db.UsersTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.less
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import java.math.BigDecimal
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.uuid.Uuid
 
 class CheckInRepositoryImpl : CheckInRepository {
@@ -108,6 +118,56 @@ class CheckInRepositoryImpl : CheckInRepository {
      */
     override suspend fun apagar(id: Uuid): AppResult<Unit> =
         dbQuery { transaction { CheckInsTable.deleteWhere { CheckInsTable.id eq id } } }.map { }
+
+    // ---- purga de mídia (4.8, emendada) ----
+
+    override suspend fun comFotoExpirada(carenciaEmDias: Int, limite: Int): AppResult<List<FotoExpirada>> = dbQuery {
+        transaction {
+            (CheckInsTable innerJoin GroupsTable)
+                .selectAll()
+                .where {
+                    CheckInsTable.photoRef.isNotNull() and
+                        CheckInsTable.photoPurgedAt.isNull() and
+                        // `end_date + carência < hoje`. A conta é em dia CIVIL e ignora o fuso do
+                        // grupo de propósito: a diferença é de no máximo um dia, e com 30 dias de
+                        // carência isso é ruído. Trazer o fuso para cá custaria uma função por
+                        // linha e impediria o índice.
+                        (GroupsTable.endDate less hojeMenos(carenciaEmDias))
+                }
+                .limit(limite)
+                .mapNotNull { linha ->
+                    linha[CheckInsTable.photoRef]?.let { FotoExpirada(linha[CheckInsTable.id], it) }
+                }
+        }
+    }
+
+    override suspend fun marcarPurgados(ids: List<Uuid>, agora: LocalDateTime): AppResult<Unit> = dbQuery {
+        if (ids.isEmpty()) return@dbQuery Unit
+        transaction {
+            CheckInsTable.update({ CheckInsTable.id inList ids }) {
+                it[photoPurgedAt] = agora
+                // O CHECK `check_ins_local_completo` exige que nome e coordenada andem juntos —
+                // anular os três de uma vez é o que mantém a linha válida.
+                it[placeName] = null
+                it[placeLat] = null
+                it[placeLng] = null
+            }
+        }
+    }
+
+    override suspend fun refsVivas(): AppResult<Set<String>> = dbQuery {
+        transaction {
+            CheckInsTable
+                .select(CheckInsTable.photoRef)
+                .where { CheckInsTable.photoRef.isNotNull() and CheckInsTable.photoPurgedAt.isNull() }
+                .mapNotNull { it[CheckInsTable.photoRef] }
+                .toSet()
+        }
+    }
+
+    /** Data civil de hoje menos N dias, no relógio do servidor. */
+    private fun hojeMenos(dias: Int): LocalDate =
+        Clock.System.now().minus(dias.days).toLocalDateTime(TimeZone.UTC).date
 
     private fun toComAutor(linha: ResultRow) = CheckInComAutor(
         checkIn = CheckIn(
