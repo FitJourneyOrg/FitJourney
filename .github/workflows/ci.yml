@@ -87,3 +87,32 @@ jobs:
       # testes de host nem os do módulo app cobrem.
       - name: Build Android app (compila UI)
         run: ./gradlew :app:androidApp:assembleDebug
+
+      # `assembleDebug` VERDE NÃO PROVA QUE O RELEASE COMPILA.
+      #
+      # Em 2026-08-25 descobrimos que o release estava quebrado desde JUNHO: uma coordenada de
+      # dependência declarada sem versão (`androidx.compose.material:material-icons-core`, sem
+      # `:versão`) resolvia por acaso no debug e falhava no `lintVitalAnalyzeRelease`. Meses de
+      # trabalho sobre um release que não buildava, e ninguém sabia — porque o CI também só
+      # rodava debug.
+      #
+      # O release exercita coisas que o debug não toca: lint vital, minificação, shrinking de
+      # recurso, e a resolução de dependência de outras configurações. É barato e pega uma
+      # classe inteira de erro que só apareceria no dia do lançamento.
+      - name: Build Android release (lint vital + empacotamento)
+        run: ./gradlew :app:androidApp:assembleRelease
+
+      # O AAB é o que vai para a loja, e o número que importa NÃO é o tamanho deste arquivo:
+      # é o download por aparelho, que o bundle divide por ABI e densidade. Sem esta nota,
+      # alguém vai olhar "20,9 MB" daqui a seis meses e achar que o app engordou.
+      - name: Tamanho do bundle (informativo)
+        run: |
+          ./gradlew :app:androidApp:bundleRelease
+          echo "### Tamanho do release" >> $GITHUB_STEP_SUMMARY
+          echo '| artefato | MB |' >> $GITHUB_STEP_SUMMARY
+          echo '|---|---:|' >> $GITHUB_STEP_SUMMARY
+          for f in app/androidApp/build/outputs/apk/release/*.apk app/androidApp/build/outputs/bundle/release/*.aab; do
+            [ -f "$f" ] && echo "| $(basename "$f") | $(du -m "$f" | cut -f1) |" >> $GITHUB_STEP_SUMMARY
+          done
+          echo '' >> $GITHUB_STEP_SUMMARY
+          echo '_O AAB contém todas as ABIs e densidades. O download real por aparelho é bem menor._' >> $GITHUB_STEP_SUMMARY
