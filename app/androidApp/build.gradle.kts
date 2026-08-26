@@ -61,9 +61,10 @@ dependencies {
     // Upload multipart do check-in. Base64 em JSON infla 33% e some com o Content-Type da parte.
     implementation(libs.ktor.client.contentNegotiation)
 
-    // icones
-    implementation("androidx.compose.material:material-icons-core")
-    implementation("org.jetbrains.compose.material:material-icons-extended:1.7.3")
+    // Ícones do Material, os dois pelo catálogo e do MESMO fornecedor. Ver o comentário no
+    // `libs.versions.toml`: um deles estava sem versão e quebrava o lint do release.
+    implementation(libs.composeIcons.core)
+    implementation(libs.composeIcons.extended)
 
     // Koin (DI no cliente)
     implementation(libs.koin.android)
