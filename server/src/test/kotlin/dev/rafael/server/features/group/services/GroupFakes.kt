@@ -196,6 +196,9 @@ class FakeUserRepository(usuarios: List<User> = emptyList()) : UserRepository {
     override suspend fun findByFirebaseUid(firebaseUid: String): AppResult<User?> =
         porUid[firebaseUid].asSuccess()
 
+    override suspend fun findById(userId: Uuid): AppResult<User?> =
+        porUid.values.firstOrNull { it.id == userId }.asSuccess()
+
     override suspend fun create(
         id: Uuid,
         firebaseUid: String,
