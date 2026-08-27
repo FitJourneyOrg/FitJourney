@@ -254,8 +254,32 @@ class CheckInRoutesTest {
         val m = montar()
 
         assertEquals(HttpStatusCode.Unauthorized, client.get("/groups/${m.grupo}/checkins").status)
+        assertEquals(HttpStatusCode.Unauthorized, client.get("/groups/${m.grupo}/ranking").status)
         assertEquals(HttpStatusCode.Unauthorized, client.delete("/groups/${m.grupo}/checkins/qualquer").status)
         assertEquals(HttpStatusCode.Unauthorized, client.get("/checkins/qualquer/foto").status)
+    }
+
+    // ---- ranking (7.2) ----
+
+    @Test
+    fun `o ranking responde JSON com posicao resolvida pelo servidor`() = testApplication {
+        // A posição vem pronta: a tela não numera lista. Se numerasse, poderia discordar do
+        // desempate — e duas fontes para a mesma verdade acabam divergindo.
+        val m = montar()
+        client.post("/groups/${m.grupo}/checkins") {
+            header(HttpHeaders.Authorization, "Bearer token-eu")
+            setBody(corpo())
+        }
+
+        val r = client.get("/groups/${m.grupo}/ranking") {
+            header(HttpHeaders.Authorization, "Bearer token-eu")
+        }
+
+        assertEquals(HttpStatusCode.OK, r.status)
+        val corpo = r.bodyAsText()
+        assertTrue(corpo.contains("\"position\":1"))
+        assertTrue(corpo.contains("\"mine\":true"))
+        assertTrue(!corpo.contains("@"), "e-mail nunca atravessa a fronteira do grupo (#33)")
     }
 
     // ---- feed, foto e exclusão ----

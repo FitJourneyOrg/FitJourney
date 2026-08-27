@@ -28,6 +28,7 @@ import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -436,6 +437,97 @@ class CheckInIntegrationTest {
         ok(checkIns.criar(novo(a.id, dono)))
 
         assertTrue(ok(checkIns.doGrupo(b.id, limite = 10)).isEmpty())
+    }
+
+    // ---- ranking (7.2, fatia C) ----
+
+    @Test
+    fun `quem SAIU deixa o ranking, e os check-ins dele ficam no historico`() = runBlocking {
+        // As duas regras juntas — 2.15 e 2.6 — e é justamente o par que se erra separando.
+        //
+        // O ranking parte de `group_members`, não de `check_ins`: sem vínculo, a pessoa não
+        // aparece, POR CONSTRUÇÃO. Filtrar depois no Kotlin seria confiar em alguém lembrar.
+        val dono = novoUsuario("Dono")
+        val quesai = novoUsuario("QueSai")
+        val grupo = grupoDe(dono)
+        ok(grupos.join(grupo.id, quesai))
+        ok(checkIns.criar(novo(grupo.id, quesai, dia = "2026-09-10")))
+        ok(checkIns.criar(novo(grupo.id, quesai, dia = "2026-09-11")))
+        ok(checkIns.criar(novo(grupo.id, dono, dia = "2026-09-10")))
+
+        assertEquals(2, ok(checkIns.ranking(grupo.id)).size)
+        ok(grupos.leave(grupo.id, quesai))
+
+        val ranking = ok(checkIns.ranking(grupo.id))
+        assertEquals(listOf("Dono"), ranking.map { it.displayName }, "quem saiu deixa o ranking (2.15)")
+        // Mas o histórico não é reescrito: os check-ins dele continuam no grupo.
+        assertEquals(3, linhasDoGrupo(grupo.id), "os check-ins ficam no histórico (2.6)")
+        assertEquals(2, ok(checkIns.doGrupo(grupo.id, limite = 10)).count { it.displayName == "QueSai" })
+    }
+
+    @Test
+    fun `membro sem nenhum check-in aparece com zero, e nao some`() = runBlocking {
+        // A guarda do LEFT JOIN. As condições do check-in vão no ON, não no WHERE — no WHERE, o
+        // filtro de status transformaria o LEFT em INNER e quem nunca treinou sumiria da lista.
+        val dono = novoUsuario("Dono")
+        val calouro = novoUsuario("Calouro")
+        val grupo = grupoDe(dono)
+        ok(grupos.join(grupo.id, calouro))
+        ok(checkIns.criar(novo(grupo.id, dono)))
+
+        val ranking = ok(checkIns.ranking(grupo.id))
+
+        assertEquals(2, ranking.size)
+        assertEquals("Calouro", ranking.last().displayName)
+        assertEquals(0, ranking.last().checkIns)
+    }
+
+    @Test
+    fun `INVALIDADO nao conta, mas EM ANALISE continua contando`() = runBlocking {
+        // 6.8, e o motivo está escrito na decisão: se o ponto sumisse durante a análise, a
+        // denúncia viraria arma — bastaria denunciar o líder do ranking.
+        val dono = novoUsuario("Dono")
+        val grupo = grupoDe(dono)
+        val a = novo(grupo.id, dono, dia = "2026-09-10")
+        val b = novo(grupo.id, dono, dia = "2026-09-11")
+        val c = novo(grupo.id, dono, dia = "2026-09-12")
+        listOf(a, b, c).forEach { ok(checkIns.criar(it)) }
+
+        transaction {
+            CheckInsTable.update({ CheckInsTable.id eq b.id }) { it[status] = CheckInStatus.EM_ANALISE.name }
+            CheckInsTable.update({ CheckInsTable.id eq c.id }) { it[status] = CheckInStatus.INVALIDADO.name }
+        }
+
+        assertEquals(2, ok(checkIns.ranking(grupo.id)).single().checkIns, "válido + em análise")
+    }
+
+    @Test
+    fun `no dia 1 todos empatam em zero, e a ordem NAO muda entre consultas`() = runBlocking {
+        // Empate não é caso de borda: é o estado inicial de todo desafio. Sem um critério final
+        // determinístico, o Postgres devolveria em ordem arbitrária — e com o polling de 10s a
+        // lista se reembaralharia sozinha na tela de quem está olhando.
+        val dono = novoUsuario("Dono")
+        val grupo = grupoDe(dono)
+        repeat(5) { i -> ok(grupos.join(grupo.id, novoUsuario("Membro$i"))) }
+
+        val primeira = ok(checkIns.ranking(grupo.id))
+        val segunda = ok(checkIns.ranking(grupo.id))
+        val terceira = ok(checkIns.ranking(grupo.id))
+
+        assertTrue(primeira.all { it.checkIns == 0 })
+        assertEquals(primeira.map { it.userId }, segunda.map { it.userId })
+        assertEquals(primeira.map { it.userId }, terceira.map { it.userId })
+        assertEquals("Dono", primeira.first().displayName, "quem entrou antes fica na frente")
+    }
+
+    @Test
+    fun `o ranking de um grupo nao enxerga check-in de outro`() = runBlocking {
+        val dono = novoUsuario("Dono")
+        val a = grupoDe(dono)
+        val b = grupoDe(dono)
+        repeat(3) { i -> ok(checkIns.criar(novo(a.id, dono, dia = "2026-09-1$i"))) }
+
+        assertEquals(0, ok(checkIns.ranking(b.id)).single().checkIns)
     }
 
     // ---- purga de mídia (4.8, emendada) ----

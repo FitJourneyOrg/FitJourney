@@ -11,6 +11,7 @@ import dev.rafael.server.features.checkin.models.CheckIn
 import dev.rafael.server.features.checkin.models.CheckInComAutor
 import dev.rafael.server.features.checkin.models.NovoCheckIn
 import dev.rafael.server.features.checkin.models.toDto
+import dev.rafael.contract.group.RankingEntryDto
 import dev.rafael.server.features.group.db.GroupRepository
 import dev.rafael.server.features.group.models.Group
 import dev.rafael.server.features.group.services.GroupPolicy
@@ -191,6 +192,35 @@ class CheckInService(
             .flatMap { itens ->
                 itens.map { it.toDto(user.id, agora, grupo.timezone) }.asSuccess()
             }
+    }
+
+    /**
+     * O RANKING do grupo (7.2, fatia C) — só para quem está dentro.
+     *
+     * **A posição é atribuída aqui, sobre a ordem que o banco devolveu, e não é guardada.** Mesma
+     * escolha do estado do grupo: derivar é sempre correto, e não existe posição persistida
+     * divergindo da contagem porque alguém esqueceu de recalcular.
+     *
+     * Não há empate na lista final: a consulta desempata por quem atingiu a pontuação primeiro,
+     * então duas pessoas com a mesma contagem recebem posições diferentes — e a de cima é a de
+     * quem chegou lá antes.
+     */
+    suspend fun ranking(
+        firebaseUid: String,
+        email: String?,
+        groupId: String,
+    ): AppResult<List<RankingEntryDto>> = comMembro(firebaseUid, email, groupId) { grupo, user ->
+        repository.ranking(grupo.id).flatMap { linhas ->
+            linhas.mapIndexed { indice, linha ->
+                RankingEntryDto(
+                    position = indice + 1,
+                    userId = linha.userId.toString(),
+                    displayName = linha.displayName,
+                    checkIns = linha.checkIns,
+                    mine = linha.userId == user.id,
+                )
+            }.asSuccess()
+        }
     }
 
     /**
