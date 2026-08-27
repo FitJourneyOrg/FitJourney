@@ -13,6 +13,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
+import kotlin.uuid.Uuid
 
 /**
  * Estatísticas do perfil (ARCH #16): XP, nível e sequência — SEMPRE derivados das sessões.
@@ -28,6 +29,30 @@ class StatsService(
     private val sessions: SessionRepository,
     private val programs: ProgramService,
 ) {
+    /**
+     * Só XP e NÍVEL, de um usuário qualquer — o que a 9.3-A tornou público.
+     *
+     * **Porta estreita de propósito.** O [forUser] devolveria `streakDays`, `totalSessions`,
+     * `sessionsThisWeek` e `trainedToday` junto, e isso é HISTÓRICO DE TREINO: exatamente o que a
+     * emenda manteve privado. Um método que devolve pouco não pode vazar muito.
+     *
+     * De quebra é mais barato: não toca em `programs`, que só existe no cálculo por causa do
+     * streak — e streak não é público.
+     */
+    suspend fun gamificacaoDe(userId: Uuid): AppResult<Gamificacao> =
+        sessions.listByUser(userId).map { historico ->
+            val porDia = historico
+                .map { it.finishedAt.date to it.sets.count { s -> s.done } }
+                .filter { (_, feitas) -> feitas > 0 }
+                .groupBy({ it.first }, { it.second })
+
+            val xp = XpPolicy.xpTotal(porDia)
+            Gamificacao(xp = xp, nivel = XpPolicy.progresso(xp).nivel)
+        }
+
+    /** O que é público de gamificação (9.3-A). Nada de streak, sessões ou "treinou hoje". */
+    data class Gamificacao(val xp: Int, val nivel: Int)
+
     suspend fun forUser(firebaseUid: String, email: String?): AppResult<UserStatsDto> =
         userService.findOrCreate(firebaseUid, email).flatMap { user ->
             sessions.listByUser(user.id).flatMap { historico ->
