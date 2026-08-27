@@ -50,6 +50,9 @@ class PurgaDeMidiaTest {
 
         override suspend fun refsVivas(): AppResult<Set<String>> = vivas.toSet().asSuccess()
 
+        /** A purga não olha ranking. Ver `RankingTest` e `CheckInIntegrationTest`. */
+        override suspend fun ranking(groupId: Uuid) = naoUsado()
+
         override suspend fun criar(novo: NovoCheckIn) = naoUsado()
         override suspend fun porId(id: Uuid) = naoUsado()
         override suspend fun doDia(groupId: Uuid, userId: Uuid, dia: LocalDate) = naoUsado()

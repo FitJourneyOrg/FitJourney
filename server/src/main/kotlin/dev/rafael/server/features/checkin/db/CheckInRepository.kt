@@ -36,6 +36,30 @@ interface CheckInRepository {
     /** Apaga de verdade — é o que LIBERA o slot do dia (4.11). */
     suspend fun apagar(id: Uuid): AppResult<Unit>
 
+    /**
+     * O RANKING do grupo (7.2), em UMA consulta.
+     *
+     * Parte de `group_members`, não de `check_ins` — é o que faz a **2.15** valer por construção:
+     * quem saiu ou foi expulso não tem vínculo e simplesmente não aparece, mesmo tendo dezenas de
+     * linhas na tabela de check-ins. Filtrar depois, no Kotlin, seria confiar em alguém lembrar.
+     *
+     * `LEFT JOIN` para que membro sem nenhum check-in apareça com zero: ele está competindo, e
+     * saber que ainda não começou é informação útil — inclusive para ele.
+     *
+     * **Quatro critérios de ordem**, e cada um existe por um motivo diferente:
+     *
+     * 1. **Contagem**, decrescente — a pontuação ([REGRA] #18).
+     * 2. **Último check-in, crescente** — quem ATINGIU aquela pontuação primeiro. Duas pessoas com
+     *    20 check-ins: quem fez o 20º antes fica na frente.
+     * 3. **Entrou antes** — o critério do DIA 1. Cinquenta pessoas com zero check-ins empatam nos
+     *    dois primeiros, e sem um terceiro o banco devolveria em ordem arbitrária, que muda entre
+     *    consultas. Com o polling de 10s, a lista se reembaralharia sozinha na tela.
+     * 4. **`user_id`** — determinismo, não justiça. Nunca é mostrado como critério.
+     *
+     * Empate não é caso de borda aqui: é o **estado inicial** de todo desafio.
+     */
+    suspend fun ranking(groupId: Uuid): AppResult<List<LinhaDoRanking>>
+
     // ---- purga de mídia (4.8, emendada) ----
 
     /**
@@ -68,3 +92,15 @@ interface CheckInRepository {
 
 /** O mínimo para purgar: a linha a marcar e o arquivo a apagar. */
 data class FotoExpirada(val id: Uuid, val photoRef: String)
+
+/**
+ * Linha crua do ranking, já ordenada pelo banco.
+ *
+ * Sem `position`: ela é atribuída pela ordem da lista, e não guardada. Persistir posição seria
+ * mais um estado para divergir da contagem — mesma escolha do `state` do grupo, que é derivado.
+ */
+data class LinhaDoRanking(
+    val userId: Uuid,
+    val displayName: String,
+    val checkIns: Int,
+)

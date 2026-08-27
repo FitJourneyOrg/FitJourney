@@ -98,6 +98,17 @@ fun Route.checkInRoutes(service: CheckInService) {
             )
         }
 
+        /**
+         * O RANKING do grupo (7.2). Só para membro.
+         *
+         * Sem paginação de propósito: o teto de 50 pessoas (2.2) é o teto da lista. Paginar
+         * cinquenta linhas seria complexidade para um problema que a regra já impede de existir.
+         */
+        get("/groups/{id}/ranking") {
+            val p = call.principal<FirebaseUser>()!!
+            call.respondResult(service.ranking(p.uid, p.email, call.parameters["id"].orEmpty()))
+        }
+
         /** Apagar o próprio check-in, no mesmo dia (4.11). */
         delete("/groups/{id}/checkins/{checkInId}") {
             val p = call.principal<FirebaseUser>()!!
