@@ -1,6 +1,7 @@
 package dev.rafael.app.data.checkin
 
 import dev.rafael.contract.checkin.CheckInDto
+import dev.rafael.contract.group.RankingEntryDto
 import dev.rafael.core.result.AppResult
 
 /**
@@ -32,6 +33,9 @@ interface CheckIns {
     suspend fun feed(groupId: String, antesDe: String? = null): AppResult<List<CheckInDto>>
 
     suspend fun apagar(groupId: String, checkInId: String): AppResult<Unit>
+
+    /** O ranking do grupo (7.2). Posição e desempate vêm resolvidos do servidor. */
+    suspend fun ranking(groupId: String): AppResult<List<RankingEntryDto>>
 }
 
 /** Sem cache: o repositório é uma casca fina sobre a API, e isso é decisão, não preguiça. */
@@ -50,4 +54,7 @@ class CheckInsRepository(private val api: CheckInsApi) : CheckIns {
 
     override suspend fun apagar(groupId: String, checkInId: String): AppResult<Unit> =
         api.apagar(groupId, checkInId)
+
+    override suspend fun ranking(groupId: String): AppResult<List<RankingEntryDto>> =
+        api.ranking(groupId)
 }
