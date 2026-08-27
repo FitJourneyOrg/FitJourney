@@ -27,6 +27,7 @@ import dev.rafael.server.features.session.db.SessionRepository
 import dev.rafael.server.features.session.db.SessionRepositoryImpl
 import dev.rafael.server.features.session.services.SessionService
 import dev.rafael.server.features.stats.AchievementService
+import dev.rafael.server.features.user.services.PublicProfileService
 import dev.rafael.server.features.stats.StatsService
 import dev.rafael.server.features.stats.db.AchievementRepository
 import dev.rafael.server.features.stats.db.AchievementRepositoryImpl
@@ -35,6 +36,16 @@ import org.koin.dsl.module
 val appModule = module {
     single<UserRepository> { UserRepositoryImpl() }
     single { UserService(get()) }
+    // userService + userRepo + statsService + achievementRepo (C.1, #34 + emenda 9.3-A)
+    single {
+        PublicProfileService(
+            userService = get(),
+            users = get(),
+            // Porta estreita: o perfil pede XP e nível, não o StatsService inteiro (ver KDoc).
+            gamificacaoDe = { userId -> get<StatsService>().gamificacaoDe(userId) },
+            achievements = get(),
+        )
+    }
 
     // Auth: FirebaseAuth.getInstance() só é válido após FirebaseAdmin.init() (roda no boot, antes).
     single { FirebaseAuth.getInstance() }

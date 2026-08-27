@@ -1,6 +1,7 @@
 package dev.rafael.app.data.checkin
 
 import dev.rafael.contract.checkin.CheckInDto
+import dev.rafael.contract.group.RankingEntryDto
 import dev.rafael.core.network.HttpClientFactory
 import dev.rafael.core.network.httpResult
 import dev.rafael.core.result.AppResult
@@ -72,4 +73,8 @@ class CheckInsApi(private val client: HttpClient) {
 
     suspend fun apagar(groupId: String, checkInId: String): AppResult<Unit> =
         httpResult { client.delete("$base/groups/$groupId/checkins/$checkInId").body() }
+
+    /** O ranking (7.2). Sem paginação: o teto de 50 membros (2.2) é o teto da lista. */
+    suspend fun ranking(groupId: String): AppResult<List<RankingEntryDto>> =
+        httpResult { client.get("$base/groups/$groupId/ranking").body() }
 }

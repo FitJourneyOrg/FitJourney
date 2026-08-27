@@ -30,6 +30,18 @@ interface GroupRepository {
     /** Papel do usuário no grupo, ou null se não é membro. */
     suspend fun roleOf(groupId: Uuid, userId: Uuid): AppResult<String?>
 
+    /**
+     * Os papéis de UM usuário em VÁRIOS grupos, numa consulta só.
+     *
+     * Existe para matar um N+1 real: a lista de grupos chamava [roleOf] dentro de um `map`, e com
+     * vinte grupos montava a tela com vinte e uma consultas. Não aparece com dois grupos de teste
+     * e é péssimo com vinte — o tipo de defeito que só um seed de volume revela.
+     *
+     * Em lote no estilo do `regrasDe`/`contagensDe` que a implementação já usa: o padrão do
+     * arquivo continua sendo um só, e a próxima pessoa a ler não precisa escolher entre dois.
+     */
+    suspend fun rolesOf(groupIds: List<Uuid>, userId: Uuid): AppResult<Map<Uuid, String>>
+
     // ---- fatia A.2: entrada e papéis ----
 
     /** Grupo pelo CÓDIGO digitado. Case-insensitive: ninguém digita código em maiúscula. */

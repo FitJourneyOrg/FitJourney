@@ -16,15 +16,19 @@ import dev.rafael.server.features.group.db.GroupsTable
 import dev.rafael.server.features.group.db.NovoGrupo
 import dev.rafael.server.features.user.db.UsersTable
 import kotlinx.coroutines.runBlocking
+import kotlinx.datetime.DatePeriod
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.minus
+import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
@@ -37,6 +41,7 @@ import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
 import org.testcontainers.postgresql.PostgreSQLContainer
 import java.math.BigDecimal
+import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 /**
@@ -116,11 +121,22 @@ class CheckInIntegrationTest {
         ),
     )
 
+    /**
+     * A referência de foto é ÚNICA por check-in, e isso não é enfeite.
+     *
+     * Com uma constante compartilhada, o `refsVivas()` — que devolve um `Set` — continuava
+     * contendo a ref depois de purgar um check-in, porque os outros apontavam para a mesma. A
+     * asserção estava certa e o dado é que não representava nada.
+     *
+     * De quebra, o schema PERMITE dois check-ins com a mesma foto, e nesse caso o recolhimento de
+     * órfãos mantém o arquivo enquanto qualquer linha o referenciar — comportamento correto, que
+     * um dado de teste compartilhado escondia em vez de exercitar.
+     */
     private fun novo(
         grupo: Uuid,
         usuario: Uuid,
         dia: String = "2026-09-10",
-        foto: String? = "ab/cd/${"0".repeat(32)}.jpg",
+        foto: String? = refUnica(),
         local: String? = null,
     ) = NovoCheckIn(
         id = Uuid.random(),
@@ -133,6 +149,12 @@ class CheckInIntegrationTest {
         placeLat = local?.let { -23.55 },
         placeLng = local?.let { -46.63 },
     )
+
+    /** No formato que o `ArmazenamentoEmDisco` valida: `aa/bb/<32 hex>.jpg`. */
+    private fun refUnica(): String {
+        val nome = Uuid.random().toString().replace("-", "")
+        return "${nome.take(2)}/${nome.drop(2).take(2)}/$nome.jpg"
+    }
 
     private fun linhasDoGrupo(grupo: Uuid): Int = transaction {
         CheckInsTable.selectAll().where { CheckInsTable.groupId eq grupo }.count().toInt()
@@ -415,6 +437,177 @@ class CheckInIntegrationTest {
         ok(checkIns.criar(novo(a.id, dono)))
 
         assertTrue(ok(checkIns.doGrupo(b.id, limite = 10)).isEmpty())
+    }
+
+    // ---- ranking (7.2, fatia C) ----
+
+    @Test
+    fun `quem SAIU deixa o ranking, e os check-ins dele ficam no historico`() = runBlocking {
+        // As duas regras juntas — 2.15 e 2.6 — e é justamente o par que se erra separando.
+        //
+        // O ranking parte de `group_members`, não de `check_ins`: sem vínculo, a pessoa não
+        // aparece, POR CONSTRUÇÃO. Filtrar depois no Kotlin seria confiar em alguém lembrar.
+        val dono = novoUsuario("Dono")
+        val quesai = novoUsuario("QueSai")
+        val grupo = grupoDe(dono)
+        ok(grupos.join(grupo.id, quesai))
+        ok(checkIns.criar(novo(grupo.id, quesai, dia = "2026-09-10")))
+        ok(checkIns.criar(novo(grupo.id, quesai, dia = "2026-09-11")))
+        ok(checkIns.criar(novo(grupo.id, dono, dia = "2026-09-10")))
+
+        assertEquals(2, ok(checkIns.ranking(grupo.id)).size)
+        ok(grupos.leave(grupo.id, quesai))
+
+        val ranking = ok(checkIns.ranking(grupo.id))
+        assertEquals(listOf("Dono"), ranking.map { it.displayName }, "quem saiu deixa o ranking (2.15)")
+        // Mas o histórico não é reescrito: os check-ins dele continuam no grupo.
+        assertEquals(3, linhasDoGrupo(grupo.id), "os check-ins ficam no histórico (2.6)")
+        assertEquals(2, ok(checkIns.doGrupo(grupo.id, limite = 10)).count { it.displayName == "QueSai" })
+    }
+
+    @Test
+    fun `membro sem nenhum check-in aparece com zero, e nao some`() = runBlocking {
+        // A guarda do LEFT JOIN. As condições do check-in vão no ON, não no WHERE — no WHERE, o
+        // filtro de status transformaria o LEFT em INNER e quem nunca treinou sumiria da lista.
+        val dono = novoUsuario("Dono")
+        val calouro = novoUsuario("Calouro")
+        val grupo = grupoDe(dono)
+        ok(grupos.join(grupo.id, calouro))
+        ok(checkIns.criar(novo(grupo.id, dono)))
+
+        val ranking = ok(checkIns.ranking(grupo.id))
+
+        assertEquals(2, ranking.size)
+        assertEquals("Calouro", ranking.last().displayName)
+        assertEquals(0, ranking.last().checkIns)
+    }
+
+    @Test
+    fun `INVALIDADO nao conta, mas EM ANALISE continua contando`() = runBlocking {
+        // 6.8, e o motivo está escrito na decisão: se o ponto sumisse durante a análise, a
+        // denúncia viraria arma — bastaria denunciar o líder do ranking.
+        val dono = novoUsuario("Dono")
+        val grupo = grupoDe(dono)
+        val a = novo(grupo.id, dono, dia = "2026-09-10")
+        val b = novo(grupo.id, dono, dia = "2026-09-11")
+        val c = novo(grupo.id, dono, dia = "2026-09-12")
+        listOf(a, b, c).forEach { ok(checkIns.criar(it)) }
+
+        transaction {
+            CheckInsTable.update({ CheckInsTable.id eq b.id }) { it[status] = CheckInStatus.EM_ANALISE.name }
+            CheckInsTable.update({ CheckInsTable.id eq c.id }) { it[status] = CheckInStatus.INVALIDADO.name }
+        }
+
+        assertEquals(2, ok(checkIns.ranking(grupo.id)).single().checkIns, "válido + em análise")
+    }
+
+    @Test
+    fun `no dia 1 todos empatam em zero, e a ordem NAO muda entre consultas`() = runBlocking {
+        // Empate não é caso de borda: é o estado inicial de todo desafio. Sem um critério final
+        // determinístico, o Postgres devolveria em ordem arbitrária — e com o polling de 10s a
+        // lista se reembaralharia sozinha na tela de quem está olhando.
+        val dono = novoUsuario("Dono")
+        val grupo = grupoDe(dono)
+        repeat(5) { i -> ok(grupos.join(grupo.id, novoUsuario("Membro$i"))) }
+
+        val primeira = ok(checkIns.ranking(grupo.id))
+        val segunda = ok(checkIns.ranking(grupo.id))
+        val terceira = ok(checkIns.ranking(grupo.id))
+
+        assertTrue(primeira.all { it.checkIns == 0 })
+        assertEquals(primeira.map { it.userId }, segunda.map { it.userId })
+        assertEquals(primeira.map { it.userId }, terceira.map { it.userId })
+        assertEquals("Dono", primeira.first().displayName, "quem entrou antes fica na frente")
+    }
+
+    @Test
+    fun `o ranking de um grupo nao enxerga check-in de outro`() = runBlocking {
+        val dono = novoUsuario("Dono")
+        val a = grupoDe(dono)
+        val b = grupoDe(dono)
+        repeat(3) { i -> ok(checkIns.criar(novo(a.id, dono, dia = "2026-09-1$i"))) }
+
+        assertEquals(0, ok(checkIns.ranking(b.id)).single().checkIns)
+    }
+
+    // ---- purga de mídia (4.8, emendada) ----
+
+    /** Um desafio que ACABOU há [diasAtras] dias, para exercitar a carência. */
+    private suspend fun grupoEncerradoHa(dono: Uuid, diasAtras: Int) = ok(
+        grupos.create(
+            NovoGrupo(
+                id = Uuid.random(),
+                type = GroupType.DESAFIO,
+                scoringModel = ScoringModel.CONTAGEM_CHECKINS,
+                title = "Encerrado",
+                description = null,
+                startDate = hoje().minus(DatePeriod(days = diasAtras + 30)),
+                endDate = hoje().minus(DatePeriod(days = diasAtras)),
+                timezone = TimeZone.of("America/Sao_Paulo"),
+                rules = setOf(GroupRule.FOTO),
+                createdBy = dono,
+            ),
+        ),
+    )
+
+    private fun hoje(): LocalDate =
+        Clock.System.now().toLocalDateTime(TimeZone.UTC).date
+
+    @Test
+    fun `so entra na purga a foto de desafio encerrado ALEM da carencia`() = runBlocking {
+        // A âncora é o fim do DESAFIO, e não um prazo contado do check-in. A 4.8 dizia "90 dias"
+        // e conflitava com a criação de grupo, que não tem duração máxima: um desafio de 180 dias
+        // perderia as fotos do primeiro mês enquanto ainda estava rolando.
+        val dono = novoUsuario()
+        val velho = grupoEncerradoHa(dono, diasAtras = 40)     // além dos 30 de carência
+        val recente = grupoEncerradoHa(dono, diasAtras = 5)    // ainda na carência
+        val rolando = grupoDe(dono)                            // AGENDADO/ATIVO
+        ok(checkIns.criar(novo(velho.id, dono, dia = velho.startDate.toString())))
+        ok(checkIns.criar(novo(recente.id, dono, dia = recente.startDate.toString())))
+        ok(checkIns.criar(novo(rolando.id, dono)))
+
+        val paraPurgar = ok(checkIns.comFotoExpirada(carenciaEmDias = 30, limite = 100))
+
+        assertEquals(1, paraPurgar.size, "só o desafio encerrado além da carência")
+    }
+
+    @Test
+    fun `marcar purgado anula nome e coordenada sem violar o CHECK`() = runBlocking {
+        // O `check_ins_local_completo` exige que nome e coordenada andem juntos. Anular só um
+        // deles faria o UPDATE explodir — e a purga é justamente onde os três saem de uma vez.
+        val dono = novoUsuario()
+        val grupo = grupoEncerradoHa(dono, diasAtras = 40)
+        val comLocal = novo(grupo.id, dono, dia = grupo.startDate.toString(), local = "Ipiranga")
+        ok(checkIns.criar(comLocal))
+
+        ok(checkIns.marcarPurgados(listOf(comLocal.id), LocalDateTime.parse("2026-08-25T12:00:00")))
+
+        val linha = transaction {
+            CheckInsTable.selectAll().where { CheckInsTable.id eq comLocal.id }.single()
+        }
+        assertNotNull(linha[CheckInsTable.photoPurgedAt])
+        assertNull(linha[CheckInsTable.placeName], "o nome do lugar é dado pessoal e sai junto")
+        assertNull(linha[CheckInsTable.placeLat])
+        assertNull(linha[CheckInsTable.placeLng])
+        // A LINHA fica: ~200 bytes que sustentam a contagem, o ranking e as conquistas.
+        assertNotNull(linha[CheckInsTable.photoRef], "a ref fica: distingue 'expirou' de 'nunca teve'")
+    }
+
+    @Test
+    fun `o que ja foi purgado nao volta para a purga nem conta como ref viva`() = runBlocking {
+        val dono = novoUsuario()
+        val grupo = grupoEncerradoHa(dono, diasAtras = 40)
+        val alvo = novo(grupo.id, dono, dia = grupo.startDate.toString())
+        ok(checkIns.criar(alvo))
+
+        assertTrue(ok(checkIns.refsVivas()).contains(alvo.photoRef))
+        ok(checkIns.marcarPurgados(listOf(alvo.id), LocalDateTime.parse("2026-08-25T12:00:00")))
+
+        assertTrue(ok(checkIns.comFotoExpirada(30, 100)).none { it.id == alvo.id })
+        assertFalse(
+            ok(checkIns.refsVivas()).contains(alvo.photoRef),
+            "ref purgada contando como viva impediria o recolhimento do arquivo para sempre",
+        )
     }
 
     // ---- doDia: o que alimenta o `myCheckInToday` ----

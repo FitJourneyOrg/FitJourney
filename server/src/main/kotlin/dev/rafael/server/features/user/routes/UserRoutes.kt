@@ -5,6 +5,7 @@ import dev.rafael.core.result.map
 import dev.rafael.server.auth.FirebaseUser
 import dev.rafael.server.error.respondResult
 import dev.rafael.server.features.user.models.toDto
+import dev.rafael.server.features.user.services.PublicProfileService
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.plugins.FIREBASE_AUTH
 import io.ktor.server.auth.authenticate
@@ -15,8 +16,24 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
 
-fun Route.userRoutes(service: UserService) {
+fun Route.userRoutes(service: UserService, perfis: PublicProfileService) {
     authenticate(FIREBASE_AUTH) {
+        /**
+         * Perfil público de terceiro (C.1, #34 + emenda 9.3-A).
+         *
+         * **Fica ANTES do `/me`** de propósito? Não — e é por isso que a ordem aqui não importa:
+         * o Ktor prefere segmento literal a parâmetro, então `/users/me` nunca cairia neste
+         * `{id}`. Registro a razão porque é o tipo de coisa que alguém "conserta" reordenando.
+         *
+         * Autenticada, e não pública: a 9.3-A abriu o perfil a **qualquer usuário autenticado**,
+         * não à internet. Sem o `authenticate` isto viraria um raspador de perfis sem custo.
+         */
+        get("/users/{id}/profile") {
+            val principal = call.principal<FirebaseUser>()!!
+            val id = call.parameters["id"].orEmpty()
+            call.respondResult(perfis.porId(principal.uid, principal.email, id))
+        }
+
         get("/me") {
             val principal = call.principal<FirebaseUser>()!!
             val result = service.findOrCreate(principal.uid, principal.email)

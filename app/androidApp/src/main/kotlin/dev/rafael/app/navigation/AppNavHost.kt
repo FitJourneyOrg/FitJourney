@@ -43,6 +43,7 @@ import dev.rafael.app.screens.home.HomeScreen
 import dev.rafael.app.screens.menu.MenuLateral
 import dev.rafael.app.screens.onboarding.NomeScreen
 import dev.rafael.app.screens.onboarding.QuizScreen
+import dev.rafael.app.screens.perfil.PerfilPublicoScreen
 import dev.rafael.app.screens.perfil.PerfilScreen
 import dev.rafael.app.screens.program.ProgramDetailScreen
 import dev.rafael.app.screens.program.ProgramGenerateScreen
@@ -326,6 +327,8 @@ fun AppNavHost() {
                 groupId = rota.id,
                 onBack = { nav.popBackStack() },
                 onCheckIn = { nav.navigate(AppRoute.CheckIn(rota.id)) },
+                // Ranking, posts e membros — os três levam ao mesmo lugar ([REGRA] #35).
+                onAbrirPerfil = { userId -> nav.navigate(AppRoute.Perfil(userId)) },
             )
         }
         composable<AppRoute.CheckIn> { entry ->
@@ -363,15 +366,41 @@ fun AppNavHost() {
 
         // ---- Perfil e conta (ARCH #34) ----
 
+        /**
+         * Uma rota, DUAS telas (C.1).
+         *
+         * O `userId` decide qual: `null` é o meu perfil, cache-first, com os números de treino
+         * que só eu vejo; um id é o perfil de outra pessoa, online, alimentado pelo
+         * `PublicProfileDto`. Telas separadas porque os TIPOS de dado são diferentes — ver o
+         * KDoc de `PerfilPublicoScreen`.
+         *
+         * A rota continua uma só porque o destino, do ponto de vista de quem navega, é o mesmo:
+         * "abrir o perfil de alguém". Quem toca no próprio nome não deveria precisar saber que
+         * cai noutro lugar.
+         */
         composable<AppRoute.Perfil> { entry ->
             val rota: AppRoute.Perfil = entry.toRoute()
-            PerfilScreen(
-                onBack = { nav.popBackStack() },
-                onEditar = { nav.navigate(AppRoute.Conta) },
-                onVerConquistas = { nav.navigate(AppRoute.Conquistas) },
-                // Na A.0 só existe o próprio perfil; a A.1 compara com o uid da sessão.
-                souEu = rota.userId == null,
-            )
+            val id = rota.userId
+            if (id == null) {
+                PerfilScreen(
+                    onBack = { nav.popBackStack() },
+                    onEditar = { nav.navigate(AppRoute.Conta) },
+                    onVerConquistas = { nav.navigate(AppRoute.Conquistas) },
+                    souEu = true,
+                )
+            } else {
+                PerfilPublicoScreen(
+                    userId = id,
+                    onBack = { nav.popBackStack() },
+                    // `popBackStack` antes de navegar: sem isso a pilha vira
+                    // ranking → meu perfil público → meu perfil, e o "voltar" passa duas vezes
+                    // pela mesma pessoa.
+                    onVerMeuPerfil = {
+                        nav.popBackStack()
+                        nav.navigate(AppRoute.Perfil())
+                    },
+                )
+            }
         }
         composable<AppRoute.Conta> {
             ContaScreen(
