@@ -17,10 +17,16 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.plugins.defaultheaders.DefaultHeaders
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.http.HttpStatusCode
+import dev.rafael.server.media.PurgaDeMidia
 import io.ktor.server.application.ApplicationStopped
 import io.ktor.server.application.log
 import io.ktor.server.response.respond
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import org.koin.ktor.ext.get
 import org.slf4j.event.Level
+import kotlin.time.Duration.Companion.minutes
 
 fun main(args: Array<String>) = EngineMain.main(args)
 
@@ -34,6 +40,36 @@ fun Application.module() {
     configureAuthentication()    // <- novo, antes do routing
     configureStatusPages()
     configureRouting()           // já existe (HealthRoutes) — vou adicionar /me aqui
+    agendarPurgaDeMidia()
+}
+
+/**
+ * Varredor de mídia (4.8, emendada): acorda uma vez por dia e apaga foto sem dono.
+ *
+ * **No ciclo de vida da aplicação, e não numa `Thread` solta.** Usar o escopo do Ktor faz o laço
+ * morrer junto com o servidor; uma thread própria sobreviveria ao `stop()` e seguraria o processo
+ * na hora do desligamento — e em teste, entre um caso e outro.
+ *
+ * **Espera antes da primeira passada.** Subir o servidor e imediatamente varrer disco competiria
+ * com as primeiras requisições, que são as que o usuário está esperando.
+ *
+ * **Com mais de uma instância, roda várias vezes.** Como apagar é idempotente, isso é desperdício
+ * e não erro. No dia em que houver réplicas, a saída é tirar o varredor daqui e rodá-lo como
+ * processo próprio — e nada do `PurgaDeMidia` muda, só quem o chama.
+ */
+private fun Application.agendarPurgaDeMidia() {
+    val purga = get<PurgaDeMidia>()
+    launch {
+        delay(2.minutes)
+        while (isActive) {
+            runCatching { purga.rodar() }
+                .onSuccess { if (it.fezAlgo) log.info("Purga de mídia: $it") }
+                // Falhar não pode derrubar o laço: um erro de disco hoje não deve significar que
+                // a purga nunca mais roda até alguém reiniciar o servidor.
+                .onFailure { log.warn("Purga de mídia falhou; tenta de novo no próximo ciclo", it) }
+            delay(PurgaDeMidia.INTERVALO)
+        }
+    }
 }
 
 private fun Application.configureSerialization() {

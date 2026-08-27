@@ -25,6 +25,14 @@ class UserRepositoryImpl : UserRepository {
                 ?.toUser()
         }
 
+    override suspend fun findById(userId: Uuid): AppResult<User?> =
+        dbQuery {
+            UsersTable.selectAll()
+                .where { UsersTable.id eq userId }
+                .singleOrNull()
+                ?.toUser()
+        }
+
     override suspend fun create(
         id: Uuid,
         firebaseUid: String,

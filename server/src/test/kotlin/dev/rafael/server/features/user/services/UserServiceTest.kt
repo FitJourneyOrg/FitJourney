@@ -29,6 +29,9 @@ class UserServiceTest {
         override suspend fun findByFirebaseUid(firebaseUid: String) =
             AppResult.Success(if (jaExiste) user else null)
 
+        override suspend fun findById(userId: Uuid): AppResult<User?> =
+            AppResult.Success(if (jaExiste && userId == user.id) user else null)
+
         override suspend fun create(
             id: Uuid,
             firebaseUid: String,

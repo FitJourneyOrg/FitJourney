@@ -6,6 +6,7 @@ import dev.rafael.app.data.checkin.CheckIns
 import dev.rafael.app.data.groups.Groups
 import dev.rafael.contract.checkin.CheckInDto
 import dev.rafael.contract.group.GroupDto
+import dev.rafael.contract.group.RankingEntryDto
 import dev.rafael.contract.group.GroupMemberDto
 import dev.rafael.contract.group.MemberRole
 import dev.rafael.core.result.AppError
@@ -26,6 +27,20 @@ data class GrupoDetalheState(
     /** O FEED (8.0): os check-ins do grupo, mais recente primeiro. */
     val feed: List<CheckInDto> = emptyList(),
     val carregandoFeed: Boolean = true,
+    val carregandoMais: Boolean = false,
+
+    /** O RANKING (7.2). Posição e desempate vêm resolvidos do servidor. */
+    val ranking: List<RankingEntryDto> = emptyList(),
+    val carregandoRanking: Boolean = true,
+
+    /**
+     * A última página veio cheia, então provavelmente há mais.
+     *
+     * "Provavelmente" é o melhor que dá para saber sem uma contagem total — e contar 4.500 linhas
+     * a cada abertura de tela custaria mais do que o botão a mais que às vezes aparece e não traz
+     * nada.
+     */
+    val temMais: Boolean = false,
     val carregando: Boolean = true,
     val ocupado: Boolean = false,
     val erro: AppError? = null,
@@ -68,6 +83,24 @@ class GrupoDetalheViewModel(
     private var enquete: Job? = null
 
     /**
+     * Qual aba está na frente. Existe para o polling **atualizar só o que está visível**.
+     *
+     * Sem isso, o laço de 10s buscaria feed E ranking o tempo todo — o dobro de requisições, para
+     * uma delas que ninguém está olhando.
+     */
+    private var abaVisivel: Aba = Aba.RANKING
+
+    enum class Aba { SOBRE, RANKING, POSTS, MEMBROS }
+
+    fun aoTrocarDeAba(aba: Aba, groupId: String) {
+        if (aba == abaVisivel) return
+        abaVisivel = aba
+        // Atualiza na hora ao chegar: esperar até 10s para ver dado fresco numa aba que a pessoa
+        // acabou de abrir seria o mesmo que não ter polling.
+        atualizarAbaVisivel(groupId)
+    }
+
+    /**
      * POLLING de ~10s enquanto a tela está aberta (8.3, 10.2).
      *
      * Polling e não push: notificação é a fatia F, e mesmo lá a decisão foi **rejeitar** sync
@@ -82,7 +115,38 @@ class GrupoDetalheViewModel(
         enquete = viewModelScope.launch {
             while (isActive) {
                 delay(INTERVALO_DO_FEED)
-                carregarFeed(groupId)
+                atualizarAbaVisivel(groupId)
+            }
+        }
+    }
+
+    /**
+     * Só a aba da frente.
+     *
+     * `SOBRE` e `MEMBROS` ficam de fora porque não mudam sozinhas: as especificações são imutáveis
+     * com o grupo `ATIVO` (2-B.3), e a lista de membros só muda por ação do admin — que já
+     * recarrega ao agir.
+     */
+    private fun atualizarAbaVisivel(groupId: String) {
+        when (abaVisivel) {
+            Aba.RANKING -> carregarRanking(groupId)
+            Aba.POSTS -> carregarFeed(groupId)
+            Aba.SOBRE, Aba.MEMBROS -> Unit
+        }
+    }
+
+    /**
+     * Recarrega o ranking. Falha em SILÊNCIO, como o feed: roda a cada 10 segundos, e um tropeço
+     * de rede virando erro vermelho faria a tela piscar sozinha enquanto a pessoa lê.
+     */
+    fun carregarRanking(groupId: String) {
+        viewModelScope.launch {
+            val r = checkIns.ranking(groupId)
+            _state.update { atual ->
+                when (r) {
+                    is AppResult.Success -> atual.copy(ranking = r.value, carregandoRanking = false)
+                    is AppResult.Failure -> atual.copy(carregandoRanking = false)
+                }
             }
         }
     }
@@ -104,11 +168,60 @@ class GrupoDetalheViewModel(
             val r = checkIns.feed(groupId)
             _state.update { atual ->
                 when (r) {
-                    is AppResult.Success -> atual.copy(feed = r.value, carregandoFeed = false)
+                    is AppResult.Success -> atual.copy(
+                        feed = juntar(novos = r.value, jaCarregados = atual.feed),
+                        carregandoFeed = false,
+                        temMais = r.value.size >= PAGINA,
+                    )
                     is AppResult.Failure -> atual.copy(carregandoFeed = false)
                 }
             }
         }
+    }
+
+    /**
+     * Próxima página, usando o item mais antigo da lista como CURSOR.
+     *
+     * Cursor e não deslocamento: com item novo chegando por cima a cada 10s, `OFFSET 30` faria a
+     * segunda página repetir ou pular linhas conforme a lista cresce por cima.
+     */
+    fun carregarMais(groupId: String) {
+        val atual = _state.value
+        if (atual.carregandoMais || !atual.temMais) return
+        val cursor = atual.feed.lastOrNull()?.createdAt ?: return
+
+        _state.update { it.copy(carregandoMais = true) }
+        viewModelScope.launch {
+            val r = checkIns.feed(groupId, antesDe = cursor)
+            _state.update { estado ->
+                when (r) {
+                    is AppResult.Success -> estado.copy(
+                        feed = estado.feed + r.value,
+                        carregandoMais = false,
+                        temMais = r.value.size >= PAGINA,
+                    )
+                    is AppResult.Failure -> estado.copy(carregandoMais = false, erro = r.error)
+                }
+            }
+        }
+    }
+
+    /**
+     * Junta a página recém-buscada com o que o usuário já paginou.
+     *
+     * **Sem isto, o polling apagaria o trabalho dele a cada dez segundos.** Ele carrega três
+     * páginas, o laço de 10s busca a primeira, e a lista voltaria para 30 itens sozinha.
+     *
+     * A regra: a página fresca é AUTORIDADE sobre a janela de tempo que ela cobre — do item mais
+     * antigo dela até agora. O que já estava carregado e é mais antigo que isso permanece. Assim
+     * um check-in apagado pelo dono some de verdade (estava na janela e não voltou), e as páginas
+     * antigas não são perdidas.
+     *
+     * Página fresca vazia significa grupo sem check-in nenhum — ela é sempre a mais recente.
+     */
+    private fun juntar(novos: List<CheckInDto>, jaCarregados: List<CheckInDto>): List<CheckInDto> {
+        val corte = novos.lastOrNull()?.createdAt ?: return emptyList()
+        return novos + jaCarregados.filter { it.createdAt < corte }
     }
 
     /**
@@ -119,7 +232,11 @@ class GrupoDetalheViewModel(
      * feed tiraria o item da lista e deixaria a pessoa sem o botão, sem entender por quê.
      */
     fun apagarCheckIn(groupId: String, checkInId: String) = agir(groupId, recarrega = true) {
-        (checkIns.apagar(groupId, checkInId) as? AppResult.Failure)?.error
+        val erro = (checkIns.apagar(groupId, checkInId) as? AppResult.Failure)?.error
+        // O ranking muda junto: um check-in a menos pode custar uma posição. Recarregar só o feed
+        // deixaria a pessoa vendo a posição antiga na aba do lado.
+        if (erro == null) carregarRanking(groupId)
+        erro
     }
 
     /**
@@ -150,7 +267,10 @@ class GrupoDetalheViewModel(
                             carregando = false,
                         )
                     }
+                    // As três abas carregam de uma vez na abertura: o ranking é a primeira coisa
+                    // que se vê, e o feed logo atrás. Depois disso, só a aba visível se atualiza.
                     carregarFeed(groupId)
+                    carregarRanking(groupId)
                 }
             }
         }
@@ -195,5 +315,8 @@ class GrupoDetalheViewModel(
 
     private companion object {
         val INTERVALO_DO_FEED = 10.seconds
+
+        /** Espelha o `PAGINA_PADRAO` do `CheckInService`. Se divergirem, o "tem mais" mente. */
+        const val PAGINA = 30
     }
 }

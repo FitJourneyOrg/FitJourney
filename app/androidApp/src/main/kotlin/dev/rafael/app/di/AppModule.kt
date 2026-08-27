@@ -20,6 +20,7 @@ import dev.rafael.app.screens.grupos.GrupoFormViewModel
 import dev.rafael.app.screens.grupos.GruposViewModel
 import dev.rafael.app.screens.onboarding.NomeViewModel
 import dev.rafael.app.screens.menu.MenuViewModel
+import dev.rafael.app.screens.perfil.PerfilPublicoViewModel
 import dev.rafael.app.screens.perfil.PerfilViewModel
 import dev.rafael.app.data.stats.StatsRepository
 import dev.rafael.app.data.sync.SyncScheduler
@@ -117,6 +118,9 @@ val appModule = module {
     // Check-in (fatia B). Sem SQLDelight e sem outbox: online-only (10.1) — ver `CheckIns`.
     single { dev.rafael.app.data.checkin.CheckInsApi(get()) }
     single<dev.rafael.app.data.checkin.CheckIns> { dev.rafael.app.data.checkin.CheckInsRepository(get()) }
+
+    // Perfil público de terceiro (C.1): online-only, sem repositório de cache. Ver KDoc.
+    single<dev.rafael.app.data.perfil.PerfisPublicos> { dev.rafael.app.data.perfil.PerfisPublicosApi(get()) }
     single { dev.rafael.app.data.checkin.Localizador(androidContext()) }
     viewModel { dev.rafael.app.screens.checkin.CheckInViewModel(get(), get(), get()) }
     single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
@@ -126,6 +130,7 @@ val appModule = module {
     viewModelOf(::HomeViewModel)     // treino de hoje (não conhece mais sessão — ARCH #34)
     viewModelOf(::MenuViewModel)     // cabeçalho do menu lateral: nome + nível, do cache
     viewModelOf(::PerfilViewModel)   // perfil: nome, nível, conquistas
+    viewModelOf(::PerfilPublicoViewModel)   // perfil de OUTRA pessoa (C.1)
     viewModelOf(::ContaViewModel)    // conta: renomear (PATCH /me) e sair
     viewModelOf(::NomeViewModel)     // 1º passo do onboarding: confirmar o nome (1-A.2)
     viewModelOf(::GruposViewModel)   // aba Grupos: lista cache-first

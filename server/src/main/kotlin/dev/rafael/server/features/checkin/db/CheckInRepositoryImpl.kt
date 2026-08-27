@@ -9,21 +9,37 @@ import dev.rafael.core.result.map
 import dev.rafael.server.features.checkin.models.CheckIn
 import dev.rafael.server.features.checkin.models.CheckInComAutor
 import dev.rafael.server.features.checkin.models.NovoCheckIn
+import dev.rafael.server.features.group.db.GroupMembersTable
+import dev.rafael.server.features.group.db.GroupsTable
 import dev.rafael.server.features.user.db.UsersTable
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
+import org.jetbrains.exposed.v1.core.JoinType
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
+import org.jetbrains.exposed.v1.core.alias
 import org.jetbrains.exposed.v1.core.and
+import org.jetbrains.exposed.v1.core.count
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.core.isNotNull
+import org.jetbrains.exposed.v1.core.isNull
 import org.jetbrains.exposed.v1.core.less
+import org.jetbrains.exposed.v1.core.max
+import org.jetbrains.exposed.v1.core.neq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
+import org.jetbrains.exposed.v1.jdbc.select
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.jetbrains.exposed.v1.jdbc.update
 import java.math.BigDecimal
+import kotlin.time.Clock
+import kotlin.time.Duration.Companion.days
 import kotlin.uuid.Uuid
 
 class CheckInRepositoryImpl : CheckInRepository {
@@ -108,6 +124,113 @@ class CheckInRepositoryImpl : CheckInRepository {
      */
     override suspend fun apagar(id: Uuid): AppResult<Unit> =
         dbQuery { transaction { CheckInsTable.deleteWhere { CheckInsTable.id eq id } } }.map { }
+
+    override suspend fun ranking(groupId: Uuid): AppResult<List<LinhaDoRanking>> = dbQuery {
+        transaction {
+            val total = CheckInsTable.id.count().alias("total")
+            // O desempate: o instante do ÚLTIMO check-in. Com contagens iguais, quem o tem mais
+            // antigo chegou àquela pontuação primeiro.
+            val ultimo = CheckInsTable.createdAt.max().alias("ultimo")
+
+            (GroupMembersTable innerJoin UsersTable)
+                .join(
+                    CheckInsTable,
+                    JoinType.LEFT,
+                    // LEFT JOIN com as três condições no ON, e não no WHERE: no WHERE, o filtro de
+                    // status transformaria o LEFT em INNER e sumiria com quem não tem check-in.
+                    onColumn = GroupMembersTable.userId,
+                    otherColumn = CheckInsTable.userId,
+                    additionalConstraint = {
+                        (CheckInsTable.groupId eq groupId) and
+                            (CheckInsTable.status neq CheckInStatus.INVALIDADO.name)
+                    },
+                )
+                .select(
+                    GroupMembersTable.userId,
+                    UsersTable.displayName,
+                    GroupMembersTable.joinedAt,
+                    total,
+                    ultimo,
+                )
+                .where { GroupMembersTable.groupId eq groupId }
+                .groupBy(GroupMembersTable.userId, UsersTable.displayName, GroupMembersTable.joinedAt)
+                .orderBy(
+                    // 1. A PONTUAÇÃO ([REGRA] #18: contagem de check-ins).
+                    total to SortOrder.DESC,
+                    // 2. Quem ATINGIU a pontuação primeiro. NULLS LAST porque quem nunca fez
+                    //    check-in tem `ultimo` nulo — sem isso o Postgres o poria em primeiro.
+                    ultimo to SortOrder.ASC_NULLS_LAST,
+                    // 3. Quem está no desafio há mais tempo.
+                    //
+                    //    Este critério existe por causa do DIA 1: cinquenta pessoas com zero
+                    //    check-ins empatam nos dois primeiros critérios, e sem um terceiro o
+                    //    Postgres devolveria em ordem arbitrária — que muda entre consultas. Com o
+                    //    polling de 10s, a lista se reembaralharia sozinha na tela.
+                    GroupMembersTable.joinedAt to SortOrder.ASC,
+                    // 4. DETERMINISMO, não justiça. Duas pessoas que entraram no mesmo instante
+                    //    ainda empatariam; isto garante que a ordem entre elas nunca mude. Nunca é
+                    //    apresentado como critério a ninguém, porque não significa nada.
+                    GroupMembersTable.userId to SortOrder.ASC,
+                )
+                .map {
+                    LinhaDoRanking(
+                        userId = it[GroupMembersTable.userId],
+                        displayName = it[UsersTable.displayName],
+                        checkIns = it[total].toInt(),
+                    )
+                }
+        }
+    }
+
+    // ---- purga de mídia (4.8, emendada) ----
+
+    override suspend fun comFotoExpirada(carenciaEmDias: Int, limite: Int): AppResult<List<FotoExpirada>> = dbQuery {
+        transaction {
+            (CheckInsTable innerJoin GroupsTable)
+                .selectAll()
+                .where {
+                    CheckInsTable.photoRef.isNotNull() and
+                        CheckInsTable.photoPurgedAt.isNull() and
+                        // `end_date + carência < hoje`. A conta é em dia CIVIL e ignora o fuso do
+                        // grupo de propósito: a diferença é de no máximo um dia, e com 30 dias de
+                        // carência isso é ruído. Trazer o fuso para cá custaria uma função por
+                        // linha e impediria o índice.
+                        (GroupsTable.endDate less hojeMenos(carenciaEmDias))
+                }
+                .limit(limite)
+                .mapNotNull { linha ->
+                    linha[CheckInsTable.photoRef]?.let { FotoExpirada(linha[CheckInsTable.id], it) }
+                }
+        }
+    }
+
+    override suspend fun marcarPurgados(ids: List<Uuid>, agora: LocalDateTime): AppResult<Unit> = dbQuery {
+        if (ids.isEmpty()) return@dbQuery Unit
+        transaction {
+            CheckInsTable.update({ CheckInsTable.id inList ids }) {
+                it[photoPurgedAt] = agora
+                // O CHECK `check_ins_local_completo` exige que nome e coordenada andem juntos —
+                // anular os três de uma vez é o que mantém a linha válida.
+                it[placeName] = null
+                it[placeLat] = null
+                it[placeLng] = null
+            }
+        }
+    }
+
+    override suspend fun refsVivas(): AppResult<Set<String>> = dbQuery {
+        transaction {
+            CheckInsTable
+                .select(CheckInsTable.photoRef)
+                .where { CheckInsTable.photoRef.isNotNull() and CheckInsTable.photoPurgedAt.isNull() }
+                .mapNotNull { it[CheckInsTable.photoRef] }
+                .toSet()
+        }
+    }
+
+    /** Data civil de hoje menos N dias, no relógio do servidor. */
+    private fun hojeMenos(dias: Int): LocalDate =
+        Clock.System.now().minus(dias.days).toLocalDateTime(TimeZone.UTC).date
 
     private fun toComAutor(linha: ResultRow) = CheckInComAutor(
         checkIn = CheckIn(
