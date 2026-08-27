@@ -107,6 +107,12 @@ fun GrupoDetalheScreen(
     groupId: String,
     onBack: () -> Unit,
     onCheckIn: () -> Unit,
+    /**
+     * [REGRA] #35: tocar no nome abre o perfil, em QUALQUER superfície — ranking, posts e
+     * membros. Um `onAbrirPerfil` só, passado às três abas, e não três parâmetros: se o gesto é
+     * o mesmo em toda parte, o destino também tem que ser.
+     */
+    onAbrirPerfil: (String) -> Unit,
     viewModel: GrupoDetalheViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -207,10 +213,11 @@ fun GrupoDetalheScreen(
                         )
 
                     GrupoDetalheViewModel.Aba.RANKING ->
-                        AbaDoRanking(state.ranking, state.carregandoRanking)
+                        AbaDoRanking(state.ranking, state.carregandoRanking, onAbrirPerfil)
 
                     GrupoDetalheViewModel.Aba.POSTS ->
                         AbaDePosts(
+                            onAbrirPerfil = onAbrirPerfil,
                             fusoDoGrupo = grupo.timezone,
                             itens = state.feed,
                             carregando = state.carregandoFeed,
@@ -222,6 +229,7 @@ fun GrupoDetalheScreen(
 
                     GrupoDetalheViewModel.Aba.MEMBROS ->
                         AbaDeMembros(
+                            onAbrirPerfil = onAbrirPerfil,
                             membros = state.membros,
                             souAdmin = state.souAdmin,
                             onAgir = { alvo = it },
@@ -410,7 +418,11 @@ private fun ConviteDoDesafio(
  * verdade acabam divergindo, e a que o usuário vê seria a errada.
  */
 @Composable
-private fun AbaDoRanking(itens: List<RankingEntryDto>, carregando: Boolean) {
+private fun AbaDoRanking(
+    itens: List<RankingEntryDto>,
+    carregando: Boolean,
+    onAbrirPerfil: (String) -> Unit,
+) {
     if (carregando && itens.isEmpty()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             repeat(5) { Box(Modifier.fillMaxWidth().height(56.dp).shimmer(RoundedCornerShape(12.dp))) }
@@ -419,15 +431,18 @@ private fun AbaDoRanking(itens: List<RankingEntryDto>, carregando: Boolean) {
     }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
-        items(itens, key = { it.userId }) { linha -> LinhaDoRanking(linha) }
+        items(itens, key = { it.userId }) { linha -> LinhaDoRanking(linha, onAbrirPerfil) }
     }
 }
 
 @Composable
-private fun LinhaDoRanking(linha: RankingEntryDto) {
+private fun LinhaDoRanking(linha: RankingEntryDto, onAbrirPerfil: (String) -> Unit) {
     Row(
         Modifier.fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
+            // A LINHA inteira é o alvo, não só o nome: um texto de 14sp é alvo de toque ruim, e
+            // aqui a linha não faz mais nada — não há segundo gesto para disputar com este.
+            .clickable { onAbrirPerfil(linha.userId) }
             // Destaque para a própria linha: quem abre o ranking procura a si mesmo antes de tudo.
             // `mine` vem resolvido do servidor — a tela não compara ids.
             .background(
@@ -490,6 +505,7 @@ private fun AbaDePosts(
     carregandoMais: Boolean,
     onApagar: (CheckInDto) -> Unit,
     onCarregarMais: () -> Unit,
+    onAbrirPerfil: (String) -> Unit,
 ) {
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -512,7 +528,7 @@ private fun AbaDePosts(
             return@LazyColumn
         }
 
-        items(itens, key = { it.id }) { item -> ItemDoFeed(item, fusoDoGrupo, onApagar) }
+        items(itens, key = { it.id }) { item -> ItemDoFeed(item, fusoDoGrupo, onApagar, onAbrirPerfil) }
 
         if (temMais) {
             item {
@@ -614,7 +630,12 @@ private fun quandoFoi(item: CheckInDto, fusoDoGrupo: String): String {
 }
 
 @Composable
-private fun ItemDoFeed(item: CheckInDto, fusoDoGrupo: String, onApagar: (CheckInDto) -> Unit) {
+private fun ItemDoFeed(
+    item: CheckInDto,
+    fusoDoGrupo: String,
+    onApagar: (CheckInDto) -> Unit,
+    onAbrirPerfil: (String) -> Unit,
+) {
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant),
@@ -628,6 +649,15 @@ private fun ItemDoFeed(item: CheckInDto, fusoDoGrupo: String, onApagar: (CheckIn
             )
         }
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            // Aqui o alvo é só o BLOCO DO AUTOR, e não o cartão inteiro como no ranking: o cartão
+            // já tem a foto e o botão de apagar. Um toque no cartão que abrisse perfil roubaria o
+            // gesto de quem só quis ver a imagem — e a foto é o conteúdo do post.
+            Row(
+                Modifier.weight(1f).clip(RoundedCornerShape(8.dp))
+                    .clickable { onAbrirPerfil(item.userId) }
+                    .padding(vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
             AvatarInicial(nome = item.displayName, id = item.userId, tamanho = 32.dp)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
@@ -640,6 +670,7 @@ private fun ItemDoFeed(item: CheckInDto, fusoDoGrupo: String, onApagar: (CheckIn
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+            }
             }
             // O botão de apagar só existe quando o SERVIDOR disse que dá (`canDelete`): é meu e é
             // hoje. A tela não recalcula a data — ela não tem o fuso do grupo nem o relógio certo.
@@ -665,6 +696,7 @@ private fun AbaDeMembros(
     membros: List<GroupMemberDto>,
     souAdmin: Boolean,
     onAgir: (GroupMemberDto) -> Unit,
+    onAbrirPerfil: (String) -> Unit,
 ) {
     /**
      * O ADMIN sempre em primeiro.
@@ -692,6 +724,7 @@ private fun AbaDeMembros(
         items(ordenados, key = { it.userId }) { m ->
             Membro(
                 membro = m,
+                onAbrir = { onAbrirPerfil(m.userId) },
                 // Admin não age sobre si mesmo: para sair existe o botão em "Sobre".
                 podeAgir = souAdmin && m.role != MemberRole.ADMIN,
                 onAgir = { onAgir(m) },
@@ -701,9 +734,17 @@ private fun AbaDeMembros(
 }
 
 @Composable
-private fun Membro(membro: GroupMemberDto, podeAgir: Boolean, onAgir: () -> Unit) {
+private fun Membro(
+    membro: GroupMemberDto,
+    podeAgir: Boolean,
+    onAgir: () -> Unit,
+    onAbrir: () -> Unit,
+) {
     Row(
-        Modifier.fillMaxWidth().padding(vertical = 8.dp),
+        Modifier.fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(onClick = onAbrir)
+            .padding(vertical = 8.dp, horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AvatarInicial(nome = membro.displayName, id = membro.userId, tamanho = 40.dp)
