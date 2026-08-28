@@ -43,6 +43,8 @@ import dev.rafael.app.screens.home.HomeScreen
 import dev.rafael.app.screens.menu.MenuLateral
 import dev.rafael.app.screens.onboarding.NomeScreen
 import dev.rafael.app.screens.onboarding.QuizScreen
+import dev.rafael.app.screens.amigos.AmigosScreen
+import dev.rafael.app.screens.amigos.BloqueadosScreen
 import dev.rafael.app.screens.perfil.PerfilPublicoScreen
 import dev.rafael.app.screens.perfil.PerfilScreen
 import dev.rafael.app.screens.program.ProgramDetailScreen
@@ -364,6 +366,21 @@ fun AppNavHost() {
         }
         composable<AppRoute.Conquistas> { AchievementsScreen(onBack = { nav.popBackStack() }) }
 
+        // ---- Grafo social (#35) ----
+
+        composable<AppRoute.Amigos> {
+            AmigosScreen(
+                onBack = { nav.popBackStack() },
+                // Buscar por código abre o PERFIL ([REGRA] #35), nunca manda pedido direto: com
+                // o perfil público, a confirmação que o ADR previa é o próprio perfil.
+                onAbrirPerfil = { userId -> nav.navigate(AppRoute.Perfil(userId)) },
+            )
+        }
+
+        composable<AppRoute.Bloqueados> {
+            BloqueadosScreen(onBack = { nav.popBackStack() })
+        }
+
         // ---- Perfil e conta (ARCH #34) ----
 
         /**
@@ -386,6 +403,7 @@ fun AppNavHost() {
                     onBack = { nav.popBackStack() },
                     onEditar = { nav.navigate(AppRoute.Conta) },
                     onVerConquistas = { nav.navigate(AppRoute.Conquistas) },
+                    onVerAmigos = { nav.navigate(AppRoute.Amigos) },
                     souEu = true,
                 )
             } else {
@@ -405,6 +423,7 @@ fun AppNavHost() {
         composable<AppRoute.Conta> {
             ContaScreen(
                 onBack = { nav.popBackStack() },
+                onVerBloqueados = { nav.navigate(AppRoute.Bloqueados) },
                 onSaiu = {
                     // Fecha o menu junto: sair com o drawer aberto deixava um painel sem dono
                     // por cima da tela de login.

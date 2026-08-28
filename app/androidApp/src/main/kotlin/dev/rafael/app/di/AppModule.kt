@@ -20,6 +20,8 @@ import dev.rafael.app.screens.grupos.GrupoFormViewModel
 import dev.rafael.app.screens.grupos.GruposViewModel
 import dev.rafael.app.screens.onboarding.NomeViewModel
 import dev.rafael.app.screens.menu.MenuViewModel
+import dev.rafael.app.screens.amigos.AmigosViewModel
+import dev.rafael.app.screens.amigos.BloqueadosViewModel
 import dev.rafael.app.screens.perfil.PerfilPublicoViewModel
 import dev.rafael.app.screens.perfil.PerfilViewModel
 import dev.rafael.app.data.stats.StatsRepository
@@ -121,6 +123,9 @@ val appModule = module {
 
     // Perfil público de terceiro (C.1): online-only, sem repositório de cache. Ver KDoc.
     single<dev.rafael.app.data.perfil.PerfisPublicos> { dev.rafael.app.data.perfil.PerfisPublicosApi(get()) }
+
+    // Amizades (#35): online-only, sem repositório de cache. Ver KDoc de `Amizades`.
+    single<dev.rafael.app.data.amizades.Amizades> { dev.rafael.app.data.amizades.AmizadesApi(get()) }
     single { dev.rafael.app.data.checkin.Localizador(androidContext()) }
     viewModel { dev.rafael.app.screens.checkin.CheckInViewModel(get(), get(), get()) }
     single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
@@ -131,6 +136,8 @@ val appModule = module {
     viewModelOf(::MenuViewModel)     // cabeçalho do menu lateral: nome + nível, do cache
     viewModelOf(::PerfilViewModel)   // perfil: nome, nível, conquistas
     viewModelOf(::PerfilPublicoViewModel)   // perfil de OUTRA pessoa (C.1)
+    viewModelOf(::AmigosViewModel)          // amigos e pedidos (#35)
+    viewModelOf(::BloqueadosViewModel)      // Conta > Bloqueados (#35)
     viewModelOf(::ContaViewModel)    // conta: renomear (PATCH /me) e sair
     viewModelOf(::NomeViewModel)     // 1º passo do onboarding: confirmar o nome (1-A.2)
     viewModelOf(::GruposViewModel)   // aba Grupos: lista cache-first
