@@ -38,6 +38,7 @@ class UserRepositoryImpl : UserRepository {
         firebaseUid: String,
         email: String?,
         displayName: String,
+        code: String,
     ): AppResult<User> =
         dbQuery {
             UsersTable.insert {
@@ -46,6 +47,7 @@ class UserRepositoryImpl : UserRepository {
                 it[UsersTable.email] = email
                 it[UsersTable.isPremium] = false
                 it[UsersTable.displayName] = displayName
+                it[UsersTable.code] = code
             }
             User(
                 id = id,
@@ -53,7 +55,23 @@ class UserRepositoryImpl : UserRepository {
                 email = email,
                 isPremium = false,
                 displayName = displayName,
+                code = code,
             )
+        }
+
+    override suspend fun findByCode(code: String): AppResult<User?> =
+        dbQuery {
+            UsersTable.selectAll()
+                .where { UsersTable.code eq code }
+                .singleOrNull()
+                ?.toUser()
+        }
+
+    override suspend fun updateCode(userId: Uuid, code: String): AppResult<User?> =
+        dbQuery {
+            val n = UsersTable.update({ UsersTable.id eq userId }) { it[UsersTable.code] = code }
+            if (n == 0) null
+            else UsersTable.selectAll().where { UsersTable.id eq userId }.single().toUser()
         }
 
     override suspend fun setPremium(userId: Uuid, premium: Boolean): AppResult<User?> =
@@ -88,4 +106,8 @@ private fun ResultRow.toUser(): User = User(
     email = this[UsersTable.email],
     isPremium = this[UsersTable.isPremium],
     displayName = this[UsersTable.displayName],
+    // CHAR(8) no Postgres vem preenchido com espaços à direita se algo gravar menos de 8.
+    // O `trim()` é rede de segurança: o CHECK da V40 já exige exatamente 8, mas uma
+    // comparação que falhasse por espaço invisível seria muito cara de diagnosticar.
+    code = this[UsersTable.code].trim(),
 )

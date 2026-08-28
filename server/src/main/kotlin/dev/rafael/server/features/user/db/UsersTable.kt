@@ -13,5 +13,15 @@ object UsersTable : Table("users") {
      * e quem decide é `DisplayNamePolicy`. Um default aqui deixaria passar insert sem nome.
      */
     val displayName = varchar("display_name", 30)
+
+    /**
+     * V40 (#35). CHAR(8) único — o endereço pelo qual outra pessoa te encontra.
+     *
+     * Sem `.default()` pela mesma razão do `displayName`: quem insere decide, e quem decide é
+     * `UserCodePolicy.gerar()`. Um default aqui deixaria passar insert sem código, e o código é
+     * NOT NULL no banco.
+     */
+    val code = varchar("code", 8)
+
     override val primaryKey = PrimaryKey(id)
 }

@@ -1,5 +1,6 @@
 package dev.rafael.server.features.user.services
 
+import dev.rafael.contract.friendship.FriendStatus
 import dev.rafael.contract.user.PublicAchievementDto
 import dev.rafael.contract.user.PublicProfileDto
 import dev.rafael.core.result.AppError
@@ -40,7 +41,32 @@ class PublicProfileService(
     private val users: UserRepository,
     private val gamificacaoDe: GamificacaoDe,
     private val achievements: AchievementRepository,
+    private val relacaoCom: RelacaoCom,
 ) {
+
+    /**
+     * Porta estreita para o grafo social (#35 + emenda 35.6), no molde do [GamificacaoDe].
+     *
+     * `user` não importa `friendship`: recebe uma função. E a função devolve as DUAS coisas que o
+     * perfil precisa numa consulta só — o botão a desenhar e se quem pede foi bloqueado.
+     *
+     * As duas juntas de propósito. Separadas seriam duas idas ao banco para responder sobre o
+     * mesmo par de pessoas, e abririam a chance de uma responder "somos amigos" enquanto a outra
+     * responde "você foi bloqueado" — estados que não podem coexistir, porque bloquear apaga a
+     * amizade na mesma transação.
+     */
+    fun interface RelacaoCom {
+        suspend operator fun invoke(dono: Uuid, quemPede: Uuid): AppResult<Relacao>
+    }
+
+    /**
+     * @param status o que quem pede pode FAZER com este perfil.
+     * @param meBloqueou o dono bloqueou quem pede? DIRECIONAL — quem bloqueou continua vendo.
+     */
+    data class Relacao(
+        val status: FriendStatus,
+        val meBloqueou: Boolean,
+    )
 
     /**
      * Porta estreita para a gamificação de um usuário, no molde do `CheckInDeHoje` do
@@ -59,6 +85,30 @@ class PublicProfileService(
     }
 
     /**
+     * Pelo CÓDIGO de 8 caracteres (35.5).
+     *
+     * **[REGRA] digitar o código abre o PERFIL, não manda um pedido.** Sem isso, um erro de
+     * digitação viraria pedido de amizade a um desconhecido — e com o perfil público a garantia
+     * sai de graça, porque a tela de confirmação que o ADR previa é o próprio perfil.
+     *
+     * O limite de tentativas é aplicado na ROTA, não aqui: ele é sobre quem PERGUNTA, e este
+     * serviço é sobre quem é perguntado.
+     *
+     * 404 quando não existe — igual ao id inexistente, pelo mesmo motivo.
+     */
+    suspend fun porCodigo(
+        quemPede: String,
+        emailDeQuemPede: String?,
+        codigo: String,
+    ): AppResult<PublicProfileDto> {
+        val normalizado = UserCodePolicy.normalizar(codigo) ?: return naoEncontrado()
+        return users.findByCode(normalizado).flatMap { pessoa ->
+            if (pessoa == null) naoEncontrado()
+            else porId(quemPede, emailDeQuemPede, pessoa.id.toString())
+        }
+    }
+
+    /**
      * @param quemPede o `uid` do Firebase de quem está OLHANDO — resolve o [PublicProfileDto.me].
      * @param userId o id interno de quem está sendo olhado, como veio da URL (string, ainda não
      *   validado: id malformado é indistinguível de id inexistente para quem pergunta).
@@ -74,20 +124,50 @@ class PublicProfileService(
             users.findById(alvo).flatMap { pessoa ->
                 if (pessoa == null) return@flatMap naoEncontrado()
 
-                gamificacaoDe(alvo).flatMap { g ->
-                    achievements.listByUser(alvo).flatMap { concedidas ->
-                        PublicProfileDto(
-                            userId = pessoa.id.toString(),
-                            displayName = pessoa.displayName,
-                            level = g.nivel,
-                            xp = g.xp,
-                            achievements = medalhas(concedidas),
-                            me = pessoa.id == eu.id,
-                        ).asSuccess()
-                    }
+                relacaoCom(alvo, eu.id).flatMap { relacao ->
+                    if (relacao.meBloqueou) indisponivel(alvo).asSuccess()
+                    else montar(pessoa, eu.id, relacao.status)
                 }
             }
         }
+
+    private suspend fun montar(
+        pessoa: dev.rafael.server.features.user.models.User,
+        eu: Uuid,
+        status: FriendStatus,
+    ): AppResult<PublicProfileDto> =
+        gamificacaoDe(pessoa.id).flatMap { g ->
+            achievements.listByUser(pessoa.id).flatMap { concedidas ->
+                PublicProfileDto(
+                    userId = pessoa.id.toString(),
+                    displayName = pessoa.displayName,
+                    level = g.nivel,
+                    xp = g.xp,
+                    achievements = medalhas(concedidas),
+                    me = pessoa.id == eu,
+                    friendStatus = status,
+                ).asSuccess()
+            }
+        }
+
+    /**
+     * O perfil que quem foi bloqueado recebe — e **o mesmo de uma conta excluída**.
+     *
+     * Zerado no SERVIDOR, não escondido na tela: `displayName` vazio significa que o nome
+     * verdadeiro não atravessou o fio. Uma tela que recebesse o nome e decidisse não mostrá-lo
+     * seria a fronteira na UI de novo, que é o erro que a 9.3-A já nos custou reconhecer.
+     *
+     * `level = 0` é sentinela: o nível real começa em 1 (#16), então zero nunca é ambíguo.
+     */
+    private fun indisponivel(alvo: Uuid) = PublicProfileDto(
+        userId = alvo.toString(),
+        displayName = "",
+        level = 0,
+        xp = 0,
+        achievements = emptyList(),
+        me = false,
+        available = false,
+    )
 
     /**
      * Traduz os ids gravados em medalhas com título e descrição.

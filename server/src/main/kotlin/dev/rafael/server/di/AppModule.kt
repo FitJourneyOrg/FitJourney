@@ -28,6 +28,11 @@ import dev.rafael.server.features.session.db.SessionRepositoryImpl
 import dev.rafael.server.features.session.services.SessionService
 import dev.rafael.server.features.stats.AchievementService
 import dev.rafael.server.features.user.services.PublicProfileService
+import dev.rafael.core.result.map
+import dev.rafael.server.features.friendship.db.FriendshipRepository
+import dev.rafael.server.features.friendship.db.FriendshipRepositoryImpl
+import dev.rafael.server.features.friendship.services.FriendshipService
+import dev.rafael.server.features.friendship.services.LimitadorDeResgate
 import dev.rafael.server.features.stats.StatsService
 import dev.rafael.server.features.stats.db.AchievementRepository
 import dev.rafael.server.features.stats.db.AchievementRepositoryImpl
@@ -41,11 +46,23 @@ val appModule = module {
         PublicProfileService(
             userService = get(),
             users = get(),
-            // Porta estreita: o perfil pede XP e nível, não o StatsService inteiro (ver KDoc).
+            // Duas portas estreitas: o perfil pede XP+nível e a relação social, nunca as classes
+            // inteiras. É o que mantém `user` sem importar `stats` nem `friendship` (ver KDoc).
             gamificacaoDe = { userId -> get<StatsService>().gamificacaoDe(userId) },
             achievements = get(),
+            relacaoCom = { dono, quemPede ->
+                get<FriendshipService>().relacaoEntre(dono, quemPede).map { r ->
+                    PublicProfileService.Relacao(r.status, r.meBloqueou)
+                }
+            },
         )
     }
+
+    // ---- Amizades (ARCH #35) ----
+    single<FriendshipRepository> { FriendshipRepositoryImpl() }
+    single { FriendshipService(get(), get(), get()) }   // userService + userRepo + repo
+    // Singleton de propósito: a contagem de tentativas vive em MEMÓRIA (ver KDoc do limitador).
+    single { LimitadorDeResgate() }
 
     // Auth: FirebaseAuth.getInstance() só é válido após FirebaseAdmin.init() (roda no boot, antes).
     single { FirebaseAuth.getInstance() }
