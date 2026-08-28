@@ -101,9 +101,14 @@ class PublicProfileService(
         emailDeQuemPede: String?,
         codigo: String,
     ): AppResult<PublicProfileDto> {
-        val normalizado = UserCodePolicy.normalizar(codigo) ?: return naoEncontrado()
+        // A frase é sobre o CÓDIGO, não sobre "um perfil": quem digitou não sabe se errou uma
+        // letra ou se a pessoa regenerou o dela. As duas respostas cabem nesta frase, e nenhuma
+        // das duas acusa o usuário de ter apagado alguma coisa.
+        val naoAchou = AppError.NotFound("Nenhum usuário com esse código.").asFailure()
+
+        val normalizado = UserCodePolicy.normalizar(codigo) ?: return naoAchou
         return users.findByCode(normalizado).flatMap { pessoa ->
-            if (pessoa == null) naoEncontrado()
+            if (pessoa == null) naoAchou
             else porId(quemPede, emailDeQuemPede, pessoa.id.toString())
         }
     }
