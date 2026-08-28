@@ -23,7 +23,30 @@ interface UserRepository {
      * outro: id é decisão de domínio — a mesma escolha do outbox no cliente (#30), onde quem
      * gera é quem manda — e o nome é `DisplayNamePolicy`, que precisa do id para o fallback.
      */
-    suspend fun create(id: Uuid, firebaseUid: String, email: String?, displayName: String): AppResult<User>
+    suspend fun create(
+        id: Uuid,
+        firebaseUid: String,
+        email: String?,
+        displayName: String,
+        code: String,
+    ): AppResult<User>
+
+    /**
+     * Por CÓDIGO (V40, #35). `null` = ninguém tem este código.
+     *
+     * O código já chega normalizado por `UserCodePolicy.normalizar` — este método não conserta
+     * caixa nem espaço, porque consertar aqui deixaria a comparação depender de o chamador ter
+     * lembrado, e um chamador novo esqueceria.
+     */
+    suspend fun findByCode(code: String): AppResult<User?>
+
+    /**
+     * Troca o código (35.5). `null` = usuário não existe.
+     *
+     * O código anterior morre na hora e não é guardado: essa é a defesa que devolve controle a
+     * quem está sendo importunado. Manter histórico de códigos antigos anularia o efeito.
+     */
+    suspend fun updateCode(userId: Uuid, code: String): AppResult<User?>
 
     /** Liga/desliga o premium do usuário. Retorna o user atualizado, ou null se não existe. */
     suspend fun setPremium(userId: Uuid, premium: Boolean): AppResult<User?>

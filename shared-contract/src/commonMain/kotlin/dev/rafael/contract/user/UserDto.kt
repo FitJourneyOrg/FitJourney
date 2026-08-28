@@ -18,6 +18,19 @@ data class UserDto(
     val displayName: String,
     val email: String?,
     val isPremium: Boolean = false,   // <- novo, default false (não quebra clientes antigos)
+
+    /**
+     * MEU código de 8 caracteres (V40, #35) — o endereço que eu passo para alguém me adicionar.
+     *
+     * **Só existe aqui, no `/me`.** Não está no `PublicProfileDto` de propósito: publicá-lo faria
+     * de cada perfil visitado uma forma de colecionar códigos, e o código é justamente o que
+     * permite mandar pedido a quem não te conhece. O meu é meu para dar; o dos outros não é meu
+     * para pegar.
+     *
+     * Default `""` porque cliente antigo não conhece o campo — e nesse caso a tela de amigos
+     * simplesmente não mostra o código, em vez de falhar ao desserializar.
+     */
+    val code: String = "",
 )
 
 /**
