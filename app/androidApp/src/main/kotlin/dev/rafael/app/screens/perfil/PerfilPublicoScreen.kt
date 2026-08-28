@@ -1,5 +1,14 @@
 package dev.rafael.app.screens.perfil
 
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import dev.rafael.app.ui.ErroInline
+import dev.rafael.contract.friendship.FriendStatus
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -100,6 +109,8 @@ fun PerfilPublicoScreen(
                     )
                 }
 
+            !perfil.available -> Indisponivel(Modifier.fillMaxSize().padding(padding))
+
             else ->
                 Column(
                     Modifier
@@ -142,6 +153,24 @@ fun PerfilPublicoScreen(
                                 .padding(12.dp),
                         )
                         Spacer(Modifier.height(12.dp))
+                    }
+
+                    if (!perfil.me) {
+                        AcaoDoGrafo(
+                            status = perfil.friendStatus,
+                            ocupado = state.agindo,
+                            onPedir = { viewModel.pedir(perfil.userId) },
+                            onAceitar = { viewModel.aceitar(perfil.userId) },
+                            onRecusar = { viewModel.recusar(perfil.userId) },
+                            onRemover = { viewModel.remover(perfil.userId) },
+                            onBloquear = { viewModel.bloquear(perfil.userId) },
+                            onDesbloquear = { viewModel.desbloquear(perfil.userId) },
+                        )
+                        state.erroDaAcao?.let {
+                            Spacer(Modifier.height(8.dp))
+                            ErroInline(it)
+                        }
+                        Spacer(Modifier.height(16.dp))
                     }
 
                     CartaoDeNivel(nivel = perfil.level, xp = perfil.xp)
@@ -234,5 +263,116 @@ private fun Conquistas(medalhas: List<PublicAchievementDto>) {
                 }
             }
         }
+    }
+}
+
+/**
+ * O botão do grafo (#35) — **desenhado pelo `friendStatus`, que o SERVIDOR resolve**.
+ *
+ * A tela não cruza a lista de amigos com a de pedidos para descobrir em que estado está. Isso
+ * daria cinco botões possíveis calculados em três lugares diferentes, e um deles ficaria errado.
+ *
+ * `Bloquear` fica como ação SECUNDÁRIA e discreta em todos os estados, nunca do mesmo tamanho do
+ * botão principal: é uma ação rara, séria e difícil de desfazer socialmente — não deve competir
+ * por toque com "Adicionar".
+ */
+@Composable
+private fun AcaoDoGrafo(
+    status: FriendStatus,
+    ocupado: Boolean,
+    onPedir: () -> Unit,
+    onAceitar: () -> Unit,
+    onRecusar: () -> Unit,
+    onRemover: () -> Unit,
+    onBloquear: () -> Unit,
+    onDesbloquear: () -> Unit,
+) {
+    var confirmarBloqueio by remember { mutableStateOf(false) }
+
+    if (confirmarBloqueio) {
+        AlertDialog(
+            onDismissRequest = { confirmarBloqueio = false },
+            title = { Text("Bloquear esta pessoa?") },
+            text = {
+                Text(
+                    // Diz os DOIS efeitos, porque o segundo surpreende: bloquear apaga a amizade
+                    // ou o pedido, e desbloquear depois não os traz de volta.
+                    "Ela não vai mais conseguir te encontrar nem te enviar pedidos. Se vocês " +
+                        "forem amigos, a amizade é desfeita — e desbloquear depois não a restaura.",
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { confirmarBloqueio = false; onBloquear() }) {
+                    Text("Bloquear", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmarBloqueio = false }) { Text("Cancelar") } },
+        )
+    }
+
+    Column(Modifier.fillMaxWidth()) {
+        when (status) {
+            FriendStatus.NENHUMA ->
+                Button(onClick = onPedir, enabled = !ocupado, modifier = Modifier.fillMaxWidth()) {
+                    Text("Adicionar")
+                }
+
+            // "Cancelar pedido" e não "Pendente" desabilitado: o botão precisa dizer o que o
+            // toque FAZ, não em que estado a relação está. Estado o texto acima já conta.
+            FriendStatus.PEDIDO_ENVIADO ->
+                OutlinedButton(onClick = onRemover, enabled = !ocupado, modifier = Modifier.fillMaxWidth()) {
+                    Text("Cancelar pedido")
+                }
+
+            FriendStatus.PEDIDO_RECEBIDO ->
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = onAceitar, enabled = !ocupado, modifier = Modifier.weight(1f)) {
+                        Text("Aceitar")
+                    }
+                    OutlinedButton(onClick = onRecusar, enabled = !ocupado, modifier = Modifier.weight(1f)) {
+                        Text("Recusar")
+                    }
+                }
+
+            FriendStatus.AMIGOS ->
+                OutlinedButton(onClick = onRemover, enabled = !ocupado, modifier = Modifier.fillMaxWidth()) {
+                    Text("Desfazer amizade")
+                }
+
+            FriendStatus.BLOQUEADO_POR_MIM ->
+                OutlinedButton(onClick = onDesbloquear, enabled = !ocupado, modifier = Modifier.fillMaxWidth()) {
+                    Text("Desbloquear")
+                }
+        }
+
+        if (status != FriendStatus.BLOQUEADO_POR_MIM) {
+            TextButton(onClick = { confirmarBloqueio = true }, enabled = !ocupado) {
+                Text(
+                    "Bloquear",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * O perfil que não pode ser mostrado (emenda 35.6).
+ *
+ * **A mesma tela para quem foi bloqueado e para conta excluída** — e é isso que impede o bloqueio
+ * de virar recado. O servidor já manda tudo zerado; aqui só não se inventa explicação.
+ *
+ * O texto NÃO diz "você foi bloqueado" nem "esta conta foi excluída": afirmar qualquer um dos
+ * dois seria escolher um, e escolher revela qual é.
+ */
+@Composable
+private fun Indisponivel(modifier: Modifier = Modifier) {
+    Box(modifier.padding(32.dp), contentAlignment = Alignment.Center) {
+        Text(
+            "Este perfil não está disponível.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

@@ -1,14 +1,19 @@
 package dev.rafael.app.screens.perfil
 
+import dev.rafael.app.data.amizades.Amizades
+import dev.rafael.contract.friendship.FriendRequestDto
+import dev.rafael.contract.friendship.PersonDto
 import dev.rafael.app.data.perfil.PerfisPublicos
 import dev.rafael.contract.user.PublicProfileDto
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
@@ -49,6 +54,43 @@ class PerfilPublicoViewModelTest {
         xp = 1200,
     )
 
+    /**
+     * Registra o que foi chamado — é como se verifica que a ação foi para o servidor E que o
+     * perfil foi recarregado depois, em vez de a tela adivinhar o botão novo.
+     */
+    private class FakeAmizades : Amizades {
+        val chamadas = mutableListOf<String>()
+        var resposta: AppResult<Unit> = AppResult.Success(Unit)
+
+        /**
+         * Trava a ação no meio do caminho, para o teste observar o estado "em voo".
+         *
+         * Sem isto não dá para verificar `agindo`: com `StandardTestDispatcher` a corrotina só
+         * roda no `advanceUntilIdle()`, e aí ela já terminou. Um fake que responde na hora não
+         * tem "meio do caminho" para observar.
+         */
+        var portao: CompletableDeferred<Unit>? = null
+
+        private suspend fun registrar(o: String): AppResult<Unit> {
+            chamadas += o
+            portao?.await()
+            return resposta
+        }
+
+        override suspend fun pedir(userId: String) = registrar("pedir")
+        override suspend fun aceitar(userId: String) = registrar("aceitar")
+        override suspend fun recusar(userId: String) = registrar("recusar")
+        override suspend fun remover(userId: String) = registrar("remover")
+        override suspend fun bloquear(userId: String) = registrar("bloquear")
+        override suspend fun desbloquear(userId: String) = registrar("desbloquear")
+
+        override suspend fun amigos() = AppResult.Success(emptyList<PersonDto>())
+        override suspend fun pedidosRecebidos() = AppResult.Success(emptyList<FriendRequestDto>())
+        override suspend fun bloqueados() = AppResult.Success(emptyList<PersonDto>())
+        override suspend fun porCodigo(codigo: String) = error("não usado")
+        override suspend fun regenerarMeuCodigo() = error("não usado")
+    }
+
     /** Conta as chamadas: é como se verifica que o [PerfilPublicoViewModel.carregar] não repete. */
     private class FakePerfis(private var resposta: AppResult<PublicProfileDto>) : PerfisPublicos {
         var chamadas = 0
@@ -59,9 +101,14 @@ class PerfilPublicoViewModelTest {
         }
     }
 
+    private fun viewModel(
+        perfis: FakePerfis,
+        amizades: FakeAmizades = FakeAmizades(),
+    ) = PerfilPublicoViewModel(perfis, amizades)
+
     @Test
     fun `carrega o perfil e sai do estado de carregando`() = runTest(dispatcher) {
-        val vm = PerfilPublicoViewModel(FakePerfis(AppResult.Success(perfil())))
+        val vm = viewModel(FakePerfis(AppResult.Success(perfil())))
 
         vm.carregar("u2")
         advanceUntilIdle()
@@ -74,7 +121,7 @@ class PerfilPublicoViewModelTest {
 
     @Test
     fun `falha vira erro na tela, sem perfil`() = runTest(dispatcher) {
-        val vm = PerfilPublicoViewModel(FakePerfis(AppResult.Failure(AppError.Connection())))
+        val vm = viewModel(FakePerfis(AppResult.Failure(AppError.Connection())))
 
         vm.carregar("u2")
         advanceUntilIdle()
@@ -88,7 +135,7 @@ class PerfilPublicoViewModelTest {
     @Test
     fun `carregar duas vezes com o mesmo id nao repete a requisicao`() = runTest(dispatcher) {
         val perfis = FakePerfis(AppResult.Success(perfil()))
-        val vm = PerfilPublicoViewModel(perfis)
+        val vm = viewModel(perfis)
 
         vm.carregar("u2")
         advanceUntilIdle()
@@ -102,7 +149,7 @@ class PerfilPublicoViewModelTest {
     @Test
     fun `recarregar depois de falhar traz o perfil sem sair da tela`() = runTest(dispatcher) {
         val perfis = FakePerfis(AppResult.Failure(AppError.Connection()))
-        val vm = PerfilPublicoViewModel(perfis)
+        val vm = viewModel(perfis)
 
         vm.carregar("u2")
         advanceUntilIdle()
@@ -128,7 +175,7 @@ class PerfilPublicoViewModelTest {
     @Test
     fun `falha ao recarregar preserva o perfil ja exibido`() = runTest(dispatcher) {
         val perfis = FakePerfis(AppResult.Success(perfil()))
-        val vm = PerfilPublicoViewModel(perfis)
+        val vm = viewModel(perfis)
 
         vm.carregar("u2")
         advanceUntilIdle()
@@ -145,11 +192,95 @@ class PerfilPublicoViewModelTest {
     @Test
     fun `recarregar antes de qualquer carregar nao faz nada`() = runTest(dispatcher) {
         val perfis = FakePerfis(AppResult.Success(perfil()))
-        val vm = PerfilPublicoViewModel(perfis)
+        val vm = viewModel(perfis)
 
         vm.recarregar()
         advanceUntilIdle()
 
         assertEquals(0, perfis.chamadas, "sem id, não há o que recarregar")
+    }
+
+    // ---- ações do grafo (#35) ----
+
+    /**
+     * [INVARIANTE] Toda ação do grafo RECARREGA o perfil.
+     *
+     * É o que garante que o botão novo venha do servidor. Trocá-lo na tela estaria errado em três
+     * casos que só o servidor conhece: bloqueio, teto de 500, e o pedido cruzado que vira amizade
+     * direto. Adivinhar aqui seria reimplementar a regra no cliente.
+     */
+    @Test
+    fun `cada acao do grafo recarrega o perfil depois`() = runTest(dispatcher) {
+        val perfis = FakePerfis(AppResult.Success(perfil()))
+        val amizades = FakeAmizades()
+        val vm = viewModel(perfis, amizades)
+
+        vm.carregar("u2")
+        advanceUntilIdle()
+        val antes = perfis.chamadas
+
+        listOf<(String) -> Unit>(
+            vm::pedir, vm::aceitar, vm::recusar, vm::remover, vm::bloquear, vm::desbloquear,
+        ).forEach { acao ->
+            acao("u2")
+            advanceUntilIdle()
+        }
+
+        assertEquals(
+            listOf("pedir", "aceitar", "recusar", "remover", "bloquear", "desbloquear"),
+            amizades.chamadas,
+            "todas as seis ações precisam chegar ao servidor",
+        )
+        assertEquals(
+            antes + 6,
+            perfis.chamadas,
+            "uma recarga por ação — o botão certo é o que o servidor devolve",
+        )
+    }
+
+    @Test
+    fun `acao que falha mostra erro SEM apagar o perfil`() = runTest(dispatcher) {
+        val perfis = FakePerfis(AppResult.Success(perfil()))
+        val amizades = FakeAmizades()
+        val vm = viewModel(perfis, amizades)
+
+        vm.carregar("u2")
+        advanceUntilIdle()
+
+        amizades.resposta = AppResult.Failure(AppError.Connection())
+        vm.pedir("u2")
+        advanceUntilIdle()
+
+        val s = vm.state.value
+        assertEquals("Fulano", s.perfil?.displayName, "falhar ao adicionar não pode limpar a tela")
+        assertTrue(s.erroDaAcao is AppError.Connection, "o erro da AÇÃO fica ao lado do botão")
+        assertNull(s.erro, "e não vira erro de tela inteira — são dois eixos diferentes")
+        assertFalse(s.agindo, "o botão tem que voltar a funcionar")
+    }
+
+    /**
+     * O botão desabilita **enquanto a ação está em voo**, e volta quando ela termina.
+     *
+     * O `portao` é o que torna isto observável: ele segura a chamada dentro do `agir`, o
+     * `runCurrent()` deixa a corrotina chegar até lá, e só então o estado é lido. Foi assim que
+     * este teste passou a valer alguma coisa — a primeira versão lia o estado antes de a
+     * corrotina sequer começar, e "passava" por acidente de agendamento.
+     */
+    @Test
+    fun `acao em voo desabilita o botao`() = runTest(dispatcher) {
+        val amizades = FakeAmizades()
+        val vm = viewModel(FakePerfis(AppResult.Success(perfil())), amizades)
+        vm.carregar("u2")
+        advanceUntilIdle()
+
+        amizades.portao = CompletableDeferred()
+        vm.pedir("u2")
+        runCurrent()
+
+        assertTrue(vm.state.value.agindo, "enquanto está em voo, o botão não aceita segundo toque")
+
+        amizades.portao!!.complete(Unit)
+        advanceUntilIdle()
+        assertFalse(vm.state.value.agindo, "terminou: o botão volta a funcionar")
     }
 }
