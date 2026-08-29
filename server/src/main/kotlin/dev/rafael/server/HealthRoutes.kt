@@ -24,6 +24,8 @@ import dev.rafael.server.features.friendship.services.FriendshipService
 import dev.rafael.server.features.friendship.services.LimitadorDeResgate
 import dev.rafael.server.features.notificacao.db.DeviceTokenRepository
 import dev.rafael.server.features.notificacao.routes.deviceRoutes
+import dev.rafael.server.features.notificacao.routes.notificacaoRoutes
+import dev.rafael.server.features.notificacao.services.NotificacaoService
 import dev.rafael.server.features.user.services.PublicProfileService
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.workout.routes.workoutRoutes
@@ -55,6 +57,7 @@ fun Application.configureRouting() {
     val friendshipService = get<FriendshipService>()
     val limitadorDeResgate = get<LimitadorDeResgate>()
     val deviceTokens = get<DeviceTokenRepository>()
+    val notificacoes = get<NotificacaoService>()
     val profileService = get<ProfileService>()
     val exerciseService = get<ExerciseService>()
     val workoutService = get<WorkoutService>()
@@ -77,6 +80,7 @@ fun Application.configureRouting() {
         userRoutes(userService, publicProfileService, limitadorDeResgate)
         friendshipRoutes(friendshipService)
         deviceRoutes(userService, deviceTokens)
+        notificacaoRoutes(notificacoes)
         profileRoutes(profileService)
         exerciseRoutes(exerciseService, profileService)
         workoutRoutes(workoutService, userService, profileService, programService)
