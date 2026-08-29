@@ -6,6 +6,7 @@ import dev.rafael.core.result.AppError
 import dev.rafael.server.auth.FirebaseAdmin
 import dev.rafael.server.db.DatabaseFactory
 import dev.rafael.server.error.toHttp
+import dev.rafael.server.features.notificacao.services.NotificacaoService
 import dev.rafael.server.plugins.configureAuthentication
 import dev.rafael.server.plugins.configureKoin
 import io.ktor.serialization.kotlinx.json.json
@@ -26,6 +27,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import org.koin.ktor.ext.get
 import org.slf4j.event.Level
+import kotlin.time.Duration.Companion.days
 import kotlin.time.Duration.Companion.minutes
 
 fun main(args: Array<String>) = EngineMain.main(args)
@@ -41,6 +43,7 @@ fun Application.module() {
     configureStatusPages()
     configureRouting()           // já existe (HealthRoutes) — vou adicionar /me aqui
     agendarPurgaDeMidia()
+    agendarPurgaDeNotificacoes()
 }
 
 /**
@@ -68,6 +71,30 @@ private fun Application.agendarPurgaDeMidia() {
                 // a purga nunca mais roda até alguém reiniciar o servidor.
                 .onFailure { log.warn("Purga de mídia falhou; tenta de novo no próximo ciclo", it) }
             delay(PurgaDeMidia.INTERVALO)
+        }
+    }
+}
+
+/**
+ * Purga de notificações com mais de 6 meses (F.1).
+ *
+ * **Laço próprio, e não um passo dentro da purga de mídia.** Juntar os dois pareceria economia e
+ * criaria um acoplamento sem motivo: uma falha lendo o disco impediria a limpeza do banco, que
+ * não tem nada a ver. Duas coisas que falham por razões diferentes falham separadas.
+ *
+ * O intervalo é o mesmo (1 dia) porque a natureza é a mesma: dado que se acumula devagar e cujo
+ * corte não tem pressa.
+ */
+private fun Application.agendarPurgaDeNotificacoes() {
+    val servico = get<NotificacaoService>()
+    launch {
+        // Escalonado em relação à purga de mídia: as duas rodando juntas no boot competiriam por
+        // conexão do pool num momento em que o app ainda está atendendo as primeiras requisições.
+        delay(5.minutes)
+        while (isActive) {
+            runCatching { servico.purgar() }
+                .onFailure { log.warn("Purga de notificações falhou; tenta no próximo ciclo", it) }
+            delay(1.days)
         }
     }
 }

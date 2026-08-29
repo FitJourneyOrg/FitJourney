@@ -35,6 +35,9 @@ import dev.rafael.server.features.friendship.services.FriendshipService
 import dev.rafael.server.features.friendship.services.LimitadorDeResgate
 import dev.rafael.server.features.notificacao.db.DeviceTokenRepository
 import dev.rafael.server.features.notificacao.db.DeviceTokenRepositoryImpl
+import dev.rafael.server.features.notificacao.db.NotificationRepository
+import dev.rafael.server.features.notificacao.db.NotificationRepositoryImpl
+import dev.rafael.server.features.notificacao.services.NotificacaoService
 import dev.rafael.server.features.notificacao.services.Aviso
 import dev.rafael.server.features.notificacao.services.Notificador
 import dev.rafael.server.features.notificacao.services.NotificadorFcm
@@ -72,8 +75,10 @@ val appModule = module {
             repository = get(),
             // Porta estreita para o push: `friendship` não importa `notificacao`, recebe uma
             // função. O default não faz nada — o grafo funciona sem notificação (ver KDoc).
+            // Passa pelo NotificacaoService, não pelo Notificador direto: ele GRAVA antes de
+            // despachar, e é a gravação que faz a notificação sobreviver a push que não chega.
             avisar = { destinatario, nome, quemPediu ->
-                get<Notificador>().notificar(destinatario, Aviso.pedidoDeAmizade(nome, quemPediu))
+                get<NotificacaoService>().avisar(destinatario, Aviso.pedidoDeAmizade(nome, quemPediu))
             },
         )
     }
@@ -82,7 +87,9 @@ val appModule = module {
 
     // ---- Notificação (F.1) ----
     single<DeviceTokenRepository> { DeviceTokenRepositoryImpl() }
+    single<NotificationRepository> { NotificationRepositoryImpl() }
     single<Notificador> { NotificadorFcm(get()) }
+    single { NotificacaoService(get(), get(), get()) }
 
     // Auth: FirebaseAuth.getInstance() só é válido após FirebaseAdmin.init() (roda no boot, antes).
     single { FirebaseAuth.getInstance() }
