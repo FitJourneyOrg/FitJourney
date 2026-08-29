@@ -33,6 +33,11 @@ import dev.rafael.server.features.friendship.db.FriendshipRepository
 import dev.rafael.server.features.friendship.db.FriendshipRepositoryImpl
 import dev.rafael.server.features.friendship.services.FriendshipService
 import dev.rafael.server.features.friendship.services.LimitadorDeResgate
+import dev.rafael.server.features.notificacao.db.DeviceTokenRepository
+import dev.rafael.server.features.notificacao.db.DeviceTokenRepositoryImpl
+import dev.rafael.server.features.notificacao.services.Aviso
+import dev.rafael.server.features.notificacao.services.Notificador
+import dev.rafael.server.features.notificacao.services.NotificadorFcm
 import dev.rafael.server.features.stats.StatsService
 import dev.rafael.server.features.stats.db.AchievementRepository
 import dev.rafael.server.features.stats.db.AchievementRepositoryImpl
@@ -60,9 +65,24 @@ val appModule = module {
 
     // ---- Amizades (ARCH #35) ----
     single<FriendshipRepository> { FriendshipRepositoryImpl() }
-    single { FriendshipService(get(), get(), get()) }   // userService + userRepo + repo
+    single {
+        FriendshipService(
+            userService = get(),
+            users = get(),
+            repository = get(),
+            // Porta estreita para o push: `friendship` não importa `notificacao`, recebe uma
+            // função. O default não faz nada — o grafo funciona sem notificação (ver KDoc).
+            avisar = { destinatario, nome, quemPediu ->
+                get<Notificador>().notificar(destinatario, Aviso.pedidoDeAmizade(nome, quemPediu))
+            },
+        )
+    }
     // Singleton de propósito: a contagem de tentativas vive em MEMÓRIA (ver KDoc do limitador).
     single { LimitadorDeResgate() }
+
+    // ---- Notificação (F.1) ----
+    single<DeviceTokenRepository> { DeviceTokenRepositoryImpl() }
+    single<Notificador> { NotificadorFcm(get()) }
 
     // Auth: FirebaseAuth.getInstance() só é válido após FirebaseAdmin.init() (roda no boot, antes).
     single { FirebaseAuth.getInstance() }

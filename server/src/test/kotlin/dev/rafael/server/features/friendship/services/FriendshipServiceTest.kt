@@ -119,9 +119,31 @@ class FriendshipServiceTest {
         override suspend fun bloqueados(userId: Uuid) = emptyList<Pessoa>().asSuccess()
     }
 
-    private fun servico(grafo: FakeGrafo = FakeGrafo()): Pair<FriendshipService, FakeGrafo> {
+    /** Registra os avisos disparados — é como se verifica QUANDO o push sai (F.1). */
+    private class FakeAvisos {
+        val enviados = mutableListOf<Triple<Uuid, String, Uuid>>()
+        val porta = FriendshipService.AvisarPedido { para, nome, de ->
+            enviados += Triple(para, nome, de)
+        }
+    }
+
+    private fun servico(
+        grafo: FakeGrafo = FakeGrafo(),
+        avisos: FakeAvisos = FakeAvisos(),
+    ): Pair<FriendshipService, FakeGrafo> {
         val users = FakeUsers()
-        return FriendshipService(UserService(users), users, grafo) to grafo
+        return FriendshipService(UserService(users), users, grafo, avisar = avisos.porta) to grafo
+    }
+
+    private fun servicoComAvisos(): Triple<FriendshipService, FakeGrafo, FakeAvisos> {
+        val grafo = FakeGrafo()
+        val avisos = FakeAvisos()
+        val users = FakeUsers()
+        return Triple(
+            FriendshipService(UserService(users), users, grafo, avisar = avisos.porta),
+            grafo,
+            avisos,
+        )
     }
 
     @Test
@@ -365,5 +387,67 @@ class FriendshipServiceTest {
         assertTrue(r is AppResult.Success)
         assertEquals(FriendStatus.NENHUMA, r.value.status)
         assertFalse(r.value.meBloqueou)
+    }
+
+    // ---- notificação (F.1) ----
+
+    @Test
+    fun `pedido criado dispara o aviso para o DESTINATARIO`(): Unit = runBlocking {
+        val (s, _, avisos) = servicoComAvisos()
+
+        s.pedir("fb-eu", "eu@x.com", outro.id.toString())
+
+        val (para, nome, de) = avisos.enviados.single()
+        assertEquals(outro.id, para, "o aviso vai para quem RECEBEU o pedido")
+        assertEquals("Eu", nome, "com o nome de quem pediu — é o que faz a pessoa decidir se abre")
+        assertEquals(eu.id, de)
+    }
+
+    /**
+     * Pedido que NÃO foi criado não avisa.
+     *
+     * Aqui o segundo pedido vira ACEITE (35.7): os dois já são amigos, ninguém está esperando
+     * resposta, e um "Fulano quer ser seu amigo" seria mentira.
+     */
+    @Test
+    fun `pedido cruzado que vira amizade NAO manda segundo aviso`(): Unit = runBlocking {
+        val (s, _, avisos) = servicoComAvisos()
+
+        s.pedir("fb-eu", "eu@x.com", outro.id.toString())
+        s.pedir("fb-outro", "outro@x.com", eu.id.toString())
+
+        assertEquals(1, avisos.enviados.size, "só o PRIMEIRO pedido gerou aviso")
+    }
+
+    @Test
+    fun `pedido recusado por impedimento nao avisa ninguem`(): Unit = runBlocking {
+        val (s, _, avisos) = servicoComAvisos()
+        s.bloquear("fb-outro", "outro@x.com", eu.id.toString())
+
+        s.pedir("fb-eu", "eu@x.com", outro.id.toString())
+
+        assertTrue(avisos.enviados.isEmpty(), "bloqueio barrou o pedido — não há o que avisar")
+    }
+
+    /**
+     * [INVARIANTE] Aceitar, recusar, remover e bloquear **não** notificam.
+     *
+     * A F.1 traz UM tipo de aviso: pedido de amizade. Notificar "fulano recusou seu pedido" seria
+     * transformar uma recusa silenciosa em recado, e a 35.6 já estabeleceu que este app não avisa
+     * ninguém de rejeição. Este teste trava a decisão — acrescentar aviso novo passa a ser
+     * escolha consciente, não efeito colateral.
+     */
+    @Test
+    fun `nenhuma outra acao do grafo notifica`(): Unit = runBlocking {
+        val (s, _, avisos) = servicoComAvisos()
+        s.pedir("fb-eu", "eu@x.com", outro.id.toString())
+        val depoisDoPedido = avisos.enviados.size
+
+        s.aceitar("fb-outro", "outro@x.com", eu.id.toString())
+        s.remover("fb-outro", "outro@x.com", eu.id.toString())
+        s.bloquear("fb-outro", "outro@x.com", eu.id.toString())
+        s.desbloquear("fb-outro", "outro@x.com", eu.id.toString())
+
+        assertEquals(depoisDoPedido, avisos.enviados.size, "nenhuma delas pode notificar")
     }
 }

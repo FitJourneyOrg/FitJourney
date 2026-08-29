@@ -37,7 +37,25 @@ class FriendshipService(
     private val users: UserRepository,
     private val repository: FriendshipRepository,
     private val clock: Clock = Clock.System,
+    /**
+     * Avisa quem recebeu o pedido (F.1). Porta estreita, como as outras.
+     *
+     * **Default que não faz nada**, e isso é decisão: o grafo funciona sem notificação — o badge
+     * da tela de Amigos é o piso. Um serviço que EXIGISSE o notificador amarraria a amizade à
+     * disponibilidade do FCM, e é justamente isso que não pode acontecer.
+     */
+    private val avisar: AvisarPedido = AvisarPedido { _, _, _ -> },
 ) {
+
+    /**
+     * Porta estreita para o push.
+     *
+     * `friendship` não importa `notificacao`: recebe uma função de três argumentos — para quem,
+     * o nome de quem pediu, e o id dele. Tudo que o aviso precisa, nada do que ele faz.
+     */
+    fun interface AvisarPedido {
+        suspend operator fun invoke(destinatario: Uuid, nomeDeQuemPediu: String, quemPediu: Uuid)
+    }
 
     private fun agora() = clock.now().toLocalDateTime(TimeZone.UTC)
 
@@ -101,17 +119,39 @@ class FriendshipService(
 
                         limpar.flatMap {
                             repository.pedir(eu, alvo, agora()).flatMap { criou ->
-                                if (criou) Unit.asSuccess()
-                                // Perdeu a corrida para o insert do outro lado — os dois se
-                                // adicionaram no mesmo instante. Não é erro do usuário: o par
-                                // existe e é isso que ele queria.
-                                else Unit.asSuccess()
+                                // O PUSH sai DEPOIS do pedido existir, e fora de qualquer
+                                // transação (F.1).
+                                //
+                                // Notificar antes — ou dentro da transação — avisaria de um
+                                // pedido que o rollback ainda pode desfazer, e não existe como
+                                // "des-notificar" alguém. O inverso (pedido criado, push falha) é
+                                // só o badge fazendo o trabalho dele.
+                                //
+                                // Dos dois erros possíveis, um é recuperável e o outro não. A
+                                // ordem escolhe qual pode acontecer.
+                                if (criou) avisarPedido(alvo, eu)
+                                // `criou == false` é a corrida: os dois se adicionaram no mesmo
+                                // instante. Não avisa — o par existe e ninguém está esperando
+                                // resposta. E não é erro do usuário.
+                                Unit.asSuccess()
                             }
                         }
                     }
                 }
             }
         }
+
+    /**
+     * Busca o nome de quem pediu e dispara o aviso. **Nunca falha para o chamador.**
+     *
+     * O nome vem numa consulta a mais, e ela é aceitável porque só roda quando um pedido é
+     * realmente criado — não em toda tentativa. A alternativa seria carregar o nome antes de
+     * saber se o pedido vingou, e aí a consulta rodaria também nos caminhos que dão conflito.
+     */
+    private suspend fun avisarPedido(destinatario: Uuid, quemPediu: Uuid) {
+        val nome = (users.findById(quemPediu) as? AppResult.Success)?.value?.displayName ?: return
+        avisar(destinatario, nome, quemPediu)
+    }
 
     /**
      * Aceita um pedido recebido.
