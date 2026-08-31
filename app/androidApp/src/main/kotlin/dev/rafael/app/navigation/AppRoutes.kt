@@ -64,6 +64,14 @@ sealed interface AppRoute {
     /** Configurações da conta → Bloqueados (#35). Só do dono, nunca de terceiro. */
     @Serializable data object Bloqueados : AppRoute
 
+    /**
+     * A central de notificações (F.1) — o que o ícone da barra abre.
+     *
+     * **Ponto único de aviso do app.** Tudo que for notificação aparece aqui, e é para cá que o
+     * deep link de um push leva quando o tipo não tem destino próprio.
+     */
+    @Serializable data object Notificacoes : AppRoute
+
     /** Itens do menu que ainda não existem — abrem EmBreve com o selo da fase. */
     @Serializable data object Wiki : AppRoute
     @Serializable data object Duvidas : AppRoute

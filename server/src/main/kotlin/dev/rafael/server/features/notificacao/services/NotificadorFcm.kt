@@ -70,17 +70,29 @@ class NotificadorFcm(
 
         // O índice da resposta casa com o índice do token enviado — é assim que se sabe QUAL
         // aparelho morreu.
+        //
+        // O log nomeia a CAUSA e o token, e isso não é verbosidade: a primeira versão dizia só
+        // "apagando 1 token(s) morto(s)", e quando o token recém-registrado do aparelho de teste
+        // foi apagado no primeiro envio não havia como saber se era `UNREGISTERED` (aparelho
+        // fora) ou `INVALID_ARGUMENT` (credencial de outro projeto Firebase) — dois problemas
+        // com causas opostas e o mesmo sintoma. **Ação destrutiva sem motivo registrado não é
+        // diagnosticável.**
         val mortos = resposta.responses.withIndex().mapNotNull { (i, r) ->
             val causa = r.exception?.messagingErrorCode
-            alvos[i].takeIf {
-                causa == MessagingErrorCode.UNREGISTERED || causa == MessagingErrorCode.INVALID_ARGUMENT
-            }
+            val morto = causa == MessagingErrorCode.UNREGISTERED ||
+                causa == MessagingErrorCode.INVALID_ARGUMENT
+            if (!morto) return@mapNotNull null
+
+            log.info(
+                "Push: apagando token {}… ({}): {}",
+                alvos[i].take(12),
+                causa,
+                r.exception?.message,
+            )
+            alvos[i]
         }
 
-        if (mortos.isNotEmpty()) {
-            log.info("Push: apagando {} token(s) morto(s)", mortos.size)
-            tokens.apagar(mortos)
-        }
+        if (mortos.isNotEmpty()) tokens.apagar(mortos)
 
         // Falha que NÃO é token morto (rede, quota, indisponibilidade) fica só no log: o token
         // continua válido e a próxima notificação tenta de novo. Apagá-lo aqui seria perder o
@@ -91,6 +103,12 @@ class NotificadorFcm(
                 it.messagingErrorCode == MessagingErrorCode.UNREGISTERED ||
                     it.messagingErrorCode == MessagingErrorCode.INVALID_ARGUMENT
             }
-            .forEach { log.warn("Push falhou num aparelho: {}", (it as FirebaseMessagingException).messagingErrorCode) }
+            .forEach {
+                log.warn(
+                    "Push falhou num aparelho ({}): {}",
+                    (it as FirebaseMessagingException).messagingErrorCode,
+                    it.message,
+                )
+            }
     }
 }

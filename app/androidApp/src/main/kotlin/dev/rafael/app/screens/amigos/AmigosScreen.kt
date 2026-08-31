@@ -55,12 +55,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.rafael.app.push.AvisosDePush
 import dev.rafael.app.ui.AvatarInicial
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.contract.friendship.FriendRequestDto
 import dev.rafael.contract.friendship.PersonDto
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 
 private enum class Aba(val titulo: String) { AMIGOS("Amigos"), PEDIDOS("Pedidos") }
 
@@ -87,6 +89,15 @@ fun AmigosScreen(
 
     // ON_START: voltar do perfil de alguém que acabei de aceitar precisa refletir a mudança.
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.carregar() }
+
+    // ...e o push, que muda a lista SEM a pessoa fazer nada. O `ON_START` cobre quem sai e volta;
+    // este cobre quem está justamente olhando a tela quando o pedido chega — que é o caso em que
+    // o badge desatualizado é mais evidente.
+    //
+    // Fica na TELA e não no ViewModel pelo mesmo motivo do `LifecycleEventEffect` acima: os dois
+    // são eventos de plataforma dizendo "agora", e o ViewModel só precisa saber recarregar.
+    val avisos: AvisosDePush = koinInject()
+    LaunchedEffect(Unit) { avisos.eventos.collect { viewModel.carregar() } }
 
     // A busca por código abre o PERFIL ([REGRA] #35) — nunca manda pedido direto.
     LaunchedEffect(state.achado) {
