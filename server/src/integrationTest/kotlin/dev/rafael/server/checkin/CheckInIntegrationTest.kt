@@ -1,5 +1,7 @@
 package dev.rafael.server.checkin
 
+import dev.rafael.server.CodigoDeTeste
+
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import dev.rafael.contract.checkin.CheckInStatus
@@ -99,6 +101,7 @@ class CheckInIntegrationTest {
                 it[firebaseUid] = "uid-$id"
                 it[email] = "$id@teste.local"
                 it[displayName] = nome
+                it[code] = CodigoDeTeste.de(id)   // V40: NOT NULL + UNIQUE + CHECK
             }
         }
         return id

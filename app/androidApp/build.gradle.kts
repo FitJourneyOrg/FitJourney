@@ -58,6 +58,11 @@ dependencies {
     // Localização do check-in (5.2). O Geocoder é da plataforma, não precisa de dependência.
     implementation(libs.playServices.location)
 
+    // Push (F.1). O GitLive cobre o Auth em KMP, mas não tem messaging — receber notificação
+    // exige estender `FirebaseMessagingService`, que é Android nativo.
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.messaging)
+
     // Upload multipart do check-in. Base64 em JSON infla 33% e some com o Content-Type da parte.
     implementation(libs.ktor.client.contentNegotiation)
 
@@ -110,6 +115,41 @@ dependencies {
     implementation(projects.shared.features.program.presentation)
 }
 
+/**
+ * Onde o app procura o servidor.
+ *
+ * Três fontes, nesta ordem:
+ *
+ * 1. **`local.properties` na raiz do projeto** — o lugar recomendado. Já está no `.gitignore`
+ *    (é onde o Android Studio guarda o `sdk.dir`), fica junto do código e abre em dois cliques.
+ * 2. `gradle.properties` global (`%USERPROFILE%\.gradle\`) — continua valendo para quem já
+ *    tinha configurado assim.
+ * 3. `10.0.2.2`, o apelido de NAT do EMULADOR. É o default COMITADO: quem clona o projeto roda
+ *    sem configurar nada, e só quem usa aparelho físico acrescenta a linha.
+ *
+ * ```
+ * apiBaseUrl=http://192.168.0.10:8080
+ * ```
+ *
+ * O IP da LAN **muda sozinho** quando o DHCP renova, e o endereço fica embutido no APK — então
+ * trocar isto exige `installDebug`, não só rebuild. Custou três episódios de diagnóstico na
+ * bateria da F.1; ver `docs/referencia/diagnostico-ambiente.md`.
+ *
+ * Fica no build e não em código compartilhado de propósito: assim trocar de aparelho não produz
+ * uma alteração em `HttpClientFactory` que entra num commit por engano.
+ *
+ * Lido linha a linha em vez de `java.util.Properties`: no Kotlin DSL, `java` resolve para a
+ * extensão Java do Gradle, não para o pacote — `java.util.Properties()` não compila aqui.
+ */
+val apiBaseUrl: String = rootProject.file("local.properties")
+    .takeIf { it.exists() }
+    ?.readLines()
+    ?.firstOrNull { it.trimStart().startsWith("apiBaseUrl=") }
+    ?.substringAfter("=")
+    ?.trim()
+    ?.takeIf { it.isNotEmpty() }
+    ?: providers.gradleProperty("apiBaseUrl").getOrElse("http://10.0.2.2:8080")
+
 android {
     namespace = "dev.rafael.app"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
@@ -121,23 +161,8 @@ android {
         versionCode = 1
         versionName = "1.0"
 
-        /**
-         * Onde o app procura o servidor.
-         *
-         * Default `10.0.2.2` — o apelido de NAT do EMULADOR. Para rodar em aparelho físico, o
-         * endereço tem que ser o IP da máquina na rede local; basta pôr no `gradle.properties`
-         * (que é local e não vai para o git):
-         *
-         *     apiBaseUrl=http://192.168.0.10:8080
-         *
-         * Fica no build e não em código compartilhado de propósito: assim trocar de aparelho não
-         * produz uma alteração em `HttpClientFactory` que entra num commit por engano.
-         */
-        buildConfigField(
-            "String",
-            "API_BASE_URL",
-            "\"${providers.gradleProperty("apiBaseUrl").getOrElse("http://10.0.2.2:8080")}\"",
-        )
+        logger.lifecycle("FitJourney: API_BASE_URL = $apiBaseUrl")
+        buildConfigField("String", "API_BASE_URL", "\"$apiBaseUrl\"")
     }
     buildFeatures { buildConfig = true }
     packaging {

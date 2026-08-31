@@ -111,6 +111,10 @@ postgres                = { module = "org.postgresql:postgresql",               
 # --- Firebase ---
 firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "firebaseBom" }
 firebase-auth = { module = "com.google.firebase:firebase-auth" }
+# Sem versão: vem do BOM. Push (F.1) exige o SDK Android NATIVO — o GitLive, que o app usa para
+# o Auth, não expõe messaging. É a primeira peça Android-only de Firebase no projeto, e é
+# coerente: o app é Android-first por decisão.
+firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 
 gitlive-firebase-auth = { module = "dev.gitlive:firebase-auth", version.ref = "gitliveFirebase" }
 # --- Auth / infra server ---

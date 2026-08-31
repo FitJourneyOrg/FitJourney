@@ -24,11 +24,14 @@ class ProfileServiceTest {
     private val stubUserRepo = object : UserRepository {
         override suspend fun findByFirebaseUid(firebaseUid: String) = error("não deveria ser chamado")
         override suspend fun findById(userId: kotlin.uuid.Uuid) = error("não deveria ser chamado")
+        override suspend fun findByCode(code: String) = error("não deveria ser chamado")
+        override suspend fun updateCode(userId: kotlin.uuid.Uuid, code: String) = error("não deveria ser chamado")
         override suspend fun create(
             id: kotlin.uuid.Uuid,
             firebaseUid: String,
             email: String?,
             displayName: String,
+            code: String,
         ) = error("não deveria ser chamado")
         override suspend fun setPremium(userId: kotlin.uuid.Uuid, premium: Boolean) = error("não deveria ser chamado")
         override suspend fun updateDisplayName(userId: kotlin.uuid.Uuid, displayName: String) =

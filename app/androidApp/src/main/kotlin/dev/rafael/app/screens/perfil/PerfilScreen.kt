@@ -1,5 +1,9 @@
 package dev.rafael.app.screens.perfil
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.outlined.People
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -56,6 +60,7 @@ fun PerfilScreen(
     onBack: () -> Unit,
     onEditar: () -> Unit,
     onVerConquistas: () -> Unit,
+    onVerAmigos: () -> Unit,
     souEu: Boolean = true,
     viewModel: PerfilViewModel = koinViewModel(),
 ) {
@@ -99,6 +104,38 @@ fun PerfilScreen(
                     fontWeight = FontWeight.Medium,
                 )
             }
+
+            /*
+             * AMIGOS mora aqui, e não no drawer (decisão de 2026-08-27).
+             *
+             * Amizade é extensão da IDENTIDADE, não uma seção do app — e assim o contador de
+             * pedidos não exige estado no ícone global do menu. Enquanto a notificação (F.1) não
+             * chega, quem avisa é o push; esta linha é o caminho para agir depois do aviso.
+             */
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(onClick = onVerAmigos)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    Icons.Outlined.People,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                Spacer(Modifier.width(12.dp))
+                Text("Amigos", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Spacer(Modifier.height(14.dp))
 
             CartaoDeProgresso(state.stats)
 

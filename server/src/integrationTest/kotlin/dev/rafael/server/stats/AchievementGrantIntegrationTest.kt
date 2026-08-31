@@ -1,5 +1,7 @@
 package dev.rafael.server.stats
 
+import dev.rafael.server.CodigoDeTeste
+
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import dev.rafael.core.result.AppResult
@@ -58,6 +60,7 @@ class AchievementGrantIntegrationTest {
                 it[email] = "$id@teste.local"
                 // V35: NOT NULL com CHECK de 2..30. O uid inteiro estouraria o VARCHAR(30).
                 it[displayName] = "Atleta-" + id.toString().replace("-", "").take(6)
+                it[code] = CodigoDeTeste.de(id)   // V40: NOT NULL + UNIQUE + CHECK
             }
         }
         return id

@@ -65,7 +65,7 @@ class MenuViewModelTest {
     }
 
     /** O logout não é o assunto destes testes — reusa os dublês da Home. */
-    private fun sair() = SairDaConta(FakeAuth(), FakePerfil())
+    private fun sair() = SairDaConta(FakeAuth(), FakePerfil()) { /* baixa do push: F.1 */ }
 
     /** Compartilha o MESMO fluxo de uid do [FakeMe]: no app real, a fonte também é uma só. */
     private class FakeToken(private val uid: MutableStateFlow<String?>) : TokenProvider {

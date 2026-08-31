@@ -60,9 +60,11 @@ Thumbs.db
 /secrets
 # ===== Docker (volumes locais, se algum dia montados em ./) =====
 /pgdata/
-# docs locais (Painel/Handoff/ADRs/débitos) — não versionar
+# Documentação inteira (fontes .md, ADRs, baterias, PDFs gerados) — local, não versionar.
+# Desde 2026-08-31 TUDO vive em docs/; a raiz tem só o README.md do repositório.
 docs/
-# Docs canônicos locais na raiz (Contrato/Handoff/Painel/Débitos/etc.) — PDFs e suas fontes .md
+# Resíduo do layout antigo, em que os canônicos ficavam soltos na raiz. Mantido para não
+# reaparecerem num checkout velho.
 /FitJourney_*.pdf
 /FitJourney_*.md
 # mídia de exercícios (963 mp4 + 963 png, ~460MB) — local, servida pelo Ktor em /media; nunca no git

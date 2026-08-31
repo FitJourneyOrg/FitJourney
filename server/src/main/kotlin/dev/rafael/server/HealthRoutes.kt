@@ -19,6 +19,13 @@ import dev.rafael.server.features.stats.StatsService
 import dev.rafael.server.features.stats.AchievementService
 import dev.rafael.server.features.stats.statsRoutes
 import dev.rafael.server.features.user.routes.userRoutes
+import dev.rafael.server.features.friendship.routes.friendshipRoutes
+import dev.rafael.server.features.friendship.services.FriendshipService
+import dev.rafael.server.features.friendship.services.LimitadorDeResgate
+import dev.rafael.server.features.notificacao.db.DeviceTokenRepository
+import dev.rafael.server.features.notificacao.routes.deviceRoutes
+import dev.rafael.server.features.notificacao.routes.notificacaoRoutes
+import dev.rafael.server.features.notificacao.services.NotificacaoService
 import dev.rafael.server.features.user.services.PublicProfileService
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.workout.routes.workoutRoutes
@@ -47,6 +54,10 @@ data class HealthResponse(
 fun Application.configureRouting() {
     val userService = get<UserService>()
     val publicProfileService = get<PublicProfileService>()
+    val friendshipService = get<FriendshipService>()
+    val limitadorDeResgate = get<LimitadorDeResgate>()
+    val deviceTokens = get<DeviceTokenRepository>()
+    val notificacoes = get<NotificacaoService>()
     val profileService = get<ProfileService>()
     val exerciseService = get<ExerciseService>()
     val workoutService = get<WorkoutService>()
@@ -66,7 +77,10 @@ fun Application.configureRouting() {
         // Mídia dos exercícios (png/mp4), pública, SÓ DEV. Ver MediaRoutes.kt.
         staticFiles("/media", mediaDir)
 
-        userRoutes(userService, publicProfileService)
+        userRoutes(userService, publicProfileService, limitadorDeResgate)
+        friendshipRoutes(friendshipService)
+        deviceRoutes(userService, deviceTokens)
+        notificacaoRoutes(notificacoes)
         profileRoutes(profileService)
         exerciseRoutes(exerciseService, profileService)
         workoutRoutes(workoutService, userService, profileService, programService)

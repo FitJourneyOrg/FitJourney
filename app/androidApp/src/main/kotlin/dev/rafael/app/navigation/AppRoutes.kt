@@ -53,6 +53,25 @@ sealed interface AppRoute {
     /** Configurações da conta (ARCH #34): privada, nunca renderiza outra pessoa. */
     @Serializable data object Conta : AppRoute
 
+    /**
+     * Amigos e pedidos (#35). Alcançada por **Perfil → Amigos**, e não pelo drawer.
+     *
+     * Fica dentro do perfil porque amizade é uma extensão da identidade, não uma seção do app —
+     * e assim o contador de pedidos não exige estado no ícone global do menu.
+     */
+    @Serializable data object Amigos : AppRoute
+
+    /** Configurações da conta → Bloqueados (#35). Só do dono, nunca de terceiro. */
+    @Serializable data object Bloqueados : AppRoute
+
+    /**
+     * A central de notificações (F.1) — o que o ícone da barra abre.
+     *
+     * **Ponto único de aviso do app.** Tudo que for notificação aparece aqui, e é para cá que o
+     * deep link de um push leva quando o tipo não tem destino próprio.
+     */
+    @Serializable data object Notificacoes : AppRoute
+
     /** Itens do menu que ainda não existem — abrem EmBreve com o selo da fase. */
     @Serializable data object Wiki : AppRoute
     @Serializable data object Duvidas : AppRoute

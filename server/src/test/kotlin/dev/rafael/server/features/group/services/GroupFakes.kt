@@ -199,13 +199,20 @@ class FakeUserRepository(usuarios: List<User> = emptyList()) : UserRepository {
     override suspend fun findById(userId: Uuid): AppResult<User?> =
         porUid.values.firstOrNull { it.id == userId }.asSuccess()
 
+    override suspend fun findByCode(code: String): AppResult<User?> =
+        porUid.values.firstOrNull { it.code == code }.asSuccess()
+
+    override suspend fun updateCode(userId: Uuid, code: String): AppResult<User?> =
+        error("não deveria ser chamado")
+
     override suspend fun create(
         id: Uuid,
         firebaseUid: String,
         email: String?,
         displayName: String,
+        code: String,
     ): AppResult<User> {
-        val u = User(id, firebaseUid, email, isPremium = false, displayName = displayName)
+        val u = User(id, firebaseUid, email, isPremium = false, displayName = displayName, code = code)
         porUid[firebaseUid] = u
         return u.asSuccess()
     }
@@ -225,4 +232,13 @@ class FakeUserRepository(usuarios: List<User> = emptyList()) : UserRepository {
 }
 
 fun usuario(uid: String, id: Uuid = Uuid.random()) =
-    User(id = id, firebaseUid = uid, email = "$uid@x.com", isPremium = false, displayName = uid)
+    User(
+        id = id,
+        firebaseUid = uid,
+        email = "$uid@x.com",
+        isPremium = false,
+        displayName = uid,
+        // Derivado do uid para ser ESTÁVEL entre execuções: código aleatório aqui faria um teste
+        // que dependesse dele falhar de vez em quando, e falha intermitente é a pior de depurar.
+        code = uid.uppercase().filter { it.isLetterOrDigit() }.padEnd(8, 'X').take(8),
+    )
