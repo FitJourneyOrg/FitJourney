@@ -58,7 +58,8 @@ class ContaViewModelTest {
         }
     }
 
-    private fun vm(me: FakeMe = FakeMe()) = ContaViewModel(me, SairDaConta(FakeAuth(), FakePerfil()))
+    private fun vm(me: FakeMe = FakeMe()) =
+        ContaViewModel(me, SairDaConta(FakeAuth(), FakePerfil()) { /* baixa do push: F.1 */ })
 
     @Test
     fun `mostra o nome vindo do cache`() = runTest(dispatcher) {
@@ -164,7 +165,7 @@ class ContaViewModelTest {
         // (teste migrado da HomeViewModelTest — o logout mudou de casa no ARCH #34)
         val perfil = FakePerfil()
         val auth = FakeAuth()
-        val viewModel = ContaViewModel(FakeMe(), SairDaConta(auth, perfil))
+        val viewModel = ContaViewModel(FakeMe(), SairDaConta(auth, perfil) { })
         advanceUntilIdle()
 
         viewModel.sair()

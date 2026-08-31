@@ -1,5 +1,6 @@
 package dev.rafael.server.features.user.services
 
+import dev.rafael.contract.friendship.FriendStatus
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asSuccess
@@ -26,8 +27,8 @@ import kotlin.uuid.Uuid
  */
 class PublicProfileServiceTest {
 
-    private val eu = User(Uuid.random(), "fb-eu", "eu@x.com", false, "Eu")
-    private val outro = User(Uuid.random(), "fb-outro", "outro@x.com", true, "Fulano")
+    private val eu = User(Uuid.random(), "fb-eu", "eu@x.com", false, "Eu", "AAAA2222")
+    private val outro = User(Uuid.random(), "fb-outro", "outro@x.com", true, "Fulano", "BBBB3333")
 
     private inner class FakeUsers : UserRepository {
         override suspend fun findByFirebaseUid(firebaseUid: String): AppResult<User?> =
@@ -36,8 +37,18 @@ class PublicProfileServiceTest {
         override suspend fun findById(userId: Uuid): AppResult<User?> =
             listOf(eu, outro).firstOrNull { it.id == userId }.asSuccess()
 
-        override suspend fun create(id: Uuid, firebaseUid: String, email: String?, displayName: String) =
-            error("não deveria ser chamado")
+        override suspend fun create(
+            id: Uuid,
+            firebaseUid: String,
+            email: String?,
+            displayName: String,
+            code: String,
+        ) = error("não deveria ser chamado")
+
+        override suspend fun findByCode(code: String): AppResult<User?> =
+            listOf(eu, outro).firstOrNull { it.code == code }.asSuccess()
+
+        override suspend fun updateCode(userId: Uuid, code: String) = error("não deveria ser chamado")
 
         override suspend fun setPremium(userId: Uuid, premium: Boolean) = error("não deveria ser chamado")
         override suspend fun updateDisplayName(userId: Uuid, displayName: String) =
@@ -61,6 +72,8 @@ class PublicProfileServiceTest {
     private fun servico(
         conquistas: FakeConquistas = FakeConquistas(emptyMap()),
         gamificacao: StatsService.Gamificacao = StatsService.Gamificacao(xp = 0, nivel = 1),
+        relacao: PublicProfileService.Relacao =
+            PublicProfileService.Relacao(FriendStatus.NENHUMA, meBloqueou = false),
     ): PublicProfileService {
         val users = FakeUsers()
         return PublicProfileService(
@@ -68,6 +81,7 @@ class PublicProfileServiceTest {
             users = users,
             gamificacaoDe = { gamificacao.asSuccess() },
             achievements = conquistas,
+            relacaoCom = { _, _ -> relacao.asSuccess() },
         )
     }
 
@@ -138,6 +152,57 @@ class PublicProfileServiceTest {
 
         assertTrue(r is AppResult.Success, "linha órfã não derruba o perfil")
         assertTrue(r.value.achievements.isEmpty())
+    }
+
+    /**
+     * [INVARIANTE] Quem foi BLOQUEADO recebe perfil indisponível (emenda 35.6).
+     *
+     * O nome verdadeiro **não atravessa o fio**: a tela não recebe dado que precise lembrar de
+     * esconder. É a mesma fronteira da 9.3-A aplicada a outro eixo.
+     */
+    @Test
+    fun `quem foi bloqueado recebe perfil indisponivel e sem o nome`(): Unit = runBlocking {
+        val bloqueado = PublicProfileService.Relacao(FriendStatus.NENHUMA, meBloqueou = true)
+
+        val r = servico(relacao = bloqueado).porId("fb-eu", "eu@x.com", outro.id.toString())
+
+        assertTrue(r is AppResult.Success)
+        assertFalse(r.value.available)
+        assertEquals("", r.value.displayName, "o nome verdadeiro NÃO sai do servidor")
+        assertEquals(0, r.value.level, "0 é sentinela — o nível real começa em 1 (#16)")
+        assertEquals(0, r.value.xp)
+        assertTrue(r.value.achievements.isEmpty())
+
+        val json = Json.encodeToString(r.value)
+        assertFalse(json.contains("Fulano"), "o nome vazou no JSON: $json")
+    }
+
+    /**
+     * O perfil indisponível é **idêntico** ao de uma conta excluída — e é isso que impede o
+     * bloqueio de virar recado. Se a resposta fosse diferente, quem foi bloqueado descobriria.
+     */
+    @Test
+    fun `o perfil indisponivel nao diz que houve bloqueio`(): Unit = runBlocking {
+        val r = servico(relacao = PublicProfileService.Relacao(FriendStatus.NENHUMA, meBloqueou = true))
+            .porId("fb-eu", "eu@x.com", outro.id.toString())
+
+        assertTrue(r is AppResult.Success)
+        val json = Json.encodeToString(r.value).lowercase()
+        listOf("bloque", "blocked", "banid").forEach {
+            assertFalse(json.contains(it), "o JSON revelou o bloqueio com `$it`: $json")
+        }
+    }
+
+    @Test
+    fun `quem BLOQUEOU continua vendo o perfil, com o botao de desbloquear`(): Unit = runBlocking {
+        val euBloqueei = PublicProfileService.Relacao(FriendStatus.BLOQUEADO_POR_MIM, meBloqueou = false)
+
+        val r = servico(relacao = euBloqueei).porId("fb-eu", "eu@x.com", outro.id.toString())
+
+        assertTrue(r is AppResult.Success)
+        assertTrue(r.value.available, "assimétrico: sem isso a lista de bloqueados vira adivinhação")
+        assertEquals("Fulano", r.value.displayName)
+        assertEquals(FriendStatus.BLOQUEADO_POR_MIM, r.value.friendStatus)
     }
 
     /**

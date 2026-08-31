@@ -25,12 +25,15 @@ class SessionServiceTest {
         email = null,
         isPremium = false,
         displayName = "Atleta-teste",
+        code = "TESTE234",
     )
 
     private inner class FakeUserRepo : UserRepository {
         override suspend fun findByFirebaseUid(firebaseUid: String) = AppResult.Success<User?>(user)
         override suspend fun findById(userId: Uuid) = AppResult.Success<User?>(user)
-        override suspend fun create(id: Uuid, firebaseUid: String, email: String?, displayName: String) =
+        override suspend fun findByCode(code: String) = AppResult.Success<User?>(user)
+        override suspend fun updateCode(userId: Uuid, code: String) = AppResult.Success<User?>(user)
+        override suspend fun create(id: Uuid, firebaseUid: String, email: String?, displayName: String, code: String) =
             AppResult.Success(user)
         override suspend fun setPremium(userId: Uuid, premium: Boolean) = AppResult.Success<User?>(user)
         override suspend fun updateDisplayName(userId: Uuid, displayName: String) =

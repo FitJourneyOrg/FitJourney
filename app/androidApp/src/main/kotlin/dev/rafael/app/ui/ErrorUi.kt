@@ -134,10 +134,27 @@ fun AppError.visual(
             acao = ErroAcao.VOLTAR,
         )
 
+    /**
+     * 404 **usa o texto do servidor**, como Conflict, Validation e Forbidden.
+     *
+     * A versão anterior dizia sempre "Isto não existe mais. Pode ter sido removido em outro
+     * aparelho." — frase escrita pensando em CONTEÚDO DO PRÓPRIO USUÁRIO, um treino apagado no
+     * outro celular. Aplicada a "código de amigo não encontrado" ela mentia duas vezes: afirmava
+     * que o código existiu, e sugeria que quem o removeu foi você. Achado na bateria do #35, ao
+     * buscar um código regenerado.
+     *
+     * É o TERCEIRO erro do mesmo tipo nesta base — Conflict (A.2) e ErroInline (A.4) foram os
+     * outros dois. O padrão: **texto fixo no cliente para um erro que o servidor sabe explicar
+     * melhor**. Quando o servidor tem contexto e o cliente não, quem escreve a frase é o servidor.
+     *
+     * O `ifBlank` cobre o default genérico do `AppError.NotFound`, que existe para quem constrói
+     * o erro sem mensagem — nesse caso a frase antiga volta, e aí ela está correta.
+     */
     is AppError.NotFound -> ErroVisual(
         icone = Icons.Outlined.SearchOff,
         titulo = "Não encontrado",
-        texto = "Isto não existe mais. Pode ter sido removido em outro aparelho.",
+        texto = message.takeIf { it.isNotBlank() && it != "Não encontrado" }
+            ?: "Isto não existe mais. Pode ter sido removido em outro aparelho.",
         acao = ErroAcao.VOLTAR,
     )
 

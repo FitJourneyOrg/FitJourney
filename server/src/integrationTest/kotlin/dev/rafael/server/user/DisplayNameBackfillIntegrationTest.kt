@@ -1,5 +1,6 @@
 package dev.rafael.server.user
 
+import dev.rafael.server.CodigoDeTeste
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import dev.rafael.server.features.user.services.DisplayNamePolicy
@@ -140,12 +141,18 @@ class DisplayNameBackfillIntegrationTest {
 
     @Test
     fun `o CHECK recusa nome curto demais`() {
+        // O `code` entra preenchido e VÁLIDO de propósito: este teste afirma que a recusa vem do
+        // CHECK do display_name, e uma segunda violação na mesma linha mudaria o motivo do erro.
+        // Foi o que aconteceu quando a V40 tornou `users.code` NOT NULL — o teste passou a falhar
+        // porque o banco recusava ANTES de chegar no nome, e a asserção da mensagem pegou.
+        // É o teste fazendo exatamente o que devia: **recusar por outro motivo não é passar**.
+        val id = Uuid.random()
         val erro = runCatching {
             ds.connection.use { c ->
                 c.createStatement().use { s ->
                     s.executeUpdate(
-                        "INSERT INTO users (id, firebase_uid, email, display_name) " +
-                            "VALUES ('${Uuid.random()}', 'uid-check', NULL, 'R')",
+                        "INSERT INTO users (id, firebase_uid, email, display_name, code) " +
+                            "VALUES ('$id', 'uid-check', NULL, 'R', '${CodigoDeTeste.de(id)}')",
                     )
                 }
             }

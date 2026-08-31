@@ -31,17 +31,36 @@ class UserService(private val repository: UserRepository) {
                     // `GET /me` do splash, ANTES do quiz: se o nome esperasse o fim do
                     // onboarding, haveria uma janela com a linha criada e a coluna NOT NULL
                     // sem valor. O onboarding confirma/edita; ninguém fica sem nome.
+                    //
+                    // O CÓDIGO também nasce aqui (V40, #35), pelo mesmo motivo do nome: a
+                    // coluna é NOT NULL, e gerá-lo "quando alguém precisar" exigiria que ela
+                    // fosse nullable — o que a A.0 já pagou para evitar.
                     val id = Uuid.random()
                     repository.create(
                         id = id,
                         firebaseUid = firebaseUid,
                         email = email,
                         displayName = DisplayNamePolicy.inicial(email, id),
+                        code = UserCodePolicy.gerar(),
                     )
                 }
             }
         }
     }
+
+    /**
+     * Gera um código novo e mata o anterior (35.5).
+     *
+     * **Só uma tentativa de colisão, e ela vira erro.** Com 32⁸ ≈ 1 trilhão de códigos, colidir
+     * é evento de loteria; um laço de retry aqui seria código que nunca roda e por isso nunca é
+     * testado. Melhor falhar alto e a pessoa tocar de novo — o botão está na frente dela.
+     */
+    suspend fun regenerarCodigo(firebaseUid: String, email: String?): AppResult<User> =
+        findOrCreate(firebaseUid, email).flatMap { user ->
+            repository.updateCode(user.id, UserCodePolicy.gerar()).flatMap { atualizado ->
+                atualizado?.asSuccess() ?: AppError.NotFound("Usuário não encontrado").asFailure()
+            }
+        }
 
     /**
      * Ativa o premium do usuário (compra simulada — Fase 7 dev). O passo de compra REAL

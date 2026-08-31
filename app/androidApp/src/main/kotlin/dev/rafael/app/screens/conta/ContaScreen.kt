@@ -54,6 +54,7 @@ import org.koin.androidx.compose.koinViewModel
 fun ContaScreen(
     onBack: () -> Unit,
     onSaiu: () -> Unit,
+    onVerBloqueados: () -> Unit,
     viewModel: ContaViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -158,6 +159,15 @@ fun ContaScreen(
             Spacer(Modifier.height(28.dp))
             HorizontalDivider()
             Spacer(Modifier.height(12.dp))
+
+            /*
+             * BLOQUEADOS (#35) mora em Configurações da conta, não no perfil.
+             *
+             * É configuração de privacidade, não vitrine — e é aqui que quem esqueceu que
+             * bloqueou alguém descobre por que o app recusou um "Adicionar". A mensagem de erro
+             * não conta isso de propósito, para o bloqueio não virar recado.
+             */
+            TextButton(onClick = onVerBloqueados) { Text("Bloqueados") }
 
             TextButton(onClick = { confirmarSaida = true }) {
                 Text("Sair da conta", color = MaterialTheme.colorScheme.error)

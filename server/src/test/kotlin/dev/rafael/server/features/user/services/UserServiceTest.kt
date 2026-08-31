@@ -7,6 +7,7 @@ import dev.rafael.server.features.user.models.User
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
@@ -21,10 +22,13 @@ class UserServiceTest {
             email = null,
             isPremium = false,
             displayName = "Atleta-abc123",
+            code = "ABCD2345",
         )
         var setPremiumCalledWith: Boolean? = null
         var criadoCom: String? = null
         var renomeadoPara: String? = null
+        var criadoComCodigo: String? = null
+        var codigoNovo: String? = null
 
         override suspend fun findByFirebaseUid(firebaseUid: String) =
             AppResult.Success(if (jaExiste) user else null)
@@ -32,14 +36,24 @@ class UserServiceTest {
         override suspend fun findById(userId: Uuid): AppResult<User?> =
             AppResult.Success(if (jaExiste && userId == user.id) user else null)
 
+        override suspend fun findByCode(code: String): AppResult<User?> =
+            AppResult.Success(if (jaExiste && code == user.code) user else null)
+
+        override suspend fun updateCode(userId: Uuid, code: String): AppResult<User?> {
+            codigoNovo = code
+            return AppResult.Success(user.copy(code = code))
+        }
+
         override suspend fun create(
             id: Uuid,
             firebaseUid: String,
             email: String?,
             displayName: String,
+            code: String,
         ): AppResult<User> {
             criadoCom = displayName
-            return AppResult.Success(user.copy(id = id, email = email, displayName = displayName))
+            criadoComCodigo = code
+            return AppResult.Success(user.copy(id = id, email = email, displayName = displayName, code = code))
         }
 
         override suspend fun setPremium(userId: Uuid, premium: Boolean): AppResult<User?> {
@@ -102,5 +116,48 @@ class UserServiceTest {
 
         assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
         assertNull(repo.renomeadoPara, "o repositório não pode ter sido tocado")
+    }
+
+    /**
+     * O CÓDIGO nasce junto com a linha (V40, #35) — mesma lição do `display_name` na A.0.
+     *
+     * A coluna é NOT NULL; gerar "quando alguém precisar" exigiria que ela fosse nullable, e
+     * nullable espalha `?:` por toda tela que a usa até alguém esquecer um.
+     */
+    @Test
+    fun `o codigo nasce junto com a linha, no primeiro acesso`(): Unit = runBlocking {
+        val repo = FakeRepo(jaExiste = false)
+
+        UserService(repo).findOrCreate("fb-novo", "novo@x.com")
+
+        val codigo = repo.criadoComCodigo
+        assertNotNull(codigo, "create tem que receber um código — a coluna é NOT NULL")
+        assertEquals(8, codigo.length)
+        assertTrue(
+            codigo.all { it in UserCodePolicy.ALFABETO },
+            "`$codigo` saiu do alfabeto sem ambiguidade",
+        )
+    }
+
+    /**
+     * Regenerar mata o código anterior (35.5) — a defesa que devolve CONTROLE a quem está sendo
+     * importunado, em vez de depender de nós detectarmos o abuso.
+     */
+    @Test
+    fun `regenerar troca o codigo por outro valido`(): Unit = runBlocking {
+        val repo = FakeRepo()
+        val anterior = repo.user.code
+
+        val r = UserService(repo).regenerarCodigo("fb-uid", null)
+
+        assertTrue(r is AppResult.Success)
+        val novo = repo.codigoNovo
+        assertNotNull(novo)
+        assertEquals(8, novo.length)
+        assertTrue(novo.all { it in UserCodePolicy.ALFABETO })
+        assertEquals(novo, r.value.code, "a resposta traz o código NOVO, não o antigo")
+        // Colisão com o anterior é possível (1 em 1 trilhão) mas seria loteria; se este teste
+        // falhar por isso, compre um bilhete.
+        assertTrue(novo != anterior)
     }
 }

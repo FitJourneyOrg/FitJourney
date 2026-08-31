@@ -1,11 +1,16 @@
 package dev.rafael.server.features.user.routes
 
 import dev.rafael.contract.user.UpdateMeRequest
+import dev.rafael.core.result.AppError
+import dev.rafael.core.result.AppResult
+import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.map
 import dev.rafael.server.auth.FirebaseUser
 import dev.rafael.server.error.respondResult
 import dev.rafael.server.features.user.models.toDto
+import dev.rafael.server.features.friendship.services.LimitadorDeResgate
 import dev.rafael.server.features.user.services.PublicProfileService
+import dev.rafael.server.features.user.services.UserCodePolicy
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.plugins.FIREBASE_AUTH
 import io.ktor.server.auth.authenticate
@@ -16,7 +21,11 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
 
-fun Route.userRoutes(service: UserService, perfis: PublicProfileService) {
+fun Route.userRoutes(
+    service: UserService,
+    perfis: PublicProfileService,
+    limitador: LimitadorDeResgate,
+) {
     authenticate(FIREBASE_AUTH) {
         /**
          * Perfil público de terceiro (C.1, #34 + emenda 9.3-A).
@@ -32,6 +41,53 @@ fun Route.userRoutes(service: UserService, perfis: PublicProfileService) {
             val principal = call.principal<FirebaseUser>()!!
             val id = call.parameters["id"].orEmpty()
             call.respondResult(perfis.porId(principal.uid, principal.email, id))
+        }
+
+        /**
+         * Perfil pela busca por CÓDIGO (35.5). Abre o perfil — **não** manda pedido.
+         *
+         * É aqui que o limite de 10/h por conta vive, e não no serviço: o limite é sobre quem
+         * PERGUNTA. Ele só consome cota quando o código é **bem formado e não encontrou ninguém**
+         * — erro de digitação que nem passa pelo `normalizar` não gasta nada, senão a defesa
+         * contra o atacante puniria o usuário de dedo grosso.
+         */
+        get("/users/by-code/{code}") {
+            val principal = call.principal<FirebaseUser>()!!
+            val codigo = call.parameters["code"].orEmpty()
+
+            val eu = service.findOrCreate(principal.uid, principal.email)
+            if (eu is AppResult.Failure) return@get call.respondResult(eu)
+            val meuId = (eu as AppResult.Success).value.id
+
+            if (!limitador.podeTentar(meuId)) {
+                return@get call.respondResult(
+                    AppError.Conflict(
+                        "Muitas tentativas. Tente de novo daqui a pouco.",
+                        "RATE_LIMIT_CODIGO",
+                    ).asFailure(),
+                )
+            }
+
+            val r = perfis.porCodigo(principal.uid, principal.email, codigo)
+            if (r is AppResult.Failure && r.error is AppError.NotFound &&
+                UserCodePolicy.normalizar(codigo) != null
+            ) {
+                limitador.registrarFalhaEPermitir(meuId)
+            }
+            call.respondResult(r)
+        }
+
+        /**
+         * Gera um código novo (35.5). O anterior morre na hora.
+         *
+         * É a defesa que mais importa das três, porque é a única que **devolve controle** a quem
+         * está sendo importunado — em vez de depender de nós detectarmos o abuso.
+         */
+        post("/me/code/regenerate") {
+            val principal = call.principal<FirebaseUser>()!!
+            call.respondResult(
+                service.regenerarCodigo(principal.uid, principal.email).map { it.toDto() },
+            )
         }
 
         get("/me") {
