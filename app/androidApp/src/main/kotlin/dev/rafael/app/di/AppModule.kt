@@ -22,6 +22,7 @@ import dev.rafael.app.screens.onboarding.NomeViewModel
 import dev.rafael.app.screens.menu.MenuViewModel
 import dev.rafael.app.screens.amigos.AmigosViewModel
 import dev.rafael.app.screens.amigos.BloqueadosViewModel
+import dev.rafael.app.screens.notificacoes.NotificacoesViewModel
 import dev.rafael.app.screens.perfil.PerfilPublicoViewModel
 import dev.rafael.app.screens.perfil.PerfilViewModel
 import dev.rafael.app.data.stats.StatsRepository
@@ -112,7 +113,12 @@ val appModule = module {
     // estado do grupo são do servidor — um grupo otimista local não teria nem um nem outro.
     // Sair da conta: UM dono da sequência (limpar onboarding ANTES do signOut), duas portas —
     // o rodapé do menu lateral e a tela de conta.
-    single { SairDaConta(get(), get()) }
+    // A baixa do push entra como PORTA (um verbo), não como o `RegistroDePush` inteiro: a
+    // sequência do logout é código de sessão e não pode depender de `Context`/Firebase.
+    single {
+        val push: dev.rafael.app.push.RegistroDePush = get()
+        SairDaConta(get(), get(), SairDaConta.BaixaDePush { push.darBaixa() })
+    }
 
     single { GroupsApi(get()) }
     single<Groups> { GroupsRepository(get(), get(), get(), get()) }
@@ -126,6 +132,18 @@ val appModule = module {
 
     // Amizades (#35): online-only, sem repositório de cache. Ver KDoc de `Amizades`.
     single<dev.rafael.app.data.amizades.Amizades> { dev.rafael.app.data.amizades.AmizadesApi(get()) }
+
+    // Notificações e push (F.1).
+    single<dev.rafael.app.data.notificacoes.Notificacoes> {
+        dev.rafael.app.data.notificacoes.NotificacoesApi(get())
+    }
+    single { dev.rafael.app.push.RegistroDePush(androidContext(), get()) }
+    // Bus de push: liga "chegou notificação" a "recarregue a tela". Sem ele, o badge só sobe
+    // quando a pessoa sai e volta — e o push serve justamente para quem NÃO saiu.
+    single { dev.rafael.app.push.AvisosDePush() }
+    // Singleton: o badge vive na barra (acima das telas) e a central é outra tela. Sem estado
+    // compartilhado, marcar como lida não apagaria o badge (ver KDoc).
+    single { dev.rafael.app.data.notificacoes.ContadorDeNaoLidas(get()) }
     single { dev.rafael.app.data.checkin.Localizador(androidContext()) }
     viewModel { dev.rafael.app.screens.checkin.CheckInViewModel(get(), get(), get()) }
     single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
@@ -138,6 +156,7 @@ val appModule = module {
     viewModelOf(::PerfilPublicoViewModel)   // perfil de OUTRA pessoa (C.1)
     viewModelOf(::AmigosViewModel)          // amigos e pedidos (#35)
     viewModelOf(::BloqueadosViewModel)      // Conta > Bloqueados (#35)
+    viewModelOf(::NotificacoesViewModel)    // central de notificações (F.1)
     viewModelOf(::ContaViewModel)    // conta: renomear (PATCH /me) e sair
     viewModelOf(::NomeViewModel)     // 1º passo do onboarding: confirmar o nome (1-A.2)
     viewModelOf(::GruposViewModel)   // aba Grupos: lista cache-first

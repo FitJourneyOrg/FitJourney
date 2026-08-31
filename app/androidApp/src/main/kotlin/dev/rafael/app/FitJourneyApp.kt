@@ -4,6 +4,7 @@ import android.app.Application
 import coil3.ImageLoader
 import coil3.PlatformContext
 import coil3.SingletonImageLoader
+import dev.rafael.app.push.CanalDeNotificacao
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import dev.rafael.app.data.sync.SyncScheduler
 import dev.rafael.app.di.appModule
@@ -51,6 +52,14 @@ class FitJourneyApp : Application(), SingletonImageLoader.Factory {
         // ANTES do Koin: o cliente HTTP é criado na construção dos módulos, e a base precisa já
         // estar valendo. Escrita única, no boot — é o que torna aceitável o `var` global.
         HttpClientFactory.BASE_URL = BuildConfig.API_BASE_URL
+
+        // ANTES de qualquer notificação poder chegar (F.1).
+        //
+        // Sem canal registrado, o Android DESCARTA a notificação em silêncio a partir do API 26:
+        // nada na tela, nada no log, nenhum rastro. Registrar aqui — e não na primeira
+        // notificação — elimina a janela em que o push chega e some.
+        CanalDeNotificacao.registrar(this)
+
         val koin = startKoin {
             androidLogger()
             androidContext(this@FitJourneyApp)

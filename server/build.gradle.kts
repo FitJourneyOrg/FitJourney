@@ -50,7 +50,12 @@ dependencies {
 
     implementation(libs.bundles.exposed)   // core, jdbc, kotlinDatetime (v1)
     implementation(libs.hikari)
-    runtimeOnly(libs.postgres)             // driver JDBC: só runtime, código não referencia
+    // Driver JDBC. Era `runtimeOnly` com a nota "código não referencia" — uma restrição que
+    // descrevia uma independência de banco que o projeto já não tem: as migrations usam JSONB,
+    // índice parcial, ON CONFLICT e INTERVAL, nenhum deles portável. A F.1 precisou de `PGobject`
+    // para gravar JSONB (ver `server.db.JsonbText`) e a restrição caiu.
+    // ⚪ Dívida: regra de Konsist para manter o import do driver restrito a `server.db`.
+    implementation(libs.postgres)
     testRuntimeOnly(libs.h2)               // testes (decisão Fase 0)
 }
 

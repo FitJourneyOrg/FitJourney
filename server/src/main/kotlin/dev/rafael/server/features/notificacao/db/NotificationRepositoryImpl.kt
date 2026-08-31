@@ -4,6 +4,7 @@ import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
+import dev.rafael.server.db.jsonbText
 import dev.rafael.server.features.notificacao.models.Notificacao
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -33,14 +34,13 @@ object NotificationsTable : Table("notifications") {
     val body = varchar("body", 300)
 
     /**
-     * JSONB no banco, TEXT aqui.
+     * JSONB no banco, `String` aqui — mas via [jsonbText], não via `text`.
      *
-     * O Exposed trataria JSONB com um tipo próprio, e isso exigiria serializador registrado para
-     * um dado que o servidor NUNCA consulta por conteúdo — ele só grava e devolve. Tratar como
-     * texto mantém a coluna JSONB (o banco continua validando que é JSON) sem pagar por uma
-     * capacidade que não se usa.
+     * A primeira versão usava `text("data")` e **nunca gravou uma linha**: o Postgres não faz cast
+     * implícito de `varchar` para `jsonb` em parâmetro preparado. O defeito só apareceu no
+     * primeiro pedido de amizade real, porque nenhum teste do servidor grava notificação.
      */
-    val data = text("data")
+    val data = jsonbText("data")
 
     val readAt = datetime("read_at").nullable()
     val createdAt = datetime("created_at")

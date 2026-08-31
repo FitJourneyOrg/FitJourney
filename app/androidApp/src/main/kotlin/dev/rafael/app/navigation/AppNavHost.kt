@@ -3,6 +3,21 @@ package dev.rafael.app.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Text
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.rafael.app.data.notificacoes.ContadorDeNaoLidas
+import dev.rafael.app.push.AvisosDePush
+import dev.rafael.app.push.PedirPermissaoDeNotificacao
+import dev.rafael.app.push.RegistroDePush
+import dev.rafael.core.network.TokenProvider
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
+import dev.rafael.app.screens.notificacoes.NotificacoesScreen
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -60,7 +75,7 @@ import dev.rafael.app.screens.workout.WorkoutFormScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppNavHost() {
+fun AppNavHost(destinoDoPush: StateFlow<String?> = MutableStateFlow(null)) {
     val nav = rememberNavController()
 
     // A barra de abas só aparece nas telas-raiz. Detalhe, execução, quiz e paywall
@@ -80,6 +95,135 @@ fun AppNavHost() {
     // isto o usuário ficava preso: "Sessão expirada" + um "Tentar de novo" que só repetia o 401.
     val sessionExpiry: SessionExpiryBus = koinInject()
     val auth: AuthRepository = koinInject()
+
+    // NOTIFICAÇÕES (F.1). O contador vive aqui, acima das telas, porque o ícone está na barra —
+    // e a central, que o zera, é outra tela. Ver `ContadorDeNaoLidas`.
+    val contador: ContadorDeNaoLidas = koinInject()
+    val registroDePush: RegistroDePush = koinInject()
+    val naoLidas by contador.quantidade.collectAsStateWithLifecycle()
+
+    /*
+     * REGISTRA O APARELHO A CADA SESSÃO, e não uma vez por composição.
+     *
+     * A primeira versão era `LaunchedEffect(Unit)`, que dispara UMA vez — e a bateria mostrou o
+     * buraco: sair da conta e entrar de novo **sem matar o app** deixava o aparelho fora do
+     * `device_tokens`. A pessoa ficava sem push até reabrir, e nada na tela dizia isso.
+     *
+     * O defeito era de simetria: a BAIXA é chamada explicitamente pelo `SairDaConta`, o registro
+     * dependia de um evento de UI que o login não produz. Uma ponta explícita e a outra implícita
+     * nunca ficam sincronizadas por muito tempo.
+     *
+     * `uidFlow()` foi criado no #30 para o mesmo tipo de problema (cache chaveado por uid que não
+     * re-chaveava no login), e resolve os três momentos de uma vez: boot com sessão, login novo, e
+     * troca de conta no mesmo aparelho.
+     *
+     * `filterNotNull`: logout emite `null` e não há o que registrar — a baixa já foi feita, com o
+     * token do Firebase ainda válido, que é a única janela em que ela funciona.
+     *
+     * ## A ORDEM DOS DOIS OPERADORES É O COMPORTAMENTO
+     *
+     * `distinctUntilChanged()` vem **antes** do `filterNotNull()`, e isso não é estilo.
+     *
+     * A sequência real de uma sessão que reinicia é `"u1"` → `null` → `"u1"`. Filtrando primeiro,
+     * o `null` do logout desaparece e sobra `"u1"` seguido de `"u1"` — iguais consecutivos, que o
+     * `distinctUntilChanged` descarta. Resultado: **sair e entrar na MESMA conta não re-registrava
+     * o aparelho**, e a pessoa ficava sem push. Entrar em outra conta funcionava, o que torna o
+     * defeito ainda mais fácil de não notar.
+     *
+     * O `null` é a única coisa que separa as duas sessões. Comparar antes de descartá-lo preserva
+     * essa fronteira.
+     */
+    val sessao: TokenProvider = koinInject()
+
+    /*
+     * A PERMISSÃO DE NOTIFICAÇÃO SÓ FAZ SENTIDO COM SESSÃO.
+     *
+     * A primeira versão chamava isto dentro da `LoginScreen`, e a bateria mostrou que estava
+     * errado por dois motivos: o `LaunchedEffect` dispara quando a TELA COMPÕE, então o diálogo
+     * aparecia **antes de a pessoa digitar a senha** — quando ela ainda não viu nada do app, que é
+     * o momento de maior taxa de recusa, e no Android recusar é quase definitivo (o sistema ignora
+     * pedidos posteriores). E quem abrisse o app com sessão restaurada pularia a `LoginScreen`
+     * inteira, e **nunca** veria o pedido.
+     *
+     * Aqui, atrelado ao `uidFlow`, o gatilho é "existe usuário logado agora" — que é exatamente a
+     * condição em que a permissão passa a valer alguma coisa. Mesmo lugar do registro do aparelho,
+     * pela mesma razão: as duas coisas dependem de haver sessão, e separá-las foi o que fez uma
+     * delas ficar para trás.
+     */
+    val uidAtual by sessao.uidFlow().collectAsStateWithLifecycle(initialValue = null)
+    if (uidAtual != null) PedirPermissaoDeNotificacao()
+
+    LaunchedEffect(Unit) {
+        sessao.uidFlow().distinctUntilChanged().filterNotNull().collect {
+            // O FCM reemite o token sozinho, e o `onNewToken` roda num Service sem sessão: ele
+            // guarda em `TokenPendente` e é aqui que o ciclo se completa.
+            registroDePush.registrar()
+            contador.atualizar()
+        }
+    }
+
+    // O contador acompanha a NAVEGAÇÃO em vez de fazer polling: trocar de tela-raiz é o momento
+    // em que a pessoa olha para a barra, e pedido de amizade não é feed para justificar polling.
+    LaunchedEffect(entry?.destination?.route) { contador.atualizar() }
+
+    // ...e o push, que é o outro momento em que o número muda sem a pessoa fazer nada. Sem isto,
+    // a notificação chega na bandeja e o badge da barra continua no número velho até a próxima
+    // navegação — foi o que a bateria da F.1 pegou.
+    val avisos: AvisosDePush = koinInject()
+    LaunchedEffect(Unit) { avisos.eventos.collect { contador.atualizar() } }
+
+    /*
+     * DEEP LINK do push (F.1).
+     *
+     * Tocar na notificação leva onde se AGE sobre ela — pedido de amizade abre Amigos, e não a
+     * central: a central é a lista, e quem tocou já sabe o que quer fazer.
+     *
+     * Consome o valor depois de navegar. Sem isso, voltar da tela reexecutaria o efeito na
+     * próxima recomposição e a pessoa ficaria presa em Amigos.
+     */
+    val destino by destinoDoPush.collectAsStateWithLifecycle()
+
+    /*
+     * ESPERA A NAVEGAÇÃO INICIAL TERMINAR — e este gate é a fatia inteira funcionando ou não.
+     *
+     * Com o app MORTO, o `AppNavHost` compõe já com o destino do push na mão, navega para Amigos,
+     * e logo depois o Splash decide para onde ir e chama
+     * `navigate(Home) { popUpTo(Splash) { inclusive = true } }` — que apaga tudo que foi empilhado
+     * sobre o Splash, inclusive a tela que o push acabou de abrir. Resultado observado na bateria:
+     * tocar na notificação com o app fechado abria a **Home**.
+     *
+     * ## A primeira versão deste gate estava larga demais
+     *
+     * Ela usava `mostrarAbas` (verdadeiro só nas telas-raiz), o que parecia elegante por reusar
+     * um cálculo existente. Mas tocar na notificação estando em **Conquistas** — uma tela de
+     * detalhe — não fazia nada: o destino ficava pendurado esperando uma raiz que a pessoa não
+     * tinha por que visitar.
+     *
+     * **Tocar na notificação é ação explícita e tem que levar de onde quer que a pessoa esteja.**
+     * O que precisa ser bloqueado não é "não-raiz", é o punhado de telas em que navegar seria
+     * desfeito (Splash) ou não faria sentido (não há sessão, ou o cadastro está em curso).
+     */
+    val naEntrada = entry?.destination?.let { atual ->
+        atual.hasRoute(AppRoute.Splash::class) ||
+            atual.hasRoute(AppRoute.Login::class) ||
+            atual.hasRoute(AppRoute.Nome::class) ||
+            atual.hasRoute(AppRoute.Quiz::class)
+    } ?: true   // `entry` nulo é o instante anterior à primeira navegação: também é entrada
+
+    LaunchedEffect(destino, naEntrada) {
+        if (destino == null || naEntrada) return@LaunchedEffect
+
+        when (destino) {
+            "PEDIDO_DE_AMIZADE" -> nav.navigate(AppRoute.Amigos)
+            // Tipo que este app não conhece — vindo de uma versão mais nova do servidor. Abre a
+            // central, que sabe mostrar qualquer notificação. Melhor um destino genérico que
+            // funciona do que nenhum.
+            else -> nav.navigate(AppRoute.Notificacoes)
+        }
+        // Consome DEPOIS de navegar. Sem isto, voltar da tela reexecutaria o efeito e a pessoa
+        // ficaria presa em Amigos.
+        (destinoDoPush as? MutableStateFlow)?.value = null
+    }
     LaunchedEffect(Unit) {
         sessionExpiry.eventos.collect {
             auth.signOut()   // limpa a sessão local e o token cacheado do Ktor
@@ -132,6 +276,26 @@ fun AppNavHost() {
                     navigationIcon = {
                         IconButton(onClick = { escopo.launch { drawer.open() } }) {
                             Icon(Icons.Filled.Menu, contentDescription = "Abrir menu")
+                        }
+                    },
+                    actions = {
+                        // O ícone fica na barra que JÁ existe nas quatro telas-raiz: quem está em
+                        // Grupos vê o badge sem voltar para a Home.
+                        IconButton(onClick = { nav.navigate(AppRoute.Notificacoes) }) {
+                            BadgedBox(
+                                badge = {
+                                    if (naoLidas > 0) Badge { Text("$naoLidas") }
+                                },
+                            ) {
+                                Icon(
+                                    Icons.Outlined.Notifications,
+                                    contentDescription = if (naoLidas > 0) {
+                                        "Notificações, $naoLidas não lidas"
+                                    } else {
+                                        "Notificações"
+                                    },
+                                )
+                            }
                         }
                     },
                 )
@@ -379,6 +543,18 @@ fun AppNavHost() {
 
         composable<AppRoute.Bloqueados> {
             BloqueadosScreen(onBack = { nav.popBackStack() })
+        }
+
+        composable<AppRoute.Notificacoes> {
+            NotificacoesScreen(
+                onBack = { nav.popBackStack() },
+                // Tocar numa notificação leva onde se AGE sobre ela. Pedido de amizade vai para
+                // Amigos; tipo sem destino próprio não navega — melhor não fazer nada do que
+                // levar a pessoa para um lugar aleatório.
+                onAbrir = { n ->
+                    if (n.type == "PEDIDO_DE_AMIZADE") nav.navigate(AppRoute.Amigos)
+                },
+            )
         }
 
         // ---- Perfil e conta (ARCH #34) ----
