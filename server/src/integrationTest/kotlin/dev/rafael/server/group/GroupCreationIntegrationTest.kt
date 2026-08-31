@@ -1,5 +1,7 @@
 package dev.rafael.server.group
 
+import dev.rafael.server.CodigoDeTeste
+
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import dev.rafael.contract.group.GroupRule
@@ -76,6 +78,7 @@ class GroupCreationIntegrationTest {
                 it[firebaseUid] = "uid-$id"
                 it[email] = "$id@teste.local"
                 it[displayName] = "Atleta-" + id.toString().replace("-", "").take(6)
+                it[code] = CodigoDeTeste.de(id)   // V40: NOT NULL + UNIQUE + CHECK
             }
         }
         return id
