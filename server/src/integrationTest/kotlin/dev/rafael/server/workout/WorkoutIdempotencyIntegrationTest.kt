@@ -1,5 +1,7 @@
 package dev.rafael.server.workout
 
+import dev.rafael.server.CodigoDeTeste
+
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
 import dev.rafael.core.result.AppResult
@@ -73,6 +75,7 @@ class WorkoutIdempotencyIntegrationTest {
                     it[firebaseUid] = uid
                     it[email] = "$uid@teste.local"
                     it[displayName] = uid   // V35: NOT NULL, CHECK de 2..30
+                    it[code] = CodigoDeTeste.de(id)   // V40: NOT NULL + UNIQUE + CHECK
                 }
             }
             val ts = LocalDateTime(2026, 8, 15, 10, 0)
