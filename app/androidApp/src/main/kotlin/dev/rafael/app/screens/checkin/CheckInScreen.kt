@@ -8,6 +8,7 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -214,6 +215,15 @@ fun CheckInScreen(
                     )
 
                 else -> {
+                    // ANTES da foto, sempre. O emoji do dia é uma instrução, não um enfeite: quem
+                    // tira a foto primeiro e lê depois já fez o gesto errado, e não há como editar
+                    // um check-in (4.11). É a mesma razão de o aviso "não dá para editar" ficar no
+                    // fim da tela e não numa tela seguinte.
+                    state.emojiDeHoje?.let { emoji ->
+                        BlocoDoEmoji(emoji)
+                        Spacer(Modifier.height(20.dp))
+                    }
+
                     if (state.exigeFoto) {
                         BlocoDaFoto(state.foto, temCamera, viewModel::aoFotografar, viewModel::descartarFoto)
                         Spacer(Modifier.height(20.dp))
@@ -278,6 +288,43 @@ fun CheckInScreen(
                 }
             }
         }
+    }
+}
+
+/**
+ * O emoji do dia (5.1, fatia D).
+ *
+ * Grande e sozinho no bloco. A pessoa vai **imitar** este desenho — precisa enxergar a expressão,
+ * não identificar o símbolo. Num tamanho de texto normal, 😑 e 😴 são a mesma bolinha amarela.
+ *
+ * Não há botão nem confirmação: ninguém confere se o gesto foi feito. Foto e emoji são
+ * autodeclarações (#33), e a correção vem por denúncia na fatia E. **Prometer verificação que não
+ * existe seria pior que não verificar.**
+ */
+@Composable
+private fun BlocoDoEmoji(emoji: String) {
+    Text(
+        "EMOJI DE HOJE",
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(8.dp))
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Text(emoji, style = MaterialTheme.typography.displaySmall)
+        Text(
+            "Reproduza este emoji na sua foto.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 

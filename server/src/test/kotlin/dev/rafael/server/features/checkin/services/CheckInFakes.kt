@@ -134,6 +134,10 @@ class FakeCheckInRepository : CheckInRepository {
             photoRef = n.photoRef,
             photoPurgedAt = null,
             placeName = n.placeName,
+            // Devolve o que foi GRAVADO, não recalcula. É o que faz o dublê espelhar a V43: um
+            // fake que chamasse `EmojiDoDia.de()` na leitura provaria o oposto do invariante —
+            // que o emoji do feed antigo segue a lista de hoje.
+            emoji = n.emoji,
         ),
         displayName = nomes[n.userId] ?: "Alguém",
     )

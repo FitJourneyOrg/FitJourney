@@ -24,6 +24,17 @@ object CheckInsTable : Table("check_ins") {
     /** Referência OPACA do `ArmazenamentoDeMidia`, nunca um caminho de arquivo. */
     val photoRef = text("photo_ref").nullable()
 
+    /**
+     * V43. O emoji que valia NAQUELE dia, gravado na criação.
+     *
+     * Nullable e sem default: `null` diz "este check-in não teve regra de emoji", que é diferente
+     * de "teve e era este". Um default inventaria o segundo.
+     *
+     * O sorteio é derivado (`EmojiDoDia`), mas o resultado é gravado: a lista curada vai crescer, e
+     * recalcular na leitura faria o feed antigo exibir um emoji que ninguém imitou.
+     */
+    val emoji = varchar("emoji", 16).nullable()
+
     /** Marcado pela purga dos 90 dias (4.8). A foto some; o check-in fica. */
     val photoPurgedAt = datetime("photo_purged_at").nullable()
 

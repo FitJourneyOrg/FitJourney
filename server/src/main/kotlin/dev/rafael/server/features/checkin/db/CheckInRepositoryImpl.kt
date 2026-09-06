@@ -63,6 +63,7 @@ class CheckInRepositoryImpl : CheckInRepository {
                 it[placeName] = novo.placeName
                 it[placeLat] = novo.placeLat?.let(BigDecimal::valueOf)
                 it[placeLng] = novo.placeLng?.let(BigDecimal::valueOf)
+                it[emoji] = novo.emoji                      // V43: o emoji DAQUELE dia
             }
 
             val doDia = CheckInsTable.selectAll().where {
@@ -244,6 +245,7 @@ class CheckInRepositoryImpl : CheckInRepository {
             photoRef = linha[CheckInsTable.photoRef],
             photoPurgedAt = linha[CheckInsTable.photoPurgedAt],
             placeName = linha[CheckInsTable.placeName],
+            emoji = linha[CheckInsTable.emoji],
         ),
         // A coordenada está na linha lida e NÃO é copiada: o `CheckIn` não tem onde guardá-la.
         displayName = linha[UsersTable.displayName],

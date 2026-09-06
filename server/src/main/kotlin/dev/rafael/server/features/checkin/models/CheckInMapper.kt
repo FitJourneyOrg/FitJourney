@@ -33,6 +33,8 @@ fun CheckInComAutor.toDto(
         // não precisa saber qual dos dois, e o servidor é quem tem `photo_purged_at` para saber.
         photoUrl = if (checkIn.fotoViva) "/checkins/${checkIn.id}/foto" else null,
         placeName = checkIn.placeName,
+        // Vem da LINHA, nunca recalculado: o emoji daquele dia é fato, e a lista curada muda.
+        emoji = checkIn.emoji,
         mine = meu,
         // Derivado na hora, como o estado do grupo. A tela pode ficar aberta atravessando a
         // meia-noite, então o `DELETE` confere de novo — isto evita OFERECER o botão, não
