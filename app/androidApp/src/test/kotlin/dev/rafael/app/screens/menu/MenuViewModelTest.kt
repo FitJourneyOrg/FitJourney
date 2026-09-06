@@ -5,6 +5,7 @@ import dev.rafael.app.data.sessao.SairDaConta
 import dev.rafael.app.data.stats.Stats
 import dev.rafael.core.network.TokenProvider
 import dev.rafael.app.screens.home.FakeAuth
+import dev.rafael.features.auth.domain.model.AuthUser
 import dev.rafael.app.screens.home.FakePerfil
 import dev.rafael.contract.stats.UserStatsDto
 import dev.rafael.contract.user.UserDto
@@ -88,7 +89,7 @@ class MenuViewModelTest {
         // o `TokenProvider.uidFlow()`, e este teste cobra isso: NINGUÉM chama nada aqui além
         // de logar.
         val me = FakeMe()                       // ninguém logado ainda
-        val viewModel = MenuViewModel(me, FakeStats(), sair(), FakeToken(me.uid))
+        val viewModel = MenuViewModel(me, FakeStats(), sair(), FakeAuth(), FakeToken(me.uid))
 
         // `stateIn(..., WhileSubscribed)` só liga o upstream quando ALGUÉM coleta. Na tela quem
         // faz isso é o `collectAsStateWithLifecycle`; aqui tem de ser explícito, senão o
@@ -112,7 +113,7 @@ class MenuViewModelTest {
     fun `trocar de conta troca o que a tela mostra`() = runTest(dispatcher) {
         // O outro lado da mesma moeda: sair não pode deixar o nome do usuário anterior na tela.
         val me = FakeMe()
-        val viewModel = MenuViewModel(me, FakeStats(), sair(), FakeToken(me.uid))
+        val viewModel = MenuViewModel(me, FakeStats(), sair(), FakeAuth(), FakeToken(me.uid))
         backgroundScope.launch { viewModel.state.collect { } }
         me.uid.value = "u1"
         advanceUntilIdle()
@@ -131,7 +132,7 @@ class MenuViewModelTest {
         // para sempre depois do primeiro logout, o `LaunchedEffect(saiu)` da tela não
         // redisparava, e o segundo "Sair" simplesmente não fazia nada: menu travado aberto.
         val me = FakeMe()
-        val viewModel = MenuViewModel(me, FakeStats(), sair(), FakeToken(me.uid))
+        val viewModel = MenuViewModel(me, FakeStats(), sair(), FakeAuth(), FakeToken(me.uid))
         backgroundScope.launch { viewModel.saiu.collect { } }
 
         viewModel.sair()
@@ -146,11 +147,58 @@ class MenuViewModelTest {
         assertTrue(viewModel.saiu.value, "a segunda saída também tem de disparar")
     }
 
+    /**
+     * REGRESSÃO: o cabeçalho não pode girar para sempre quando o `/me` não chega.
+     *
+     * Achado na bancada — o IP da LAN mudou, o `me.sincronizar()` falhou em silêncio (ele engole a
+     * falha de propósito, para "manter o último nome conhecido") e o cache estava vazio. Sem nome e
+     * com sessão viva, o esqueleto era o estado permanente: **carregar e falhar eram o mesmo
+     * pixel**.
+     *
+     * O e-mail vem da sessão do Firebase, que existe offline. Não é enfeite: é a única verdade
+     * sobre o usuário disponível quando o servidor não responde.
+     */
+    @Test
+    fun `sem o nome do servidor, o cabecalho cai para o e-mail local`() = runTest(dispatcher) {
+        val me = FakeMe()
+        val auth = FakeAuth().apply { local = AuthUser("u1", "rafael@teste.local") }
+        val viewModel = MenuViewModel(me, FakeStats(), sair(), auth, FakeToken(me.uid))
+        backgroundScope.launch { viewModel.state.collect { } }
+
+        // Logado, mas o `/me` nunca chegou: o FakeMe só conhece "u1" — usar outro uid simula
+        // exatamente o cache vazio com sessão viva.
+        me.uid.value = "desconhecido"
+        advanceUntilIdle()
+
+        val s = viewModel.state.value
+        assertEquals("", s.nome, "o servidor não respondeu, então não há nome")
+        assertEquals("rafael@teste.local", s.email)
+        assertFalse(
+            s.semNadaAindaConhecido,
+            "com o e-mail em mãos o esqueleto tem de sair — senão gira para sempre",
+        )
+    }
+
+    @Test
+    fun `esqueleto SO enquanto nao se sabe nada`() = runTest(dispatcher) {
+        // O outro lado: sem nome E sem e-mail, o esqueleto é honesto. É a fração de segundo entre
+        // abrir o app e o Firebase responder — aí ele está mesmo carregando.
+        val me = FakeMe()
+        val auth = FakeAuth().apply { local = null }
+        val viewModel = MenuViewModel(me, FakeStats(), sair(), auth, FakeToken(me.uid))
+        backgroundScope.launch { viewModel.state.collect { } }
+
+        me.uid.value = "desconhecido"
+        advanceUntilIdle()
+
+        assertTrue(viewModel.state.value.semNadaAindaConhecido)
+    }
+
     @Test
     fun `abrir o menu pede sync`() = runTest(dispatcher) {
         // Continua valendo: a chave se resolve sozinha, mas alguém tem de pedir o dado NOVO.
         val me = FakeMe()
-        val viewModel = MenuViewModel(me, FakeStats(), sair(), FakeToken(me.uid))
+        val viewModel = MenuViewModel(me, FakeStats(), sair(), FakeAuth(), FakeToken(me.uid))
         advanceUntilIdle()
 
         viewModel.aoAbrir()

@@ -119,6 +119,13 @@ class FakeAuth : AuthRepository {
     override suspend fun isLoggedIn(): Boolean = true
     override suspend fun currentIdToken(): String? = "t"
     override suspend fun fetchMe(): AppResult<AuthUser> = AppResult.Success(AuthUser("u", "e"))
+
+    /**
+     * A sessão LOCAL do Firebase, que existe offline. `var` para o teste do cabeçalho poder
+     * simular "logado, mas o `/me` não chegou" — o caso que girava para sempre.
+     */
+    var local: AuthUser? = AuthUser("u", "eu@teste.local")
+    override suspend fun usuarioLocal(): AuthUser? = local
 }
 
 class FakePerfil : ProfileRepository {

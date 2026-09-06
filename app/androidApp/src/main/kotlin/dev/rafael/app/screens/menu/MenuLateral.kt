@@ -38,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rafael.app.ui.AvatarInicial
@@ -110,16 +111,32 @@ fun MenuLateral(
                     // Saiu da conta com o menu aberto. Não há dado e não vai haver — esqueleto
                     // aqui seria um carregamento que nunca termina.
                     Spacer(Modifier.height(44.dp))
-                } else if (state.nome.isBlank()) {
+                } else if (state.semNadaAindaConhecido) {
+                    // Esqueleto SÓ aqui: nem o nome do servidor nem o e-mail local existem, o que
+                    // é a fração de segundo entre abrir o app e o Firebase responder.
+                    //
+                    // Antes esta condição era `nome.isBlank()`, e cobria também "a rede falhou e o
+                    // nome não vai chegar" — que girava para sempre. **Carregar e falhar eram o
+                    // mesmo pixel.** Foi visto na bancada quando o IP da LAN mudou.
                     Box(Modifier.size(44.dp).clip(CircleShape).shimmer())
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Box(Modifier.width(120.dp).height(14.dp).shimmer(RoundedCornerShape(4.dp)))
                         Box(Modifier.width(64.dp).height(11.dp).shimmer(RoundedCornerShape(4.dp)))
                     }
                 } else {
-                    AvatarInicial(nome = state.nome, id = state.id, tamanho = 44.dp)
+                    // O nome do servidor quando existe; o e-mail da sessão local quando não. O
+                    // e-mail é dado REAL do usuário — diferente do antigo "Você", que afirmava um
+                    // nome que ninguém tinha. Quando o `/me` chegar, o nome substitui sem susto.
+                    val rotulo = state.nome.ifBlank { state.email }
+
+                    AvatarInicial(nome = rotulo, id = state.id, tamanho = 44.dp)
                     Column {
-                        Text(state.nome, style = MaterialTheme.typography.titleSmall)
+                        Text(
+                            rotulo,
+                            style = MaterialTheme.typography.titleSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                         val nivel = state.nivel
                         if (nivel != null) {
                             Text(
