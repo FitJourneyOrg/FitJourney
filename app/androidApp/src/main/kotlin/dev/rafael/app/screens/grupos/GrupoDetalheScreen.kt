@@ -663,10 +663,12 @@ private fun ItemDoFeed(
             Column(Modifier.weight(1f)) {
                 Text(item.displayName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                 Text(
-                    // Lugar e horário na mesma linha: são as duas circunstâncias do treino, e
-                    // separá-los em duas linhas daria a cada um peso que nenhum dos dois tem.
-                    // O lugar pode não existir — o grupo só o exige se a regra estiver ligada.
-                    listOfNotNull(item.placeName, quandoFoi(item, fusoDoGrupo)).joinToString(" · "),
+                    // Emoji, lugar e horário na mesma linha: são as circunstâncias do treino, e
+                    // separá-los em linhas daria a cada um peso que nenhum dos três tem.
+                    // Os dois primeiros podem não existir — o grupo só os exige se a regra estiver
+                    // ligada, e o emoji vem do que foi GRAVADO naquele dia (V43), nunca recalculado.
+                    listOfNotNull(item.emoji, item.placeName, quandoFoi(item, fusoDoGrupo))
+                        .joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

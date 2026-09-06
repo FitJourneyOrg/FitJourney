@@ -39,6 +39,15 @@ data class CheckInState(
     val exigeLocal: Boolean get() = GroupRule.LOCALIZACAO in grupo?.rules.orEmpty()
 
     /**
+     * O emoji para reproduzir hoje (5.1), ou `null` se o grupo não exige.
+     *
+     * Vem PRONTO do servidor (`GroupDto.emojiDeHoje`), e o cliente não o calcula: o sorteio depende
+     * do fuso do GRUPO e do relógio do SERVIDOR. Um aparelho com a data adiantada mostraria o
+     * emoji de amanhã e mandaria a pessoa fazer o gesto errado — e ela só descobriria no feed.
+     */
+    val emojiDeHoje: String? get() = grupo?.emojiDeHoje
+
+    /**
      * Espelha a checagem ESTRUTURAL do servidor (`CheckInPolicy.regrasNaoCumpridas`).
      *
      * Duplicar a regra aqui é deliberado, e não desconfiança do servidor: é o que permite o botão

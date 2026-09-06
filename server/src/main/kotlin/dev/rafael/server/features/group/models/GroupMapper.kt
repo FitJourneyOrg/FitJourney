@@ -1,8 +1,11 @@
 package dev.rafael.server.features.group.models
 
 import dev.rafael.contract.group.GroupDto
+import dev.rafael.contract.group.GroupRule
 import dev.rafael.contract.group.MemberRole
+import dev.rafael.server.features.group.services.EmojiDoDia
 import dev.rafael.server.features.group.services.GroupPolicy
+import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 
 /**
@@ -53,4 +56,13 @@ fun Group.toDto(
     memberCount = memberCount,
     myRole = meuPapel,
     myCheckInToday = meuCheckInHoje,
+
+    // Calculado SEMPRE, e sem custo: é função pura de (id, dia), sem ida ao banco. Por isso não
+    // vira parâmetro como o `meuCheckInHoje`, que exige uma consulta por grupo.
+    //
+    // O dia sai do fuso do GRUPO, não do servidor nem do aparelho (4.6) — o mesmo `agora` e o
+    // mesmo `timezone` que o `state` logo acima usa.
+    emojiDeHoje = EmojiDoDia
+        .de(id, agora.toLocalDateTime(timezone).date)
+        .takeIf { GroupRule.EMOJI_DO_DIA in rules },
 )

@@ -45,6 +45,7 @@ class SairDaContaTest {
         override suspend fun isLoggedIn(): Boolean = true
         override suspend fun currentIdToken(): String? = "t"
         override suspend fun fetchMe(): AppResult<AuthUser> = error("não usado")
+        override suspend fun usuarioLocal(): AuthUser? = null
     }
 
     private inner class PerfilQueRegistra : ProfileRepository {
