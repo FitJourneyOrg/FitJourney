@@ -25,6 +25,8 @@ data class CheckIn(
     /** Preenchido pela purga dos 90 dias (4.8): teve foto, e ela expirou. */
     val photoPurgedAt: LocalDateTime?,
     val placeName: String?,
+    /** O emoji daquele dia (V43). `null` = o grupo não exigia `EMOJI_DO_DIA`. */
+    val emoji: String?,
 ) {
     /** Tem foto para servir AGORA. Distingue "nunca teve" de "expirou" — as duas dão `null` no DTO. */
     val fotoViva: Boolean get() = photoRef != null && photoPurgedAt == null
@@ -42,6 +44,13 @@ data class NovoCheckIn(
     /** JÁ arredondada por `CheckInPolicy.arredondar` — o repositório não corrige ninguém. */
     val placeLat: Double?,
     val placeLng: Double?,
+    /**
+     * O emoji do dia (fatia D), resolvido pelo SERVIÇO e não pelo cliente.
+     *
+     * `null` quando o grupo não exige `EMOJI_DO_DIA`. Deixar o cliente mandá-lo seria deixá-lo
+     * escolher qual regra cumpriu — a mesma razão de o `localDate` ser resolvido no servidor.
+     */
+    val emoji: String?,
 )
 
 /**

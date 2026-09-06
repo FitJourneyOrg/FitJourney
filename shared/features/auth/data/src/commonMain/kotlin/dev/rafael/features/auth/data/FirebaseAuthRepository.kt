@@ -62,6 +62,14 @@ class FirebaseAuthRepository(
     /** Sessão persistida (sobrevive offline + restart). Não bate na rede — só olha o cache local. */
     override suspend fun isLoggedIn(): Boolean = auth.currentUser != null
 
+    /**
+     * O mesmo `currentUser` do [isLoggedIn], com os dados em vez do booleano. **Não bate na rede.**
+     *
+     * O e-mail vem da sessão persistida do Firebase, que sobrevive offline e a reinício — é a
+     * única coisa que se sabe sobre o usuário quando o `GET /me` não chega.
+     */
+    override suspend fun usuarioLocal(): AuthUser? = auth.currentUser?.toAuthUser()
+
     override suspend fun fetchMe(): AppResult<AuthUser> =
         httpResult { meDataSource.getMe().let { AuthUser(uid = it.id, email = it.email) } }
 

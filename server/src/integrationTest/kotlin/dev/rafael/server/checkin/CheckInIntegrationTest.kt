@@ -14,6 +14,7 @@ import dev.rafael.server.features.checkin.db.CheckInRepositoryImpl
 import dev.rafael.server.features.checkin.db.CheckInsTable
 import dev.rafael.server.features.checkin.models.NovoCheckIn
 import dev.rafael.server.features.group.db.GroupRepositoryImpl
+import dev.rafael.server.features.group.services.EmojiDoDia
 import dev.rafael.server.features.group.db.GroupsTable
 import dev.rafael.server.features.group.db.NovoGrupo
 import dev.rafael.server.features.user.db.UsersTable
@@ -141,6 +142,7 @@ class CheckInIntegrationTest {
         dia: String = "2026-09-10",
         foto: String? = refUnica(),
         local: String? = null,
+        emojiDoDia: String? = null,
     ) = NovoCheckIn(
         id = Uuid.random(),
         groupId = grupo,
@@ -151,6 +153,10 @@ class CheckInIntegrationTest {
         placeName = local,
         placeLat = local?.let { -23.55 },
         placeLng = local?.let { -46.63 },
+        // V43. Default `null` porque a maioria dos grupos não exige a regra — quem quer testar o
+        // emoji passa um. Quem RESOLVE o emoji é o `CheckInService`, não o repositório: aqui se
+        // testa que a coluna guarda e devolve o que recebeu, e nada além disso.
+        emoji = emojiDoDia,
     )
 
     /** No formato que o `ArmazenamentoEmDisco` valida: `aa/bb/<32 hex>.jpg`. */
@@ -161,6 +167,54 @@ class CheckInIntegrationTest {
 
     private fun linhasDoGrupo(grupo: Uuid): Int = transaction {
         CheckInsTable.selectAll().where { CheckInsTable.groupId eq grupo }.count().toInt()
+    }
+
+    // ---- o emoji do dia (V43, fatia D) ----
+
+    /**
+     * O emoji **sobrevive ao round-trip** e volta idêntico.
+     *
+     * Parece óbvio e não é: emoji não cabe num `CHAR(2)`. `👍` são duas unidades UTF-16, `✌️` leva
+     * seletor de variação, e a coluna é `VARCHAR(16)` justamente por isso. Um dimensionamento
+     * errado truncaria no meio do par substituto e devolveria um caractere inválido — que no
+     * Postgres nem sempre dá erro, às vezes só grava lixo.
+     *
+     * Este teste existe porque a V40 ensinou a lição uma semana atrás: **o que só o banco decide,
+     * só o banco prova.**
+     */
+    @Test
+    fun `o emoji sobrevive ao round-trip, inclusive com seletor de variacao`() = runBlocking {
+        val dono = novoUsuario()
+        val grupo = grupoDe(dono)
+
+        // "✌️" é o caso difícil: gesto + U+FE0F. Se a coluna truncasse, voltaria "✌" — parecido o
+        // bastante para passar despercebido numa inspeção visual.
+        EmojiDoDia.LISTA.forEachIndexed { i, emoji ->
+            val usuario = novoUsuario()
+            ok(checkIns.criar(novo(grupo.id, usuario, dia = "2026-09-10", emojiDoDia = emoji)))
+
+            val lido = transaction {
+                CheckInsTable.selectAll()
+                    .where { CheckInsTable.userId eq usuario }
+                    .single()[CheckInsTable.emoji]
+            }
+            assertEquals(emoji, lido, "o emoji ${i + 1} da lista não voltou igual do banco")
+        }
+    }
+
+    @Test
+    fun `check-in sem regra de emoji grava NULL`() = runBlocking {
+        // `null` diz "este check-in não teve regra de emoji", que é diferente de "teve e era este".
+        // Um DEFAULT na coluna inventaria o segundo, e a tela não teria como distinguir.
+        val dono = novoUsuario()
+        val grupo = grupoDe(dono)
+
+        ok(checkIns.criar(novo(grupo.id, dono)))
+
+        val lido = transaction {
+            CheckInsTable.selectAll().where { CheckInsTable.groupId eq grupo.id }.single()[CheckInsTable.emoji]
+        }
+        assertNull(lido)
     }
 
     // ---- o índice único: "um por pessoa/dia/grupo" (4.3) ----

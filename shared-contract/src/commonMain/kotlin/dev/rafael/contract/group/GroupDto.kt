@@ -81,6 +81,20 @@ data class GroupDto(
      * item no feed sem uma segunda pergunta.
      */
     val myCheckInToday: String? = null,
+
+    /**
+     * O emoji que ESTE grupo tem de reproduzir HOJE (5.1, fatia D). `null` quando o grupo não
+     * exige `EMOJI_DO_DIA`.
+     *
+     * Derivado no servidor pelo mesmo motivo do [state] e do [myCheckInToday]: "hoje" depende do
+     * fuso do GRUPO e do relógio do SERVIDOR, e o cliente não tem nenhum dos dois. Um aparelho com
+     * a data adiantada veria o emoji de amanhã e mandaria a pessoa fazer o gesto errado.
+     *
+     * **A regra só funciona se a pessoa souber ANTES de tirar a foto.** Sem este campo, o emoji
+     * apareceria depois do check-in — que é o mesmo defeito de oferecer e desmentir do
+     * [myCheckInToday]: descobrir a exigência depois do trabalho feito.
+     */
+    val emojiDeHoje: String? = null,
 )
 
 /**

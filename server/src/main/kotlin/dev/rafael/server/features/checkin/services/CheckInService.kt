@@ -1,6 +1,7 @@
 package dev.rafael.server.features.checkin.services
 
 import dev.rafael.contract.checkin.CheckInDto
+import dev.rafael.contract.group.GroupRule
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
@@ -14,6 +15,7 @@ import dev.rafael.server.features.checkin.models.toDto
 import dev.rafael.contract.group.RankingEntryDto
 import dev.rafael.server.features.group.db.GroupRepository
 import dev.rafael.server.features.group.models.Group
+import dev.rafael.server.features.group.services.EmojiDoDia
 import dev.rafael.server.features.group.services.GroupPolicy
 import dev.rafael.server.features.user.models.User
 import dev.rafael.server.features.user.services.UserService
@@ -94,16 +96,24 @@ class CheckInService(
             is AppResult.Success -> r.value
         }
 
+        val dia = CheckInPolicy.diaDoGrupo(agora, fuso)   // dia do GRUPO (4.6)
+
         val novo = NovoCheckIn(
             id = Uuid.random(),
             groupId = grupo.id,
             userId = user.id,
-            localDate = CheckInPolicy.diaDoGrupo(agora, fuso),   // dia do GRUPO (4.6)
+            localDate = dia,
             createdAt = agora.toLocalDateTime(TimeZone.UTC),     // relógio do SERVIDOR (4.5)
             photoRef = ref,
             placeName = pedido.nomeDoLocal?.trim(),
             placeLat = pedido.latitude?.let(CheckInPolicy::arredondar),
             placeLng = pedido.longitude?.let(CheckInPolicy::arredondar),
+
+            // O emoji é RESOLVIDO AQUI, não recebido do cliente (fatia D). Deixar o app mandá-lo
+            // seria deixá-lo escolher qual regra cumpriu — mesma razão de o `localDate` sair do
+            // servidor. E é gravado porque a lista curada vai crescer: recalcular na leitura faria
+            // o feed antigo exibir um emoji que ninguém imitou.
+            emoji = EmojiDoDia.de(grupo.id, dia).takeIf { GroupRule.EMOJI_DO_DIA in grupo.rules },
         )
 
         repository.criar(novo).flatMap { criou ->
@@ -314,6 +324,7 @@ class CheckInService(
                 photoRef = novo.photoRef,
                 photoPurgedAt = null,
                 placeName = novo.placeName,
+                emoji = novo.emoji,
             ),
             displayName = autor.displayName,
         ).toDto(quemPede = autor.id, agora = agora, fusoDoGrupo = fuso)

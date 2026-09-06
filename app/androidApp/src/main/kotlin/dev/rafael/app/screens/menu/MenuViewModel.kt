@@ -6,11 +6,14 @@ import dev.rafael.app.data.me.Me
 import dev.rafael.app.data.sessao.SairDaConta
 import dev.rafael.app.data.stats.Stats
 import dev.rafael.core.network.TokenProvider
+import dev.rafael.features.auth.domain.repository.AuthRepository
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -26,7 +29,24 @@ data class MenuState(
      * conta com o menu aberto.
      */
     val semSessao: Boolean = false,
-)
+
+    /**
+     * O e-mail da sessão do Firebase, que existe **offline**.
+     *
+     * É o que o cabeçalho mostra quando o `/me` não chegou: dado REAL do usuário, e não uma
+     * invenção como o antigo "Você" — que a versão anterior removeu justamente por afirmar um
+     * nome que ninguém tinha.
+     */
+    val email: String = "",
+) {
+    /**
+     * Ainda não se sabe NADA sobre quem é — nem o nome do servidor, nem o e-mail local.
+     *
+     * É o único caso em que o esqueleto é honesto. Antes, ele cobria também "a rede falhou e não
+     * vai chegar nunca", e girava para sempre: **carregar e falhar eram o mesmo pixel**.
+     */
+    val semNadaAindaConhecido: Boolean get() = !semSessao && nome.isBlank() && email.isBlank()
+}
 
 /**
  * Cabeçalho do menu lateral: quem é você e em que nível está.
@@ -45,6 +65,7 @@ class MenuViewModel(
     private val me: Me,
     private val stats: Stats,
     private val sairDaConta: SairDaConta,
+    private val auth: AuthRepository,
     tokenProvider: TokenProvider,
 ) : ViewModel() {
 
@@ -66,13 +87,31 @@ class MenuViewModel(
     /** Chame DEPOIS de tratar a saída. Sem isto, a próxima saída não dispara. */
     fun consumirSaida() { _saiu.value = false }
 
+    /**
+     * O e-mail da sessão local do Firebase — a rede de segurança do cabeçalho.
+     *
+     * Relido a cada mudança de sessão, e não uma vez só: este ViewModel atravessa logout e login
+     * sem ser recriado, e um valor lido no `init` ficaria preso ao usuário anterior. É o mesmo
+     * defeito que o `uidFlow` corrigiu para os caches.
+     */
+    private val emailLocal: Flow<String> =
+        tokenProvider.uidFlow().map { uid ->
+            if (uid == null) "" else auth.usuarioLocal()?.email.orEmpty()
+        }
+
     val state: StateFlow<MenuState> =
-        combine(me.observar(), stats.observar(), tokenProvider.uidFlow()) { usuario, progresso, uid ->
+        combine(
+            me.observar(),
+            stats.observar(),
+            tokenProvider.uidFlow(),
+            emailLocal,
+        ) { usuario, progresso, uid, email ->
             MenuState(
                 id = usuario?.id.orEmpty(),
                 nome = usuario?.displayName.orEmpty(),
                 nivel = progresso?.level,
                 semSessao = uid == null,
+                email = email,
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MenuState())
 
