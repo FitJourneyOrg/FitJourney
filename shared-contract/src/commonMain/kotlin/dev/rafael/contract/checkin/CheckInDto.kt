@@ -45,6 +45,16 @@ data class CheckInDto(
     val placeName: String? = null,
 
     /**
+     * O emoji que valia no dia deste check-in (5.1, fatia D). `null` quando o grupo não exige
+     * `EMOJI_DO_DIA`.
+     *
+     * Vem do BANCO, não recalculado na leitura: a lista curada cresce, e recalcular faria o feed
+     * de meses atrás exibir um emoji que ninguém imitou. É o mesmo motivo de `title`/`body` da
+     * notificação virem renderizados (#36).
+     */
+    val emoji: String? = null,
+
+    /**
      * É meu? Resolvido no servidor, como o `myRole` do grupo — a tela não compara ids para
      * decidir o que mostrar.
      */

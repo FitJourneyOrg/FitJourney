@@ -1,0 +1,43 @@
+-- Emoji do dia no check-in (fatia D, ARCH #33 regra 5.1).
+--
+-- ============================================================================
+-- POR QUE GRAVAR, SE O EMOJI É CALCULÁVEL
+-- ============================================================================
+--
+-- O `EmojiDoDia` é função pura de `(group_id, local_date)` — dá para recalcular a qualquer momento,
+-- e por isso o SORTEIO não tem tabela nem job. Mas o resultado **daquele dia** é gravado aqui, e a
+-- diferença entre as duas coisas é a que a F.1 já pagou uma vez:
+--
+--   calcular  ->  "qual é o emoji de hoje?"           (pergunta sobre o presente)
+--   gravar    ->  "qual emoji esta pessoa imitou?"    (fato do passado)
+--
+-- A lista curada vai crescer — o Rafael já disse que acrescenta emojis depois. No instante em que
+-- ela mudar, `LISTA.size` muda, o índice do módulo muda, e **todo check-in antigo passaria a exibir
+-- um emoji que ninguém imitou**. O feed de agosto mostraria 🤝 onde a pessoa fez 💪.
+--
+-- > Registro do que houve, não consulta ao presente. Mesma razão do `title`/`body` já renderizado
+-- > da V42.
+--
+-- ============================================================================
+-- POR QUE NULLABLE
+-- ============================================================================
+--
+-- A coluna é NULL em três casos legítimos, e nenhum deles é erro:
+--
+--   1. check-ins anteriores a esta migration (não havia emoji);
+--   2. grupos que não exigem `EMOJI_DO_DIA` — a maioria;
+--   3. grupos que passarem a exigir depois: os check-ins de antes continuam NULL.
+--
+-- Um DEFAULT aqui seria pior que o NULL: preencheria com um emoji inventado um check-in que nunca
+-- teve regra de emoji, e a tela não teria como distinguir "não se aplica" de "aplicou-se e era
+-- este". NULL diz a verdade.
+--
+-- VARCHAR(16) e não CHAR(2): um emoji não é um caractere. `👍` são 2 unidades UTF-16, `✌️` leva
+-- seletor de variação, e sequências ZWJ podem passar de 10. Dimensionar por "parece um símbolo"
+-- é como o `display_name` foi dimensionado errado na primeira tentativa.
+
+ALTER TABLE check_ins ADD COLUMN emoji VARCHAR(16);
+
+-- Sem índice: ninguém consulta check-in POR emoji. Ele é lido junto da linha, no feed, e um índice
+-- aqui seria mantido a cada inserção para servir uma consulta que não existe — o mesmo raciocínio
+-- que fez o índice da purga de notificações ser parcial (V42).
