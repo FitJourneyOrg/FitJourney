@@ -11,12 +11,10 @@ import kotlinx.coroutines.flow.StateFlow
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rafael.app.data.notificacoes.ContadorDeNaoLidas
+import dev.rafael.app.data.sessao.ReagirASessao
 import dev.rafael.app.push.AvisosDePush
 import dev.rafael.app.push.PedirPermissaoDeNotificacao
-import dev.rafael.app.push.RegistroDePush
 import dev.rafael.core.network.TokenProvider
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.filterNotNull
 import dev.rafael.app.screens.notificacoes.NotificacoesScreen
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -99,40 +97,8 @@ fun AppNavHost(destinoDoPush: StateFlow<String?> = MutableStateFlow(null)) {
     // NOTIFICAÇÕES (F.1). O contador vive aqui, acima das telas, porque o ícone está na barra —
     // e a central, que o zera, é outra tela. Ver `ContadorDeNaoLidas`.
     val contador: ContadorDeNaoLidas = koinInject()
-    val registroDePush: RegistroDePush = koinInject()
     val naoLidas by contador.quantidade.collectAsStateWithLifecycle()
 
-    /*
-     * REGISTRA O APARELHO A CADA SESSÃO, e não uma vez por composição.
-     *
-     * A primeira versão era `LaunchedEffect(Unit)`, que dispara UMA vez — e a bateria mostrou o
-     * buraco: sair da conta e entrar de novo **sem matar o app** deixava o aparelho fora do
-     * `device_tokens`. A pessoa ficava sem push até reabrir, e nada na tela dizia isso.
-     *
-     * O defeito era de simetria: a BAIXA é chamada explicitamente pelo `SairDaConta`, o registro
-     * dependia de um evento de UI que o login não produz. Uma ponta explícita e a outra implícita
-     * nunca ficam sincronizadas por muito tempo.
-     *
-     * `uidFlow()` foi criado no #30 para o mesmo tipo de problema (cache chaveado por uid que não
-     * re-chaveava no login), e resolve os três momentos de uma vez: boot com sessão, login novo, e
-     * troca de conta no mesmo aparelho.
-     *
-     * `filterNotNull`: logout emite `null` e não há o que registrar — a baixa já foi feita, com o
-     * token do Firebase ainda válido, que é a única janela em que ela funciona.
-     *
-     * ## A ORDEM DOS DOIS OPERADORES É O COMPORTAMENTO
-     *
-     * `distinctUntilChanged()` vem **antes** do `filterNotNull()`, e isso não é estilo.
-     *
-     * A sequência real de uma sessão que reinicia é `"u1"` → `null` → `"u1"`. Filtrando primeiro,
-     * o `null` do logout desaparece e sobra `"u1"` seguido de `"u1"` — iguais consecutivos, que o
-     * `distinctUntilChanged` descarta. Resultado: **sair e entrar na MESMA conta não re-registrava
-     * o aparelho**, e a pessoa ficava sem push. Entrar em outra conta funcionava, o que torna o
-     * defeito ainda mais fácil de não notar.
-     *
-     * O `null` é a única coisa que separa as duas sessões. Comparar antes de descartá-lo preserva
-     * essa fronteira.
-     */
     val sessao: TokenProvider = koinInject()
 
     /*
@@ -153,14 +119,19 @@ fun AppNavHost(destinoDoPush: StateFlow<String?> = MutableStateFlow(null)) {
     val uidAtual by sessao.uidFlow().collectAsStateWithLifecycle(initialValue = null)
     if (uidAtual != null) PedirPermissaoDeNotificacao()
 
-    LaunchedEffect(Unit) {
-        sessao.uidFlow().distinctUntilChanged().filterNotNull().collect {
-            // O FCM reemite o token sozinho, e o `onNewToken` roda num Service sem sessão: ele
-            // guarda em `TokenPendente` e é aqui que o ciclo se completa.
-            registroDePush.registrar()
-            contador.atualizar()
-        }
-    }
+    /*
+     * REGISTRA O APARELHO A CADA SESSÃO — a regra mora em `ReagirASessao`, não aqui.
+     *
+     * Ela já esteve neste arquivo, e a bateria da F.1 achou dois defeitos nela que **não davam
+     * sintoma**: um `LaunchedEffect(Unit)` que não redispara no login, e a ordem invertida de
+     * `filterNotNull`/`distinctUntilChanged`, que engolia o segundo login da mesma conta.
+     *
+     * Nenhum dos dois tinha teste, porque regra dentro de `@Composable` exige compor a árvore
+     * inteira para exercitar. Extraída, ela é testada em milissegundos — inclusive a sequência
+     * `"u1"` → `null` → `"u1"`, que é onde os dois moravam.
+     */
+    val reagirASessao: ReagirASessao = koinInject()
+    LaunchedEffect(Unit) { reagirASessao.observar() }
 
     // O contador acompanha a NAVEGAÇÃO em vez de fazer polling: trocar de tela-raiz é o momento
     // em que a pessoa olha para a barra, e pedido de amizade não é feed para justificar polling.
