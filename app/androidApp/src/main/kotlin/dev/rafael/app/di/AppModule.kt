@@ -141,6 +141,19 @@ val appModule = module {
     // Bus de push: liga "chegou notificação" a "recarregue a tela". Sem ele, o badge só sobe
     // quando a pessoa sai e volta — e o push serve justamente para quem NÃO saiu.
     single { dev.rafael.app.push.AvisosDePush() }
+
+    // O que acontece a cada SESSÃO nova (boot, login, troca de conta). Saiu do `AppNavHost` para
+    // poder ser testado: os dois piores defeitos da F.1 moravam nessa regra, dentro de um
+    // Composable, sem teste possível. Portas estreitas porque o `RegistroDePush` carrega Context.
+    single {
+        val push: dev.rafael.app.push.RegistroDePush = get()
+        val contador: dev.rafael.app.data.notificacoes.ContadorDeNaoLidas = get()
+        dev.rafael.app.data.sessao.ReagirASessao(
+            sessao = get(),
+            registrarAparelho = { push.registrar() },
+            atualizarContador = { contador.atualizar() },
+        )
+    }
     // Singleton: o badge vive na barra (acima das telas) e a central é outra tela. Sem estado
     // compartilhado, marcar como lida não apagaria o badge (ver KDoc).
     single { dev.rafael.app.data.notificacoes.ContadorDeNaoLidas(get()) }
