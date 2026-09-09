@@ -4,6 +4,7 @@ import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.error.ErrorResponse
 import dev.rafael.core.result.AppError
 import dev.rafael.server.auth.FirebaseAdmin
+import dev.rafael.server.avisos.AvisosDoDia
 import dev.rafael.server.db.DatabaseFactory
 import dev.rafael.server.error.toHttp
 import dev.rafael.server.features.notificacao.services.NotificacaoService
@@ -44,6 +45,7 @@ fun Application.module() {
     configureRouting()           // já existe (HealthRoutes) — vou adicionar /me aqui
     agendarPurgaDeMidia()
     agendarPurgaDeNotificacoes()
+    agendarAvisosDoDia()
 }
 
 /**
@@ -95,6 +97,33 @@ private fun Application.agendarPurgaDeNotificacoes() {
             runCatching { servico.purgar() }
                 .onFailure { log.warn("Purga de notificações falhou; tenta no próximo ciclo", it) }
             delay(1.days)
+        }
+    }
+}
+
+/**
+ * O laço diário do grupo (fatia F): entradas agregadas, fila parada e casos de desafio encerrado.
+ *
+ * **Acorda de hora em hora, não uma vez por dia**, ao contrário das duas purgas. O corte delas não
+ * tem pressa; aqui o dia civil de cada grupo vira num instante diferente conforme o fuso, e dormir
+ * 24h faria o aviso sair com até um dia de atraso para quem está do outro lado do mundo. **Quem
+ * garante o "uma vez por dia" é a PK da V46, não o intervalo do laço** — e é por isso que acordar
+ * mais vezes é seguro.
+ *
+ * Escalonado em 8 minutos: é o terceiro laço do boot, e os três disputando o pool enquanto o app
+ * atende as primeiras requisições seria pagar no pior momento.
+ */
+private fun Application.agendarAvisosDoDia() {
+    val avisos = get<AvisosDoDia>()
+    launch {
+        delay(8.minutes)
+        while (isActive) {
+            runCatching { avisos.rodar() }
+                .onSuccess { if (it.fezAlgo) log.info("Avisos do dia: $it") }
+                // Falhar não derruba o laço: um erro hoje não pode significar que ninguém mais
+                // recebe aviso até alguém reiniciar o servidor. Mesma regra das purgas.
+                .onFailure { log.warn("Avisos do dia falharam; tenta no próximo ciclo", it) }
+            delay(AvisosDoDia.INTERVALO)
         }
     }
 }

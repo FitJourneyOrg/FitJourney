@@ -2,6 +2,7 @@ package dev.rafael.server.features.checkin.models
 
 import dev.rafael.contract.checkin.CheckInDto
 import dev.rafael.server.features.checkin.services.CheckInPolicy
+import dev.rafael.server.features.checkin.services.ModeracaoPolicy
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
 import kotlin.time.Instant
@@ -39,6 +40,19 @@ fun CheckInComAutor.toDto(
         // Derivado na hora, como o estado do grupo. A tela pode ficar aberta atravessando a
         // meia-noite, então o `DELETE` confere de novo — isto evita OFERECER o botão, não
         // substitui a regra.
-        canDelete = meu && CheckInPolicy.podeApagar(checkIn.localDate, agora, fusoDoGrupo),
+        canDelete = meu && CheckInPolicy.impedimentoParaApagar(
+            status = checkIn.status,
+            diaDoCheckIn = checkIn.localDate,
+            agora = agora,
+            fuso = fusoDoGrupo,
+        ) == null,
+        // Fatia E.2. Não consulta se ESTE leitor já denunciou — ver o KDoc do campo no contrato:
+        // seria uma quarta consulta em lote no feed para evitar uma mensagem barata.
+        canReport = ModeracaoPolicy.podeDenunciarCheckIn(
+            status = checkIn.status,
+            criadoEm = checkIn.createdAt,
+            agora = agora,
+            souOAutor = meu,
+        ) == null,
     )
 }

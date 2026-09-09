@@ -1,5 +1,6 @@
 package dev.rafael.server.media
 
+import dev.rafael.contract.checkin.CheckInStatus
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asSuccess
 import dev.rafael.server.features.checkin.db.CheckInRepository
@@ -58,6 +59,7 @@ class PurgaDeMidiaTest {
         override suspend fun doDia(groupId: Uuid, userId: Uuid, dia: LocalDate) = naoUsado()
         override suspend fun doGrupo(groupId: Uuid, limite: Int, antesDe: LocalDateTime?) = naoUsado()
         override suspend fun apagar(id: Uuid) = naoUsado()
+        override suspend fun atualizarStatus(id: Uuid, novo: CheckInStatus) = naoUsado()
         private fun naoUsado(): Nothing = error("a purga não chama isto")
     }
 

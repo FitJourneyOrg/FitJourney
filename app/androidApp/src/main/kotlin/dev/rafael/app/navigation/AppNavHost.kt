@@ -44,11 +44,15 @@ import dev.rafael.features.auth.domain.repository.AuthRepository
 import dev.rafael.features.program.domain.repository.ProgramRepository
 import org.koin.compose.koinInject
 import dev.rafael.app.screens.authentication.LoginScreen
+import dev.rafael.app.push.DestinoDePush
+import dev.rafael.app.screens.comentarios.ComentariosScreen
+import dev.rafael.app.screens.moderacao.ModeracaoScreen
 import dev.rafael.app.screens.conta.ContaScreen
 import dev.rafael.app.screens.exercise.ExerciseDetailScreen
 import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
 import dev.rafael.app.screens.grupos.EntrarScreen
 import dev.rafael.app.screens.checkin.CheckInScreen
+import dev.rafael.app.screens.grupos.AbasDoGrupo
 import dev.rafael.app.screens.grupos.GrupoDetalheScreen
 import dev.rafael.app.screens.grupos.GrupoFormScreen
 import dev.rafael.app.screens.grupos.GruposScreen
@@ -73,7 +77,7 @@ import dev.rafael.app.screens.workout.WorkoutFormScreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AppNavHost(destinoDoPush: StateFlow<String?> = MutableStateFlow(null)) {
+fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)) {
     val nav = rememberNavController()
 
     // A barra de abas só aparece nas telas-raiz. Detalhe, execução, quiz e paywall
@@ -184,13 +188,46 @@ fun AppNavHost(destinoDoPush: StateFlow<String?> = MutableStateFlow(null)) {
     LaunchedEffect(destino, naEntrada) {
         if (destino == null || naEntrada) return@LaunchedEffect
 
-        when (destino) {
-            "PEDIDO_DE_AMIZADE" -> nav.navigate(AppRoute.Amigos)
+        // Cada tipo leva ONDE SE AGE — o critério da F.1, agora com destino específico (fatia F).
+        //
+        // O `?:` depois de cada rota que depende de id não é paranoia: o `data` do push é um
+        // `Map<String,String>` sem contrato de compilação, e uma versão do servidor que mandasse o
+        // tipo sem o `groupId` faria a tela abrir vazia. **Cair na central é sempre melhor que
+        // abrir um grupo que não existe.**
+        val rota = when (destino?.tipo) {
+            "PEDIDO_DE_AMIZADE" -> AppRoute.Amigos
+
+            // Comentário abre a CONVERSA daquele check-in, não o grupo: quem recebe "alguém
+            // comentou" quer ler o comentário, e cair no feed a faria procurar o card.
+            "COMENTARIO_NO_CHECKIN" -> {
+                val g = destino?.groupId
+                val c = destino?.checkInId
+                if (g != null && c != null) AppRoute.Comentarios(g, c) else AppRoute.Notificacoes
+            }
+
+            // A fila é onde o admin AGE. Os outros dois levam ao grupo, que é onde o conteúdo
+            // está — o denunciado e o invalidado precisam ver o próprio card, não uma fila que
+            // eles nem podem abrir.
+            "DENUNCIA_NO_GRUPO", "FILA_PARADA" ->
+                destino?.groupId?.let { AppRoute.Moderacao(it) } ?: AppRoute.Notificacoes
+
+            // Os três levam ao grupo, mas **em abas diferentes** — levar ao grupo certo na aba
+            // errada é meio caminho. O card denunciado/invalidado está em POSTS; quem entrou no
+            // desafio está em MEMBROS.
+            "DENUNCIA_CONTRA_MIM", "CHECK_IN_INVALIDADO" ->
+                destino?.groupId?.let { AppRoute.GrupoDetalhe(it, AbasDoGrupo.POSTS) }
+                    ?: AppRoute.Notificacoes
+
+            "ENTRADAS_DO_DIA" ->
+                destino?.groupId?.let { AppRoute.GrupoDetalhe(it, AbasDoGrupo.MEMBROS) }
+                    ?: AppRoute.Notificacoes
+
             // Tipo que este app não conhece — vindo de uma versão mais nova do servidor. Abre a
             // central, que sabe mostrar qualquer notificação. Melhor um destino genérico que
             // funciona do que nenhum.
-            else -> nav.navigate(AppRoute.Notificacoes)
+            else -> AppRoute.Notificacoes
         }
+        nav.navigate(rota)
         // Consome DEPOIS de navegar. Sem isto, voltar da tela reexecutaria o efeito e a pessoa
         // ficaria presa em Amigos.
         (destinoDoPush as? MutableStateFlow)?.value = null
@@ -462,9 +499,33 @@ fun AppNavHost(destinoDoPush: StateFlow<String?> = MutableStateFlow(null)) {
             val rota: AppRoute.GrupoDetalhe = entry.toRoute()
             GrupoDetalheScreen(
                 groupId = rota.id,
+                abaInicial = rota.aba,
                 onBack = { nav.popBackStack() },
                 onCheckIn = { nav.navigate(AppRoute.CheckIn(rota.id)) },
                 // Ranking, posts e membros — os três levam ao mesmo lugar ([REGRA] #35).
+                onAbrirPerfil = { userId -> nav.navigate(AppRoute.Perfil(userId)) },
+                onComentarios = { checkInId ->
+                    nav.navigate(AppRoute.Comentarios(rota.id, checkInId))
+                },
+                onModeracao = { id -> nav.navigate(AppRoute.Moderacao(id)) },
+            )
+        }
+
+        composable<AppRoute.Moderacao> { entry ->
+            val rota: AppRoute.Moderacao = entry.toRoute()
+            ModeracaoScreen(
+                groupId = rota.groupId,
+                onBack = { nav.popBackStack() },
+                onAbrirPerfil = { userId -> nav.navigate(AppRoute.Perfil(userId)) },
+            )
+        }
+
+        composable<AppRoute.Comentarios> { entry ->
+            val rota: AppRoute.Comentarios = entry.toRoute()
+            ComentariosScreen(
+                groupId = rota.groupId,
+                checkInId = rota.checkInId,
+                onBack = { nav.popBackStack() },
                 onAbrirPerfil = { userId -> nav.navigate(AppRoute.Perfil(userId)) },
             )
         }

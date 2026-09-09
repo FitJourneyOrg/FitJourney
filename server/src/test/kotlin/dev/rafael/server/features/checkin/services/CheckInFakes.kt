@@ -66,6 +66,18 @@ class FakeCheckInRepository : CheckInRepository {
     }
 
     /**
+     * Escreve no MESMO mapa que a leitura consulta (fatia E.2).
+     *
+     * Um dublê que guardasse o estado em outro lugar deixaria `atualizarStatus` e `porId` contarem
+     * histórias diferentes — e o teste "invalidar tira do ranking" passaria sem que nada tivesse
+     * mudado. **O fake precisa ter uma fonte de verdade só, como o banco tem.**
+     */
+    override suspend fun atualizarStatus(id: Uuid, novo: CheckInStatus): AppResult<Unit> {
+        status[id] = novo
+        return Unit.asSuccess()
+    }
+
+    /**
      * Repete a ORDENAÇÃO do banco, incluindo o desempate.
      *
      * Um dublê que devolvesse a lista em qualquer ordem faria o teste de empate passar por
@@ -81,7 +93,14 @@ class FakeCheckInRepository : CheckInRepository {
         // Quem está no ranking são os MEMBROS, e não quem tem check-in. O dublê não conhece
         // `group_members`, então recebe a lista pelo `entradas` — e o `LEFT JOIN` de verdade, que
         // é o que faz a 2.15 valer, só o Postgres prova (ver CheckInIntegrationTest).
-        val porUsuario = porDia.values.filter { it.groupId == groupId }.groupBy { it.userId }
+        // O filtro de STATUS espelha o `status neq INVALIDADO` da consulta real (fatia E.2). Sem
+        // ele, o dublê contaria check-in invalidado e o teste do [INV] "invalidado nunca volta a
+        // contar" passaria por construção — provando o contrário do que afirma.
+        //
+        // `EM_ANALISE` CONTINUA contando, e é o mesmo `neq` que garante os dois casos (6.8).
+        val porUsuario = porDia.values
+            .filter { it.groupId == groupId && status[it.id] != CheckInStatus.INVALIDADO }
+            .groupBy { it.userId }
         val membros = (entradas.keys + porUsuario.keys).distinct()
 
         return membros
@@ -120,7 +139,12 @@ class FakeCheckInRepository : CheckInRepository {
     /** Nomes de quem fez, para o feed. Sem isto o dublê não teria como preencher o `displayName`. */
     val nomes = mutableMapOf<Uuid, String>()
 
-    /** Status por check-in — só a fatia E os muda; aqui existe para testar a guarda do apagar. */
+    /**
+     * Status por check-in. Escrito por [atualizarStatus] e lido por [comAutor] e [ranking].
+     *
+     * Público para o teste poder SEMEAR um estado inicial sem passar pela moderação — é como se
+     * afirma "o já invalidado não se apaga" sem encenar uma denúncia inteira antes.
+     */
     val status = mutableMapOf<Uuid, CheckInStatus>()
 
     private fun comAutor(n: NovoCheckIn) = CheckInComAutor(
@@ -177,4 +201,86 @@ class FakeArmazenamento : ArmazenamentoDeMidia {
      */
     override suspend fun listarRefs(anteriorA: Instant): AppResult<List<String>> =
         arquivos.keys.toList().asSuccess()
+}
+
+/**
+ * Comentários e reações em memória (fatia E.1).
+ *
+ * Existe porque o `CheckInService` passou a enriquecer o feed com contagens, e todo teste dele
+ * precisa de um. **As reações são chaveadas por `(checkInId, userId)`**, como a PK da V44 — um
+ * dublê que acumulasse numa lista deixaria a segunda reação da mesma pessoa passar aqui e falhar
+ * só em produção.
+ *
+ * Vazio por padrão: os testes de check-in não são sobre o social, e um feed sem comentários nem
+ * reações é o estado normal da maioria dos cards.
+ */
+class FakeSocialRepository : SocialRepositoryEmMemoria()
+
+/** Aberta para o `SocialServiceTest` estender com asserções próprias. */
+open class SocialRepositoryEmMemoria : dev.rafael.server.features.checkin.db.SocialRepository {
+
+    val comentarios = mutableMapOf<Uuid, dev.rafael.server.features.checkin.models.Comentario>()
+    val reacoes = mutableMapOf<Pair<Uuid, Uuid>, String>()
+
+    override suspend fun comentar(
+        novo: dev.rafael.server.features.checkin.models.NovoComentario,
+    ): AppResult<dev.rafael.server.features.checkin.models.Comentario> {
+        val c = dev.rafael.server.features.checkin.models.Comentario(
+            id = novo.id,
+            checkInId = novo.checkInId,
+            groupId = novo.groupId,
+            userId = novo.userId,
+            displayName = "Atleta",
+            body = novo.body,
+            createdAt = novo.createdAt,
+        )
+        comentarios[novo.id] = c
+        return c.asSuccess()
+    }
+
+    override suspend fun comentarios(checkInId: Uuid) =
+        comentarios.values.filter { it.checkInId == checkInId }.sortedBy { it.createdAt }.asSuccess()
+
+    override suspend fun comentario(id: Uuid) = comentarios[id].asSuccess()
+
+    override suspend fun apagarComentario(id: Uuid): AppResult<Unit> {
+        comentarios.remove(id)
+        return Unit.asSuccess()
+    }
+
+    override suspend fun contarComentarios(checkInIds: List<Uuid>) =
+        comentarios.values.filter { it.checkInId in checkInIds }
+            .groupingBy { it.checkInId }.eachCount().asSuccess()
+
+    /** A PK composta em ação: reagir de novo SUBSTITUI, não acumula. */
+    override suspend fun reagir(
+        checkInId: Uuid,
+        groupId: Uuid,
+        userId: Uuid,
+        emoji: String,
+        quando: LocalDateTime,
+    ): AppResult<Unit> {
+        reacoes[checkInId to userId] = emoji
+        return Unit.asSuccess()
+    }
+
+    override suspend fun desreagir(checkInId: Uuid, userId: Uuid): AppResult<Unit> {
+        reacoes.remove(checkInId to userId)
+        return Unit.asSuccess()
+    }
+
+    override suspend fun reacoes(checkInIds: List<Uuid>, doUsuario: Uuid) =
+        reacoes.filterKeys { it.first in checkInIds }
+            .entries
+            .groupBy { it.key.first }
+            .mapValues { (_, linhas) ->
+                linhas.groupBy { it.value }.map { (emoji, doEmoji) ->
+                    dev.rafael.server.features.checkin.models.ReacaoAgrupada(
+                        emoji = emoji,
+                        quantidade = doEmoji.size,
+                        souEu = doEmoji.any { it.key.second == doUsuario },
+                    )
+                }
+            }
+            .asSuccess()
 }

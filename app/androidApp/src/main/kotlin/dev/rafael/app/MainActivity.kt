@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import dev.rafael.app.navigation.AppNavHost
+import dev.rafael.app.push.DestinoDePush
 import dev.rafael.core.designsystem.FitJourneyTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 
@@ -18,7 +19,7 @@ class MainActivity : ComponentActivity() {
      * numa notificação com o app ABERTO chama `onNewIntent` — a tela já está composta e não seria
      * recriada com o valor novo. Um fluxo é o que faz os dois caminhos chegarem no mesmo lugar.
      */
-    private val destinoDoPush = MutableStateFlow<String?>(null)
+    private val destinoDoPush = MutableStateFlow<DestinoDePush?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
@@ -40,8 +41,8 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun lerDestino(intent: Intent?) {
-        // Só o TIPO: é ele que decide a tela. O `fromUserId` viaja junto no push e fica
-        // disponível para quando algum tipo precisar de destino mais específico.
-        destinoDoPush.value = intent?.getStringExtra("tipo")
+        // O tipo E os ids (fatia F): "alguém comentou" precisa abrir AQUELE check-in, não a lista
+        // de grupos. Os ids já viajavam no push desde a F.1 — o que faltava era ler mais de um.
+        destinoDoPush.value = DestinoDePush.de(intent)
     }
 }

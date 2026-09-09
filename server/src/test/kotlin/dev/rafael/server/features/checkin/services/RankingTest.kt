@@ -60,7 +60,7 @@ class RankingTest {
         )
         return Cenario(
             checkIns,
-            CheckInService(users, grupos, checkIns, FakeArmazenamento(), relogio),
+            CheckInService(users, grupos, checkIns, FakeArmazenamento(), FakeSocialRepository(), relogio),
             id.toString(),
         )
     }
@@ -209,7 +209,7 @@ class RankingTest {
         val grupos = FakeGroupRepository()
         val users = UserService(FakeUserRepository(listOf(ana, forasteiro)))
         val grupo = grupos.semear(admin = ana.id, inicio = LocalDate(2026, 8, 1), fim = LocalDate(2026, 9, 30))
-        val service = CheckInService(users, grupos, FakeCheckInRepository(), FakeArmazenamento(), relogio)
+        val service = CheckInService(users, grupos, FakeCheckInRepository(), FakeArmazenamento(), FakeSocialRepository(), relogio)
 
         val r = service.ranking(forasteiro.firebaseUid, forasteiro.email, grupo.toString())
 
