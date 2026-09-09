@@ -29,7 +29,14 @@ import kotlin.uuid.Uuid
  */
 object Semear {
 
-    /** Um usuário válido, com o `code` derivado do id (ver [CodigoDeTeste]). */
+    /**
+     * Um usuário válido, com o `code` derivado do id (ver [CodigoDeTeste]).
+     *
+     * ⚠️ **NÃO escreve `locale` de propósito** (V47). Assim esta linha é idêntica à de quem existia
+     * antes da migration, e é o `DEFAULT` da coluna que decide o idioma. O
+     * `IdiomaIntegrationTest.linha que nao escolheu idioma nasce em portugues` depende disso:
+     * acrescentar `locale` aqui faria aquele teste passar sem provar nada.
+     */
     fun usuario(nome: String = "Atleta"): Uuid {
         val id = Uuid.random()
         transaction {

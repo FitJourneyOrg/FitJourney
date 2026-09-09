@@ -1,6 +1,7 @@
 package dev.rafael.server.features.friendship.services
 
 import dev.rafael.contract.friendship.FriendStatus
+import dev.rafael.contract.i18n.Idioma
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asSuccess
@@ -51,6 +52,7 @@ class FriendshipServiceTest {
         ) = error("não usado")
         override suspend fun setPremium(userId: Uuid, premium: Boolean) = error("não usado")
         override suspend fun updateDisplayName(userId: Uuid, displayName: String) = error("não usado")
+        override suspend fun updateIdioma(userId: Uuid, idioma: Idioma) = error("não usado")
     }
 
     /** Chaveado pelo PAR CANÔNICO, como o banco. É o que faz o fake não mentir. */

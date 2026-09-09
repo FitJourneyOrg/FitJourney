@@ -1,5 +1,6 @@
 package dev.rafael.server.features.session.services
 
+import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.session.SetLogDto
 import dev.rafael.contract.session.WorkoutSessionDto
 import dev.rafael.core.result.AppError
@@ -37,6 +38,8 @@ class SessionServiceTest {
             AppResult.Success(user)
         override suspend fun setPremium(userId: Uuid, premium: Boolean) = AppResult.Success<User?>(user)
         override suspend fun updateDisplayName(userId: Uuid, displayName: String) =
+            AppResult.Success<User?>(user)
+        override suspend fun updateIdioma(userId: Uuid, idioma: Idioma) =
             AppResult.Success<User?>(user)
     }
 
