@@ -48,7 +48,19 @@ data class CasoAberto(
 data class AcaoDeModeracao(
     val id: Uuid,
     val groupId: Uuid,
-    val adminId: Uuid,
+    /**
+     * Quem decidiu. **Anulável** — e a exceção é o `ENCERRADO_SEM_JULGAMENTO` da V46.
+     *
+     * Era `Uuid` não-anulável até a fatia F, e a coluna já era `nullable`: o
+     * `encerrarCasosPendentes` inseria `null` **direto na tabela**, contornando este model. Duas
+     * verdades sobre a mesma coluna, e a do model era a errada.
+     *
+     * > **Model que não representa o que a tabela permite empurra alguém a contornar o model.**
+     *
+     * Achado ao escrever o teste de integração da V45 — o compilador recusou `adminId = null` num
+     * caso que o banco aceita todo dia.
+     */
+    val adminId: Uuid?,
     val alvo: ReportTarget,
     val alvoId: Uuid,
     val acao: TipoDeAcao,

@@ -1,11 +1,9 @@
 package dev.rafael.server.workout
 
+import dev.rafael.server.BancoDeTeste
 import dev.rafael.server.CodigoDeTeste
 
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
 import dev.rafael.core.result.AppResult
-import dev.rafael.server.db.Migrations
 import dev.rafael.server.features.exercise.db.ExercisesTable
 import dev.rafael.server.features.program.models.ProgramsTable
 import dev.rafael.server.features.user.db.UsersTable
@@ -18,11 +16,9 @@ import dev.rafael.server.features.workout.models.WorkoutSet
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDateTime
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -30,7 +26,6 @@ import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.testcontainers.postgresql.PostgreSQLContainer
 import kotlin.uuid.Uuid
 
 /**
@@ -46,8 +41,6 @@ import kotlin.uuid.Uuid
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class WorkoutIdempotencyIntegrationTest {
 
-    private val postgres = PostgreSQLContainer("postgres:16-alpine")
-    private lateinit var ds: HikariDataSource
     private val repo = WorkoutRepositoryImpl()
 
     private val dono = Uuid.random()
@@ -57,16 +50,10 @@ class WorkoutIdempotencyIntegrationTest {
 
     @BeforeAll
     fun setup() {
-        postgres.start()
-        ds = HikariConfig().apply {
-            jdbcUrl = postgres.jdbcUrl
-            username = postgres.username
-            password = postgres.password
-            driverClassName = "org.postgresql.Driver"
-            isAutoCommit = false
-        }.let(::HikariDataSource)
-        Migrations.run(ds)
-        Database.connect(ds)
+        BancoDeTeste.dataSource
+        // A limpeza vem ANTES do semeio: os `firebase_uid` desta classe são fixos ("uid-dono"),
+        // e o `UNIQUE` os recusaria se uma linha anterior tivesse sobrado.
+        BancoDeTeste.limpar()
 
         transaction {
             listOf(dono to "uid-dono", outro to "uid-outro").forEach { (id, uid) ->
@@ -95,12 +82,6 @@ class WorkoutIdempotencyIntegrationTest {
             // Exercício real do catálogo (FK de workout_exercises).
             exercicioId = ExercisesTable.selectAll().limit(1).single()[ExercisesTable.id]
         }
-    }
-
-    @AfterAll
-    fun teardown() {
-        ds.close()
-        postgres.stop()
     }
 
     private fun treino(id: Uuid) = Workout(
