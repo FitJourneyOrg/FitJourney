@@ -25,19 +25,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.AddAPhoto
+import androidx.compose.material.icons.outlined.AddReaction
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.Flag
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -65,10 +73,12 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import dev.rafael.app.ui.AvatarInicial
+import dev.rafael.app.ui.DialogoDeDenuncia
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.app.ui.NetworkImage
 import dev.rafael.app.ui.shimmer
 import dev.rafael.contract.checkin.CheckInDto
+import dev.rafael.contract.checkin.CheckInStatus
 import dev.rafael.contract.group.GroupDto
 import dev.rafael.contract.group.GroupMemberDto
 import dev.rafael.contract.group.GroupState
@@ -113,12 +123,23 @@ fun GrupoDetalheScreen(
      * o mesmo em toda parte, o destino também tem que ser.
      */
     onAbrirPerfil: (String) -> Unit,
+    /** A conversa de um check-in (E.1) — tela própria, não expansão no card. */
+    onComentarios: (String) -> Unit,
+    /** A fila de moderação (E.2) — tela própria, atalho só na barra do admin. */
+    onModeracao: (String) -> Unit,
+    /**
+     * Em qual aba abrir (fatia F). Só o deep link passa algo diferente de `Sobre`.
+     *
+     * Índice e não enum: quem manda é a ROTA, que não deve conhecer tipos de tela.
+     */
+    abaInicial: Int = 0,
     viewModel: GrupoDetalheViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var confirmarSaida by remember { mutableStateOf(false) }
     var alvo by remember { mutableStateOf<GroupMemberDto?>(null) }
     var alvoParaApagar by remember { mutableStateOf<CheckInDto?>(null) }
+    var alvoParaInvalidar by remember { mutableStateOf<CheckInDto?>(null) }
 
     LaunchedEffect(state.saiu) { if (state.saiu) onBack() }
 
@@ -144,6 +165,16 @@ fun GrupoDetalheScreen(
         aoTornarAdmin = { viewModel.transferirAdmin(groupId, it.userId) },
         aoRemover = { viewModel.expulsar(groupId, it.userId) },
     )
+    DialogoDeDenuncia(
+        alvo = state.denunciando?.titulo,
+        ocupado = state.ocupado,
+        erro = state.erro,
+        aoFechar = viewModel::cancelarDenuncia,
+        aoEnviar = { motivo -> viewModel.denunciar(groupId, motivo) },
+    )
+    DialogoDeInvalidacao(alvoParaInvalidar, aoFechar = { alvoParaInvalidar = null }) { item ->
+        viewModel.invalidarDireto(groupId, item.id)
+    }
 
     Scaffold(
         topBar = {
@@ -152,6 +183,27 @@ fun GrupoDetalheScreen(
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                    }
+                },
+                actions = {
+                    // O atalho da fila só existe para o admin — para o membro comum a rota
+                    // devolveria 403, e oferecer um botão que dá erro é pior que não oferecer.
+                    //
+                    // O badge é o ponto: sem ele, a fila dependeria de o admin abrir a tela por
+                    // acaso, e 6.12 diz que ele não tem prazo. O número é o único aviso até a
+                    // notificação da fatia F chegar.
+                    if (state.souAdmin) {
+                        IconButton(onClick = { onModeracao(groupId) }) {
+                            BadgedBox(
+                                badge = {
+                                    if (state.denunciasPendentes > 0) {
+                                        Badge { Text("${state.denunciasPendentes}") }
+                                    }
+                                },
+                            ) {
+                                Icon(Icons.Outlined.Shield, contentDescription = "Denúncias")
+                            }
+                        }
                     }
                 },
             )
@@ -176,7 +228,12 @@ fun GrupoDetalheScreen(
         // isso é o convite — o gargalo do produto (2-B.0), grupo que nasce vazio nasce morto. Em
         // `ATIVO` é o check-in, que é o laço diário inteiro. Cair no ranking e ter de trocar de
         // aba para agir poria a consulta na frente da ação.
-        val pager = rememberPagerState(initialPage = 0, pageCount = { ABAS.size })
+        // `coerceIn` porque o índice vem da ROTA, que é dado externo: uma versão futura do servidor
+        // mandando um número fora da faixa faria o pager estourar. Cair em Sobre é o pior caso.
+        val pager = rememberPagerState(
+            initialPage = abaInicial.coerceIn(0, ABAS.lastIndex),
+            pageCount = { ABAS.size },
+        )
         val escopo = rememberCoroutineScope()
 
         // A aba visível dita o que o polling atualiza. Sem isso, o laço de 10s buscaria feed E
@@ -223,8 +280,23 @@ fun GrupoDetalheScreen(
                             carregando = state.carregandoFeed,
                             temMais = state.temMais,
                             carregandoMais = state.carregandoMais,
+                            souAdmin = state.souAdmin,
                             onApagar = { alvoParaApagar = it },
+                            onDenunciar = {
+                                viewModel.pedirDenuncia(
+                                    AlvoDeDenuncia(
+                                        id = it.id,
+                                        ehComentario = false,
+                                        titulo = "o check-in de ${it.displayName}",
+                                    ),
+                                )
+                            },
+                            onInvalidar = { alvoParaInvalidar = it },
                             onCarregarMais = { viewModel.carregarMais(groupId) },
+                            onReagir = { checkInId, emoji ->
+                                viewModel.reagir(groupId, checkInId, emoji)
+                            },
+                            onComentarios = onComentarios,
                         )
 
                     GrupoDetalheViewModel.Aba.MEMBROS ->
@@ -255,6 +327,19 @@ private val ABAS = listOf(
     AbaDaTela(GrupoDetalheViewModel.Aba.POSTS, "Posts"),
     AbaDaTela(GrupoDetalheViewModel.Aba.MEMBROS, "Membros"),
 )
+
+/**
+ * Os índices que o deep link usa (fatia F).
+ *
+ * Constantes nomeadas e não números soltos na navegação: `GrupoDetalhe(id, 2)` no `AppNavHost` não
+ * diz nada a quem lê, e reordenar as abas quebraria o destino **em silêncio** — nada no compilador
+ * relaciona o `2` com "Posts".
+ */
+object AbasDoGrupo {
+    val SOBRE = ABAS.indexOfFirst { it.aba == GrupoDetalheViewModel.Aba.SOBRE }
+    val POSTS = ABAS.indexOfFirst { it.aba == GrupoDetalheViewModel.Aba.POSTS }
+    val MEMBROS = ABAS.indexOfFirst { it.aba == GrupoDetalheViewModel.Aba.MEMBROS }
+}
 
 // ---------------------------------------------------------------------------
 // ABA 1 — SOBRE (as especificações do desafio)
@@ -503,9 +588,14 @@ private fun AbaDePosts(
     carregando: Boolean,
     temMais: Boolean,
     carregandoMais: Boolean,
+    souAdmin: Boolean,
     onApagar: (CheckInDto) -> Unit,
+    onDenunciar: (CheckInDto) -> Unit,
+    onInvalidar: (CheckInDto) -> Unit,
     onCarregarMais: () -> Unit,
     onAbrirPerfil: (String) -> Unit,
+    onReagir: (String, String) -> Unit,
+    onComentarios: (String) -> Unit,
 ) {
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -528,7 +618,19 @@ private fun AbaDePosts(
             return@LazyColumn
         }
 
-        items(itens, key = { it.id }) { item -> ItemDoFeed(item, fusoDoGrupo, onApagar, onAbrirPerfil) }
+        items(itens, key = { it.id }) { item ->
+            ItemDoFeed(
+                item = item,
+                fusoDoGrupo = fusoDoGrupo,
+                souAdmin = souAdmin,
+                onApagar = onApagar,
+                onDenunciar = onDenunciar,
+                onInvalidar = onInvalidar,
+                onAbrirPerfil = onAbrirPerfil,
+                onReagir = onReagir,
+                onComentarios = onComentarios,
+            )
+        }
 
         if (temMais) {
             item {
@@ -633,13 +735,19 @@ private fun quandoFoi(item: CheckInDto, fusoDoGrupo: String): String {
 private fun ItemDoFeed(
     item: CheckInDto,
     fusoDoGrupo: String,
+    souAdmin: Boolean,
     onApagar: (CheckInDto) -> Unit,
+    onDenunciar: (CheckInDto) -> Unit,
+    onInvalidar: (CheckInDto) -> Unit,
     onAbrirPerfil: (String) -> Unit,
+    onReagir: (String, String) -> Unit,
+    onComentarios: (String) -> Unit,
 ) {
     Column(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.surfaceVariant),
     ) {
+        SeloDeStatus(item.status)
         item.photoUrl?.let { caminho ->
             NetworkImage(
                 // A rota é AUTENTICADA e mora na base da API, não na base de mídia dos exercícios.
@@ -674,20 +782,216 @@ private fun ItemDoFeed(
                 )
             }
             }
-            // O botão de apagar só existe quando o SERVIDOR disse que dá (`canDelete`): é meu e é
-            // hoje. A tela não recalcula a data — ela não tem o fuso do grupo nem o relógio certo.
+            // As ações do card viraram MENU na fatia E.2. Antes era um ícone de lixeira solto;
+            // com denunciar e invalidar entrando, seriam até três ícones competindo com o nome de
+            // quem postou. E denunciar merece o toque a mais: é um gesto de conflito, e um botão
+            // exposto ao lado das reações banalizaria o ato e convidaria ao toque acidental.
+            MenuDoCard(
+                item = item,
+                souAdmin = souAdmin,
+                onApagar = onApagar,
+                onDenunciar = onDenunciar,
+                onInvalidar = onInvalidar,
+            )
+        }
+
+        BarraSocial(item, onReagir, onComentarios)
+    }
+}
+
+/**
+ * A faixa que diz que este check-in está sob moderação (fatia E.2).
+ *
+ * ## Por que fica, em vez de sumir
+ *
+ * O invalidado **continua no feed, marcado**. Some seria mais limpo e apagaria a única evidência
+ * de que a moderação agiu: quem denunciou não saberia se foi atendido, e a decisão do admin — que
+ * não tem recurso (6.7) — aconteceria sem ninguém ver. **A publicidade da decisão é o freio contra
+ * o abuso de quem decide.**
+ *
+ * `EM_ANALISE` também aparece, e para todo mundo, porque a alternativa seria pior: o dono veria o
+ * próprio check-in normal e descobriria a invalidação só pelo ranking, sem entender por quê.
+ */
+@Composable
+private fun SeloDeStatus(status: CheckInStatus) {
+    if (status == CheckInStatus.VALIDO) return
+
+    val (texto, cor) = when (status) {
+        CheckInStatus.EM_ANALISE ->
+            "Em análise pelo admin · continua contando ponto" to MaterialTheme.colorScheme.tertiaryContainer
+        // A cor de erro é para o INVALIDADO e só para ele. Pintar "em análise" de vermelho
+        // condenaria antes do julgamento, e a 6.8 diz o contrário — o ponto continua valendo.
+        else -> "Invalidado pelo admin" to MaterialTheme.colorScheme.errorContainer
+        }
+
+    Row(
+        Modifier.fillMaxWidth().background(cor).padding(horizontal = 12.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Outlined.Shield,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(texto, style = MaterialTheme.typography.labelMedium)
+    }
+}
+
+/**
+ * As ações do card, atrás de três pontos (fatia E.2).
+ *
+ * Cada item existe por uma autoridade diferente, e o servidor já decidiu quais aparecem:
+ *
+ * | Item | Quem |
+ * |---|---|
+ * | Apagar | o dono, no mesmo dia (`canDelete`, 4.11) |
+ * | Denunciar | qualquer membro que não seja o dono, em 7 dias (`canReport`, 6.1) |
+ * | Invalidar | o admin, sem denúncia prévia (6.10) |
+ *
+ * **A tela não calcula nenhuma dessas condições** — as duas primeiras vêm resolvidas no DTO, e a
+ * terceira é o papel que o grupo já informou. Menu vazio não abre: um botão que não faz nada é
+ * pior que botão nenhum.
+ */
+@Composable
+private fun MenuDoCard(
+    item: CheckInDto,
+    souAdmin: Boolean,
+    onApagar: (CheckInDto) -> Unit,
+    onDenunciar: (CheckInDto) -> Unit,
+    onInvalidar: (CheckInDto) -> Unit,
+) {
+    val podeInvalidar = souAdmin && item.status != CheckInStatus.INVALIDADO
+    if (!item.canDelete && !item.canReport && !podeInvalidar) return
+
+    var aberto by remember { mutableStateOf(false) }
+
+    Box {
+        IconButton(onClick = { aberto = true }) {
+            Icon(
+                Icons.Outlined.MoreVert,
+                contentDescription = "Ações deste check-in",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        DropdownMenu(expanded = aberto, onDismissRequest = { aberto = false }) {
             if (item.canDelete) {
-                IconButton(onClick = { onApagar(item) }) {
-                    Icon(
-                        Icons.Outlined.Delete,
-                        contentDescription = "Apagar meu check-in",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                DropdownMenuItem(
+                    text = { Text("Apagar meu check-in") },
+                    leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null) },
+                    onClick = { aberto = false; onApagar(item) },
+                )
+            }
+            if (item.canReport) {
+                DropdownMenuItem(
+                    text = { Text("Denunciar") },
+                    leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = null) },
+                    onClick = { aberto = false; onDenunciar(item) },
+                )
+            }
+            if (podeInvalidar) {
+                DropdownMenuItem(
+                    // O texto diz o EFEITO, não o gesto: "invalidar" sozinho não conta que a
+                    // pessoa perde o ponto, e é isso que o admin precisa saber antes de tocar.
+                    text = { Text("Invalidar (tira o ponto)") },
+                    leadingIcon = { Icon(Icons.Outlined.Shield, contentDescription = null) },
+                    onClick = { aberto = false; onInvalidar(item) },
+                )
             }
         }
     }
 }
+
+/**
+ * Reações e comentários do card (fatia E.1).
+ *
+ * ## O card mostra o que JÁ TEM, não as seis opções
+ *
+ * Seis emojis por card num feed de 20 cards é ruído, e a maioria ficaria em zero. Aqui aparecem só
+ * as reações existentes, com a contagem — que é a informação que importa — mais um botão que abre
+ * a fileira para escolher.
+ */
+@Composable
+private fun BarraSocial(
+    item: CheckInDto,
+    onReagir: (String, String) -> Unit,
+    onComentarios: (String) -> Unit,
+) {
+    var escolhendo by remember { mutableStateOf(false) }
+
+    Column(Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp)) {
+        if (escolhendo) {
+            // A fileira dos seis, só enquanto se escolhe. Fecha ao tocar — reagir é um gesto, não
+            // um formulário.
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                REACOES.forEach { emoji ->
+                    TextButton(onClick = { escolhendo = false; onReagir(item.id, emoji) }) {
+                        Text(emoji, style = MaterialTheme.typography.titleLarge)
+                    }
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+        }
+
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            // Tocar numa reação existente PÕE a minha nela — ou tira, se já era a minha. É o
+            // gesto que todo app com reação tem, e sem ele não haveria como desfazer.
+            item.reactions.forEach { r ->
+                val minha = r.mine
+                Row(
+                    Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(
+                            if (minha) {
+                                MaterialTheme.colorScheme.primaryContainer
+                            } else {
+                                MaterialTheme.colorScheme.surface
+                            },
+                        )
+                        .clickable { onReagir(item.id, r.emoji) }
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(r.emoji, style = MaterialTheme.typography.bodyMedium)
+                    Text("${r.count}", style = MaterialTheme.typography.labelMedium)
+                }
+            }
+
+            IconButton(onClick = { escolhendo = !escolhendo }, modifier = Modifier.size(32.dp)) {
+                Icon(
+                    Icons.Outlined.AddReaction,
+                    contentDescription = "Reagir",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+
+            Spacer(Modifier.weight(1f))
+
+            // A contagem é o convite: "0 comentários" seria um botão que não promete nada, então
+            // sem nenhum o texto vira o chamado para ser o primeiro.
+            TextButton(onClick = { onComentarios(item.id) }) {
+                Text(
+                    when (item.commentCount) {
+                        0 -> "Comentar"
+                        1 -> "1 comentário"
+                        else -> "${item.commentCount} comentários"
+                    },
+                    style = MaterialTheme.typography.labelMedium,
+                )
+            }
+        }
+    }
+}
+
+/**
+ * As seis reações. Espelha a `SocialPolicy` do servidor — que é quem recusa o que não está aqui.
+ *
+ * Duplicar a lista é o mesmo trato do `MAX_COMENTARIO`: o cliente evita oferecer o que seria
+ * recusado, e quem decide continua sendo o servidor.
+ */
+private val REACOES = listOf("👍", "💪", "🔥", "👏", "😮", "❤️")
 
 // ---------------------------------------------------------------------------
 // ABA 3 — MEMBROS
@@ -792,6 +1096,38 @@ private fun DialogoDeExclusaoDeCheckIn(
         confirmButton = {
             TextButton(onClick = { aoFechar(); aoConfirmar(item) }) {
                 Text("Apagar", color = MaterialTheme.colorScheme.error)
+            }
+        },
+        dismissButton = { TextButton(onClick = aoFechar) { Text("Cancelar") } },
+    )
+}
+
+/**
+ * 6.10: o admin invalida direto, sem denúncia prévia.
+ *
+ * Confirmação porque o efeito é **irreversível** — `INVALIDADO` é terminal e não há recurso (6.7).
+ * O texto diz o que a pessoa perde, não o que o admin faz: "invalidar" é jargão de sistema, "perde
+ * o ponto no ranking" é a consequência real.
+ */
+@Composable
+private fun DialogoDeInvalidacao(
+    alvo: CheckInDto?,
+    aoFechar: () -> Unit,
+    aoConfirmar: (CheckInDto) -> Unit,
+) {
+    val item = alvo ?: return
+    AlertDialog(
+        onDismissRequest = aoFechar,
+        title = { Text("Invalidar o check-in de ${item.displayName}?") },
+        text = {
+            Text(
+                "Ele perde o ponto no ranking e a decisão não pode ser desfeita. " +
+                    "O check-in continua visível, marcado como invalidado.",
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { aoFechar(); aoConfirmar(item) }) {
+                Text("Invalidar", color = MaterialTheme.colorScheme.error)
             }
         },
         dismissButton = { TextButton(onClick = aoFechar) { Text("Cancelar") } },

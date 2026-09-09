@@ -19,6 +19,8 @@ import dev.rafael.app.screens.grupos.GrupoDetalheViewModel
 import dev.rafael.app.screens.grupos.GrupoFormViewModel
 import dev.rafael.app.screens.grupos.GruposViewModel
 import dev.rafael.app.screens.onboarding.NomeViewModel
+import dev.rafael.app.screens.comentarios.ComentariosViewModel
+import dev.rafael.app.screens.moderacao.ModeracaoViewModel
 import dev.rafael.app.screens.menu.MenuViewModel
 import dev.rafael.app.screens.amigos.AmigosViewModel
 import dev.rafael.app.screens.amigos.BloqueadosViewModel
@@ -178,6 +180,12 @@ val appModule = module {
     // Detalhe do grupo: gerência de membros (A.4) + FEED de check-ins (B.5). O `viewModelOf`
     // resolveu o `CheckIns` novo sem tocar aqui — é o que essa forma compra.
     viewModelOf(::GrupoDetalheViewModel)
+    // A conversa de um check-in (E.1). Tela própria, ViewModel próprio: reação é do card, mas
+    // comentário merece a tela inteira — e o teclado não pode tapar o feed.
+    viewModelOf(::ComentariosViewModel)
+    // A fila de moderação (E.2). Tela própria e não aba: uma quinta aba estaria visível para os
+    // 49 membros que não podem abri-la, e escondê-la faria a barra mudar conforme o papel.
+    viewModelOf(::ModeracaoViewModel)
     viewModelOf(::ProgressViewModel) // histórico offline-first + stats
     viewModelOf(::AchievementsViewModel)   // conquistas offline-first
     viewModelOf(::ProgramRevealViewModel)   // injeta ProgramRepository (revelação)

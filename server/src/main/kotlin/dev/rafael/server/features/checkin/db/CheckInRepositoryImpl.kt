@@ -126,6 +126,21 @@ class CheckInRepositoryImpl : CheckInRepository {
     override suspend fun apagar(id: Uuid): AppResult<Unit> =
         dbQuery { transaction { CheckInsTable.deleteWhere { CheckInsTable.id eq id } } }.map { }
 
+    /**
+     * Grava o novo estado. Sem `where` de estado esperado, e isso é uma escolha.
+     *
+     * Um `UPDATE ... WHERE status = 'VALIDO'` daria trava otimista de graça, mas transformaria
+     * "dois admins julgando ao mesmo tempo" num erro silencioso — zero linhas afetadas, nenhum
+     * aviso. Como as transições são idempotentes (invalidar o já invalidado dá invalidado) e há um
+     * único admin por grupo (6.7), a corrida não é real. O que é real é o registro append-only:
+     * duas decisões geram duas linhas de auditoria, e é lá que a segunda aparece.
+     */
+    override suspend fun atualizarStatus(id: Uuid, novo: CheckInStatus): AppResult<Unit> = dbQuery {
+        transaction {
+            CheckInsTable.update({ CheckInsTable.id eq id }) { it[status] = novo.name }
+        }
+    }.map { }
+
     override suspend fun ranking(groupId: Uuid): AppResult<List<LinhaDoRanking>> = dbQuery {
         transaction {
             val total = CheckInsTable.id.count().alias("total")

@@ -45,6 +45,7 @@ import dev.rafael.server.features.stats.StatsService
 import dev.rafael.server.features.stats.db.AchievementRepository
 import dev.rafael.server.features.stats.db.AchievementRepositoryImpl
 import org.koin.dsl.module
+import kotlin.uuid.Uuid
 
 val appModule = module {
     single<UserRepository> { UserRepositoryImpl() }
@@ -90,6 +91,38 @@ val appModule = module {
     single<NotificationRepository> { NotificationRepositoryImpl() }
     single<Notificador> { NotificadorFcm(get()) }
     single { NotificacaoService(get(), get(), get()) }
+
+    // ---- laço diário do grupo (fatia F: 10.6 + as duas emendas de 2026-09-07) ----
+    //
+    // Mora em `server.avisos`, fora de `features/`, porque atravessa três delas: lê membros
+    // (`group`), lê denúncias (`checkin`) e escreve notificação. Mesma escolha do `PurgaDeMidia`.
+    single<dev.rafael.server.avisos.AvisosDiariosRepository> {
+        dev.rafael.server.avisos.AvisosDiariosRepositoryImpl()
+    }
+    single {
+        dev.rafael.server.avisos.AvisosDoDia(
+            repository = get(),
+            avisar = object : dev.rafael.server.avisos.AvisosDoDia.EnviarAviso {
+                override suspend fun entradasDoDia(
+                    destinatario: Uuid,
+                    grupo: String,
+                    groupId: Uuid,
+                    quantas: Int,
+                    souOCriador: Boolean,
+                ) = get<NotificacaoService>()
+                    .avisar(destinatario, Aviso.entradasDoDia(grupo, groupId, quantas, souOCriador))
+
+                override suspend fun filaParada(
+                    admin: Uuid,
+                    grupo: String,
+                    groupId: Uuid,
+                    casos: Int,
+                    dias: Int,
+                ) = get<NotificacaoService>()
+                    .avisar(admin, Aviso.filaParada(grupo, groupId, casos, dias))
+            },
+        )
+    }
 
     // Auth: FirebaseAuth.getInstance() só é válido após FirebaseAdmin.init() (roda no boot, antes).
     single { FirebaseAuth.getInstance() }
@@ -145,11 +178,55 @@ val appModule = module {
 
     // Check-in (fatia B). O `ArmazenamentoDeMidia` vem do `midiaModule`, que é separado porque
     // precisa da pasta resolvida a partir da configuração do Ktor.
+    // Comentários e reações (E.1). Repositório próprio: o CheckInRepository já tem nove
+    // operações, e um repositório que cresce sem parar vira o lugar onde nada é encontrável.
+    single<dev.rafael.server.features.checkin.db.SocialRepository> {
+        dev.rafael.server.features.checkin.db.SocialRepositoryImpl()
+    }
+    single {
+        dev.rafael.server.features.checkin.services.SocialService(
+            get(), get(), get(), get(),
+            clock = kotlin.time.Clock.System,
+            // Porta estreita para o push (fatia F): `checkin` não importa `notificacao`. Passa pelo
+            // NotificacaoService e não pelo Notificador direto — é ele que GRAVA antes de
+            // despachar, e a gravação é o que faz a notificação sobreviver a push que não chega.
+            avisarComentario = { dono, nome, texto, groupId, checkInId ->
+                get<NotificacaoService>().avisar(
+                    dono,
+                    Aviso.comentarioNoMeuCheckIn(nome, texto, groupId, checkInId),
+                )
+            },
+        )
+    }
+
+    // Denúncia e moderação (E.2). Repositório próprio pelo mesmo motivo do social — e porque as
+    // duas tabelas dele têm políticas de integridade OPOSTAS (ver a V45).
+    single<dev.rafael.server.features.checkin.db.ModeracaoRepository> {
+        dev.rafael.server.features.checkin.db.ModeracaoRepositoryImpl()
+    }
+    single {
+        dev.rafael.server.features.checkin.services.ModeracaoService(
+            get(), get(), get(), get(), get(),
+            clock = kotlin.time.Clock.System,
+            avisos = dev.rafael.server.features.checkin.services.ModeracaoService.AvisosDeModeracao(
+                denunciaContraMim = { dono, groupId, ehComentario ->
+                    get<NotificacaoService>().avisar(dono, Aviso.denunciaContraMim(groupId, ehComentario))
+                },
+                novaDenunciaNoGrupo = { admin, nome, groupId ->
+                    get<NotificacaoService>().avisar(admin, Aviso.novaDenunciaNoGrupo(nome, groupId))
+                },
+                checkInInvalidado = { dono, nome, groupId ->
+                    get<NotificacaoService>().avisar(dono, Aviso.checkInInvalidado(nome, groupId))
+                },
+            ),
+        )
+    }
+
     single<dev.rafael.server.features.checkin.db.CheckInRepository> {
         dev.rafael.server.features.checkin.db.CheckInRepositoryImpl()
     }
     single {
         // userService + groupRepository + checkInRepository + armazenamento
-        dev.rafael.server.features.checkin.services.CheckInService(get(), get(), get(), get())
+        dev.rafael.server.features.checkin.services.CheckInService(get(), get(), get(), get(), get())
     }
 }

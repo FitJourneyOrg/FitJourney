@@ -6,6 +6,7 @@ import dev.rafael.server.auth.FirebaseUser
 import dev.rafael.server.features.checkin.services.CheckInService
 import dev.rafael.server.features.checkin.services.FakeArmazenamento
 import dev.rafael.server.features.checkin.services.FakeCheckInRepository
+import dev.rafael.server.features.checkin.services.FakeSocialRepository
 import dev.rafael.server.features.group.services.FakeGroupRepository
 import dev.rafael.server.features.group.services.FakeUserRepository
 import dev.rafael.server.features.group.services.usuario
@@ -90,7 +91,7 @@ class CheckInRoutesTest {
             fim = LocalDate(2026, 9, 30),
             regras = regras,
         )
-        val service = CheckInService(users, grupos, checkIns, disco, relogio)
+        val service = CheckInService(users, grupos, checkIns, disco, FakeSocialRepository(), relogio)
 
         application {
             modulo(
@@ -328,7 +329,7 @@ class CheckInRoutesTest {
         val forasteiro = usuario("forasteiro")
         val users = UserService(FakeUserRepository(listOf(eu, forasteiro)))
         val id = grupos.semear(admin = eu.id, inicio = LocalDate(2026, 8, 1), fim = LocalDate(2026, 9, 30), regras = setOf(GroupRule.FOTO))
-        val service = CheckInService(users, grupos, checkIns, disco, relogio)
+        val service = CheckInService(users, grupos, checkIns, disco, FakeSocialRepository(), relogio)
 
         application {
             modulo(

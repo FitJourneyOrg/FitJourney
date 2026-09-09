@@ -53,7 +53,7 @@ class CheckInServiceTest {
         val id = grupos.semear(admin = eu.id, inicio = inicio, fim = fim, regras = regras)
         return Cenario(
             grupos, checkIns, disco,
-            CheckInService(users, grupos, checkIns, disco, relogio),
+            CheckInService(users, grupos, checkIns, disco, FakeSocialRepository(), relogio),
         ) to id.toString()
     }
 
@@ -198,7 +198,7 @@ class CheckInServiceTest {
         val grupos = FakeGroupRepository()
         val users = UserService(FakeUserRepository(listOf(eu, forasteiro)))
         val grupo = grupos.semear(admin = eu.id)
-        val service = CheckInService(users, grupos, FakeCheckInRepository(), FakeArmazenamento(), relogio)
+        val service = CheckInService(users, grupos, FakeCheckInRepository(), FakeArmazenamento(), FakeSocialRepository(), relogio)
 
         val r = service.criar(forasteiro.firebaseUid, forasteiro.email, grupo.toString(), pedido())
 

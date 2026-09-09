@@ -55,6 +55,23 @@ data class CheckInDto(
     val emoji: String? = null,
 
     /**
+     * Quantos comentários este check-in tem (8.1, fatia E.1).
+     *
+     * Só a CONTAGEM no feed, nunca a lista: um card com 30 comentários viraria a tela inteira, e
+     * baixar todos para mostrar "3 comentários" seria pagar caro por um número. A lista vem numa
+     * segunda chamada, quando a pessoa abre.
+     */
+    val commentCount: Int = 0,
+
+    /**
+     * As reações agrupadas por emoji, com a minha marcada (8.2).
+     *
+     * Vem AGRUPADO do servidor. Mandar as reações cruas faria cada aparelho baixar até 50 linhas
+     * por card só para exibir "12 👍" — e o feed já é a tela mais pesada do app.
+     */
+    val reactions: List<ReactionSummaryDto> = emptyList(),
+
+    /**
      * É meu? Resolvido no servidor, como o `myRole` do grupo — a tela não compara ids para
      * decidir o que mostrar.
      */
@@ -68,4 +85,18 @@ data class CheckInDto(
      * recusa de novo na hora do `DELETE`. Isto aqui evita oferecer o botão, não substitui a regra.
      */
     val canDelete: Boolean = false,
+
+    /**
+     * Dá para denunciar (6.1, fatia E.2)? Falso para o dono, fora dos 7 dias e para o já
+     * invalidado.
+     *
+     * **Não consulta se EU já denunciei**, e a omissão é consciente: saber isso exigiria uma quarta
+     * consulta em lote no feed — que já paga contagem de comentários e agrupamento de reações — e
+     * o custo de errar é oferecer um botão que responde "você já denunciou este check-in". Barato.
+     * Esconder o botão para quem está no prazo seria bem pior.
+     *
+     * Como o `canDelete`, isto evita oferecer a ação; **não substitui a regra**, que o servidor
+     * confere de novo no `POST`.
+     */
+    val canReport: Boolean = false,
 )

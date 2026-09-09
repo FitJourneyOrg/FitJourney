@@ -1,5 +1,6 @@
 package dev.rafael.server.features.checkin.db
 
+import dev.rafael.contract.checkin.CheckInStatus
 import dev.rafael.core.result.AppResult
 import dev.rafael.server.features.checkin.models.CheckInComAutor
 import dev.rafael.server.features.checkin.models.NovoCheckIn
@@ -35,6 +36,18 @@ interface CheckInRepository {
 
     /** Apaga de verdade — é o que LIBERA o slot do dia (4.11). */
     suspend fun apagar(id: Uuid): AppResult<Unit>
+
+    /**
+     * Move o check-in na máquina de estados (fatia E.2, seção 6).
+     *
+     * O ÚNICO ponto de escrita do `status` depois da criação. Quem decide para onde ele vai é a
+     * [dev.rafael.server.features.checkin.services.ModeracaoPolicy] — este método só grava.
+     *
+     * Não devolve o estado anterior de propósito: quem chama já leu o check-in para decidir, e
+     * devolver o "antes" convidaria a usar isto como leitura, que é o começo de duas fontes de
+     * verdade para o mesmo campo.
+     */
+    suspend fun atualizarStatus(id: Uuid, novo: CheckInStatus): AppResult<Unit>
 
     /**
      * O RANKING do grupo (7.2), em UMA consulta.
