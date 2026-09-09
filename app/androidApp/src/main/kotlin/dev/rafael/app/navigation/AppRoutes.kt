@@ -20,7 +20,23 @@ sealed interface AppRoute {
 
     @Serializable data object Grupos : AppRoute
     @Serializable data object GrupoNovo : AppRoute
-    @Serializable data class GrupoDetalhe(val id: String) : AppRoute
+    /**
+     * Detalhe do desafio. [aba] escolhe qual das quatro abre (fatia F).
+     *
+     * ## Por que o deep link precisa disso
+     *
+     * "Seu check-in foi denunciado" abrindo em **Sobre** faz a pessoa trocar de aba para ver o que
+     * motivou o aviso — o card está em **Posts**. E "3 pessoas entraram" não tem nada a ver com
+     * Posts. **Levar ao grupo certo na aba errada é meio caminho**, e o critério da F.1 era levar
+     * *onde se age*.
+     *
+     * `Int` e não o enum `GrupoDetalheViewModel.Aba`: a rota é serializada pela navegação e não
+     * deve depender de um tipo de tela. O índice é o do `ABAS`, e a tela traduz.
+     *
+     * Default `0` (Sobre) mantém retrocompatível toda navegação que já existia — a lista de grupos
+     * continua chamando `GrupoDetalhe(id)` sem saber que o parâmetro existe.
+     */
+    @Serializable data class GrupoDetalhe(val id: String, val aba: Int = 0) : AppRoute
 
     /** Entrar num desafio. `inviteToken` != null = chegou por link; null = vai digitar o código. */
     @Serializable data class GrupoEntrar(val inviteToken: String? = null) : AppRoute
@@ -33,6 +49,29 @@ sealed interface AppRoute {
      * precisam sobreviver a rotação e a ida às configurações do sistema.
      */
     @Serializable data class CheckIn(val groupId: String) : AppRoute
+
+    /**
+     * A conversa de um check-in (8.1, fatia E.1).
+     *
+     * Tela própria em vez de expansão no card: o feed viraria uma lista de alturas imprevisíveis
+     * que salta a cada polling de 10s, e o teclado taparia metade do que se está lendo.
+     *
+     * Leva o **grupo** junto porque toda rota social é do grupo — é ele a fronteira de acesso
+     * ([REGRA] #33), e sem o id aqui a tela teria de descobri-lo para chamar a API.
+     */
+    @Serializable data class Comentarios(val groupId: String, val checkInId: String) : AppRoute
+
+    /**
+     * A fila de moderação do admin (6.2, fatia E.2).
+     *
+     * Tela própria, e não um modal ou uma quinta aba do detalhe. Uma aba estaria visível para os
+     * 49 membros que não podem abri-la, e escondê-la só para o admin faria a barra de abas mudar
+     * de tamanho conforme quem olha — a lista de abas passaria a depender de papel.
+     *
+     * Aqui o gesto é raro e deliberado: o admin vai à fila quando o badge sobe. Alcançada só pelo
+     * atalho na barra do detalhe, que também só existe para ele.
+     */
+    @Serializable data class Moderacao(val groupId: String) : AppRoute
 
     // Aba ainda sem implementação (placeholder) — Progresso é Fase 5 (#16).
     @Serializable data object Progresso : AppRoute

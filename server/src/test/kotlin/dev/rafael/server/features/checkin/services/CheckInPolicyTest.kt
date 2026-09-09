@@ -1,5 +1,6 @@
 package dev.rafael.server.features.checkin.services
 
+import dev.rafael.contract.checkin.CheckInStatus
 import dev.rafael.contract.group.GroupRule
 import dev.rafael.contract.group.GroupState
 import kotlinx.datetime.LocalDate
@@ -98,23 +99,63 @@ class CheckInPolicyTest {
         )
     }
 
-    // ---- apagar só no mesmo dia (4.11) ----
+    // ---- apagar: prazo (4.11) + moderação (seção 6) ----
+
+    /** Atalho para os casos em que o estado não é o assunto. */
+    private fun impedimento(
+        dia: LocalDate,
+        agora: String,
+        status: CheckInStatus = CheckInStatus.VALIDO,
+    ) = CheckInPolicy.impedimentoParaApagar(status, dia, Instant.parse(agora), saoPaulo)
 
     @Test
     fun `apagar vale ate a virada do dia NO FUSO DO GRUPO`() {
         val feitoEm = LocalDate(2026, 8, 24)
 
         // 23h59 em São Paulo (= 02h59 UTC do dia 25): ainda é o dia 24 para o grupo.
-        assertTrue(CheckInPolicy.podeApagar(feitoEm, Instant.parse("2026-08-25T02:59:00Z"), saoPaulo))
+        assertNull(impedimento(feitoEm, "2026-08-25T02:59:00Z"))
 
         // 00h01 em São Paulo: virou. Acabou a janela.
-        assertFalse(CheckInPolicy.podeApagar(feitoEm, Instant.parse("2026-08-25T03:01:00Z"), saoPaulo))
+        assertEquals(ApagarBlock.PRAZO, impedimento(feitoEm, "2026-08-25T03:01:00Z"))
     }
 
     @Test
     fun `check-in de ontem nao se apaga`() {
-        assertFalse(
-            CheckInPolicy.podeApagar(LocalDate(2026, 8, 20), Instant.parse("2026-08-24T12:00:00Z"), saoPaulo),
+        assertEquals(ApagarBlock.PRAZO, impedimento(LocalDate(2026, 8, 20), "2026-08-24T12:00:00Z"))
+    }
+
+    /**
+     * ⭐ [REGRA de 2026-09-07] Check-in sob moderação não se apaga — **nem no mesmo dia**.
+     *
+     * A 4.11 diz que apagar libera o slot. Sem isto, quem fosse invalidado apagaria e refaria,
+     * desfazendo a decisão do admin com dois toques — num sistema onde "decisões do admin são
+     * imutáveis".
+     *
+     * `EM_ANALISE` é a metade que se esquece: bloquear só o invalidado deixaria a fuga um passo
+     * mais cedo, esvaziando a fila do admin antes do julgamento.
+     */
+    @Test
+    fun `check-in sob moderacao nao se apaga, mesmo sendo hoje`() {
+        val hoje = LocalDate(2026, 8, 24)
+        val agoraNoDia = "2026-08-24T15:00:00Z"
+
+        assertEquals(ApagarBlock.SOB_MODERACAO, impedimento(hoje, agoraNoDia, CheckInStatus.EM_ANALISE))
+        assertEquals(ApagarBlock.SOB_MODERACAO, impedimento(hoje, agoraNoDia, CheckInStatus.INVALIDADO))
+        assertNull(impedimento(hoje, agoraNoDia, CheckInStatus.VALIDO), "o válido de hoje se apaga")
+    }
+
+    /**
+     * A ORDEM das recusas, quando as duas se aplicam.
+     *
+     * Um check-in invalidado E de ontem: se o prazo viesse primeiro, a tela diria "só dá para
+     * apagar no mesmo dia" — sugerindo que apagar rápido teria desfeito a decisão do admin, que é
+     * exatamente a brecha que a regra fecha. **A mensagem errada ensina a regra errada.**
+     */
+    @Test
+    fun `moderacao vem antes do prazo quando as duas valem`() {
+        assertEquals(
+            ApagarBlock.SOB_MODERACAO,
+            impedimento(LocalDate(2026, 8, 20), "2026-08-24T12:00:00Z", CheckInStatus.INVALIDADO),
         )
     }
 

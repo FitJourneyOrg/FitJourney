@@ -1,5 +1,6 @@
 package dev.rafael.server.features.checkin.services
 
+import dev.rafael.contract.checkin.CheckInStatus
 import dev.rafael.contract.group.GroupRule
 import dev.rafael.contract.group.GroupState
 import kotlinx.datetime.LocalDate
@@ -64,14 +65,37 @@ object CheckInPolicy {
     }
 
     /**
-     * Ainda dá para apagar (4.11)? Só o dono, só no MESMO dia do grupo.
+     * O que impede de apagar (4.11)? `null` = pode. Só o dono, e só se **nada** disto valer.
      *
      * **Por que só no mesmo dia:** atende o arrependimento honesto — foto tremida, local errado —
      * sem virar brecha para mexer no ranking dias depois. Apagar libera o slot, o que é o que faz
      * a regra conversar com o índice único; sem isso, apagar seria uma armadilha.
+     *
+     * **Por que o STATUS entra aqui, e não só no serviço** *(corrigido em 2026-09-07, passo 21 da
+     * bateria E.2)*: a guarda da moderação vivia apenas no `apagar` do serviço, e o `canDelete` do
+     * DTO só olhava a data. O resultado foi um menu oferecendo "Apagar meu check-in" num check-in
+     * invalidado — o servidor recusaria, mas depois do toque.
+     *
+     * > **Duas fontes de verdade para a mesma pergunta divergem na primeira que alguém esquecer.**
+     * > A regra é uma; o serviço e o DTO agora leem a mesma função.
+     *
+     * Devolve um enum e não um booleano porque o serviço precisa escolher entre duas mensagens
+     * diferentes — mesma forma do [CheckInBlock] e do
+     * [dev.rafael.server.features.checkin.services.DenunciaBlock].
      */
-    fun podeApagar(diaDoCheckIn: LocalDate, agora: Instant, fuso: TimeZone): Boolean =
-        diaDoCheckIn == diaDoGrupo(agora, fuso)
+    fun impedimentoParaApagar(
+        status: CheckInStatus,
+        diaDoCheckIn: LocalDate,
+        agora: Instant,
+        fuso: TimeZone,
+    ): ApagarBlock? = when {
+        // A moderação vem ANTES do prazo, e a ordem importa. Um check-in invalidado hoje se
+        // encaixa nas duas recusas; dizer "o prazo acabou" sugeriria que apagar rápido teria
+        // desfeito a decisão do admin — que é exatamente a brecha que a regra fecha.
+        status != CheckInStatus.VALIDO -> ApagarBlock.SOB_MODERACAO
+        diaDoCheckIn != diaDoGrupo(agora, fuso) -> ApagarBlock.PRAZO
+        else -> null
+    }
 
     /** Teto da 5.2 — o nome do lugar é rótulo, não endereço. */
     const val MAX_NOME_DO_LOCAL = 60
@@ -84,6 +108,21 @@ object CheckInPolicy {
      * mascarado na saída, um `SELECT` continuaria expondo onde a pessoa mora.
      */
     fun arredondar(valor: Double): Double = kotlin.math.round(valor * 100) / 100
+}
+
+/** Por que não dá para apagar o próprio check-in (4.11 + seção 6). */
+enum class ApagarBlock {
+    /** Já passou o dia. */
+    PRAZO,
+
+    /**
+     * Está `EM_ANALISE` ou `INVALIDADO`.
+     *
+     * Vale para os dois estados, e a metade que se esquece é o `EM_ANALISE`: bloquear só o
+     * invalidado deixaria a fuga um passo mais cedo — apagar antes do julgamento, esvaziando a
+     * fila do admin.
+     */
+    SOB_MODERACAO,
 }
 
 /** Por que não dá para fazer check-in. Enum e não frase: a tela escreve o texto (#31). */

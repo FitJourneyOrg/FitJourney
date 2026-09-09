@@ -4,7 +4,11 @@ import dev.rafael.server.db.DatabaseFactory
 import dev.rafael.server.features.exercise.routes.exerciseRoutes
 import dev.rafael.server.features.exercise.services.ExerciseService
 import dev.rafael.server.features.checkin.routes.checkInRoutes
+import dev.rafael.server.features.checkin.routes.moderacaoRoutes
+import dev.rafael.server.features.checkin.routes.socialRoutes
 import dev.rafael.server.features.checkin.services.CheckInService
+import dev.rafael.server.features.checkin.services.ModeracaoService
+import dev.rafael.server.features.checkin.services.SocialService
 import dev.rafael.server.features.group.routes.groupMembershipRoutes
 import dev.rafael.server.features.group.routes.groupRoutes
 import dev.rafael.server.features.group.services.GroupMembershipService
@@ -68,6 +72,8 @@ fun Application.configureRouting() {
     val groupService = get<GroupService>()
     val groupMembershipService = get<GroupMembershipService>()
     val checkInService = get<CheckInService>()
+    val socialService = get<SocialService>()
+    val moderacaoService = get<ModeracaoService>()
     val mediaDir = resolveMediaDir(
         environment.config.propertyOrNull("media.dir")?.getString() ?: "gifs_exercicios",
     )
@@ -90,6 +96,8 @@ fun Application.configureRouting() {
         groupRoutes(groupService)
         groupMembershipRoutes(groupMembershipService)
         checkInRoutes(checkInService)
+        socialRoutes(socialService)
+        moderacaoRoutes(moderacaoService)
 
         get("/health") {
             val dbOk = DatabaseFactory.isHealthy()
