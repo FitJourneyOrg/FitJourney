@@ -1,28 +1,23 @@
 package dev.rafael.server.engine
 
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
+import dev.rafael.server.BancoDeTeste
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.ProfileDto
 import dev.rafael.contract.profile.TrainingEnvironment
-import dev.rafael.server.db.Migrations
 import dev.rafael.server.features.exercise.db.ExercisesTable
 import dev.rafael.server.features.exercise.engine.DeterministicWorkoutGenerator
 import dev.rafael.server.features.exercise.engine.ExercisePreFilter
 import dev.rafael.server.features.exercise.engine.StructureEngine
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.inList
-import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.testcontainers.postgresql.PostgreSQLContainer
 import kotlin.uuid.Uuid
 
 /**
@@ -37,28 +32,14 @@ import kotlin.uuid.Uuid
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class WorkoutGenerationIntegrationTest {
 
-    private val postgres = PostgreSQLContainer("postgres:16-alpine")
-    private lateinit var ds: HikariDataSource
     private val generator by lazy { DeterministicWorkoutGenerator(StructureEngine(), ExercisePreFilter()) }
 
     @BeforeAll
     fun setup() {
-        postgres.start()
-        ds = HikariConfig().apply {
-            jdbcUrl = postgres.jdbcUrl
-            username = postgres.username
-            password = postgres.password
-            driverClassName = "org.postgresql.Driver"
-            isAutoCommit = false
-        }.let(::HikariDataSource)
-        Migrations.run(ds)     // aplica todas as migrations = seed do catálogo (V4/V9/V14/V15)
-        Database.connect(ds)   // Exposed conecta (o ExercisePreFilter usa transaction {})
-    }
-
-    @AfterAll
-    fun teardown() {
-        ds.close()
-        postgres.stop()
+        // O catálogo de exercícios (seed das V4/V9/V14/V15) é o único dado de que esta classe
+        // precisa — e é justamente o que o `limpar()` NÃO trunca, por ser dado de referência.
+        BancoDeTeste.dataSource
+        BancoDeTeste.limpar()
     }
 
     // ========================= EDITE AQUI o "questionário do onboarding" =========================

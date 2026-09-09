@@ -1,25 +1,20 @@
 package dev.rafael.server.stats
 
+import dev.rafael.server.BancoDeTeste
 import dev.rafael.server.CodigoDeTeste
 
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
 import dev.rafael.core.result.AppResult
-import dev.rafael.server.db.Migrations
 import dev.rafael.server.features.stats.db.AchievementRepositoryImpl
 import dev.rafael.server.features.user.db.UsersTable
 import kotlinx.coroutines.runBlocking
-import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.testcontainers.postgresql.PostgreSQLContainer
 import kotlin.uuid.Uuid
 
 /**
@@ -38,18 +33,17 @@ import kotlin.uuid.Uuid
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AchievementGrantIntegrationTest {
 
-    private val postgres = PostgreSQLContainer("postgres:16-alpine")
-    private lateinit var ds: HikariDataSource
     private val repo = AchievementRepositoryImpl()
 
     /**
      * Cada teste cria o SEU usuário.
      *
      * A primeira versão compartilhava um só, e quebrou na hora: JUnit não garante ordem, então
-     * um teste que concede NIVEL_5 fazia o `assertEquals` de outro enxergar chave a mais. Com
-     * container `PER_CLASS` (caro de subir), o isolamento tem de vir da CHAVE — a mesma lição
-     * do uid no cliente. Relaxar a asserção para `contains` esconderia o problema em vez de
-     * resolvê-lo, e um teste que depende de ordem é defeito esperando acontecer.
+     * um teste que concede NIVEL_5 fazia o `assertEquals` de outro enxergar chave a mais. A
+     * limpeza acontece uma vez por CLASSE — nunca por teste —, então o isolamento tem de vir da
+     * CHAVE, a mesma lição do uid no cliente. Relaxar a asserção para `contains` esconderia o
+     * problema em vez de resolvê-lo, e um teste que depende de ordem é defeito esperando
+     * acontecer.
      */
     private fun novoUsuario(): Uuid {
         val id = Uuid.random()
@@ -68,23 +62,8 @@ class AchievementGrantIntegrationTest {
 
     @BeforeAll
     fun setup() {
-        postgres.start()
-        ds = HikariConfig().apply {
-            jdbcUrl = postgres.jdbcUrl
-            username = postgres.username
-            password = postgres.password
-            driverClassName = "org.postgresql.Driver"
-            isAutoCommit = false
-        }.let(::HikariDataSource)
-        Migrations.run(ds)   // inclui V34 e V35
-        Database.connect(ds)
-
-    }
-
-    @AfterAll
-    fun teardown() {
-        ds.close()
-        postgres.stop()
+        BancoDeTeste.dataSource
+        BancoDeTeste.limpar()
     }
 
     private fun <T> ok(r: AppResult<T>): T = (r as AppResult.Success).value
