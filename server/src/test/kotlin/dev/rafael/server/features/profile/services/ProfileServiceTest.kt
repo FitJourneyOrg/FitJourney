@@ -3,6 +3,7 @@ package dev.rafael.server.features.profile.services
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.ProfileDto
+import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.profile.TrainingEnvironment
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -35,6 +36,8 @@ class ProfileServiceTest {
         ) = error("não deveria ser chamado")
         override suspend fun setPremium(userId: kotlin.uuid.Uuid, premium: Boolean) = error("não deveria ser chamado")
         override suspend fun updateDisplayName(userId: kotlin.uuid.Uuid, displayName: String) =
+            error("não deveria ser chamado")
+        override suspend fun updateIdioma(userId: kotlin.uuid.Uuid, idioma: Idioma) =
             error("não deveria ser chamado")
     }
     private val stubProfileRepo = object : ProfileRepository {

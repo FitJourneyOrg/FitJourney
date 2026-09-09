@@ -1,6 +1,7 @@
 package dev.rafael.server.features.user.services
 
 import dev.rafael.contract.friendship.FriendStatus
+import dev.rafael.contract.i18n.Idioma
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asSuccess
@@ -52,6 +53,8 @@ class PublicProfileServiceTest {
 
         override suspend fun setPremium(userId: Uuid, premium: Boolean) = error("não deveria ser chamado")
         override suspend fun updateDisplayName(userId: Uuid, displayName: String) =
+            error("não deveria ser chamado")
+        override suspend fun updateIdioma(userId: Uuid, idioma: Idioma) =
             error("não deveria ser chamado")
     }
 

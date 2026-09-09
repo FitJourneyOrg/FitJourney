@@ -12,7 +12,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer
  *
  * ## Por que deixou de ser um container por classe
  *
- * Cada classe subia o próprio container e rodava as **46 migrations** do zero: ~5s de boot mais
+ * Cada classe subia o próprio container e rodava as **47 migrations** do zero: ~5s de boot mais
  * ~2,5s de schema, oito vezes. Com os arquivos de V40–V46 seriam treze — e **suíte lenta é suíte
  * que ninguém roda**.
  *
@@ -43,7 +43,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer
  *   tempo, e o teste que quebra aponta para cá;
  * - o `TRUNCATE ... CASCADE` é mais rápido que subir container, então cada classe continua
  *   começando de um banco vazio;
- * - o schema é aplicado **uma vez**, o que também testa que as 46 migrations convivem — que é o
+ * - o schema é aplicado **uma vez**, o que também testa que as 47 migrations convivem — que é o
  *   que o `MigrationIntegrationTest` afirma de propósito, e continua fazendo com container próprio;
  * - **doze das treze classes** compartilham o mesmo Postgres, o que tirou da suíte os oito boots
  *   que ela pagava só para chegar num banco vazio.
