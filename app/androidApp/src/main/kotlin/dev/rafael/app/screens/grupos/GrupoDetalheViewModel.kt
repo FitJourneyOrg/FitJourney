@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.rafael.app.data.checkin.CheckIns
 import dev.rafael.app.data.groups.Groups
 import dev.rafael.contract.checkin.CheckInDto
+import dev.rafael.contract.checkin.ReactionSummaryDto
 import dev.rafael.contract.group.GroupDto
 import dev.rafael.contract.group.RankingEntryDto
 import dev.rafael.contract.group.GroupMemberDto
@@ -20,6 +21,19 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.seconds
+
+/**
+ * O que está sendo denunciado, enquanto o diálogo está aberto (fatia E.2).
+ *
+ * Carrega o `titulo` já pronto em vez de o id sozinho: a tela precisa dizer O QUE se está
+ * denunciando ("o check-in de Ana", "o comentário de João"), e buscar isso de novo na lista no
+ * momento de desenhar exporia o diálogo ao polling — o item pode ter saído do feed.
+ */
+data class AlvoDeDenuncia(
+    val id: String,
+    val ehComentario: Boolean,
+    val titulo: String,
+)
 
 data class GrupoDetalheState(
     val grupo: GroupDto? = null,
@@ -45,6 +59,22 @@ data class GrupoDetalheState(
     val ocupado: Boolean = false,
     val erro: AppError? = null,
     val saiu: Boolean = false,
+
+    /**
+     * Quantos casos esperam o admin (fatia E.2). Zero para membro comum — ele nem consulta.
+     *
+     * Fica no estado do detalhe, e não numa tela própria, porque é a BARRA que o mostra: o admin
+     * precisa saber que há algo a julgar sem abrir a fila para descobrir.
+     */
+    val denunciasPendentes: Int = 0,
+
+    /**
+     * O alvo do diálogo de denúncia aberto, ou `null`.
+     *
+     * O diálogo é do ViewModel e não da tela porque o motivo é obrigatório e a chamada é
+     * assíncrona: um `remember` local perderia o texto na primeira recomposição vinda do polling.
+     */
+    val denunciando: AlvoDeDenuncia? = null,
 ) {
     val souAdmin: Boolean get() = grupo?.myRole == MemberRole.ADMIN
 
@@ -271,6 +301,10 @@ class GrupoDetalheViewModel(
                     // que se vê, e o feed logo atrás. Depois disso, só a aba visível se atualiza.
                     carregarFeed(groupId)
                     carregarRanking(groupId)
+                    // Depois de `grupo` estar no estado: `carregarPendentes` consulta `souAdmin`,
+                    // que vem do grupo. Chamado antes, sairia sem fazer nada — e o badge só
+                    // apareceria na segunda abertura da tela.
+                    carregarPendentes(groupId)
                 }
             }
         }
@@ -301,6 +335,141 @@ class GrupoDetalheViewModel(
      * composição do grupo. Sem isto, cada botão repetiria o mesmo cerimonial e um deles
      * esqueceria de recarregar — e a tela mostraria alguém que acabou de ser expulso.
      */
+    // ---- reações (fatia E.1) ----
+    //
+    // Comentários NÃO ficam aqui: eles têm tela própria (`ComentariosScreen`), com ViewModel
+    // próprio. Reação é do CARD — um toque que muda um número na hora —, comentário é uma
+    // conversa que merece o espaço da tela e o campo de texto sem o teclado cobrindo o feed.
+
+    /**
+     * Põe, TROCA ou tira a reação (8.2).
+     *
+     * Tocar no emoji que já é o meu **tira** — é o gesto que todo app com reação tem, e sem ele
+     * não haveria como desfazer sem escolher outro.
+     *
+     * **Escrita otimista aqui**, ao contrário do resto da fatia: reagir é o gesto mais barato do
+     * feed, e esperar a rede para pintar o botão faria cada toque parecer travado. Se falhar, a
+     * recarga do feed desfaz — e o custo de um emoji errado por dois segundos é nenhum. É o mesmo
+     * critério do #30: **dado velho só é perigoso quando vira AÇÃO errada**, e aqui não vira.
+     */
+    fun reagir(groupId: String, checkInId: String, emoji: String) {
+        val atual = _state.value.feed.firstOrNull { it.id == checkInId } ?: return
+        val minhaAtual = atual.reactions.firstOrNull { it.mine }?.emoji
+        val tirando = minhaAtual == emoji
+
+        _state.update { s ->
+            s.copy(feed = s.feed.map { if (it.id == checkInId) it.comReacao(emoji, tirando) else it })
+        }
+
+        viewModelScope.launch {
+            val r = if (tirando) {
+                checkIns.desreagir(groupId, checkInId)
+            } else {
+                checkIns.reagir(groupId, checkInId, emoji)
+            }
+            // Falhou: recarrega o feed e a verdade do servidor volta. Não mostro erro — o gesto é
+            // pequeno demais para interromper a pessoa com um aviso.
+            if (r is AppResult.Failure) carregarFeed(groupId)
+        }
+    }
+
+    /** Recalcula as contagens localmente, do jeito que o servidor recalcularia. */
+    private fun CheckInDto.comReacao(emoji: String, tirando: Boolean): CheckInDto {
+        val semAMinha = reactions.mapNotNull { r ->
+            if (!r.mine) r else (r.copy(count = r.count - 1, mine = false)).takeIf { it.count > 0 }
+        }
+        if (tirando) return copy(reactions = semAMinha)
+
+        val jaTem = semAMinha.any { it.emoji == emoji }
+        val comAMinha = if (jaTem) {
+            semAMinha.map { if (it.emoji == emoji) it.copy(count = it.count + 1, mine = true) else it }
+        } else {
+            semAMinha + ReactionSummaryDto(emoji, 1, mine = true)
+        }
+        // Mesma ordem do servidor: sem isto, o botão dança de lugar entre a escrita otimista e a
+        // resposta real.
+        return copy(reactions = comAMinha.sortedWith(compareByDescending<ReactionSummaryDto> { it.count }.thenBy { it.emoji }))
+    }
+
+    // ---- denúncia (fatia E.2) ----
+
+    /**
+     * Abre o diálogo. Nada vai à rede aqui — o motivo é obrigatório e ainda não foi escrito.
+     *
+     * **Limpa o erro ao abrir.** Sem isso, o diálogo do próximo check-in nasceria mostrando a
+     * recusa do anterior — e a pessoa leria "você já denunciou este check-in" sobre um que ela
+     * nunca tocou.
+     */
+    fun pedirDenuncia(alvo: AlvoDeDenuncia) =
+        _state.update { it.copy(denunciando = alvo, erro = null) }
+
+    fun cancelarDenuncia() = _state.update { it.copy(denunciando = null, erro = null) }
+
+    /**
+     * Envia a denúncia. **Sem otimismo**, ao contrário da reação.
+     *
+     * A diferença é o critério do #30: dado velho só é perigoso quando vira AÇÃO errada. Um emoji
+     * errado por dois segundos não faz nada; "sua denúncia foi enviada" quando ela não foi faz a
+     * pessoa parar de esperar uma resposta que nunca virá. **Confirmação otimista de um ato que
+     * depende de outra pessoa é mentira com prazo.**
+     */
+    fun denunciar(groupId: String, motivo: String) {
+        val alvo = _state.value.denunciando ?: return
+        _state.update { it.copy(ocupado = true, erro = null) }
+
+        viewModelScope.launch {
+            val r = if (alvo.ehComentario) {
+                checkIns.denunciarComentario(groupId, alvo.id, motivo)
+            } else {
+                checkIns.denunciarCheckIn(groupId, alvo.id, motivo)
+            }
+            _state.update {
+                it.copy(
+                    ocupado = false,
+                    erro = (r as? AppResult.Failure)?.error,
+                    // O diálogo só fecha quando deu certo: fechar na falha apagaria o texto que a
+                    // pessoa escreveu, e ela teria de redigir tudo de novo para tentar outra vez.
+                    denunciando = if (r is AppResult.Success) null else it.denunciando,
+                )
+            }
+            // O feed muda: o check-in denunciado passa a EM_ANALISE e perde o `canReport`.
+            if (r is AppResult.Success && !alvo.ehComentario) carregarFeed(groupId)
+        }
+    }
+
+    /**
+     * O contador do badge. Só o admin chama — membro comum receberia 403.
+     *
+     * Falha em silêncio, como o feed: um badge que não subiu é menos ruim que um erro vermelho na
+     * barra por causa de um tropeço de rede.
+     */
+    /**
+     * 6.10: o admin invalida direto.
+     *
+     * Recarrega feed E ranking: o selo muda no card e o ponto sai da contagem. Recarregar só o
+     * feed deixaria a posição antiga na aba do lado — o mesmo defeito que o `apagarCheckIn`
+     * evitou.
+     */
+    fun invalidarDireto(groupId: String, checkInId: String) = agir(groupId) {
+        val erro = (checkIns.invalidar(groupId, checkInId) as? AppResult.Failure)?.error
+        if (erro == null) {
+            carregarFeed(groupId)
+            carregarRanking(groupId)
+            // A invalidação direta FECHA as denúncias abertas daquele check-in: o badge tem de
+            // descer junto, senão a fila prometeria um caso que não existe mais.
+            carregarPendentes(groupId)
+        }
+        erro
+    }
+
+    fun carregarPendentes(groupId: String) {
+        if (!_state.value.souAdmin) return
+        viewModelScope.launch {
+            val r = checkIns.pendentes(groupId)
+            if (r is AppResult.Success) _state.update { it.copy(denunciasPendentes = r.value) }
+        }
+    }
+
     private fun agir(groupId: String, recarrega: Boolean = false, bloco: suspend () -> AppError?) {
         // `update` e não leitura-e-escrita: o polling do feed escreve no MESMO estado a partir de
         // outra corrotina, e `bloco()` suspende no meio. É exatamente a corrida que fez a lista de

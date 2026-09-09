@@ -1,6 +1,7 @@
 package dev.rafael.server.features.checkin.services
 
 import dev.rafael.contract.checkin.CheckInDto
+import dev.rafael.contract.checkin.ReactionSummaryDto
 import dev.rafael.contract.group.GroupRule
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -8,6 +9,7 @@ import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.core.result.flatMap
 import dev.rafael.server.features.checkin.db.CheckInRepository
+import dev.rafael.server.features.checkin.db.SocialRepository
 import dev.rafael.server.features.checkin.models.CheckIn
 import dev.rafael.server.features.checkin.models.CheckInComAutor
 import dev.rafael.server.features.checkin.models.NovoCheckIn
@@ -59,6 +61,14 @@ class CheckInService(
     private val groups: GroupRepository,
     private val repository: CheckInRepository,
     private val midia: ArmazenamentoDeMidia,
+    /**
+     * Comentários e reações (E.1), só para ENRIQUECER o feed com contagens.
+     *
+     * O `SocialService` é quem escreve; este serviço apenas lê o resumo, e em lote. Se o feed
+     * chamasse o outro serviço, as guardas de filiação rodariam duas vezes por requisição — e a
+     * deste método já rodou.
+     */
+    private val social: SocialRepository,
     private val clock: Clock = Clock.System,
 ) {
 
@@ -148,23 +158,32 @@ class CheckInService(
             if (alvo == null || alvo.groupId != grupo.id || alvo.userId != user.id) {
                 return@flatMap naoEncontrado()
             }
-            if (!CheckInPolicy.podeApagar(alvo.localDate, clock.now(), grupo.timezone)) {
-                return@flatMap AppError.Conflict(
-                    "Só dá para apagar um check-in no mesmo dia em que ele foi feito.",
-                    CODE_PRAZO_DE_EXCLUSAO,
-                ).asFailure()
-            }
-            // [PROPOSTA — a ratificar na fatia E] check-in INVALIDADO não se apaga.
+            // A MESMA função que resolve o `canDelete` do DTO (`CheckInMapper`).
             //
-            // A 4.11 diz "apagar libera o slot" e o invariante diz "invalidado nunca volta a
-            // contar". Juntas, permitiriam apagar-e-refazer para desfazer a decisão do admin — e
-            // "decisões do admin são imutáveis". Hoje não morde (invalidação só existe na E), mas
-            // deixar a brecha aberta seria plantá-la.
-            if (alvo.status != CheckInStatus.VALIDO) {
-                return@flatMap AppError.Conflict(
-                    "Este check-in está em análise e não pode ser apagado.",
-                    CODE_EM_ANALISE,
-                ).asFailure()
+            // Antes eram duas: o serviço checava prazo E status, o mapper só o prazo. O menu do
+            // card oferecia "Apagar meu check-in" num check-in invalidado, e o servidor recusava
+            // depois do toque — defeito achado no passo 21 da bateria E.2.
+            //
+            // [REGRA — ratificada em 2026-09-07] check-in sob moderação não se apaga. A 4.11 diz
+            // "apagar libera o slot" e o invariante diz "invalidado nunca volta a contar"; juntas,
+            // permitiriam apagar-e-refazer para desfazer a decisão do admin. Vale para os DOIS
+            // estados: bloquear só o invalidado deixaria a fuga um passo mais cedo.
+            CheckInPolicy.impedimentoParaApagar(
+                status = alvo.status,
+                diaDoCheckIn = alvo.localDate,
+                agora = clock.now(),
+                fuso = grupo.timezone,
+            )?.let { bloco ->
+                return@flatMap when (bloco) {
+                    ApagarBlock.PRAZO -> AppError.Conflict(
+                        "Só dá para apagar um check-in no mesmo dia em que ele foi feito.",
+                        CODE_PRAZO_DE_EXCLUSAO,
+                    )
+                    ApagarBlock.SOB_MODERACAO -> AppError.Conflict(
+                        "Este check-in está sob moderação e não pode ser apagado.",
+                        CODE_EM_ANALISE,
+                    )
+                }.asFailure()
             }
 
             // A LINHA primeiro, o arquivo depois — e nessa ordem de propósito.
@@ -200,7 +219,22 @@ class CheckInService(
         }
         repository.doGrupo(grupo.id, (limite ?: PAGINA_PADRAO).coerceIn(1, PAGINA_MAXIMA), cursor)
             .flatMap { itens ->
-                itens.map { it.toDto(user.id, agora, grupo.timezone) }.asSuccess()
+                // Comentários e reações do feed inteiro em DUAS consultas, não duas por card
+                // (fatia E.1). Um `count` por item seria o N+1 que o seed de volume já revelou em
+                // `meusGrupos` — e código novo imita código existente.
+                val ids = itens.map { it.checkIn.id }
+                social.contarComentarios(ids).flatMap { contagens ->
+                    social.reacoes(ids, user.id).flatMap { reacoes ->
+                        itens.map { item ->
+                            item.toDto(user.id, agora, grupo.timezone).copy(
+                                commentCount = contagens[item.checkIn.id] ?: 0,
+                                reactions = reacoes[item.checkIn.id].orEmpty().map { r ->
+                                    ReactionSummaryDto(r.emoji, r.quantidade, r.souEu)
+                                },
+                            )
+                        }.asSuccess()
+                    }
+                }
             }
     }
 

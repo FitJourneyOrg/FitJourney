@@ -61,7 +61,7 @@ class CheckInLeituraTest {
             fim = LocalDate(2026, 9, 30),
             regras = regras,
         )
-        return Cenario(grupos, checkIns, disco, CheckInService(users, grupos, checkIns, disco, relogio), id.toString())
+        return Cenario(grupos, checkIns, disco, CheckInService(users, grupos, checkIns, disco, FakeSocialRepository(), relogio), id.toString())
     }
 
     private suspend fun Cenario.checkInDe(quem: dev.rafael.server.features.user.models.User, comFoto: Boolean = false) =
@@ -191,7 +191,7 @@ class CheckInLeituraTest {
         val grupos = FakeGroupRepository()
         val users = UserService(FakeUserRepository(listOf(eu, forasteiro)))
         val grupo = grupos.semear(admin = eu.id, inicio = LocalDate(2026, 8, 1), fim = LocalDate(2026, 9, 30))
-        val service = CheckInService(users, grupos, FakeCheckInRepository(), FakeArmazenamento(), relogio)
+        val service = CheckInService(users, grupos, FakeCheckInRepository(), FakeArmazenamento(), FakeSocialRepository(), relogio)
 
         val r = service.feed(forasteiro.firebaseUid, forasteiro.email, grupo.toString(), null, null)
 
@@ -218,7 +218,8 @@ class CheckInLeituraTest {
         val meu = c.checkInDe(eu, comFoto = true)
         val forasteiro = usuario("forasteiro")
         val service = CheckInService(
-            UserService(FakeUserRepository(listOf(forasteiro))), c.grupos, c.checkIns, c.disco, relogio,
+            UserService(FakeUserRepository(listOf(forasteiro))), c.grupos, c.checkIns, c.disco,
+            FakeSocialRepository(), relogio,
         )
 
         val r = service.foto(forasteiro.firebaseUid, forasteiro.email, meu.id)
