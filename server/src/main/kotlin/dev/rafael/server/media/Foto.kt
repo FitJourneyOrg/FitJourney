@@ -1,5 +1,6 @@
 package dev.rafael.server.media
 
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
@@ -48,11 +49,21 @@ object Foto {
     const val PIXELS_MAXIMOS = 50_000_000
 
     fun normalizar(bytes: ByteArray): AppResult<ByteArray> {
-        if (bytes.isEmpty()) return recusa("Envie uma foto.")
-        if (bytes.size > BYTES_MAXIMOS) return recusa("A foto é grande demais.")
+        if (bytes.isEmpty()) {
+            return recusa("Adicione uma foto para concluir o check-in.", ErrorCodes.FOTO_AUSENTE)
+        }
+        if (bytes.size > BYTES_MAXIMOS) {
+            return recusa(
+                "Esta foto é pesada demais. Escolha outra ou tire uma pela câmera.",
+                ErrorCodes.FOTO_GRANDE_DEMAIS,
+            )
+        }
 
         val original = runCatching { decodificar(bytes) }.getOrNull()
-            ?: return recusa("O arquivo enviado não é uma imagem válida.")
+            ?: return recusa(
+                "Não consegui ler esta imagem. Escolha outra ou tire uma pela câmera.",
+                ErrorCodes.FOTO_INVALIDA,
+            )
 
         val redimensionada = redimensionar(original)
         return runCatching { escreverJpeg(redimensionada) }.fold(
@@ -112,8 +123,15 @@ object Foto {
         return saida.toByteArray()
     }
 
-    private fun recusa(mensagem: String): AppResult<ByteArray> =
-        AppError.Validation(mensagem, mapOf("foto" to mensagem)).asFailure()
+    /**
+     * O `code` passou a vir de FORA na G.2 (ARCH #37).
+     *
+     * As três recusas desta classe dizem coisas diferentes ("não veio foto", "é pesada demais",
+     * "não consigo ler") e precisam de textos diferentes no cliente, logo de códigos diferentes.
+     * Enquanto o código era fixo aqui dentro, as três eram indistinguíveis do lado de lá.
+     */
+    private fun recusa(mensagem: String, code: String): AppResult<ByteArray> =
+        AppError.Validation(mensagem, mapOf("foto" to mensagem), code = code).asFailure()
 
     /** 0.8 é o joelho da curva: abaixo disso aparece artefato em pele e em texto de camiseta. */
     private const val QUALIDADE = 0.8f

@@ -29,10 +29,14 @@ import kotlinx.datetime.toInstant
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
+import dev.rafael.contract.error.ErrorCodes
 
 /** Códigos de erro que a tela distingue (#31). Frase é do cliente; o servidor manda o código. */
-const val CODE_PRAZO_DA_DENUNCIA = "denuncia_fora_do_prazo"
-const val CODE_JA_DENUNCIEI = "denuncia_repetida"
+// G.2: apontam para o `ErrorCodes`, que virou a fonte única do vocabulário. Antes tinham valor
+// próprio em minúsculas (`denuncia_repetida`), fora do padrão de todos os outros códigos da API.
+// Os nomes locais ficam para não mexer nos call sites e nos testes.
+const val CODE_PRAZO_DA_DENUNCIA = ErrorCodes.PRAZO_DA_DENUNCIA
+const val CODE_JA_DENUNCIEI = ErrorCodes.JA_DENUNCIEI
 
 /**
  * DENÚNCIA E MODERAÇÃO (fatia E.2, ARCH #33 seção 6).
@@ -444,7 +448,7 @@ class ModeracaoService(
         bloco: suspend (Group, User) -> AppResult<T>,
     ): AppResult<T> = comMembro(firebaseUid, email, groupId) { grupo, user, papel ->
         if (!ModeracaoPolicy.podeModerar(papel)) {
-            return@comMembro AppError.Forbidden("Só o admin do desafio julga denúncias.").asFailure()
+            return@comMembro AppError.Forbidden("Só o admin do desafio julga denúncias.", code = ErrorCodes.SO_O_ADMIN_JULGA).asFailure()
         }
         bloco(grupo, user)
     }
@@ -457,15 +461,17 @@ class ModeracaoService(
         // 403 e não 404: quem chegou aqui está olhando para o próprio conteúdo — esconder a
         // existência dele seria absurdo. A tela nem oferece o botão (`canReport`); isto é a rede
         // de segurança de quem chamou a rota direto.
-        DenunciaBlock.E_SEU -> AppError.Forbidden("Não dá para denunciar o próprio conteúdo.")
-        DenunciaBlock.JA_JULGADO -> AppError.Conflict("Este check-in já foi invalidado.")
+        DenunciaBlock.E_SEU -> AppError.Forbidden("Não dá para denunciar o próprio conteúdo.", code = ErrorCodes.DENUNCIA_DO_PROPRIO_CONTEUDO)
+        DenunciaBlock.JA_JULGADO ->
+            AppError.Conflict("Este check-in já foi invalidado.", code = ErrorCodes.CHECKIN_JA_INVALIDADO)
     }.asFailure()
 
     private fun <T> semMotivo(): AppResult<T> = AppError.Validation(
         "Escreva o motivo da denúncia.",
         mapOf("reason" to "Escreva o motivo da denúncia."),
+        code = ErrorCodes.DENUNCIA_SEM_MOTIVO,
     ).asFailure()
 
     private fun <T> naoEncontrado(): AppResult<T> =
-        AppError.NotFound("Não encontramos este item.").asFailure()
+        AppError.NotFound("Este conteúdo não está mais disponível.", code = ErrorCodes.ALVO_INDISPONIVEL).asFailure()
 }

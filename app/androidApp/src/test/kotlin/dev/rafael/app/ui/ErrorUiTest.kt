@@ -1,5 +1,6 @@
 package dev.rafael.app.ui
 
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.core.result.AppError
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -24,17 +25,42 @@ import kotlin.test.assertTrue
  * A regra que ficou: **quando o servidor tem contexto e o cliente não, quem escreve a frase é o
  * servidor.** Estes testes valem para todo erro que carrega mensagem, não só os três que já
  * quebraram — é o que faz o quarto caso não acontecer.
+ *
+ * ## A G.2 mudou o VEÍCULO da regra, não a regra (ARCH #37)
+ *
+ * Com dois idiomas o servidor deixou de poder escrever a frase, porque ele não sabe em que idioma a
+ * tela está. O que ele tem é **conhecimento da situação, não direito sobre as palavras** — e o
+ * `code` carrega esse conhecimento igual.
+ *
+ * O perigo da inversão é o código ficar genérico e perder a especificidade que aqueles três
+ * defeitos custaram; por isso a G.2 desmembrou cinco situações que compartilhavam frase, e por isso
+ * o `TextosDeErroTest` exige texto para **todo** código.
+ *
+ * **A proteção original continua inteira no fallback**: código que o app não conhece cai na
+ * mensagem do servidor. É o teste `mensagem do servidor sobrevive quando o codigo e desconhecido`.
  */
 class ErrorUiTest {
 
     /** Sem rede no teste; o visual não depende dela para os erros que carregam mensagem. */
     private fun visualDe(erro: AppError) = erro.visual(temRede = true, contexto = ErroContexto.LOGADO)
 
+    /**
+     * ⭐ O sucessor direto do teste original desta classe.
+     *
+     * Antes ele afirmava que **toda** mensagem do servidor chegava à tela. Agora afirma o caso em
+     * que isso ainda vale, e é o caso que importa: **servidor novo, app antigo**. Aí o texto do
+     * servidor é a melhor coisa disponível, e descartá-lo devolveria o defeito de 2026-08.
+     */
     @Test
-    fun `todo erro com mensagem do servidor mostra a mensagem do servidor`() {
+    fun `mensagem do servidor sobrevive quando o codigo e desconhecido`() {
         val frase = "Transfira o cargo de admin antes de sair."
 
         val comMensagem = listOf(
+            AppError.Conflict(frase, "CODIGO_QUE_ESTE_APP_NAO_CONHECE"),
+            AppError.Validation(frase, code = "CODIGO_QUE_ESTE_APP_NAO_CONHECE"),
+            AppError.Forbidden(frase, "CODIGO_QUE_ESTE_APP_NAO_CONHECE"),
+            AppError.NotFound(frase, "CODIGO_QUE_ESTE_APP_NAO_CONHECE"),
+            // E sem código nenhum, que é o caminho de quem constrói o erro sem motivo específico.
             AppError.Conflict(frase),
             AppError.Validation(frase),
             AppError.Forbidden(frase),
@@ -45,9 +71,27 @@ class ErrorUiTest {
             assertEquals(
                 frase,
                 visualDe(erro).texto,
-                "${erro::class.simpleName} descartou a mensagem do servidor",
+                "${erro::class.simpleName} descartou a mensagem do servidor sem ter texto próprio",
             )
         }
+    }
+
+    /**
+     * ⭐ E o inverso: **com código conhecido, o texto é do CLIENTE**, e a frase do servidor não
+     * aparece.
+     *
+     * É o que faz a tradução funcionar. Sem esta asserção, `comTextoDoCodigo` poderia deixar de ser
+     * chamado e todo o resto continuaria verde, porque o fallback devolve algo plausível.
+     *
+     * > **Fallback que funciona bem esconde a ausência do caminho principal.**
+     */
+    @Test
+    fun `com codigo conhecido o texto vem do cliente`() {
+        val doServidor = "Frase em português que o servidor mandou."
+        val visual = visualDe(AppError.NotFound(doServidor, ErrorCodes.PESSOA_NAO_EXISTE))
+
+        assertEquals(TextosDeErro.de(ErrorCodes.PESSOA_NAO_EXISTE), visual.texto)
+        assertTrue(visual.texto != doServidor, "o texto do servidor venceu o do cliente")
     }
 
     /**

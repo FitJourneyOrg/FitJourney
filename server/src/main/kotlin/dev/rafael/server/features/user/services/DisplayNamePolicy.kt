@@ -1,5 +1,6 @@
 package dev.rafael.server.features.user.services
 
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
@@ -52,16 +53,18 @@ object DisplayNamePolicy {
     fun normalizar(bruto: String): AppResult<String> {
         val nome = bruto.trim().replace(ESPACOS, " ")
         return when {
-            nome.length < MIN -> erro("Use pelo menos $MIN caracteres.")
-            nome.length > MAX -> erro("Use no máximo $MAX caracteres.")
+            nome.length < MIN -> erro("Use pelo menos $MIN caracteres.", ErrorCodes.NOME_CURTO)
+            nome.length > MAX -> erro("Use no máximo $MAX caracteres.", ErrorCodes.NOME_LONGO)
             else -> nome.asSuccess()
         }
     }
 
     private val ESPACOS = Regex("\\s+")
 
-    private fun erro(msg: String): AppResult<String> = AppError.Validation(
+    /** O `code` vem de fora desde a G.2: curto e longo precisam de textos distintos no cliente. */
+    private fun erro(msg: String, code: String): AppResult<String> = AppError.Validation(
         message = msg,
         fieldErrors = mapOf("displayName" to msg),
+        code = code,
     ).asFailure()
 }

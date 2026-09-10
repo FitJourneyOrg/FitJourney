@@ -210,7 +210,11 @@ class ProgramServiceTest {
         val r = svc.requireEditable(user, Uuid.parse(ai.id!!), isPremium = false)
 
         assertTrue(r is AppResult.Failure && r.error is AppError.Forbidden)
-        assertEquals(ErrorCodes.ENTITLEMENT_REQUIRED, ((r as AppResult.Failure).error as AppError.Forbidden).code)
+        // G.2: código próprio, para o texto poder ser próprio. O que a tela precisa saber é que é
+        // portão de plano, e isso está no conjunto.
+        val code = (r.error as AppError.Forbidden).code
+        assertEquals(ErrorCodes.EDICAO_DE_IA_E_PREMIUM, code)
+        assertTrue(code in ErrorCodes.PORTOES_DE_PLANO, "precisa abrir o paywall")
     }
 
     @Test

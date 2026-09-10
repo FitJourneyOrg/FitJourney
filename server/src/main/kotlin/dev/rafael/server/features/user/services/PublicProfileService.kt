@@ -13,6 +13,7 @@ import dev.rafael.server.features.stats.StatsService
 import dev.rafael.server.features.stats.db.AchievementRepository
 import dev.rafael.server.features.user.db.UserRepository
 import kotlin.uuid.Uuid
+import dev.rafael.contract.error.ErrorCodes
 
 /**
  * O perfil de alguém, público (ARCH #34, emenda 9.3-A).
@@ -104,7 +105,7 @@ class PublicProfileService(
         // A frase é sobre o CÓDIGO, não sobre "um perfil": quem digitou não sabe se errou uma
         // letra ou se a pessoa regenerou o dela. As duas respostas cabem nesta frase, e nenhuma
         // das duas acusa o usuário de ter apagado alguma coisa.
-        val naoAchou = AppError.NotFound("Nenhum usuário com esse código.").asFailure()
+        val naoAchou = AppError.NotFound("Nenhum usuário com esse código.", code = ErrorCodes.CODIGO_DE_USUARIO_NAO_EXISTE).asFailure()
 
         val normalizado = UserCodePolicy.normalizar(codigo) ?: return naoAchou
         return users.findByCode(normalizado).flatMap { pessoa ->
@@ -206,5 +207,8 @@ class PublicProfileService(
      * existência de uma conta que a pessoa não deveria conseguir sondar.
      */
     private fun naoEncontrado(): AppResult<Nothing> =
-        AppError.NotFound("Perfil não encontrado").asFailure()
+        AppError.NotFound(
+            "Este perfil não está disponível.",
+            code = ErrorCodes.PERFIL_DE_TERCEIRO_INDISPONIVEL,
+        ).asFailure()
 }

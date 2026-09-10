@@ -23,6 +23,7 @@ import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.put
 import kotlin.uuid.Uuid
+import dev.rafael.contract.error.ErrorCodes
 
 fun Route.workoutRoutes(
     service: WorkoutService,
@@ -39,7 +40,7 @@ fun Route.workoutRoutes(
             // (na rota), não no WorkoutService, pra não criar ciclo workout→program.
             val programId = dto.programId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
             val result = if (programId == null) {
-                AppError.Validation("Treino precisa pertencer a um programa (programId inválido ou ausente)").asFailure()
+                AppError.Validation("Não consegui salvar este treino.", code = ErrorCodes.TREINO_SEM_PROGRAMA).asFailure()
             } else {
                 userService.findOrCreate(p.uid, p.email).flatMap { user ->
                     // GATE PREMIUM (ARCH #25): adicionar treino a programa IA exige premium.
@@ -112,7 +113,7 @@ fun Route.workoutRoutes(
                     gate.flatMap {
                         service.delete(p.uid, p.email, id).flatMap { deleted ->
                             if (deleted) Unit.asSuccess()
-                            else AppError.NotFound("Treino não encontrado").asFailure()
+                            else AppError.NotFound("Treino não encontrado", code = ErrorCodes.TREINO_NAO_EXISTE).asFailure()
                         }
                     }
                 }
@@ -126,10 +127,10 @@ private fun ApplicationCall.workoutIdParam(): Uuid? =
     parameters["id"]?.let { runCatching { Uuid.parse(it) }.getOrNull() }
 
 private fun <T> notFound(): AppResult<T> =
-    AppError.NotFound("Treino não encontrado").asFailure()
+    AppError.NotFound("Treino não encontrado", code = ErrorCodes.TREINO_NAO_EXISTE).asFailure()
 
 private fun <T : Any> AppResult<T?>.notFoundIfNull(): AppResult<T> =
     flatMap { value ->
         if (value != null) value.asSuccess()
-        else AppError.NotFound("Treino não encontrado").asFailure()
+        else AppError.NotFound("Treino não encontrado", code = ErrorCodes.TREINO_NAO_EXISTE).asFailure()
     }

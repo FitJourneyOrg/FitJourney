@@ -9,6 +9,7 @@ import dev.rafael.contract.i18n.IdiomaPolicy
 import dev.rafael.server.features.user.db.UserRepository
 import dev.rafael.server.features.user.models.User
 import kotlin.uuid.Uuid
+import dev.rafael.contract.error.ErrorCodes
 
 class UserService(private val repository: UserRepository) {
 
@@ -100,6 +101,7 @@ class UserService(private val repository: UserRepository) {
             IdiomaPolicy.valida(locale) ?: return AppError.Validation(
                 "Idioma não suportado.",
                 mapOf("locale" to "Idioma não suportado."),
+                code = ErrorCodes.IDIOMA_NAO_SUPORTADO,
             ).asFailure()
         }
 
@@ -115,8 +117,24 @@ class UserService(private val repository: UserRepository) {
         }
     }
 
+    /**
+     * A conta de **quem está pedindo** sumiu, logo depois de o servidor tê-la lido.
+     *
+     * ## Desmembrado de "Usuário não encontrado" na G.2
+     *
+     * A mesma frase servia a dois lugares opostos: aqui, e no `FriendshipService`, onde ela quer
+     * dizer *"a pessoa que você procurou não existe"*. Dizer que o usuário não foi encontrado para
+     * alguém que está logada é o app negando a existência de quem está olhando.
+     *
+     * Na prática isto é **estado impossível**: o `findOrCreate` acabou de devolver a linha, e o
+     * `UPDATE` seguinte não a achou. O código `MINHA_CONTA_SUMIU` deixa o cliente tratar como
+     * falha nossa em vez de mandar a pessoa procurar o que fez de errado.
+     */
     private fun naoEncontrado(u: User?): AppResult<User> =
-        u?.asSuccess() ?: AppError.NotFound("Usuário não encontrado").asFailure()
+        u?.asSuccess() ?: AppError.NotFound(
+            "Não consegui carregar sua conta agora. Tente de novo em instantes.",
+            code = ErrorCodes.MINHA_CONTA_SUMIU,
+        ).asFailure()
 
     /**
      * Gera um código novo e mata o anterior (35.5).
@@ -128,7 +146,7 @@ class UserService(private val repository: UserRepository) {
     suspend fun regenerarCodigo(firebaseUid: String, email: String?): AppResult<User> =
         findOrCreate(firebaseUid, email).flatMap { user ->
             repository.updateCode(user.id, UserCodePolicy.gerar()).flatMap { atualizado ->
-                atualizado?.asSuccess() ?: AppError.NotFound("Usuário não encontrado").asFailure()
+                atualizado?.asSuccess() ?: naoEncontrado(null)
             }
         }
 
@@ -140,7 +158,7 @@ class UserService(private val repository: UserRepository) {
     suspend fun activatePremium(firebaseUid: String, email: String?): AppResult<User> =
         findOrCreate(firebaseUid, email).flatMap { user ->
             repository.setPremium(user.id, true).flatMap { updated ->
-                updated?.asSuccess() ?: AppError.NotFound("Usuário não encontrado").asFailure()
+                updated?.asSuccess() ?: naoEncontrado(null)
             }
         }
 

@@ -18,6 +18,7 @@ import dev.rafael.server.features.workout.db.WorkoutRepository
 import dev.rafael.server.features.workout.models.toDomain
 import dev.rafael.server.features.workout.models.toDto
 import kotlin.uuid.Uuid
+import dev.rafael.contract.error.ErrorCodes
 
 class WorkoutService(
     private val userService: UserService,
@@ -46,7 +47,10 @@ class WorkoutService(
                 // null = id do cliente colidiu com treino de OUTRO usuário. Não é erro de
                 // servidor (500) nem "não encontrado": é conflito de identificador.
                 criado?.toDto()?.asSuccess()
-                    ?: AppError.Conflict("Já existe um treino com este identificador.").asFailure()
+                    ?: AppError.Conflict(
+                        "Não consegui salvar este treino. Tente criar de novo.",
+                        code = ErrorCodes.TREINO_DUPLICADO,
+                    ).asFailure()
             }
         }
     }
@@ -75,12 +79,12 @@ class WorkoutService(
         }
 
     private fun validate(dto: WorkoutDto): AppError? {
-        if (dto.name.isBlank()) return AppError.Validation("Nome do treino é obrigatório", mapOf(ErrorFields.NAME to "Nome do treino é obrigatório"))
-        if (dto.exercises.isEmpty()) return AppError.Validation("Treino precisa de ao menos 1 exercício", mapOf(ErrorFields.EXERCISES to "Treino precisa de ao menos 1 exercício"))
+        if (dto.name.isBlank()) return AppError.Validation("Nome do treino é obrigatório", mapOf(ErrorFields.NAME to "Nome do treino é obrigatório"), code = ErrorCodes.NOME_DE_TREINO_VAZIO)
+        if (dto.exercises.isEmpty()) return AppError.Validation("Treino precisa de ao menos 1 exercício", mapOf(ErrorFields.EXERCISES to "Treino precisa de ao menos 1 exercício"), code = ErrorCodes.TREINO_SEM_EXERCICIO)
         dto.exercises.forEach { ex ->
-            if (ex.sets.isEmpty()) return AppError.Validation("Cada exercício precisa de ao menos 1 série", mapOf(ErrorFields.SETS to "Cada exercício precisa de ao menos 1 série"))
+            if (ex.sets.isEmpty()) return AppError.Validation("Cada exercício precisa de ao menos 1 série", mapOf(ErrorFields.SETS to "Cada exercício precisa de ao menos 1 série"), code = ErrorCodes.EXERCICIO_SEM_SERIE)
             ex.sets.forEach { s ->
-                if (s.reps <= 0) return AppError.Validation("Repetições devem ser maiores que zero", mapOf(ErrorFields.REPS to "Repetições devem ser maiores que zero"))
+                if (s.reps <= 0) return AppError.Validation("Repetições devem ser maiores que zero", mapOf(ErrorFields.REPS to "Repetições devem ser maiores que zero"), code = ErrorCodes.REPETICOES_INVALIDAS)
             }
         }
         return null
@@ -90,10 +94,10 @@ class WorkoutService(
         val ids = try {
             dto.exercises.map { Uuid.parse(it.exerciseId) }
         } catch (e: IllegalArgumentException) {
-            return AppError.Validation("ID de exercício inválido")
+            return AppError.Validation("Um dos exercícios deste treino não pôde ser salvo.", code = ErrorCodes.ID_DE_EXERCICIO_INVALIDO)
         }
         val allExist = exerciseRepository.existsByIds(ids).getOrNull() ?: false
         return if (allExist) null
-        else AppError.Validation("Um ou mais exercícios não existem no catálogo")
+        else AppError.Validation("Um ou mais exercícios não existem no catálogo", code = ErrorCodes.EXERCICIO_FORA_DO_CATALOGO)
     }
 }

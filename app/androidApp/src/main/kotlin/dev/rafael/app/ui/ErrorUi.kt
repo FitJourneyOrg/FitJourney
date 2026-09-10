@@ -90,7 +90,7 @@ data class ErroVisual(
 fun AppError.visual(
     temRede: Boolean,
     contexto: ErroContexto = ErroContexto.LOGADO,
-): ErroVisual = when (this) {
+): ErroVisual = comTextoDoCodigo(when (this) {
     is AppError.Connection ->
         if (temRede) ErroVisual(
             icone = Icons.Outlined.SyncProblem,
@@ -120,9 +120,23 @@ fun AppError.visual(
             acao = ErroAcao.IR_PRO_LOGIN,
         )
 
-    // Falta entitlement (ARCH #23) → paywall. Outros 403 são bloqueio de verdade.
+    /**
+     * Portão de plano (ARCH #23) leva ao paywall. Outros 403 são bloqueio de verdade.
+     *
+     * ⚠️ **Compara com o CONJUNTO, não com um código.** Até a G.2 os quatro portões compartilhavam
+     * `ENTITLEMENT_REQUIRED` e aqui havia `if (code == ENTITLEMENT_REQUIRED)`. Dar texto próprio a
+     * cada um exigiu código próprio, e isso **quase apagou o paywall em silêncio**: os códigos
+     * novos não casariam com o `if`, nenhum teste falharia, e a tela ofereceria "Voltar" no lugar
+     * da assinatura.
+     *
+     * > **Ramificar por um código só e depois multiplicar os códigos quebra a ramificação sem
+     * > quebrar o build.**
+     *
+     * O conjunto mora no `ErrorCodes`, no contrato: acrescentar um portão é acrescentar lá, e esta
+     * linha acompanha sozinha.
+     */
     is AppError.Forbidden ->
-        if (code == ErrorCodes.ENTITLEMENT_REQUIRED) ErroVisual(
+        if (code in ErrorCodes.PORTOES_DE_PLANO) ErroVisual(
             icone = Icons.Outlined.Lock,
             titulo = "Recurso do plano Premium",
             texto = message,
@@ -193,6 +207,41 @@ fun AppError.visual(
         texto = "Já sabemos do problema. Tente de novo em instantes.",
         acao = ErroAcao.TENTAR_DE_NOVO,
     )
+})
+
+/**
+ * O código do erro, quando a família carrega um. Desde a G.2 são todas menos `Connection` e
+ * `Unexpected`, que nunca chegam a uma tela com texto do servidor.
+ */
+val AppError.codigo: String?
+    get() = when (this) {
+        is AppError.Validation -> code
+        is AppError.Unauthorized -> code
+        is AppError.Forbidden -> code
+        is AppError.NotFound -> code
+        is AppError.Conflict -> code
+        else -> null
+    }
+
+/**
+ * Troca o texto pelo do CÓDIGO, quando existe (G.2, ARCH #37).
+ *
+ * ## Por que é um envelope em volta do `when`, e não um ramo dentro dele
+ *
+ * A escolha de **título, ícone e ação** continua sendo por família de erro: é o desenho que o
+ * `ErroInline` já documentava, *"o título é a CATEGORIA, o texto é o que aconteceu"*. Só o TEXTO
+ * muda por código, e envolver o `when` inteiro deixa isso valer para todas as famílias sem repetir
+ * a mesma linha em cinco ramos — que é onde a sexta seria esquecida.
+ *
+ * ## O fallback é a lição do #31 sobrevivendo
+ *
+ * Código que este app não conhece mantém a `message` do servidor. Um servidor novo falando com um
+ * app antigo continua explicando melhor do que qualquer texto genérico que a gente escrevesse aqui.
+ * É a mesma proteção de antes, agora só para o caso em que ela é de fato necessária.
+ */
+private fun AppError.comTextoDoCodigo(visual: ErroVisual): ErroVisual {
+    val doCodigo = TextosDeErro.de(codigo) ?: return visual
+    return visual.copy(texto = doCodigo)
 }
 
 /**

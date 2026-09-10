@@ -16,8 +16,11 @@ import dev.rafael.server.features.program.models.ProgramCounts
  *  - grátis: 1 gerado por IA + 2 manuais (contados SEPARADAMENTE).
  *  - premium: 10 no total (IA + manual).
  *
- * Bloqueio grátis → Forbidden com code ENTITLEMENT_REQUIRED (cliente abre paywall).
- * Bloqueio premium → Forbidden sem code (é teto duro, não upsell).
+ * Bloqueio grátis → Forbidden com código de **portão de plano** (o cliente abre o paywall). Desde a
+ * G.2 cada caso tem código próprio, para poder ter texto próprio, e todos estão em
+ * `ErrorCodes.PORTOES_DE_PLANO` — é o conjunto, e não um código único, que o cliente consulta.
+ * Bloqueio premium → Forbidden com `LIMITE_DE_PROGRAMAS_PREMIUM`, que **não** está naquele
+ * conjunto: é teto duro, não upsell, e oferecer o plano a quem já pagou é pior que não oferecer.
  */
 object ProgramLimits {
 
@@ -39,18 +42,22 @@ object ProgramLimits {
         if (!blocked) return Unit.asSuccess()
 
         if (isPremium) {
+            // ⚠️ NÃO usa `ENTITLEMENT_REQUIRED`, e a diferença importa: aqui a pessoa JÁ é premium,
+            // e mandá-la ao paywall seria oferecer o que ela acabou de pagar. É teto de uso, não
+            // portão de plano.
             return AppError.Forbidden(
                 "Você atingiu o limite máximo de $PREMIUM_TOTAL_LIMIT programas.",
+                ErrorCodes.LIMITE_DE_PROGRAMAS_PREMIUM,
             ).asFailure()
         }
         return when (kind) {
             Kind.AI -> AppError.Forbidden(
                 "Gerar treino por IA é limitado a $FREE_AI_LIMIT no plano grátis. Assine o premium pra gerar mais.",
-                ErrorCodes.ENTITLEMENT_REQUIRED,
+                ErrorCodes.LIMITE_DE_IA_GRATIS,
             ).asFailure()
             Kind.MANUAL -> AppError.Forbidden(
                 "Criar programas é limitado a $FREE_MANUAL_LIMIT no plano grátis. Assine o premium pra criar mais.",
-                ErrorCodes.ENTITLEMENT_REQUIRED,
+                ErrorCodes.LIMITE_DE_MANUAIS_GRATIS,
             ).asFailure()
         }
     }

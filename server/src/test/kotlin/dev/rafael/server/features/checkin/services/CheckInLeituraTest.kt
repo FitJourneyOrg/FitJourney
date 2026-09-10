@@ -2,6 +2,7 @@ package dev.rafael.server.features.checkin.services
 
 import dev.rafael.contract.checkin.CheckInDto
 import dev.rafael.contract.checkin.CheckInStatus
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.group.GroupRule
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -131,7 +132,9 @@ class CheckInLeituraTest {
         c.checkIns.status[kotlin.uuid.Uuid.parse(feito.id)] = CheckInStatus.EM_ANALISE
 
         val erro = assertIs<AppResult.Failure>(c.service.apagar(eu.firebaseUid, eu.email, c.grupo, feito.id)).error
-        assertEquals("EM_ANALISE", assertIs<AppError.Conflict>(erro).code)
+        // G.2: o valor do código passou a sair do `ErrorCodes`, fonte única do vocabulário. Afirmar
+        // a constante e não o literal é o que faz este teste sobreviver ao próximo renome.
+        assertEquals(ErrorCodes.CHECKIN_EM_ANALISE, assertIs<AppError.Conflict>(erro).code)
     }
 
     // ---- feed (8.0) ----

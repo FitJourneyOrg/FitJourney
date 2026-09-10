@@ -1,5 +1,6 @@
 package dev.rafael.server.features.friendship.services
 
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.friendship.FriendStatus
 import dev.rafael.contract.i18n.Idioma
 import dev.rafael.core.result.AppError
@@ -210,7 +211,10 @@ class FriendshipServiceTest {
 
         val r = s.aceitar("fb-eu", "eu@x.com", outro.id.toString())
 
-        assertTrue(r is AppResult.Failure && r.error is AppError.NotFound)
+        // G.2: era `NotFound` com "Pedido não encontrado", que dizia duas inverdades — o pedido
+        // existe, e ela é que não pode respondê-lo. Virou 403 com código próprio.
+        assertTrue(r is AppResult.Failure && r.error is AppError.Forbidden)
+        assertEquals(ErrorCodes.PEDIDO_E_MEU, (r.error as AppError.Forbidden).code)
         assertEquals(
             FriendshipPolicy.Estado.PENDENTE,
             grafo.amizades.values.single().status,
