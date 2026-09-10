@@ -15,6 +15,7 @@ import dev.rafael.server.features.exercise.db.ExerciseRepository
 import dev.rafael.server.features.exercise.engine.ExercisePreFilter
 import dev.rafael.server.features.exercise.models.toDto
 import kotlin.uuid.Uuid
+import dev.rafael.contract.error.ErrorCodes
 
 class ExerciseService(
     private val repository: ExerciseRepository,
@@ -40,7 +41,7 @@ class ExerciseService(
     ): AppResult<List<ExerciseDto>> =
         repository.findById(exerciseId).flatMap { target ->
             if (target == null) {
-                AppError.NotFound("Exercício não encontrado").asFailure()
+                AppError.NotFound("Exercício não encontrado", code = ErrorCodes.EXERCICIO_NAO_EXISTE).asFailure()
             } else {
                 val pool = preFilter.poolFor(environment, limitations, level)
                 pool.filter { c ->

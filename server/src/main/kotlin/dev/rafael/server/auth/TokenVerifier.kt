@@ -8,6 +8,7 @@ import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import dev.rafael.contract.error.ErrorCodes
 
 /** Token rejeitado (inválido/expirado). Exceção do domínio do server — não vaza tipo do Google. */
 class InvalidTokenException(message: String, cause: Throwable? = null) : Exception(message, cause)
@@ -38,7 +39,7 @@ class TokenVerifier(private val decoder: TokenDecoder) {
             onSuccess = { it.asSuccess() },
             onFailure = { e ->
                 when (e) {
-                    is InvalidTokenException -> AppError.Unauthorized(e.message ?: "Token inválido").asFailure()
+                    is InvalidTokenException -> AppError.Unauthorized(e.message ?: "Sua sessão expirou. Entre de novo para continuar.", code = ErrorCodes.TOKEN_INVALIDO).asFailure()
                     else -> AppError.Unexpected("Falha ao validar token", e).asFailure()
                 }
             },

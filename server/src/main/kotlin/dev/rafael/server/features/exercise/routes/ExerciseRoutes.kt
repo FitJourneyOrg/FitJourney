@@ -14,6 +14,7 @@ import io.ktor.server.auth.principal
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import kotlin.uuid.Uuid
+import dev.rafael.contract.error.ErrorCodes
 
 fun Route.exerciseRoutes(service: ExerciseService, profileService: ProfileService) {
     authenticate(FIREBASE_AUTH) {
@@ -33,11 +34,11 @@ fun Route.exerciseRoutes(service: ExerciseService, profileService: ProfileServic
             val principal = call.principal<FirebaseUser>()!!
             val id = call.parameters["id"]?.let { runCatching { Uuid.parse(it) }.getOrNull() }
             val result = if (id == null) {
-                AppError.Validation("id de exercício inválido").asFailure()
+                AppError.Validation("Não consegui abrir este exercício.", code = ErrorCodes.ID_DE_EXERCICIO_INVALIDO).asFailure()
             } else {
                 profileService.getProfile(principal.uid, principal.email).flatMap { p ->
                     val env = p.environment
-                    if (env == null) AppError.Validation("Ambiente de treino não definido").asFailure()
+                    if (env == null) AppError.Validation("Ambiente de treino não definido", code = ErrorCodes.AMBIENTE_NAO_DEFINIDO).asFailure()
                     else service.alternatives(id, env, p.level, p.limitations)
                 }
             }

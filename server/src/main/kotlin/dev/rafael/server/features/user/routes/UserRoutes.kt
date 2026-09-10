@@ -1,5 +1,6 @@
 package dev.rafael.server.features.user.routes
 
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.user.UpdateMeRequest
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -63,7 +64,7 @@ fun Route.userRoutes(
                 return@get call.respondResult(
                     AppError.Conflict(
                         "Muitas tentativas. Tente de novo daqui a pouco.",
-                        "RATE_LIMIT_CODIGO",
+                        ErrorCodes.RATE_LIMIT_CODIGO,
                     ).asFailure(),
                 )
             }

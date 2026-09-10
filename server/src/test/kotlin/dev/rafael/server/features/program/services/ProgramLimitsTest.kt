@@ -28,12 +28,18 @@ class ProgramLimitsTest {
     }
 
     @Test
-    fun `gratis bloqueia a 2a IA com code ENTITLEMENT`() {
+    /**
+     * G.2: o código deixou de ser `ENTITLEMENT_REQUIRED` e virou próprio, para a frase poder ser
+     * própria. **O que importa não é o valor, é estar em `PORTOES_DE_PLANO`** — é o conjunto que o
+     * cliente consulta para abrir o paywall, e afirmar o valor exato aqui não provaria isso.
+     */
+    fun `gratis bloqueia a 2a IA com portao de plano`() {
         val r = gate(ai = 1, manual = 0, premium = false, kind = ProgramLimits.Kind.AI)
         assertIs<AppResult.Failure>(r)
         val err = r.error
         assertIs<AppError.Forbidden>(err)
-        assertEquals(ErrorCodes.ENTITLEMENT_REQUIRED, err.code)
+        assertEquals(ErrorCodes.LIMITE_DE_IA_GRATIS, err.code)
+        assertTrue(err.code in ErrorCodes.PORTOES_DE_PLANO, "precisa abrir o paywall")
     }
 
     @Test
@@ -42,10 +48,12 @@ class ProgramLimitsTest {
     }
 
     @Test
-    fun `gratis bloqueia o 3o manual com code ENTITLEMENT`() {
+    fun `gratis bloqueia o 3o manual com portao de plano`() {
         val r = gate(ai = 0, manual = 2, premium = false, kind = ProgramLimits.Kind.MANUAL)
         assertIs<AppResult.Failure>(r)
-        assertEquals(ErrorCodes.ENTITLEMENT_REQUIRED, (r.error as AppError.Forbidden).code)
+        val code = (r.error as AppError.Forbidden).code
+        assertEquals(ErrorCodes.LIMITE_DE_MANUAIS_GRATIS, code)
+        assertTrue(code in ErrorCodes.PORTOES_DE_PLANO, "precisa abrir o paywall")
     }
 
     @Test
@@ -64,12 +72,26 @@ class ProgramLimitsTest {
     }
 
     @Test
-    fun `premium bloqueia no total 10 sem code (teto duro)`() {
+    /**
+     * ⭐ O teto do premium tem código, e ele **NÃO** é portão de plano.
+     *
+     * Antes da G.2 o `code` era nulo, e o nulo carregava sozinho a decisão de não abrir o paywall.
+     * Isso funcionava e não dizia por quê: nulo é ausência, e ausência não explica nada.
+     *
+     * Agora o código existe (a frase precisa dele) e a decisão está no CONJUNTO. É a asserção de
+     * baixo que guarda a regra: **oferecer o plano a quem acabou de pagar é pior que não oferecer
+     * nada.**
+     */
+    fun `teto do premium NAO e portao de plano`() {
         val r = gate(ai = 5, manual = 5, premium = true, kind = ProgramLimits.Kind.AI)
         assertIs<AppResult.Failure>(r)
         val err = r.error
         assertIs<AppError.Forbidden>(err)
-        assertNull(err.code, "teto premium não é upsell, então sem ENTITLEMENT")
+        assertEquals(ErrorCodes.LIMITE_DE_PROGRAMAS_PREMIUM, err.code)
+        assertTrue(
+            err.code !in ErrorCodes.PORTOES_DE_PLANO,
+            "teto de quem já é premium não pode abrir o paywall",
+        )
     }
 
     @Test
