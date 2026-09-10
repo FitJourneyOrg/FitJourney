@@ -1,3 +1,178 @@
 <resources>
+
+    <!--
+      ============================================================================================
+      TEXTO DA INTERFACE (fatia G.3, ARCH #37)
+      ============================================================================================
+
+      CONVENÇÃO DE CHAVE: <area>_<elemento>, em snake_case.
+
+        login_titulo          tela de login
+        grupo_detalhe_aba_posts
+        comum_voltar          usado em mais de uma tela
+        enum_musculo_chest    rótulo de valor de enum
+        erro_pessoa_nao_existe  frase de erro, chaveada pelo ErrorCodes
+
+      A área vem do PACOTE da tela, não do que a frase diz. Chave que descreve o texto
+      (`erro_nao_encontrado`) envelhece quando o texto muda; chave que descreve o LUGAR sobrevive.
+
+      ============================================================================================
+      TODO STRING TEM COMENTÁRIO DE CONTEXTO, E ISSO NÃO É OPCIONAL
+      ============================================================================================
+
+      Quem traduz não tem o app aberto. "Denunciar" sozinho pode virar *Report*, *Flag* ou
+      *Denounce*, e as três estão certas em algum contexto e erradas neste.
+
+      O comentário diz ONDE aparece e, quando o espaço é apertado (botão, chip, aba), qual é o
+      limite. Extrair sem comentar seria mais rápido e entregaria um catálogo que só serve para
+      quem já conhece o app — ou seja, para ninguém que vá traduzi-lo.
+
+      > O tradutor não tem o app aberto. Contexto que não está no documento não existe.
+
+      ============================================================================================
+      SEM TRAVESSÃO (#37, seção 8)
+      ============================================================================================
+
+      Nem — nem –, em nenhum idioma. Os que já existiam no código foram extraídos COMO ESTÃO, para
+      a G.3 manter o critério de "nenhuma tela mudou"; o `gen_strings.py` os marca no catálogo, e a
+      correção acontece na validação do pt-BR, antes de qualquer tradução.
+    -->
+
+    <!-- Nome do app na gaveta e no launcher. NÃO se traduz: é marca. -->
     <string name="app_name">FitJourney</string>
+
+
+    <!-- ============================ Login ============================ -->
+
+    <!-- Título da tela de entrada, acima dos campos. -->
+    <string name="login_titulo">FitJourney</string>
+
+    <!-- Rótulo do campo de e-mail. Espaço curto: cabe ~20 caracteres. -->
+    <string name="login_email">E-mail</string>
+
+    <!-- Rótulo do campo de senha. Espaço curto: cabe ~20 caracteres. -->
+    <string name="login_senha">Senha</string>
+
+    <!-- Botão primário: entra com uma conta que JÁ existe. Botão, ~15 caracteres. -->
+    <string name="login_entrar">Entrar</string>
+
+    <!-- Botão secundário, ao lado do anterior: cria conta nova. Botão, ~15 caracteres. -->
+    <string name="login_cadastrar">Cadastrar</string>
+
+
+    <!-- ====================== Detalhe do exercício ====================== -->
+
+    <!-- Cabeçalhos das seções da tela, um por bloco de informação. -->
+    <string name="exercicio_secao_sobre">Sobre o exercício</string>
+    <string name="exercicio_secao_musculos">Músculos trabalhados</string>
+    <string name="exercicio_secao_equipamento">Equipamento</string>
+    <string name="exercicio_secao_como_treinar">Como treinar</string>
+
+    <!--
+      Linha abaixo dos chips de músculo primário, listando os secundários.
+      %1$s é a lista já formatada e separada por vírgula: "Tríceps, Ombros".
+    -->
+    <string name="exercicio_musculos_secundarios">Também: %1$s</string>
+
+    <!-- Rótulos da coluna esquerda do bloco "Como treinar". Curtos: ~15 caracteres. -->
+    <string name="exercicio_info_nivel">Nível</string>
+    <string name="exercicio_info_prescricao">Prescrição</string>
+    <string name="exercicio_info_tipo">Tipo</string>
+    <string name="exercicio_info_execucao">Execução</string>
+
+    <!-- Valores do "Tipo": exercício que move várias articulações, ou uma só. -->
+    <string name="exercicio_tipo_composto">Composto</string>
+    <string name="exercicio_tipo_isolamento">Isolamento</string>
+
+    <!-- Valores da "Execução": um lado por vez, ou os dois juntos. -->
+    <string name="exercicio_execucao_unilateral">Unilateral</string>
+    <string name="exercicio_execucao_bilateral">Bilateral</string>
+
+
+    <!--
+      ====================== Rótulos de enum (ver ui/Rotulos.kt) ======================
+
+      Traduzidos UMA vez e usados em toda tela. Antes desta fatia, "Peito" e "Iniciante" estavam
+      duplicados em duas telas: duplicata de texto sobrevive num idioma e diverge no segundo.
+
+      Todos são rótulo curto: cabem em chip, aba e linha de resumo. ~20 caracteres.
+    -->
+
+    <!-- Grupos musculares. Aparecem em chip na tela de exercício e como escolha no quiz. -->
+    <string name="enum_musculo_chest">Peito</string>
+    <string name="enum_musculo_back">Costas</string>
+    <string name="enum_musculo_biceps">Bíceps</string>
+    <string name="enum_musculo_triceps">Tríceps</string>
+    <string name="enum_musculo_forearms">Antebraços</string>
+    <string name="enum_musculo_shoulders">Ombros</string>
+    <string name="enum_musculo_legs">Pernas</string>
+    <string name="enum_musculo_glutes">Glúteos</string>
+    <!-- Região abdominal e lombar. "Core" é o termo usado em academia, não se traduz. -->
+    <string name="enum_musculo_core">Core</string>
+
+    <!-- Nível de experiência. Escolhido no quiz e exibido no exercício. -->
+    <string name="enum_nivel_beginner">Iniciante</string>
+    <string name="enum_nivel_intermediate">Intermediário</string>
+    <string name="enum_nivel_advanced">Avançado</string>
+
+    <!-- Objetivo do treino. Escolha do quiz, uma opção por cartão. -->
+    <string name="enum_objetivo_gain_muscle">Ganhar massa</string>
+    <string name="enum_objetivo_lose_fat">Perder gordura</string>
+    <string name="enum_objetivo_maintain">Manter a forma</string>
+    <string name="enum_objetivo_general_health">Saúde geral</string>
+
+    <!-- Onde a pessoa treina. Rótulo curto, para chip e resumo. -->
+    <string name="enum_ambiente_academia">Academia</string>
+    <string name="enum_ambiente_casa">Casa</string>
+    <!-- A frase de escolha do quiz, com exemplos do que existe em cada ambiente. Linha inteira. -->
+    <string name="enum_ambiente_academia_descricao">Academia (máquinas, barras, cabos, halteres)</string>
+    <string name="enum_ambiente_casa_descricao">Casa (halteres, peso do corpo, elásticos)</string>
+
+    <!--
+      Categoria do exercício, no chip do topo da tela de detalhe.
+      ⚠️ Antes desta fatia isto mostrava o nome do enum em INGLÊS ("Chest", "Lower back") para o
+      usuário brasileiro, porque o rótulo era derivado de `name`. Corrigido aqui.
+    -->
+    <string name="enum_categoria_core">Core</string>
+    <string name="enum_categoria_functional_hit">Funcional / HIIT</string>
+    <string name="enum_categoria_mobility">Mobilidade</string>
+    <string name="enum_categoria_calisthenics">Calistenia</string>
+    <string name="enum_categoria_legs">Pernas</string>
+    <string name="enum_categoria_shoulders">Ombros</string>
+    <string name="enum_categoria_chest">Peito</string>
+    <string name="enum_categoria_back">Costas</string>
+    <string name="enum_categoria_crossfit">CrossFit</string>
+    <string name="enum_categoria_biceps">Bíceps</string>
+    <string name="enum_categoria_triceps">Tríceps</string>
+    <string name="enum_categoria_trapezius">Trapézio</string>
+    <string name="enum_categoria_glutes">Glúteos</string>
+    <string name="enum_categoria_calves">Panturrilhas</string>
+    <string name="enum_categoria_forearms">Antebraços</string>
+    <string name="enum_categoria_cardio">Cardio</string>
+    <string name="enum_categoria_lower_back">Lombar</string>
+
+    <!-- Equipamento necessário, na linha de informação do exercício. -->
+    <string name="enum_equipamento_barbell">Barra</string>
+    <string name="enum_equipamento_dumbbell">Halteres</string>
+    <string name="enum_equipamento_machine">Máquina</string>
+    <string name="enum_equipamento_cable">Cabo / Polia</string>
+    <string name="enum_equipamento_bodyweight">Peso do corpo</string>
+    <string name="enum_equipamento_kettlebell">Kettlebell</string>
+    <string name="enum_equipamento_band">Elástico</string>
+    <string name="enum_equipamento_smith">Smith</string>
+    <string name="enum_equipamento_ez_bar">Barra W</string>
+    <string name="enum_equipamento_plate">Anilha</string>
+    <string name="enum_equipamento_medicine_ball">Bola medicinal</string>
+    <string name="enum_equipamento_stability_ball">Bola de estabilidade</string>
+    <string name="enum_equipamento_bosu">Bosu</string>
+    <string name="enum_equipamento_suspension">Suspensão / TRX</string>
+    <string name="enum_equipamento_rope">Corda</string>
+    <string name="enum_equipamento_agility_ladder">Escada de agilidade</string>
+    <!-- Exercício que não usa equipamento nenhum. Antes era um travessão solto. -->
+    <string name="enum_equipamento_nenhum">Nenhum</string>
+
+    <!-- Como o exercício é prescrito: por repetições ou por tempo. -->
+    <string name="enum_prescricao_reps">Repetições</string>
+    <string name="enum_prescricao_time">Tempo</string>
+
 </resources>

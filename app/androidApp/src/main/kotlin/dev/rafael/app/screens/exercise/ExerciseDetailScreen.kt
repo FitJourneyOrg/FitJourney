@@ -13,15 +13,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+// ⚠️ O import EXPLÍCITO do R é obrigatório neste arquivo, e não é preferência de estilo: os
+// curingas do Compose (`material3.*`, `layout.*`) trazem os `R` das próprias bibliotecas para o
+// escopo, e sem este import o `R.string` resolve para o `R` errado. O erro que isso dá não fala de
+// import nenhum — diz "class R does not have a companion object", em cascata.
+import dev.rafael.app.R
 import dev.rafael.app.ui.ErroDeTela
 import dev.rafael.app.ui.NetworkImage
 import dev.rafael.app.ui.ShimmerLine
+import dev.rafael.app.ui.rotulo
+import dev.rafael.app.ui.rotuloDeEquipamento
+import dev.rafael.app.ui.rotuloDePrescricao
 import dev.rafael.app.ui.shimmer
-import dev.rafael.contract.exercise.ExerciseCategory
-import dev.rafael.contract.profile.Level
-import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.core.network.MediaUrls
 import dev.rafael.features.exercise.domain.model.Exercise
 import dev.rafael.features.exercise.presentation.viewmodel.ExerciseDetailViewModel
@@ -95,27 +101,33 @@ private fun ExerciseDetailContent(ex: Exercise) {
         Spacer(Modifier.height(16.dp))
         Text(ex.name, style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
-        AssistChip(onClick = {}, label = { Text(categoryLabel(ex.category)) })
+        AssistChip(onClick = {}, label = { Text(stringResource(ex.category.rotulo())) })
 
         // Seção: Sobre o exercício (parágrafos; "Aviso/Atenção/Importante" viram nota).
         ex.description?.takeIf { it.isNotBlank() }?.let { desc ->
-            Section("Sobre o exercício") {
+            Section(stringResource(R.string.exercicio_secao_sobre)) {
                 DescriptionBody(desc)
             }
         }
 
         // Seção: Músculos trabalhados (primários em chip; secundários em texto).
         if (ex.primaryMuscles.isNotEmpty()) {
-            Section("Músculos trabalhados") {
+            Section(stringResource(R.string.exercicio_secao_musculos)) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ex.primaryMuscles.forEach { m ->
-                        AssistChip(onClick = {}, label = { Text(muscleLabel(m)) })
+                        AssistChip(onClick = {}, label = { Text(stringResource(m.rotulo())) })
                     }
                 }
                 if (ex.secondaryMuscles.isNotEmpty()) {
                     Spacer(Modifier.height(6.dp))
+                    // Resolve os rótulos ANTES de juntar: `joinToString` não é inline, então a
+                    // lambda de transformação dele não herda o escopo @Composable. `map` é inline
+                    // e herda, por isso a ordem é map-e-depois-join, e não join-com-transform.
+                    val secundarios = ex.secondaryMuscles
+                        .map { stringResource(it.rotulo()) }
+                        .joinToString()
                     Text(
-                        "Também: " + ex.secondaryMuscles.joinToString { muscleLabel(it) },
+                        stringResource(R.string.exercicio_musculos_secundarios, secundarios),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -124,21 +136,42 @@ private fun ExerciseDetailContent(ex: Exercise) {
         }
 
         // Seção: Equipamento.
-        ex.equipment?.takeIf { it.isNotBlank() }?.let {
-            Section("Equipamento") {
-                Text(equipmentLabel(it), style = MaterialTheme.typography.bodyMedium)
+        ex.equipment?.takeIf { it.isNotBlank() }?.let { bruto ->
+            Section(stringResource(R.string.exercicio_secao_equipamento)) {
+                // Valor fora do vocabulário conhecido cai no bruto prettificado: mostrar o que o
+                // catálogo trouxe é melhor que mostrar vazio.
+                val texto = rotuloDeEquipamento(bruto)?.let { stringResource(it) }
+                    ?: bruto.lowercase().replaceFirstChar { it.uppercase() }
+                Text(texto, style = MaterialTheme.typography.bodyMedium)
             }
         }
 
         // Seção: Como treinar (nível, prescrição, tipo, execução).
         val comoTreinar = buildList {
-            ex.level?.let { add("Nível" to levelLabel(it)) }
-            ex.prescriptionType?.let { add("Prescrição" to prescriptionLabel(it)) }
-            ex.isCompound?.let { add("Tipo" to if (it) "Composto" else "Isolamento") }
-            ex.unilateral?.let { add("Execução" to if (it) "Unilateral" else "Bilateral") }
+            ex.level?.let {
+                add(stringResource(R.string.exercicio_info_nivel) to stringResource(it.rotulo()))
+            }
+            ex.prescriptionType?.let { bruto ->
+                val v = rotuloDePrescricao(bruto)?.let { stringResource(it) } ?: bruto
+                add(stringResource(R.string.exercicio_info_prescricao) to v)
+            }
+            ex.isCompound?.let {
+                add(
+                    stringResource(R.string.exercicio_info_tipo) to stringResource(
+                        if (it) R.string.exercicio_tipo_composto else R.string.exercicio_tipo_isolamento,
+                    ),
+                )
+            }
+            ex.unilateral?.let {
+                add(
+                    stringResource(R.string.exercicio_info_execucao) to stringResource(
+                        if (it) R.string.exercicio_execucao_unilateral else R.string.exercicio_execucao_bilateral,
+                    ),
+                )
+            }
         }
         if (comoTreinar.isNotEmpty()) {
-            Section("Como treinar") {
+            Section(stringResource(R.string.exercicio_secao_como_treinar)) {
                 comoTreinar.forEach { (k, v) -> InfoRow(k, v) }
             }
         }
@@ -217,50 +250,11 @@ private fun NoteBox(text: String) {
     }
 }
 
-private fun categoryLabel(c: ExerciseCategory): String =
-    c.name.lowercase().replace('_', ' ').replaceFirstChar { it.uppercase() }
-
-private fun muscleLabel(m: MuscleGroup): String = when (m) {
-    MuscleGroup.CHEST -> "Peito"
-    MuscleGroup.BACK -> "Costas"
-    MuscleGroup.BICEPS -> "Bíceps"
-    MuscleGroup.TRICEPS -> "Tríceps"
-    MuscleGroup.FOREARMS -> "Antebraços"
-    MuscleGroup.SHOULDERS -> "Ombros"
-    MuscleGroup.LEGS -> "Pernas"
-    MuscleGroup.GLUTES -> "Glúteos"
-    MuscleGroup.CORE -> "Core"
-}
-
-private fun levelLabel(l: Level): String = when (l) {
-    Level.BEGINNER -> "Iniciante"
-    Level.INTERMEDIATE -> "Intermediário"
-    Level.ADVANCED -> "Avançado"
-}
-
-private fun prescriptionLabel(p: String): String = when (p.uppercase()) {
-    "REPS" -> "Repetições"
-    "TIME" -> "Tempo"
-    else -> p
-}
-
-private fun equipmentLabel(e: String): String = when (e.uppercase()) {
-    "BARBELL" -> "Barra"
-    "DUMBBELL" -> "Halteres"
-    "MACHINE" -> "Máquina"
-    "CABLE" -> "Cabo / Polia"
-    "BODYWEIGHT" -> "Peso do corpo"
-    "KETTLEBELL" -> "Kettlebell"
-    "BAND", "RESISTANCE_BAND", "ELASTIC" -> "Elástico"
-    "SMITH" -> "Smith"
-    "EZ_BAR" -> "Barra W"
-    "PLATE" -> "Anilha"
-    "MEDICINE_BALL" -> "Bola medicinal"
-    "STABILITY_BALL" -> "Bola de estabilidade"
-    "BOSU" -> "Bosu"
-    "SUSPENSION" -> "Suspensão / TRX"
-    "ROPE" -> "Corda"
-    "AGILITY_LADDER" -> "Escada de agilidade"
-    "NONE", "" -> "—"
-    else -> e.lowercase().replaceFirstChar { it.uppercase() }
-}
+// Os rótulos de enum saíram daqui na G.3 e vivem em `ui/Rotulos.kt`, um lugar só.
+//
+// Estavam duplicados com o `QuizSteps` ("Peito", "Iniciante"), e duplicata de texto sobrevive num
+// idioma e diverge no segundo: o tradutor recebe a mesma palavra duas vezes, em telas diferentes
+// do catálogo, e não tem como saber que precisam combinar.
+//
+// O `categoryLabel` não foi movido, foi CORRIGIDO: ele derivava o rótulo de `enum.name` e mostrava
+// "Chest" e "Lower back" para o usuário brasileiro.
