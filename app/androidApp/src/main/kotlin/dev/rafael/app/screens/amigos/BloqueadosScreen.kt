@@ -43,6 +43,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
 
 data class BloqueadosState(
     val pessoas: List<PersonDto> = emptyList(),
@@ -107,10 +109,13 @@ fun BloqueadosScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Bloqueados") },
+                title = { Text(stringResource(R.string.comum_bloqueados)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.comum_voltar),
+                        )
                     }
                 },
             )
@@ -122,7 +127,7 @@ fun BloqueadosScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    "Você não bloqueou ninguém.",
+                    stringResource(R.string.bloqueados_vazio),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -152,7 +157,7 @@ fun BloqueadosScreen(
                     OutlinedButton(
                         onClick = { viewModel.desbloquear(p.userId) },
                         enabled = !state.ocupado,
-                    ) { Text("Desbloquear") }
+                    ) { Text(stringResource(R.string.comum_desbloquear)) }
                 }
             }
 
@@ -161,8 +166,7 @@ fun BloqueadosScreen(
                 Text(
                     // Dito aqui porque é o que a pessoa quer saber ao desbloquear alguém: o
                     // desbloqueio devolve o acesso, não a amizade.
-                    "Desbloquear não restaura a amizade — se quiserem, um dos dois envia um " +
-                        "pedido novo.",
+                    stringResource(R.string.bloqueados_aviso),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

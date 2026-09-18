@@ -42,9 +42,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rafael.app.ui.AvatarInicial
+import dev.rafael.app.ui.TextosDeConquista
 import dev.rafael.contract.stats.AchievementDto
 import dev.rafael.contract.stats.UserStatsDto
 import org.koin.androidx.compose.koinViewModel
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * Perfil (ARCH #34). Na fatia A.0 só existe o PRÓPRIO perfil — `userId` continua na rota para
@@ -69,16 +72,19 @@ fun PerfilScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Perfil") },
+                title = { Text(stringResource(R.string.perfil_titulo)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.comum_voltar),
+                        )
                     }
                 },
                 actions = {
                     if (souEu) {
                         IconButton(onClick = onEditar) {
-                            Icon(Icons.Filled.Edit, contentDescription = "Editar perfil")
+                            Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.perfil_editar))
                         }
                     }
                 },
@@ -99,7 +105,7 @@ fun PerfilScreen(
             ) {
                 AvatarInicial(nome = state.nome, id = state.id, tamanho = 58.dp)
                 Text(
-                    state.nome.ifBlank { "Você" },
+                    state.nome.ifBlank { stringResource(R.string.perfil_sem_nome) },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Medium,
                 )
@@ -128,7 +134,11 @@ fun PerfilScreen(
                     modifier = Modifier.size(20.dp),
                 )
                 Spacer(Modifier.width(12.dp))
-                Text("Amigos", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Text(
+                    stringResource(R.string.comum_amigos),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.weight(1f),
+                )
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
@@ -146,13 +156,13 @@ fun PerfilScreen(
                 verticalAlignment = Alignment.Bottom,
             ) {
                 Text(
-                    "CONQUISTAS",
+                    stringResource(R.string.comum_conquistas),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (state.conquistas.isNotEmpty()) {
                     Text(
-                        "${state.desbloqueadas} de ${state.conquistas.size}",
+                        stringResource(R.string.comum_x_de_y, state.desbloqueadas, state.conquistas.size),
                         style = MaterialTheme.typography.labelMedium,
                         // lime: recompensa do perfil individual ([REGRA] ARCH #16).
                         color = MaterialTheme.colorScheme.tertiary,
@@ -179,13 +189,13 @@ private fun CartaoDeProgresso(stats: UserStatsDto?) {
         val lime = MaterialTheme.colorScheme.tertiary
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
-                "Nível ${stats?.level ?: 1}",
+                stringResource(R.string.comum_nivel, stats?.level ?: 1),
                 style = MaterialTheme.typography.titleSmall,
                 color = lime,
             )
             if (stats != null) {
                 Text(
-                    "${stats.xpInLevel} / ${stats.xpForNextLevel} XP",
+                    stringResource(R.string.comum_xp_do_nivel, stats.xpInLevel, stats.xpForNextLevel),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -204,8 +214,8 @@ private fun CartaoDeProgresso(stats: UserStatsDto?) {
         )
         Spacer(Modifier.height(13.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-            Numero(stats?.totalSessions ?: 0, "treinos")
-            Numero(stats?.sessionsThisWeek ?: 0, "nesta semana")
+            Numero(stats?.totalSessions ?: 0, stringResource(R.string.perfil_metrica_treinos))
+            Numero(stats?.sessionsThisWeek ?: 0, stringResource(R.string.perfil_metrica_semana))
         }
     }
 }
@@ -250,9 +260,13 @@ private fun FileiraDeConquistas(conquistas: List<AchievementDto>, onVerTodas: ()
                     ),
                 contentAlignment = Alignment.Center,
             ) {
+                // A vitrine é só ícone: quem enxerga não lê nada aqui, e quem usa leitor de tela
+                // ouve o nome da medalha. Por isso a `contentDescription` é a ÚNICA forma do
+                // título nesta tela, e por isso ela também precisava sair do servidor (G.5).
+                val titulo = conquista?.id?.let { TextosDeConquista.titulo(it) }
                 Icon(
                     if (conquista?.unlocked == true) Icons.Outlined.EmojiEvents else Icons.Outlined.Lock,
-                    contentDescription = conquista?.title,
+                    contentDescription = titulo?.let { stringResource(it) },
                     tint = if (conquista?.unlocked == true) lime else apagado,
                     modifier = Modifier.size(20.dp),
                 )

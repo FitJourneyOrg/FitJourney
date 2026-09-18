@@ -111,7 +111,10 @@ class ProgramServiceTest {
         assertIs<AppResult.Success<ProgramDto>>(r)
         assertEquals(1, repo.store.size, "deveria ter persistido 1 programa")
         assertEquals(WorkoutOrigin.AI, r.value.origin)
-        assertTrue(r.value.name.startsWith("Programa"), "nome automático")
+        // G.5: programa gerado nasce SEM nome. Este teste afirmava o contrário até 2026-09-15
+        // (`startsWith("Programa")`), porque o servidor montava a frase em português e a gravava.
+        // Agora o vazio é o contrato: significa "ninguém escolheu, a tela deriva" (ARCH #37, V48).
+        assertEquals("", r.value.name, "programa gerado não nomeia: quem escreve a palavra é a tela")
     }
 
     @Test

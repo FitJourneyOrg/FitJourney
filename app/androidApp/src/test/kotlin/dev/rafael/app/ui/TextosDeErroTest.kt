@@ -8,7 +8,7 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
- * O catálogo de textos de erro do cliente (G.2, ARCH #37).
+ * O catálogo de textos de erro do cliente (G.2, extraído na G.3, ARCH #37).
  *
  * ## O que este arquivo impede
  *
@@ -17,6 +17,17 @@ import kotlin.test.assertTrue
  * cai no fallback e mostra a frase em português do servidor, para sempre, sem ninguém notar.
  *
  * O teste da cobertura fecha essa porta pelo build.
+ *
+ * ## O que mudou com a extração
+ *
+ * `TextosDeErro.de` devolve `@StringRes Int?`, e num teste JVM um `R.string.*` é **um número sem o
+ * texto**. Duas consequências, e as duas melhoraram o arquivo:
+ *
+ * 1. As asserções sobre a FORMA do texto (não parece código, sem travessão) saíram daqui e viraram
+ *    o `CatalogoDeStringsTest`, que varre o `strings.xml` inteiro em vez de só a área de erros.
+ * 2. As que precisam da frase leem o catálogo pela chave DERIVADA do código
+ *    (`PESSOA_NAO_EXISTE` → `erro_pessoa_nao_existe`). Isso passou a ser verificável: chave fora do
+ *    padrão quebra o build em vez de virar string órfã no documento do tradutor.
  */
 class TextosDeErroTest {
 
@@ -26,19 +37,28 @@ class TextosDeErroTest {
             .filter { it.type == String::class.java }
             .map { it.isAccessible = true; it.get(ErrorCodes) as String }
 
+    /** A chave do `strings.xml` que corresponde a um código, pela convenção do arquivo. */
+    private fun chaveDe(codigo: String) = "erro_" + codigo.lowercase()
+
+    /** A frase que o usuário lê para este código, ou `null` se ele não tem texto próprio. */
+    private fun fraseDe(codigo: String) = CatalogoDeStrings.porChave[chaveDe(codigo)]
+
     /**
      * ⭐ **Todo código tem texto próprio, ou está declarado como exceção.**
      *
      * As duas listas de exceção não são escapatória: elas obrigam a decisão a ficar ESCRITA.
      *
      * - `GENERICOS` são os fallbacks de família, cujo texto o `ErrorUi` já escreve;
-     * - `SEM_TEXTO_PROPRIO` são os nove que carregam um número que só o servidor conhece, e que por
-     *   decisão de 2026-09-09 continuam usando a frase dele.
+     * - `SEM_TEXTO_PROPRIO` está VAZIO desde 2026-09-11: os nove que carregavam número do
+     *   servidor entraram no catálogo com o número dentro da frase, e o conjunto continua
+     *   existindo porque é onde a decisão de um código novo sem texto vai morar.
      *
      * > **Débito que ninguém consegue enumerar não é débito, é surpresa.**
      *
-     * Quando o inglês entrar, os nove aparecerão em português. Isso é sabido, está listado, e este
-     * teste é o que garante que a lista continua completa.
+     * ⚠️ A frase acima dizia *"quando o inglês entrar, os nove aparecerão em português"*. Isso
+     * deixou de ser verdade em 2026-09-11: eles entraram no catálogo, e **nenhuma frase de erro do
+     * app fica sem tradução**. O que sobrou no lugar é outro débito, menor e registrado: doze
+     * strings do catálogo cravam números que são constantes do SERVIDOR e que elas não enxergam.
      */
     @Test
     fun `todo codigo tem texto no cliente ou excecao declarada`() {
@@ -69,6 +89,43 @@ class TextosDeErroTest {
             .filter { it !in existentes }
 
         assertTrue(fantasmas.isEmpty(), "exceção para código que não existe mais: $fantasmas")
+    }
+
+    /**
+     * ⭐ **A chave no `strings.xml` é DERIVADA do código, e o build confere.**
+     *
+     * Este é o teste que a extração acrescentou, e ele fecha um buraco novo: `de()` devolve um
+     * `Int`, e um `Int` errado é indistinguível de um certo lendo o código. A ponte é a convenção
+     * — `PESSOA_NAO_EXISTE` → `erro_pessoa_nao_existe` — e ela só vale se for verificada.
+     *
+     * Nos dois sentidos, porque os dois erros são reais:
+     *
+     * - código com texto em `de()` e **sem** a chave no catálogo → alguém escreveu a chave errada,
+     *   e o app mostraria a frase de OUTRO erro;
+     * - chave `erro_*` no catálogo e **sem** código correspondente → sobrou lixo de um código
+     *   apagado, e o tradutor recebe uma frase que ninguém vai ler.
+     */
+    @Test
+    fun `a chave de cada codigo segue a convencao, nos dois sentidos`() {
+        val comTexto = todosOsCodigos().filter { TextosDeErro.de(it) != null }
+
+        val semChave = comTexto.filter { fraseDe(it) == null }
+        assertTrue(
+            semChave.isEmpty(),
+            "código com texto em TextosDeErro.de e sem a chave derivada no strings.xml: " +
+                "${semChave.map(::chaveDe)}",
+        )
+
+        // O caminho inverso ignora as chaves de CATEGORIA (erro_titulo_*, erro_texto_*, erro_acao_*),
+        // que pertencem à família de erro e não a nenhum ErrorCode.
+        val deCategoria = setOf("erro_titulo_", "erro_texto_", "erro_acao_")
+        val esperadas = comTexto.map(::chaveDe).toSet()
+        val sobrando = CatalogoDeStrings.entradas
+            .map { it.chave }
+            .filter { chave -> chave.startsWith("erro_") && deCategoria.none { chave.startsWith(it) } }
+            .filter { chave -> chave !in esperadas }
+
+        assertTrue(sobrando.isEmpty(), "chave `erro_*` sem código correspondente: $sobrando")
     }
 
     /**
@@ -124,7 +181,8 @@ class TextosDeErroTest {
      * continua explicando melhor do que qualquer texto genérico escrito aqui.
      *
      * Sem este caminho, cada código novo do servidor viraria "Não encontrado" na tela de quem não
-     * atualizou o app.
+     * atualizou o app. Depois da G.3 a asserção ficou mais forte de graça: o texto tem de ser
+     * literalmente [Frase.DoServidor], e não uma coincidência de conteúdo.
      */
     @Test
     fun `codigo desconhecido usa a mensagem do servidor`() {
@@ -132,7 +190,7 @@ class TextosDeErroTest {
         val visual = AppError.Conflict(frase, "CODIGO_DO_FUTURO")
             .visual(temRede = true, contexto = ErroContexto.LOGADO)
 
-        assertEquals(frase, visual.texto)
+        assertEquals(Frase.DoServidor(frase), visual.texto)
     }
 
     /** E erro sem código nenhum também. É o caminho de todo `AppError` construído sem motivo. */
@@ -142,29 +200,15 @@ class TextosDeErroTest {
         val visual = AppError.Conflict(frase)
             .visual(temRede = true, contexto = ErroContexto.LOGADO)
 
-        assertEquals(frase, visual.texto)
+        assertEquals(Frase.DoServidor(frase), visual.texto)
     }
 
     /**
-     * [INV] Nenhum texto do catálogo parece código, e nenhum usa travessão.
+     * Os cinco desmembramentos da G.2 têm textos DIFERENTES. Unificá-los desfaria a fatia.
      *
-     * O `.name` de enum já vazou para a tela uma vez ("TETO_ATINGIDO", fatia A.2). O travessão é a
-     * convenção do #37, seção 8, e **este é o único lugar do cliente onde ela é verificada hoje** —
-     * os outros ~500 literais do app só entram na varredura na G.3.
+     * Compara as FRASES do catálogo, não os ids: dois ids diferentes apontando para o mesmo texto
+     * é exatamente a regressão que este teste procura, e comparar `Int` não a veria.
      */
-    @Test
-    fun `nenhum texto parece codigo nem usa travessao`() {
-        todosOsCodigos().mapNotNull { TextosDeErro.de(it) }.forEach { texto ->
-            assertTrue(texto.isNotBlank(), "texto vazio no catálogo")
-            assertTrue(
-                !texto.contains("_") && texto != texto.uppercase(),
-                "`$texto` parece constante de código",
-            )
-            assertTrue(!texto.contains('—') && !texto.contains('–'), "travessão em `$texto`")
-        }
-    }
-
-    /** Os cinco desmembramentos da G.2 têm textos DIFERENTES. Unificá-los desfaria a fatia. */
     @Test
     fun `os desmembramentos da G2 dizem coisas diferentes`() {
         val pares = listOf(
@@ -176,8 +220,8 @@ class TextosDeErroTest {
         )
 
         pares.forEach { (um, outro) ->
-            val a = TextosDeErro.de(um)
-            val b = TextosDeErro.de(outro)
+            val a = fraseDe(um)
+            val b = fraseDe(outro)
             assertNotNull(a, "$um perdeu o texto")
             assertNotNull(b, "$outro perdeu o texto")
             assertTrue(a != b, "`$um` e `$outro` foram desmembrados e voltaram a dizer a mesma coisa")

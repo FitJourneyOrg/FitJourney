@@ -6,6 +6,7 @@ import dev.rafael.contract.stats.AchievementDto
 import dev.rafael.core.database.FitJourneyDatabase
 import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.TokenProvider
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -63,17 +64,25 @@ class AchievementsRepository(
      * ângulos diferentes, e janelas distintas fariam a medalha aparecer minutos depois do nível
      * que a desbloqueou — o usuário leria como bug.
      */
-    override suspend fun sincronizar(forcar: Boolean) {
-        if (tokenProvider.currentUid() == null) return   // sem sessão, sincronizar só produz 401
-        if (!forcar && stamps.fresco(SyncStamps.CONQUISTAS, TTL_MS)) return
+    override suspend fun sincronizar(forcar: Boolean): AppError? {
+        if (tokenProvider.currentUid() == null) return null   // sem sessão, sincronizar só produz 401
+        if (!forcar && stamps.fresco(SyncStamps.CONQUISTAS, TTL_MS)) return null
         val k = chave()
-        when (val r = api.get()) {
-            is AppResult.Success -> withContext(Dispatchers.Default) {
-                cache.put(k, json.encodeToString(serializer, r.value))
-            }.also { stamps.marcar(SyncStamps.CONQUISTAS) }
-            is AppResult.Failure -> Unit   // mantém o último catálogo conhecido
+        return when (val r = api.get()) {
+            is AppResult.Success -> {
+                withContext(Dispatchers.Default) {
+                    cache.put(k, json.encodeToString(serializer, r.value))
+                }
+                stamps.marcar(SyncStamps.CONQUISTAS)
+                null
+            }
+            // Continua mantendo o último catálogo conhecido. O que mudou é que a falha deixa de
+            // ser engolida: sem catálogo nenhum, ela é a única explicação para uma grade vazia.
+            is AppResult.Failure -> r.error
         }
     }
+
+    override suspend fun jaSincronizou(): Boolean = stamps.jaSincronizou(SyncStamps.CONQUISTAS)
 
     private companion object {
         const val TTL_MS = 2 * 60 * 1000L

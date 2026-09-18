@@ -43,6 +43,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * Câmera IN-APP do check-in (4.4).
@@ -97,7 +99,10 @@ fun CameraDoCheckIn(
             onClick = { frontal = !frontal },
             modifier = Modifier.align(Alignment.TopEnd).padding(12.dp),
         ) {
-            Icon(Icons.Filled.Cameraswitch, contentDescription = "Trocar de câmera")
+            Icon(
+                Icons.Filled.Cameraswitch,
+                contentDescription = stringResource(R.string.checkin_trocar_camera),
+            )
         }
 
         FloatingActionButton(

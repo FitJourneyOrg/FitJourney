@@ -24,6 +24,11 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.ui.ShimmerList
 import dev.rafael.contract.stats.AchievementDto
 import org.koin.androidx.compose.koinViewModel
+import dev.rafael.app.R
+import dev.rafael.app.ui.ErroAcao
+import dev.rafael.app.ui.ErroDeTela
+import dev.rafael.app.ui.TextosDeConquista
+import androidx.compose.ui.res.stringResource
 
 /**
  * Conquistas (ARCH #16).
@@ -49,10 +54,13 @@ fun AchievementsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Conquistas") },
+                title = { Text(stringResource(R.string.comum_conquistas)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.comum_voltar),
+                        )
                     }
                 },
             )
@@ -63,9 +71,31 @@ fun AchievementsScreen(
                 state.carregandoInicial && state.conquistas.isEmpty() ->
                     ShimmerList(modifier = Modifier.padding(vertical = 8.dp))
 
+                /*
+                 * ⭐ GRADE VAZIA E SYNC FALHOU: dizer, em vez de afirmar `0 de 0`.
+                 *
+                 * O `0 de 0` não é um vazio: é uma AFIRMAÇÃO, e falsa — diz que existem zero
+                 * conquistas no catálogo, quando o catálogo não chegou. Aqui a tela não tem dado
+                 * local nenhum, então é nível 2 do ARCH #31, não silêncio.
+                 */
+                state.conquistas.isEmpty() && state.erroSync != null ->
+                    ErroDeTela(
+                        erro = state.erroSync!!,
+                        onAcao = { acao ->
+                            if (acao == ErroAcao.TENTAR_DE_NOVO) viewModel.sincronizar(forcar = true)
+                        },
+                    )
+
+                /*
+                 * Grade vazia, sem erro, e nunca sincronizou: ainda não chegou. Continua sendo
+                 * espera, e não um catálogo de tamanho zero.
+                 */
+                state.conquistas.isEmpty() && !state.jaSincronizou ->
+                    ShimmerList(modifier = Modifier.padding(vertical = 8.dp))
+
                 else -> {
                     Text(
-                        "${state.desbloqueadas.size} de ${state.total}",
+                        stringResource(R.string.comum_x_de_y, state.desbloqueadas.size, state.total),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.tertiary,   // lime: é recompensa
                         fontWeight = FontWeight.Bold,
@@ -87,6 +117,15 @@ fun AchievementsScreen(
 
 @Composable
 private fun CartaoDeConquista(conquista: AchievementDto) {
+    // G.5: o texto vem do catálogo do cliente, pela chave derivada do id (ARCH #37). Antes disto
+    // o `title` e a `description` chegavam prontos do servidor, em português, e esta tela inteira
+    // ficava em português para quem escolhia inglês.
+    //
+    // Sem título não há cartão: `null` só acontece com servidor novo e app antigo, e um cartão
+    // com o identificador cru (`STREAK_90`) no meio da grade é pior que uma medalha a menos.
+    val titulo = TextosDeConquista.titulo(conquista.id) ?: return
+    val descricao = TextosDeConquista.descricao(conquista.id)
+
     // O estado vem de `unlockedAt`, NUNCA de comparar current >= target: streak quebra e a
     // medalha continua ganha. Quem decide desbloqueio é o servidor ([REGRA] ARCH #16).
     val desbloqueada = conquista.unlocked
@@ -121,19 +160,21 @@ private fun CartaoDeConquista(conquista: AchievementDto) {
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                conquista.title,
+                stringResource(titulo),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
                 color = if (desbloqueada) MaterialTheme.colorScheme.onSurface else apagado,
             )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                conquista.description,
-                style = MaterialTheme.typography.bodySmall,
-                textAlign = TextAlign.Center,
-                color = apagado,
-            )
+            descricao?.let {
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    stringResource(it),
+                    style = MaterialTheme.typography.bodySmall,
+                    textAlign = TextAlign.Center,
+                    color = apagado,
+                )
+            }
 
             // Progresso SÓ na bloqueada. Na desbloqueada a barra seria ruído — e pior, poderia
             // aparecer incompleta (streak que quebrou depois), sugerindo que a medalha está
@@ -151,7 +192,7 @@ private fun CartaoDeConquista(conquista: AchievementDto) {
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "${conquista.current} de ${conquista.target}",
+                    stringResource(R.string.comum_x_de_y, conquista.current, conquista.target),
                     style = MaterialTheme.typography.labelSmall,
                     color = apagado,
                 )

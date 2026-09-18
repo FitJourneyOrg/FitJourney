@@ -1,5 +1,7 @@
 package dev.rafael.app.navigation
 
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
@@ -47,6 +49,7 @@ import dev.rafael.app.screens.authentication.LoginScreen
 import dev.rafael.app.push.DestinoDePush
 import dev.rafael.app.screens.comentarios.ComentariosScreen
 import dev.rafael.app.screens.moderacao.ModeracaoScreen
+import dev.rafael.app.screens.idioma.IdiomaScreen
 import dev.rafael.app.screens.conta.ContaScreen
 import dev.rafael.app.screens.exercise.ExerciseDetailScreen
 import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
@@ -74,6 +77,9 @@ import dev.rafael.app.screens.session.WorkoutSessionScreen
 import dev.rafael.app.screens.splash.SplashScreen
 import dev.rafael.app.screens.workout.WorkoutDetailScreen
 import dev.rafael.app.screens.workout.WorkoutFormScreen
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -273,6 +279,7 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
                 onWiki = { navegarDoMenu(AppRoute.Wiki) },
                 onDuvidas = { navegarDoMenu(AppRoute.Duvidas) },
                 onConta = { navegarDoMenu(AppRoute.Conta) },
+                onIdioma = { navegarDoMenu(AppRoute.IdiomaDaInterface) },
             )
         },
     ) {
@@ -283,7 +290,7 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
                     title = {},
                     navigationIcon = {
                         IconButton(onClick = { escopo.launch { drawer.open() } }) {
-                            Icon(Icons.Filled.Menu, contentDescription = "Abrir menu")
+                            Icon(Icons.Filled.Menu, contentDescription = stringResource(R.string.nav_abrir_menu))
                         }
                     },
                     actions = {
@@ -298,9 +305,13 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
                                 Icon(
                                     Icons.Outlined.Notifications,
                                     contentDescription = if (naoLidas > 0) {
-                                        "Notificações, $naoLidas não lidas"
+                                        pluralStringResource(
+                                            R.plurals.notificacoes_nao_lidas,
+                                            naoLidas,
+                                            naoLidas,
+                                        )
                                     } else {
-                                        "Notificações"
+                                        stringResource(R.string.comum_notificacoes)
                                     },
                                 )
                             }
@@ -310,11 +321,71 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
             }
         },
         bottomBar = { if (mostrarAbas) FitJourneyBottomBar(nav) },
+        // Ver o bloco logo abaixo: este `Scaffold` não reserva inset nenhum para si.
+        contentWindowInsets = WindowInsets(0),
     ) { padding ->
+    /*
+     * ⭐ [REGRA] QUEM DESENHA A BARRA DO TOPO PINTA A STATUS BAR.
+     *
+     * Este `Scaffold` é aninhado com os 24 das telas, e as três linhas envolvidas (o
+     * `contentWindowInsets` acima, o `padding` e o `consumeWindowInsets` abaixo) resolvem juntas
+     * dois defeitos que parecem opostos e têm a mesma raiz: **ninguém tinha declarado de quem é o
+     * inset.**
+     *
+     * ## Defeito 1: faixa preta em cima E embaixo, em toda tela
+     *
+     * Havia só `Modifier.padding(padding)`. `Modifier.padding` empurra o conteúdo e **não conta a
+     * ninguém**: o `Scaffold` de dentro perguntava ao sistema quanto valiam as barras, ouvia a
+     * altura cheia, e descontava de novo.
+     *
+     * > **Espaço reservado duas vezes não é bug de layout: é a segunda pessoa não sabendo que a
+     * > primeira já pagou.**
+     *
+     * ## Defeito 2 (o que a correção do 1 revelou)
+     *
+     * Consumir tudo aqui em cima matou a faixa dupla e criou outra: a `TopAppBar` de cada tela
+     * passou a começar ABAIXO da status bar, que sobrava pintada pelo fundo da janela. Preto,
+     * depois o header, depois o conteúdo.
+     *
+     * A causa é o `contentWindowInsets` padrão deste `Scaffold`: ele reservava a status bar para
+     * si, sem ter nada para desenhar ali quando `mostrarAbas` é falso.
+     *
+     * ## O arranjo, e por que ele vale nos dois modos
+     *
+     * `contentWindowInsets = WindowInsets(0)` diz que este `Scaffold` **não reserva inset nenhum
+     * para si**. O `padding` que ele entrega passa a ser só a ALTURA das barras que ele realmente
+     * desenhou, e `consumeWindowInsets(padding)` consome exatamente isso.
+     *
+     * | | `mostrarAbas` = false (Perfil, Conta, detalhes) | `mostrarAbas` = true (as 4 raízes) |
+     * |---|---|---|
+     * | barras daqui | nenhuma | `TopAppBar` + `NavigationBar` |
+     * | `padding` | zero | altura das duas, **inset já embutido nelas** |
+     * | o que a tela enxerga | os insets INTEIROS | zero, porque as barras já os cobriram |
+     * | quem pinta a status bar | a `TopAppBar` da tela | a `TopAppBar` daqui |
+     *
+     * Funciona porque `TopAppBar` e `NavigationBar` do Material 3 **já aplicam o próprio inset**:
+     * elas crescem e pintam por baixo da barra do sistema sozinhas. O erro era este `Scaffold`
+     * tirar delas essa chance.
+     *
+     * ⚠️ Nenhuma tela deve chamar `statusBarsPadding`, `navigationBarsPadding` ou
+     * `systemBarsPadding`. Quem aplica inset na tela é o `Scaffold` dela, e um modificador solto
+     * por cima volta a somar duas vezes — o defeito 1, agora numa tela só. Regra travada no
+     * `ArchitectureKonsistTest`. O `imePadding` continua sendo de quem tem campo de texto:
+     * teclado não é barra fixa e ninguém o consome aqui.
+     */
     NavHost(
         navController = nav,
         startDestination = AppRoute.Splash,
-        modifier = Modifier.padding(padding),
+        modifier = Modifier
+            .padding(padding)
+            .consumeWindowInsets(padding),
+        // O movimento entre telas é decidido pelas ROTAS envolvidas, não anotado destino a
+        // destino — ver `Movimento.kt`, que também explica por quê. Empilhar desliza, trocar de
+        // aba esmaece, entrar numa tarefa sobe de baixo.
+        enterTransition = { Movimento.entrada(this) },
+        exitTransition = { Movimento.saida(this) },
+        popEnterTransition = { Movimento.entradaVoltando(this) },
+        popExitTransition = { Movimento.saidaVoltando(this) },
     ) {
 
         composable<AppRoute.Splash> {
@@ -405,6 +476,7 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
         composable<AppRoute.Library> {
             ExerciseLibraryScreen(
                 onOpenExercise = { id -> nav.navigate(AppRoute.ExerciseDetail(id)) },
+                onBack = { nav.popBackStack() },
             )
         }
         composable<AppRoute.ExerciseDetail> { entry ->
@@ -628,10 +700,15 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
                 )
             }
         }
+        composable<AppRoute.IdiomaDaInterface> {
+            IdiomaScreen(onBack = { nav.popBackStack() })
+        }
+
         composable<AppRoute.Conta> {
             ContaScreen(
                 onBack = { nav.popBackStack() },
                 onVerBloqueados = { nav.navigate(AppRoute.Bloqueados) },
+                onIdioma = { nav.navigate(AppRoute.IdiomaDaInterface) },
                 onSaiu = {
                     // Fecha o menu junto: sair com o drawer aberto deixava um painel sem dono
                     // por cima da tela de login.
@@ -645,10 +722,16 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
         }
 
         composable<AppRoute.Wiki> {
-            EmBreveScreen("Wiki fitness", "Conteúdo sobre treino, técnica e recuperação. Chega na Fase 8.")
+            EmBreveScreen(
+                stringResource(R.string.menu_wiki),
+                stringResource(R.string.nav_wiki_descricao),
+            )
         }
         composable<AppRoute.Duvidas> {
-            EmBreveScreen("Dúvidas frequentes", "As perguntas mais comuns sobre o app e os treinos.")
+            EmBreveScreen(
+                stringResource(R.string.menu_duvidas),
+                stringResource(R.string.nav_duvidas_descricao),
+            )
         }
     }
     }

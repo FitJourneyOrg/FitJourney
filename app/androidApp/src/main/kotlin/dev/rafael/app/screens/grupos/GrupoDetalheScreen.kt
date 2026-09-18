@@ -65,6 +65,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,10 +74,13 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import dev.rafael.app.R
 import dev.rafael.app.ui.AvatarInicial
 import dev.rafael.app.ui.DialogoDeDenuncia
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.app.ui.NetworkImage
+import dev.rafael.app.ui.rotulo
+import dev.rafael.app.ui.rotuloDetalhado
 import dev.rafael.app.ui.shimmer
 import dev.rafael.contract.checkin.CheckInDto
 import dev.rafael.contract.checkin.CheckInStatus
@@ -166,7 +171,8 @@ fun GrupoDetalheScreen(
         aoRemover = { viewModel.expulsar(groupId, it.userId) },
     )
     DialogoDeDenuncia(
-        alvo = state.denunciando?.titulo,
+        nomeDoAutor = state.denunciando?.nome,
+        ehComentario = state.denunciando?.ehComentario == true,
         ocupado = state.ocupado,
         erro = state.erro,
         aoFechar = viewModel::cancelarDenuncia,
@@ -182,7 +188,10 @@ fun GrupoDetalheScreen(
                 title = { Text(state.grupo?.title.orEmpty()) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.comum_voltar),
+                        )
                     }
                 },
                 actions = {
@@ -201,7 +210,10 @@ fun GrupoDetalheScreen(
                                     }
                                 },
                             ) {
-                                Icon(Icons.Outlined.Shield, contentDescription = "Denúncias")
+                                Icon(
+                                    Icons.Outlined.Shield,
+                                    contentDescription = stringResource(R.string.comum_denuncias),
+                                )
                             }
                         }
                     }
@@ -248,7 +260,7 @@ fun GrupoDetalheScreen(
                     Tab(
                         selected = pager.currentPage == indice,
                         onClick = { escopo.launch { pager.animateScrollToPage(indice) } },
-                        text = { Text(aba.titulo) },
+                        text = { Text(stringResource(aba.titulo)) },
                     )
                 }
             }
@@ -287,7 +299,7 @@ fun GrupoDetalheScreen(
                                     AlvoDeDenuncia(
                                         id = it.id,
                                         ehComentario = false,
-                                        titulo = "o check-in de ${it.displayName}",
+                                        nome = it.displayName,
                                     ),
                                 )
                             },
@@ -312,7 +324,10 @@ fun GrupoDetalheScreen(
     }
 }
 
-private data class AbaDaTela(val aba: GrupoDetalheViewModel.Aba, val titulo: String)
+private data class AbaDaTela(
+    val aba: GrupoDetalheViewModel.Aba,
+    @androidx.annotation.StringRes val titulo: Int,
+)
 
 /**
  * A ordem lê como uma pergunta de cada vez: **o que é isto → quem está ganhando → o que aconteceu
@@ -322,10 +337,10 @@ private data class AbaDaTela(val aba: GrupoDetalheViewModel.Aba, val titulo: Str
  * `ATIVO`, a tela abre em Ranking. Ver o `initialPage`.
  */
 private val ABAS = listOf(
-    AbaDaTela(GrupoDetalheViewModel.Aba.SOBRE, "Sobre"),
-    AbaDaTela(GrupoDetalheViewModel.Aba.RANKING, "Ranking"),
-    AbaDaTela(GrupoDetalheViewModel.Aba.POSTS, "Posts"),
-    AbaDaTela(GrupoDetalheViewModel.Aba.MEMBROS, "Membros"),
+    AbaDaTela(GrupoDetalheViewModel.Aba.SOBRE, R.string.grupo_detalhe_aba_sobre),
+    AbaDaTela(GrupoDetalheViewModel.Aba.RANKING, R.string.grupo_detalhe_aba_ranking),
+    AbaDaTela(GrupoDetalheViewModel.Aba.POSTS, R.string.grupo_detalhe_aba_posts),
+    AbaDaTela(GrupoDetalheViewModel.Aba.MEMBROS, R.string.grupo_detalhe_aba_membros),
 )
 
 /**
@@ -396,12 +411,21 @@ private fun AbaSobre(
                 }
 
                 Spacer(Modifier.height(14.dp))
-                Linha("Período", "${grupo.startDate} a ${grupo.endDate}")
-                Linha("Fuso", grupo.timezone)
+                Linha(
+                    stringResource(R.string.grupo_detalhe_periodo),
+                    stringResource(R.string.grupo_periodo, grupo.startDate, grupo.endDate),
+                )
+                Linha(stringResource(R.string.grupo_detalhe_fuso), grupo.timezone)
                 if (grupo.rules.isNotEmpty()) {
+                    // ⚠️ `map` ANTES de `joinToString`. `joinToString` não é inline e a lambda dele
+                    // não herda o escopo `@Composable`; `map` é inline e herda. Resolver, depois
+                    // juntar — é a terceira armadilha da G.3.
+                    //
+                    // E o rótulo vem do enum: antes disto era `name.lowercase().replace('_',' ')`,
+                    // que mostrava `localizacao` sem cedilha.
                     Linha(
-                        "Check-in exige",
-                        grupo.rules.joinToString(", ") { it.name.lowercase().replace('_', ' ') },
+                        stringResource(R.string.grupo_detalhe_regras),
+                        grupo.rules.map { stringResource(it.rotulo()) }.joinToString(", "),
                     )
                 }
 
@@ -419,7 +443,10 @@ private fun AbaSobre(
                 Spacer(Modifier.height(12.dp))
                 TextButton(onClick = onSair, enabled = !ocupado) {
                     Text(
-                        if (souUltimo) "Excluir o desafio" else "Sair do desafio",
+                        stringResource(
+                            if (souUltimo) R.string.grupo_detalhe_excluir
+                            else R.string.grupo_detalhe_sair,
+                        ),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -427,7 +454,7 @@ private fun AbaSobre(
                 // único membro, este aviso mandava transferir o cargo para alguém que não existia.
                 if (souAdmin && !souUltimo) {
                     Text(
-                        "Como admin, você precisa passar o cargo para alguém antes de sair.",
+                        stringResource(R.string.grupo_detalhe_admin_precisa_transferir),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -456,17 +483,21 @@ private fun ConviteDoDesafio(
 ) {
     if (grupo.state != GroupState.AGENDADO) return
 
+    // Resolvidos AQUI, em composição: o `onClick` roda fora dela e `stringResource` não existe lá.
+    val textoDoConvite = stringResource(R.string.grupo_detalhe_convite_texto, grupo.title, grupo.code)
+    val tituloDoChooser = stringResource(R.string.grupo_detalhe_convite_chooser)
+
     Spacer(Modifier.height(14.dp))
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(
-                "CÓDIGO DO DESAFIO",
+                stringResource(R.string.comum_codigo_do_desafio),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(grupo.code, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Medium)
         }
-        TextButton(onClick = { area.setText(AnnotatedString(grupo.code)) }) { Text("Copiar") }
+        TextButton(onClick = { area.setText(AnnotatedString(grupo.code)) }) { Text(stringResource(R.string.grupo_detalhe_copiar)) }
     }
 
     Spacer(Modifier.height(8.dp))
@@ -480,16 +511,15 @@ private fun ConviteDoDesafio(
                         type = "text/plain"
                         putExtra(
                             Intent.EXTRA_TEXT,
-                            "Entra no meu desafio no FitJourney: \"${grupo.title}\".\n" +
-                                "Use o código ${grupo.code} para entrar.",
+                            textoDoConvite,
                         )
                     },
-                    "Convidar para o desafio",
+                    tituloDoChooser,
                 ),
             )
         },
         modifier = Modifier.fillMaxWidth(),
-    ) { Text("Convidar") }
+    ) { Text(stringResource(R.string.grupo_detalhe_convidar)) }
 }
 
 // ---------------------------------------------------------------------------
@@ -609,7 +639,7 @@ private fun AbaDePosts(
         if (itens.isEmpty()) {
             item {
                 Text(
-                    "Ninguém treinou ainda. Seja o primeiro.",
+                    stringResource(R.string.grupo_detalhe_feed_vazio),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp),
@@ -640,7 +670,7 @@ private fun AbaDePosts(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (carregandoMais) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                    else Text("Ver check-ins mais antigos")
+                    else Text(stringResource(R.string.grupo_detalhe_carregar_mais))
                 }
             }
         }
@@ -668,7 +698,7 @@ private fun AcaoDeCheckIn(grupo: GroupDto, onCheckIn: () -> Unit) {
         ) {
             Icon(Icons.Outlined.AddAPhoto, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Fazer check-in")
+            Text(stringResource(R.string.grupo_detalhe_fazer_checkin))
         }
     } else {
         Row(
@@ -692,7 +722,7 @@ private fun AcaoDeCheckIn(grupo: GroupDto, onCheckIn: () -> Unit) {
                 // morava no topo do feed e o item vinha logo em seguida; agora que a ação está em
                 // "Sobre" e o item em "Posts", "abaixo" mandaria a pessoa rolar uma tela onde não
                 // há nada. Texto que descreve posição envelhece a cada mudança de layout.
-                "Você já treinou hoje. Para refazer, apague o seu check-in na aba Posts.",
+                stringResource(R.string.grupo_detalhe_ja_treinou),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -711,6 +741,7 @@ private fun AcaoDeCheckIn(grupo: GroupDto, onCheckIn: () -> Unit) {
  * O DIA vem do `localDate`, que já é o dia civil do grupo, resolvido pelo servidor. Só a HORA
  * precisa de conversão.
  */
+@Composable
 private fun quandoFoi(item: CheckInDto, fusoDoGrupo: String): String {
     val fuso = runCatching { TimeZone.of(fusoDoGrupo) }.getOrDefault(TimeZone.UTC)
     val instante = runCatching { Instant.parse(item.createdAt) }.getOrNull()
@@ -723,11 +754,15 @@ private fun quandoFoi(item: CheckInDto, fusoDoGrupo: String): String {
 
     return when {
         dia == null -> hora
-        dia == hoje -> "Hoje às $hora"
-        dia == hoje.minus(DatePeriod(days = 1)) -> "Ontem às $hora"
+        dia == hoje -> stringResource(R.string.checkin_hoje_as, hora)
+        dia == hoje.minus(DatePeriod(days = 1)) -> stringResource(R.string.checkin_ontem_as, hora)
         // Data absoluta para o que já saiu da memória recente. "há 12 dias" obriga a pessoa a
         // fazer a conta de cabeça para saber de que dia se trata.
-        else -> "%02d/%02d às %s".format(dia.dayOfMonth, dia.monthNumber, hora)
+        //
+        // Virou `@Composable` na G.3: a ORDEM dia/mês é do pt-BR e precisa sair do Kotlin para o
+        // catálogo, onde en-US pode invertê-la. Uma função pura que devolvesse a frase pronta não
+        // teria como fazer isso.
+        else -> stringResource(R.string.checkin_data_as, dia.dayOfMonth, dia.monthNumber, hora)
     }
 }
 
@@ -814,15 +849,14 @@ private fun ItemDoFeed(
  */
 @Composable
 private fun SeloDeStatus(status: CheckInStatus) {
-    if (status == CheckInStatus.VALIDO) return
+    val rotulo = status.rotulo() ?: return
 
-    val (texto, cor) = when (status) {
-        CheckInStatus.EM_ANALISE ->
-            "Em análise pelo admin · continua contando ponto" to MaterialTheme.colorScheme.tertiaryContainer
+    val cor = when (status) {
+        CheckInStatus.EM_ANALISE -> MaterialTheme.colorScheme.tertiaryContainer
         // A cor de erro é para o INVALIDADO e só para ele. Pintar "em análise" de vermelho
         // condenaria antes do julgamento, e a 6.8 diz o contrário — o ponto continua valendo.
-        else -> "Invalidado pelo admin" to MaterialTheme.colorScheme.errorContainer
-        }
+        else -> MaterialTheme.colorScheme.errorContainer
+    }
 
     Row(
         Modifier.fillMaxWidth().background(cor).padding(horizontal = 12.dp, vertical = 6.dp),
@@ -834,7 +868,7 @@ private fun SeloDeStatus(status: CheckInStatus) {
             modifier = Modifier.size(16.dp),
         )
         Spacer(Modifier.width(6.dp))
-        Text(texto, style = MaterialTheme.typography.labelMedium)
+        Text(stringResource(rotulo), style = MaterialTheme.typography.labelMedium)
     }
 }
 
@@ -870,21 +904,21 @@ private fun MenuDoCard(
         IconButton(onClick = { aberto = true }) {
             Icon(
                 Icons.Outlined.MoreVert,
-                contentDescription = "Ações deste check-in",
+                contentDescription = stringResource(R.string.checkin_acoes),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         DropdownMenu(expanded = aberto, onDismissRequest = { aberto = false }) {
             if (item.canDelete) {
                 DropdownMenuItem(
-                    text = { Text("Apagar meu check-in") },
+                    text = { Text(stringResource(R.string.checkin_apagar_meu)) },
                     leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null) },
                     onClick = { aberto = false; onApagar(item) },
                 )
             }
             if (item.canReport) {
                 DropdownMenuItem(
-                    text = { Text("Denunciar") },
+                    text = { Text(stringResource(R.string.comum_denunciar)) },
                     leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = null) },
                     onClick = { aberto = false; onDenunciar(item) },
                 )
@@ -893,7 +927,7 @@ private fun MenuDoCard(
                 DropdownMenuItem(
                     // O texto diz o EFEITO, não o gesto: "invalidar" sozinho não conta que a
                     // pessoa perde o ponto, e é isso que o admin precisa saber antes de tocar.
-                    text = { Text("Invalidar (tira o ponto)") },
+                    text = { Text(stringResource(R.string.checkin_invalidar_menu)) },
                     leadingIcon = { Icon(Icons.Outlined.Shield, contentDescription = null) },
                     onClick = { aberto = false; onInvalidar(item) },
                 )
@@ -961,7 +995,7 @@ private fun BarraSocial(
             IconButton(onClick = { escolhendo = !escolhendo }, modifier = Modifier.size(32.dp)) {
                 Icon(
                     Icons.Outlined.AddReaction,
-                    contentDescription = "Reagir",
+                    contentDescription = stringResource(R.string.checkin_reagir),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.size(20.dp),
                 )
@@ -973,10 +1007,14 @@ private fun BarraSocial(
             // sem nenhum o texto vira o chamado para ser o primeiro.
             TextButton(onClick = { onComentarios(item.id) }) {
                 Text(
-                    when (item.commentCount) {
-                        0 -> "Comentar"
-                        1 -> "1 comentário"
-                        else -> "${item.commentCount} comentários"
+                    if (item.commentCount == 0) {
+                        stringResource(R.string.checkin_comentar)
+                    } else {
+                        pluralStringResource(
+                            R.plurals.checkin_comentarios,
+                            item.commentCount,
+                            item.commentCount,
+                        )
                     },
                     style = MaterialTheme.typography.labelMedium,
                 )
@@ -1020,7 +1058,7 @@ private fun AbaDeMembros(
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp)) {
         item {
             Text(
-                "PARTICIPANTES · ${membros.size}",
+                stringResource(R.string.grupo_detalhe_participantes, membros.size),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1059,14 +1097,18 @@ private fun Membro(
         if (membro.role == MemberRole.ADMIN) {
             Icon(
                 Icons.Outlined.Shield,
-                contentDescription = "Admin",
+                contentDescription = stringResource(R.string.grupo_detalhe_admin),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(18.dp),
             )
         }
         if (podeAgir) {
             IconButton(onClick = onAgir) {
-                Icon(Icons.Outlined.Close, contentDescription = "Gerenciar", modifier = Modifier.size(18.dp))
+                Icon(
+                    Icons.Outlined.Close,
+                    contentDescription = stringResource(R.string.grupo_detalhe_gerenciar),
+                    modifier = Modifier.size(18.dp),
+                )
             }
         }
     }
@@ -1085,20 +1127,20 @@ private fun DialogoDeExclusaoDeCheckIn(
     val item = alvo ?: return
     AlertDialog(
         onDismissRequest = aoFechar,
-        title = { Text("Apagar este check-in?") },
+        title = { Text(stringResource(R.string.checkin_apagar_pergunta)) },
         text = {
-            Text(
-                // A 4.11 dita ANTES: apagar libera o slot do dia, então dá para refazer hoje. Sem
-                // isso a pessoa hesita achando que perde o dia.
-                "O dia fica livre de novo — você pode fazer outro check-in hoje. Depois da meia-noite não dá mais para apagar.",
-            )
+            // A 4.11 dita ANTES: apagar libera o slot do dia, então dá para refazer hoje. Sem
+            // isso a pessoa hesita achando que perde o dia.
+            Text(stringResource(R.string.checkin_apagar_texto))
         },
         confirmButton = {
             TextButton(onClick = { aoFechar(); aoConfirmar(item) }) {
-                Text("Apagar", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.comum_apagar), color = MaterialTheme.colorScheme.error)
             }
         },
-        dismissButton = { TextButton(onClick = aoFechar) { Text("Cancelar") } },
+        dismissButton = {
+            TextButton(onClick = aoFechar) { Text(stringResource(R.string.comum_cancelar)) }
+        },
     )
 }
 
@@ -1118,19 +1160,21 @@ private fun DialogoDeInvalidacao(
     val item = alvo ?: return
     AlertDialog(
         onDismissRequest = aoFechar,
-        title = { Text("Invalidar o check-in de ${item.displayName}?") },
-        text = {
-            Text(
-                "Ele perde o ponto no ranking e a decisão não pode ser desfeita. " +
-                    "O check-in continua visível, marcado como invalidado.",
-            )
+        title = {
+            Text(stringResource(R.string.checkin_invalidar_pergunta, item.displayName))
         },
+        text = { Text(stringResource(R.string.checkin_invalidar_texto)) },
         confirmButton = {
             TextButton(onClick = { aoFechar(); aoConfirmar(item) }) {
-                Text("Invalidar", color = MaterialTheme.colorScheme.error)
+                Text(
+                    stringResource(R.string.checkin_invalidar_confirmar),
+                    color = MaterialTheme.colorScheme.error,
+                )
             }
         },
-        dismissButton = { TextButton(onClick = aoFechar) { Text("Cancelar") } },
+        dismissButton = {
+            TextButton(onClick = aoFechar) { Text(stringResource(R.string.comum_cancelar)) }
+        },
     )
 }
 
@@ -1149,24 +1193,37 @@ private fun DialogoDeSaida(
     if (!aberto) return
     AlertDialog(
         onDismissRequest = aoFechar,
-        title = { Text(if (souUltimo) "Excluir o desafio?" else "Sair do desafio?") },
-        text = {
+        title = {
             Text(
-                if (souUltimo) {
-                    "Você é a única pessoa aqui. Sair apaga este desafio — o código deixa de valer e não dá para desfazer."
-                } else {
-                    // Diz a verdade sobre o que fica: os check-ins permanecem no histórico do
-                    // grupo (2.6). Omitir isso faria a pessoa sair achando que apagou tudo.
-                    "Você deixa de aparecer no ranking. Os seus check-ins continuam no histórico do grupo."
-                },
+                stringResource(
+                    if (souUltimo) R.string.grupo_detalhe_excluir_pergunta
+                    else R.string.grupo_detalhe_sair_pergunta,
+                ),
+            )
+        },
+        text = {
+            // A segunda diz a verdade sobre o que FICA: os check-ins permanecem no histórico do
+            // grupo (2.6). Omitir isso faria a pessoa sair achando que apagou tudo.
+            Text(
+                stringResource(
+                    if (souUltimo) R.string.grupo_detalhe_excluir_texto
+                    else R.string.grupo_detalhe_sair_texto,
+                ),
             )
         },
         confirmButton = {
             TextButton(onClick = { aoFechar(); aoConfirmar() }) {
-                Text(if (souUltimo) "Excluir" else "Sair")
+                Text(
+                    stringResource(
+                        if (souUltimo) R.string.comum_excluir
+                        else R.string.grupo_detalhe_sair_confirmar,
+                    ),
+                )
             }
         },
-        dismissButton = { TextButton(onClick = aoFechar) { Text("Cancelar") } },
+        dismissButton = {
+            TextButton(onClick = aoFechar) { Text(stringResource(R.string.comum_cancelar)) }
+        },
     )
 }
 
@@ -1181,13 +1238,15 @@ private fun DialogoDeMembro(
     AlertDialog(
         onDismissRequest = aoFechar,
         title = { Text(m.displayName) },
-        text = { Text("O que você quer fazer com esta pessoa?") },
+        text = { Text(stringResource(R.string.grupo_detalhe_membro_pergunta)) },
         confirmButton = {
-            TextButton(onClick = { aoFechar(); aoTornarAdmin(m) }) { Text("Tornar admin") }
+            TextButton(onClick = { aoFechar(); aoTornarAdmin(m) }) {
+                Text(stringResource(R.string.grupo_detalhe_tornar_admin))
+            }
         },
         dismissButton = {
             TextButton(onClick = { aoFechar(); aoRemover(m) }) {
-                Text("Remover do grupo", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.grupo_detalhe_remover), color = MaterialTheme.colorScheme.error)
             }
         },
     )
@@ -1195,12 +1254,16 @@ private fun DialogoDeMembro(
 
 @Composable
 private fun Selo(estado: GroupState) {
-    val (texto, cor) = when (estado) {
-        GroupState.AGENDADO -> "Começa em breve · entrada aberta" to MaterialTheme.colorScheme.primary
-        GroupState.ATIVO -> "Em andamento · entrada fechada" to MaterialTheme.colorScheme.onSurface
-        GroupState.ENCERRADO -> "Encerrado" to MaterialTheme.colorScheme.outline
+    val cor = when (estado) {
+        GroupState.AGENDADO -> MaterialTheme.colorScheme.primary
+        GroupState.ATIVO -> MaterialTheme.colorScheme.onSurface
+        GroupState.ENCERRADO -> MaterialTheme.colorScheme.outline
     }
-    Text(texto, style = MaterialTheme.typography.labelMedium, color = cor)
+    Text(
+        stringResource(estado.rotuloDetalhado()),
+        style = MaterialTheme.typography.labelMedium,
+        color = cor,
+    )
 }
 
 @Composable

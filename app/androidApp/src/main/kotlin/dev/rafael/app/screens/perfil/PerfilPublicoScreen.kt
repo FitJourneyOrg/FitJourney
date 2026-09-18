@@ -48,8 +48,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rafael.app.ui.AvatarInicial
 import dev.rafael.app.ui.ErroAcao
 import dev.rafael.app.ui.ErroDeTela
+import dev.rafael.app.ui.TextosDeConquista
 import dev.rafael.contract.user.PublicAchievementDto
 import org.koin.androidx.compose.koinViewModel
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * Perfil de OUTRA pessoa (C.1, #34 + emenda 9.3-A).
@@ -84,10 +87,13 @@ fun PerfilPublicoScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Perfil") },
+                title = { Text(stringResource(R.string.perfil_titulo)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.comum_voltar),
+                        )
                     }
                 },
             )
@@ -142,7 +148,7 @@ fun PerfilPublicoScreen(
                      */
                     if (perfil.me) {
                         Text(
-                            "Este é o seu perfil, como os outros veem. Toque para abrir o seu.",
+                            stringResource(R.string.perfil_publico_e_voce),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier
@@ -209,9 +215,13 @@ private fun CartaoDeNivel(nivel: Int, xp: Int) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // lime: recompensa do perfil individual ([REGRA] ARCH #16).
-        Text("Nível $nivel", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.tertiary)
         Text(
-            "$xp XP",
+            stringResource(R.string.comum_nivel, nivel),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.tertiary,
+        )
+        Text(
+            stringResource(R.string.perfil_publico_xp, xp),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -229,7 +239,7 @@ private fun CartaoDeNivel(nivel: Int, xp: Int) {
 private fun Conquistas(medalhas: List<PublicAchievementDto>) {
     if (medalhas.isEmpty()) {
         Text(
-            "Nenhuma conquista ainda.",
+            stringResource(R.string.perfil_publico_sem_conquistas),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -238,6 +248,12 @@ private fun Conquistas(medalhas: List<PublicAchievementDto>) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val lime = MaterialTheme.colorScheme.tertiary
         medalhas.forEach { m ->
+            // G.5: o texto vem do catálogo do cliente (ARCH #37). Esta tela é a que mais precisava
+            // disso — é aqui que uma pessoa lê a medalha de OUTRA, e as duas podem estar em
+            // idiomas diferentes. Antes, a medalha de todo mundo era em português.
+            val titulo = TextosDeConquista.titulo(m.id) ?: return@forEach
+            val descricao = TextosDeConquista.descricao(m.id)
+
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -254,12 +270,18 @@ private fun Conquistas(medalhas: List<PublicAchievementDto>) {
                     modifier = Modifier.size(22.dp),
                 )
                 Column {
-                    Text(m.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
                     Text(
-                        m.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        stringResource(titulo),
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
                     )
+                    descricao?.let {
+                        Text(
+                            stringResource(it),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
             }
         }
@@ -292,21 +314,23 @@ private fun AcaoDoGrafo(
     if (confirmarBloqueio) {
         AlertDialog(
             onDismissRequest = { confirmarBloqueio = false },
-            title = { Text("Bloquear esta pessoa?") },
+            title = { Text(stringResource(R.string.perfil_publico_bloquear_pergunta)) },
             text = {
-                Text(
-                    // Diz os DOIS efeitos, porque o segundo surpreende: bloquear apaga a amizade
-                    // ou o pedido, e desbloquear depois não os traz de volta.
-                    "Ela não vai mais conseguir te encontrar nem te enviar pedidos. Se vocês " +
-                        "forem amigos, a amizade é desfeita — e desbloquear depois não a restaura.",
-                )
+                // Diz os DOIS efeitos, porque o segundo surpreende: bloquear apaga a amizade
+                // ou o pedido, e desbloquear depois não os traz de volta. Uma string só: eram
+                // dois literais concatenados, e a frase precisa chegar inteira ao tradutor.
+                Text(stringResource(R.string.perfil_publico_bloquear_texto))
             },
             confirmButton = {
                 TextButton(onClick = { confirmarBloqueio = false; onBloquear() }) {
-                    Text("Bloquear", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.comum_bloquear), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmarBloqueio = false }) { Text("Cancelar") } },
+            dismissButton = {
+                TextButton(onClick = { confirmarBloqueio = false }) {
+                    Text(stringResource(R.string.comum_cancelar))
+                }
+            },
         )
     }
 
@@ -314,41 +338,41 @@ private fun AcaoDoGrafo(
         when (status) {
             FriendStatus.NENHUMA ->
                 Button(onClick = onPedir, enabled = !ocupado, modifier = Modifier.fillMaxWidth()) {
-                    Text("Adicionar")
+                    Text(stringResource(R.string.perfil_publico_adicionar))
                 }
 
             // "Cancelar pedido" e não "Pendente" desabilitado: o botão precisa dizer o que o
             // toque FAZ, não em que estado a relação está. Estado o texto acima já conta.
             FriendStatus.PEDIDO_ENVIADO ->
                 OutlinedButton(onClick = onRemover, enabled = !ocupado, modifier = Modifier.fillMaxWidth()) {
-                    Text("Cancelar pedido")
+                    Text(stringResource(R.string.perfil_publico_cancelar_pedido))
                 }
 
             FriendStatus.PEDIDO_RECEBIDO ->
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = onAceitar, enabled = !ocupado, modifier = Modifier.weight(1f)) {
-                        Text("Aceitar")
+                        Text(stringResource(R.string.comum_aceitar))
                     }
                     OutlinedButton(onClick = onRecusar, enabled = !ocupado, modifier = Modifier.weight(1f)) {
-                        Text("Recusar")
+                        Text(stringResource(R.string.comum_recusar))
                     }
                 }
 
             FriendStatus.AMIGOS ->
                 OutlinedButton(onClick = onRemover, enabled = !ocupado, modifier = Modifier.fillMaxWidth()) {
-                    Text("Desfazer amizade")
+                    Text(stringResource(R.string.perfil_publico_desfazer))
                 }
 
             FriendStatus.BLOQUEADO_POR_MIM ->
                 OutlinedButton(onClick = onDesbloquear, enabled = !ocupado, modifier = Modifier.fillMaxWidth()) {
-                    Text("Desbloquear")
+                    Text(stringResource(R.string.comum_desbloquear))
                 }
         }
 
         if (status != FriendStatus.BLOQUEADO_POR_MIM) {
             TextButton(onClick = { confirmarBloqueio = true }, enabled = !ocupado) {
                 Text(
-                    "Bloquear",
+                    stringResource(R.string.comum_bloquear),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -370,7 +394,9 @@ private fun AcaoDoGrafo(
 private fun Indisponivel(modifier: Modifier = Modifier) {
     Box(modifier.padding(32.dp), contentAlignment = Alignment.Center) {
         Text(
-            "Este perfil não está disponível.",
+            // A mesma frase do `PERFIL_DE_TERCEIRO_INDISPONIVEL`: é a mesma situação, e duas
+            // chaves para ela divergiriam na tradução.
+            stringResource(R.string.erro_perfil_de_terceiro_indisponivel),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

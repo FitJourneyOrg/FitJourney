@@ -8,6 +8,7 @@ import dev.rafael.app.screens.home.FakeAuth
 import dev.rafael.features.auth.domain.model.AuthUser
 import dev.rafael.app.screens.home.FakePerfil
 import dev.rafael.contract.stats.UserStatsDto
+import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.user.UserDto
 import dev.rafael.core.result.AppResult
 import kotlinx.coroutines.Dispatchers
@@ -63,6 +64,7 @@ class MenuViewModelTest {
 
         override suspend fun sincronizar(forcar: Boolean) { sincronizacoes++ }
         override suspend fun renomear(nome: String): AppResult<String> = AppResult.Success(nome)
+        override suspend fun definirIdioma(idioma: Idioma): AppResult<Unit> = AppResult.Success(Unit)
     }
 
     /** O logout não é o assunto destes testes — reusa os dublês da Home. */

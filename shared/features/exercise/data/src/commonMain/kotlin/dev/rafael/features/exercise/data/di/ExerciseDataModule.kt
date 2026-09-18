@@ -10,5 +10,7 @@ val exerciseDataModule = module {
     single { ExerciseRemoteDataSource(get()) }               // HttpClient do networkModule
     single { ExerciseLocalDataSource(get()) }                // FitJourneyDatabase do databaseModule
     // + SyncStamps: carimbo de sync persistido (TTL sobrevive ao fechar o app)
-    single<ExerciseRepository> { ExerciseRepositoryImpl(get(), get(), get()) }
+    // O 4º `get()` é a porta estreita do idioma: uma `() -> Idioma` que o módulo `app` fornece a
+    // partir do `IdiomaDoAparelho`. Aqui em commonMain não há `Context` — e não deve haver.
+    single<ExerciseRepository> { ExerciseRepositoryImpl(get(), get(), get(), get()) }
 }

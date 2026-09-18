@@ -13,10 +13,17 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.ui.ErroDeTela
+import dev.rafael.app.ui.Frase
+import dev.rafael.app.ui.nomeDoPrograma
+import dev.rafael.app.ui.resolver
+import dev.rafael.app.ui.rotuloDoDiaDaSemana
+import dev.rafael.app.R
 import dev.rafael.features.program.presentation.state.ProgramDetailEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramDetailViewModel
 import dev.rafael.app.ui.ShimmerContent
@@ -64,15 +71,19 @@ fun ProgramDetailScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Excluir programa?") },
-            text = { Text("Isso apaga o programa e todos os treinos dentro dele. Não pode ser desfeito.") },
+            title = { Text(stringResource(R.string.programa_detalhe_excluir_pergunta)) },
+            text = { Text(stringResource(R.string.programa_detalhe_excluir_texto)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteConfirm = false
                     viewModel.onEvent(ProgramDetailEvent.Delete)
-                }) { Text("Excluir") }
+                }) { Text(stringResource(R.string.comum_excluir)) }
             },
-            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancelar") } },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirm = false }) {
+                    Text(stringResource(R.string.comum_cancelar))
+                }
+            },
         )
     }
 
@@ -80,15 +91,31 @@ fun ProgramDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.program?.name ?: "Programa") },
+                title = {
+                    // G.5: `name` vazio significa "programa gerado, derive o rótulo" — o `?:`
+                    // sozinho não bastava, porque ele só cobria o programa ainda não carregado.
+                    Text(
+                        nomeDoPrograma(
+                            name = state.program?.name,
+                            daysPerWeek = state.program?.daysPerWeek ?: 0,
+                            split = state.program?.split.orEmpty(),
+                        ),
+                    )
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar") }
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.comum_voltar))
+                    }
                 },
                 actions = {
                     if (!readOnly) {
-                        IconButton(onClick = { showRename = true }) { Icon(Icons.Default.Edit, "Renomear") }
+                        IconButton(onClick = { showRename = true }) {
+                            Icon(Icons.Default.Edit, stringResource(R.string.programa_detalhe_renomear))
+                        }
                     }
-                    IconButton(onClick = { showDeleteConfirm = true }) { Icon(Icons.Default.Delete, "Excluir") }
+                    IconButton(onClick = { showDeleteConfirm = true }) {
+                        Icon(Icons.Default.Delete, stringResource(R.string.comum_excluir))
+                    }
                 },
             )
         },
@@ -102,7 +129,7 @@ fun ProgramDetailScreen(
                     ) {
                         Icon(Icons.Default.Lock, contentDescription = null, Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Desbloquear todos os treinos")
+                        Text(stringResource(R.string.comum_desbloquear_treinos))
                     }
                 }
             }
@@ -129,7 +156,7 @@ fun ProgramDetailScreen(
                         onAcao = { viewModel.onEvent(ProgramDetailEvent.Retry) },
                     )
                 state.program?.workouts?.isEmpty() == true ->
-                    Text("Nenhum treino neste programa ainda.", Modifier.align(Alignment.Center))
+                    Text(stringResource(R.string.programa_detalhe_vazio), Modifier.align(Alignment.Center))
                 else ->
                     LazyColumn(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         // Cronograma: "Semana Y de X" + banner de conclusão (só p/ programa estruturado).
@@ -145,7 +172,11 @@ fun ProgramDetailScreen(
                         }
                         state.program?.rationale?.takeIf { it.isNotBlank() }?.let { rationale ->
                             item {
-                                Text(rationale, style = MaterialTheme.typography.bodyMedium)
+                                // ⚠️ TEXTO DO SERVIDOR, não traduzido. Ver `TextoDoServidorTest`.
+                                Text(
+                                    Frase.DoServidor(rationale).resolver(),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
                                 Spacer(Modifier.height(4.dp))
                             }
                         }
@@ -161,22 +192,46 @@ fun ProgramDetailScreen(
                             val w = workoutByDay[day]
                             when {
                                 w == null -> ListItem(
-                                    overlineContent = { Text(weekdayLabel(day)) },
+                                    overlineContent = { Text(stringResource(rotuloDoDiaDaSemana(day))) },
                                     headlineContent = {
-                                        Text("Descanso", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        Text(
+                                            stringResource(R.string.programa_detalhe_descanso),
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        )
                                     },
                                 )
                                 w.locked -> ListItem(
-                                    overlineContent = { Text(weekdayLabel(day)) },
+                                    overlineContent = { Text(stringResource(rotuloDoDiaDaSemana(day))) },
                                     headlineContent = { Text(w.name) },
-                                    supportingContent = { Text("${w.exerciseCount} exercícios · Assine para desbloquear") },
-                                    leadingContent = { Icon(Icons.Default.Lock, contentDescription = "Bloqueado") },
+                                    supportingContent = {
+                                        Text(
+                                            pluralStringResource(
+                                                R.plurals.treino_exercicios,
+                                                w.exerciseCount,
+                                                w.exerciseCount,
+                                            ) + " · " + stringResource(R.string.programa_detalhe_assine),
+                                        )
+                                    },
+                                    leadingContent = {
+                                        Icon(
+                                            Icons.Default.Lock,
+                                            contentDescription = stringResource(R.string.programa_detalhe_bloqueado),
+                                        )
+                                    },
                                     modifier = Modifier.clickable { onOpenPaywall() },
                                 )
                                 else -> ListItem(
-                                    overlineContent = { Text(weekdayLabel(day)) },
+                                    overlineContent = { Text(stringResource(rotuloDoDiaDaSemana(day))) },
                                     headlineContent = { Text(w.name) },
-                                    supportingContent = { Text("${w.exerciseCount} exercícios") },
+                                    supportingContent = {
+                                        Text(
+                                            pluralStringResource(
+                                                R.plurals.treino_exercicios,
+                                                w.exerciseCount,
+                                                w.exerciseCount,
+                                            ),
+                                        )
+                                    },
                                     trailingContent = if (!canSchedule) null else {
                                         {
                                             WeekdayPicker(
@@ -196,9 +251,6 @@ fun ProgramDetailScreen(
     }
 }
 
-private val WEEKDAYS = listOf("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom")
-private fun weekdayLabel(day: Int): String = WEEKDAYS.getOrElse(day - 1) { "?" }
-
 /** "Semana Y de X" + barra de progresso; ao concluir a janela, banner com as 2 ações de novo programa. */
 @Composable
 private fun WeekProgress(
@@ -209,7 +261,10 @@ private fun WeekProgress(
 ) {
     val done = currentWeek >= durationWeeks
     Column(Modifier.fillMaxWidth()) {
-        Text("Semana $currentWeek de $durationWeeks", style = MaterialTheme.typography.titleMedium)
+        Text(
+            stringResource(R.string.programa_detalhe_semana, currentWeek, durationWeeks),
+            style = MaterialTheme.typography.titleMedium,
+        )
         LinearProgressIndicator(
             progress = { (currentWeek.toFloat() / durationWeeks).coerceIn(0f, 1f) },
             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -221,14 +276,21 @@ private fun WeekProgress(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Programa concluído", style = MaterialTheme.typography.titleSmall)
                     Text(
-                        "Hora de trocar. Gere um novo com IA ou crie um manual.",
+                        stringResource(R.string.programa_detalhe_concluido_titulo),
+                        style = MaterialTheme.typography.titleSmall,
+                    )
+                    Text(
+                        stringResource(R.string.programa_detalhe_concluido_texto),
                         style = MaterialTheme.typography.bodySmall,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = onGenerateNew, modifier = Modifier.weight(1f)) { Text("Gerar com IA") }
-                        OutlinedButton(onClick = onCreateManual, modifier = Modifier.weight(1f)) { Text("Criar manual") }
+                        Button(onClick = onGenerateNew, modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.programa_detalhe_gerar_ia))
+                        }
+                        OutlinedButton(onClick = onCreateManual, modifier = Modifier.weight(1f)) {
+                            Text(stringResource(R.string.programa_detalhe_criar_manual))
+                        }
                     }
                 }
             }
@@ -241,11 +303,19 @@ private fun WeekProgress(
 private fun WeekdayPicker(day: Int, enabled: Boolean, onPick: (Int) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box {
-        TextButton(onClick = { open = true }, enabled = enabled) { Text(weekdayLabel(day)) }
+        TextButton(onClick = { open = true }, enabled = enabled) {
+            Text(stringResource(rotuloDoDiaDaSemana(day)))
+        }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             (1..7).forEach { d ->
+                val rotulo = stringResource(rotuloDoDiaDaSemana(d))
                 DropdownMenuItem(
-                    text = { Text(weekdayLabel(d) + if (d == day) "  ✓" else "") },
+                    text = {
+                        Text(
+                            if (d == day) stringResource(R.string.programa_detalhe_dia_atual, rotulo)
+                            else rotulo,
+                        )
+                    },
                     onClick = { open = false; if (d != day) onPick(d) },
                 )
             }
@@ -258,16 +328,23 @@ private fun RenameProgramDialog(initialName: String, onDismiss: () -> Unit, onCo
     var name by remember { mutableStateOf(initialName) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Renomear programa") },
+        title = { Text(stringResource(R.string.programa_detalhe_renomear_titulo)) },
         text = {
-            OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nome") }, singleLine = true)
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text(stringResource(R.string.comum_nome)) },
+                singleLine = true,
+            )
         },
         confirmButton = {
             TextButton(
                 onClick = { if (name.isNotBlank()) onConfirm(name.trim()) },
                 enabled = name.isNotBlank(),
-            ) { Text("Salvar") }
+            ) { Text(stringResource(R.string.comum_salvar)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.comum_cancelar)) }
+        },
     )
 }

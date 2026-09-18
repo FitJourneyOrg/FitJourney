@@ -4,6 +4,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * A confirmação de saída, num lugar só.
@@ -16,9 +18,9 @@ import androidx.compose.runtime.Composable
 fun DialogoDeSaida(onConfirmar: () -> Unit, onCancelar: () -> Unit) {
     AlertDialog(
         onDismissRequest = onCancelar,
-        title = { Text("Sair da conta?") },
-        text = { Text("Você precisará entrar de novo para acessar seus programas.") },
-        confirmButton = { TextButton(onClick = onConfirmar) { Text("Sair") } },
-        dismissButton = { TextButton(onClick = onCancelar) { Text("Cancelar") } },
+        title = { Text(stringResource(R.string.sair_pergunta)) },
+        text = { Text(stringResource(R.string.sair_texto)) },
+        confirmButton = { TextButton(onClick = onConfirmar) { Text(stringResource(R.string.menu_sair)) } },
+        dismissButton = { TextButton(onClick = onCancelar) { Text(stringResource(R.string.comum_cancelar)) } },
     )
 }

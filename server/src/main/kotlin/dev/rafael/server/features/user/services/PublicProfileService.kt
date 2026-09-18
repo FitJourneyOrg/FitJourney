@@ -176,11 +176,14 @@ class PublicProfileService(
     )
 
     /**
-     * Traduz os ids gravados em medalhas com título e descrição.
+     * Os ids gravados viram medalhas. **Só o id e a data** — a frase é do cliente desde a G.5.
      *
      * Id que não existe mais no código — conquista removida numa versão futura — é ignorado em
      * silêncio. A linha órfã não faz mal a ninguém, e derrubar o perfil por causa dela seria
      * desproporcional. Mesma escolha que o catálogo do dono já fazia.
+     *
+     * A busca no enum continua existindo **por causa disso**, e não para pegar o texto: é ela que
+     * filtra id órfão. Trocá-la por `id` cru faria a linha morta chegar à tela sem frase.
      */
     private fun medalhas(concedidas: Map<String, kotlinx.datetime.LocalDateTime>): List<PublicAchievementDto> =
         concedidas.entries
@@ -189,8 +192,6 @@ class PublicProfileService(
                     ?: return@mapNotNull null
                 PublicAchievementDto(
                     id = c.name,
-                    title = c.titulo,
-                    description = c.descricao,
                     unlockedAt = quando.toString(),
                 )
             }

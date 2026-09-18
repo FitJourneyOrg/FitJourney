@@ -1,11 +1,13 @@
 package dev.rafael.app
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import dev.rafael.app.navigation.AppNavHost
+import dev.rafael.app.idioma.IdiomaDoAparelho
 import dev.rafael.app.push.DestinoDePush
 import dev.rafael.core.designsystem.FitJourneyTheme
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +22,17 @@ class MainActivity : ComponentActivity() {
      * recriada com o valor novo. Um fluxo é o que faz os dois caminhos chegarem no mesmo lugar.
      */
     private val destinoDoPush = MutableStateFlow<DestinoDePush?>(null)
+
+    /**
+     * Aplica o idioma escolhido ANTES de qualquer recurso ser lido (G.4, ARCH #37).
+     *
+     * Só faz efeito abaixo do Android 13; do 33 em diante o sistema já entrega o contexto no
+     * idioma certo. Tem de ser aqui e não no `onCreate`: quando o `onCreate` roda, o tema e os
+     * primeiros recursos já foram resolvidos, e resolvidos no idioma antigo.
+     */
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(IdiomaDoAparelho.envolver(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()

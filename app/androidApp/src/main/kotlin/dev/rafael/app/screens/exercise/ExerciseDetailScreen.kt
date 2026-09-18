@@ -45,10 +45,15 @@ fun ExerciseDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.exercise?.name ?: "Exercício") },
+                title = {
+                    Text(state.exercise?.name ?: stringResource(R.string.comum_exercicio))
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.comum_voltar),
+                        )
                     }
                 },
             )
@@ -62,7 +67,7 @@ fun ExerciseDetailScreen(
                 state.exercise == null && state.error != null ->
                     ErroDeTela(erro = state.error!!, modifier = Modifier.align(Alignment.Center))
                 state.exercise == null ->
-                    Text("Exercício não encontrado", Modifier.align(Alignment.Center))
+                    Text(stringResource(R.string.exercicio_nao_encontrado), Modifier.align(Alignment.Center))
                 else ->
                     ExerciseDetailContent(state.exercise!!)
             }

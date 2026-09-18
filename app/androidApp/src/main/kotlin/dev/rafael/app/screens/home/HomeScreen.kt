@@ -28,6 +28,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.core.result.AppError
 import dev.rafael.app.ui.ErroDeTela
+import dev.rafael.app.ui.nomeDoPrograma
 import dev.rafael.app.ui.ShimmerLine
 import dev.rafael.app.ui.shimmer
 import dev.rafael.contract.stats.UserStatsDto
@@ -35,6 +36,9 @@ import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import org.koin.androidx.compose.koinViewModel
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 
 @Composable
 fun HomeScreen(
@@ -96,15 +100,15 @@ fun HomeScreen(
 
         Spacer(Modifier.height(24.dp))
         Text(
-            "ATALHOS",
+            stringResource(R.string.home_secao_atalhos),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Atalho("Criar treino", Icons.Filled.Add, Modifier.weight(1f), onOpenWorkouts)
-            Atalho("Exercícios", Icons.Outlined.BarChart, Modifier.weight(1f), onOpenLibrary)
-            Atalho("Grupos", Icons.Outlined.Group, Modifier.weight(1f), onOpenGroups)
+            Atalho(stringResource(R.string.home_atalho_criar_treino), Icons.Filled.Add, Modifier.weight(1f), onOpenWorkouts)
+            Atalho(stringResource(R.string.comum_exercicios), Icons.Outlined.BarChart, Modifier.weight(1f), onOpenLibrary)
+            Atalho(stringResource(R.string.home_atalho_grupos), Icons.Outlined.Group, Modifier.weight(1f), onOpenGroups)
         }
         Spacer(Modifier.height(24.dp))
     }
@@ -113,18 +117,26 @@ fun HomeScreen(
 @Composable
 private fun Saudacao() {
     val hoje = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
-    val dias = listOf("seg", "ter", "qua", "qui", "sex", "sáb", "dom")
-    val meses = listOf("jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez")
-    val saudacao = when (hoje.hour) {
-        in 0..11 -> "Bom dia"
-        in 12..17 -> "Boa tarde"
-        else -> "Boa noite"
-    }
+    // Quarta e última cópia dos nomes dos dias no app. Estes são a forma COMPACTA, minúscula,
+    // que compõe a linha de data — distinta dos `quiz_dia_*`, que são etiqueta de chip.
+    val saudacao = stringResource(
+        when (hoje.hour) {
+            in 0..11 -> R.string.home_bom_dia
+            in 12..17 -> R.string.home_boa_tarde
+            else -> R.string.home_boa_noite
+        },
+    )
+    val data = stringResource(
+        R.string.home_data,
+        stringResource(DIAS_COMPACTOS[hoje.date.dayOfWeek.ordinal]),
+        hoje.date.day,
+        stringResource(MESES_COMPACTOS[hoje.date.month.ordinal]),
+    )
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(saudacao, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
             Text(
-                "${dias[hoje.date.dayOfWeek.ordinal]} · ${hoje.date.day} ${meses[hoje.date.month.ordinal]}",
+                data,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -178,15 +190,19 @@ private fun FaixaDeProgresso(stats: UserStatsDto?, pendentes: Int) {
                         color = if (s.streakDays > 0) lime else MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        if (s.streakDays == 1) "dia seguido" else "dias seguidos",
+                        pluralStringResource(R.plurals.home_dias_seguidos, s.streakDays),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Column(horizontalAlignment = Alignment.End) {
-                    Text("Nível ${s.level}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     Text(
-                        "$xpAnimado / ${s.xpForNextLevel} XP",
+                        stringResource(R.string.comum_nivel, s.level),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        stringResource(R.string.comum_xp_do_nivel, xpAnimado, s.xpForNextLevel),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -204,8 +220,7 @@ private fun FaixaDeProgresso(stats: UserStatsDto?, pendentes: Int) {
             if (pendentes > 0) {
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    if (pendentes == 1) "1 treino aguardando sincronizar — o XP entra quando houver conexão"
-                    else "$pendentes treinos aguardando sincronizar — o XP entra quando houver conexão",
+                    pluralStringResource(R.plurals.home_treinos_pendentes, pendentes, pendentes),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.tertiaryContainer,
                 )
@@ -223,30 +238,50 @@ private fun CardTreinoDeHoje(
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(
-                "TREINO DE HOJE",
+                stringResource(R.string.home_secao_treino_de_hoje),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
             )
             Spacer(Modifier.height(8.dp))
-            Text(treino.name, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text(
+                treino.name ?: stringResource(R.string.home_treino_de_hoje),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
             Spacer(Modifier.height(4.dp))
+            // Os três pedaços são resolvidos ANTES do `buildString`: composable dentro do
+            // `builderAction` funcionaria (é inline), mas separar deixa a lista de partes visível.
+            val exercicios = pluralStringResource(
+                R.plurals.treino_exercicios,
+                treino.exerciseCount,
+                treino.exerciseCount,
+            )
+            val minutos = stringResource(R.string.home_treino_minutos, treino.minutes)
+            val semana = stringResource(R.string.home_treino_semana, treino.week, treino.totalWeeks)
             val detalhe = buildString {
-                append("${treino.exerciseCount} exercícios")
-                if (treino.minutes > 0) append(" · ~${treino.minutes} min")
-                append(" · semana ${treino.week}/${treino.totalWeeks}")
+                append(exercicios)
+                if (treino.minutes > 0) append(" · ").append(minutos)
+                append(" · ").append(semana)
             }
             Text(detalhe, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(treino.programName, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            // G.5: programa gerado chega sem nome e o rótulo é derivado aqui (`NomeDePrograma.kt`).
+            Text(
+                nomeDoPrograma(treino.programName, treino.programDaysPerWeek, treino.programSplit),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Spacer(Modifier.height(16.dp))
             if (treino.locked) {
                 // ARCH #23: dia trancado p/ não-premium — a Home não fura o blur
                 OutlinedButton(onClick = onVerPrograma, modifier = Modifier.fillMaxWidth()) {
                     Icon(Icons.Outlined.Lock, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Desbloquear treino")
+                    Text(stringResource(R.string.home_desbloquear_treino))
                 }
             } else {
-                Button(onClick = onIniciar, modifier = Modifier.fillMaxWidth()) { Text("Iniciar treino") }
+                Button(onClick = onIniciar, modifier = Modifier.fillMaxWidth()) {
+                    Text(stringResource(R.string.comum_iniciar_treino))
+                }
             }
         }
     }
@@ -274,7 +309,11 @@ private fun CardTreinoConcluido(
                 tint = lime, modifier = Modifier.size(44.dp),
             )
             Spacer(Modifier.height(12.dp))
-            Text("Treino concluído", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(R.string.home_concluido_titulo),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
             nomeDoTreino?.let {
                 Spacer(Modifier.height(2.dp))
                 Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -282,7 +321,7 @@ private fun CardTreinoConcluido(
             if (xpHoje > 0) {
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    "+$xpHoje XP",
+                    stringResource(R.string.home_xp_de_hoje, xpHoje),
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
                     color = lime,
@@ -290,15 +329,15 @@ private fun CardTreinoConcluido(
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                if (streak > 1) "Sequência de $streak dias mantida. Descanse — o próximo treino aparece amanhã."
-                else "Sequência iniciada. Descanse — o próximo treino aparece amanhã.",
+                if (streak > 1) stringResource(R.string.home_sequencia_mantida, streak)
+                else stringResource(R.string.home_sequencia_iniciada),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(16.dp))
             OutlinedButton(onClick = onVerProgresso, modifier = Modifier.fillMaxWidth()) {
-                Text("Ver progresso")
+                Text(stringResource(R.string.home_ver_progresso))
             }
         }
     }
@@ -316,18 +355,26 @@ private fun CardDiaDeDescanso(onTreinoAvulso: () -> Unit, onProgresso: () -> Uni
                 tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp),
             )
             Spacer(Modifier.height(12.dp))
-            Text("Dia de descanso", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(R.string.home_descanso_titulo),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
             Spacer(Modifier.height(8.dp))
             Text(
-                "Recuperar faz parte do progresso — é no descanso que o músculo se constrói.",
+                stringResource(R.string.home_descanso_texto),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onTreinoAvulso, modifier = Modifier.weight(1f)) { Text("Treino avulso") }
-                OutlinedButton(onClick = onProgresso, modifier = Modifier.weight(1f)) { Text("Progresso") }
+                OutlinedButton(onClick = onTreinoAvulso, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.home_treino_avulso))
+                }
+                OutlinedButton(onClick = onProgresso, modifier = Modifier.weight(1f)) {
+                    Text(stringResource(R.string.comum_progresso))
+                }
             }
         }
     }
@@ -358,10 +405,14 @@ private fun CardSemPrograma(onGerarComIa: () -> Unit, onCriarManual: () -> Unit)
             Modifier.fillMaxWidth().padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text("Comece seu primeiro programa", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+            Text(
+                stringResource(R.string.home_sem_programa_titulo),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
             Spacer(Modifier.height(8.dp))
             Text(
-                "Monte um programa e o treino do dia aparece aqui, pronto pra começar.",
+                stringResource(R.string.home_sem_programa_texto),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
@@ -370,10 +421,10 @@ private fun CardSemPrograma(onGerarComIa: () -> Unit, onCriarManual: () -> Unit)
             // DUAS saídas: quem recusou a oferta no onboarding não pode cair num card que
             // só oferece a mesma coisa que ele acabou de recusar.
             Button(onClick = onGerarComIa, modifier = Modifier.fillMaxWidth()) {
-                Text("Montar com IA")
+                Text(stringResource(R.string.home_montar_com_ia))
             }
             TextButton(onClick = onCriarManual, modifier = Modifier.fillMaxWidth()) {
-                Text("Criar treino manualmente")
+                Text(stringResource(R.string.home_criar_manual))
             }
         }
     }
@@ -414,3 +465,37 @@ private fun Atalho(rotulo: String, icone: ImageVector, modifier: Modifier = Modi
         }
     }
 }
+
+/**
+ * Os dias e os meses abreviados da linha de data, na ORDEM do `kotlinx.datetime`.
+ *
+ * `DayOfWeek.ordinal` é 0 = segunda e `Month.ordinal` é 0 = janeiro: o índice vem da biblioteca,
+ * não da apresentação, e por isso a lista não pode ser reordenada por gosto de país.
+ *
+ * ⚠️ São a forma COMPACTA, minúscula. Os `quiz_dia_*` são a etiqueta de chip, capitalizada — ver
+ * o comentário no `strings.xml`.
+ */
+private val DIAS_COMPACTOS = intArrayOf(
+    R.string.data_dia_seg,
+    R.string.data_dia_ter,
+    R.string.data_dia_qua,
+    R.string.data_dia_qui,
+    R.string.data_dia_sex,
+    R.string.data_dia_sab,
+    R.string.data_dia_dom,
+)
+
+private val MESES_COMPACTOS = intArrayOf(
+    R.string.data_mes_jan,
+    R.string.data_mes_fev,
+    R.string.data_mes_mar,
+    R.string.data_mes_abr,
+    R.string.data_mes_mai,
+    R.string.data_mes_jun,
+    R.string.data_mes_jul,
+    R.string.data_mes_ago,
+    R.string.data_mes_set,
+    R.string.data_mes_out,
+    R.string.data_mes_nov,
+    R.string.data_mes_dez,
+)

@@ -63,8 +63,13 @@ import dev.rafael.contract.friendship.PersonDto
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
 
-private enum class Aba(val titulo: String) { AMIGOS("Amigos"), PEDIDOS("Pedidos") }
+private enum class Aba(@androidx.annotation.StringRes val titulo: Int) {
+    AMIGOS(R.string.comum_amigos),
+    PEDIDOS(R.string.amigos_aba_pedidos),
+}
 
 /**
  * Amigos e pedidos (ARCH #35), alcançada por **Perfil → Amigos**.
@@ -110,31 +115,36 @@ fun AmigosScreen(
     if (confirmarRegenerar) {
         AlertDialog(
             onDismissRequest = { confirmarRegenerar = false },
-            title = { Text("Gerar um código novo?") },
+            title = { Text(stringResource(R.string.amigos_gerar_pergunta)) },
             text = {
-                Text(
-                    // O aviso é o ponto do diálogo: regenerar é a defesa contra importunação, mas
-                    // tem custo — quem já recebeu seu código não te encontra mais.
-                    "O código atual para de funcionar na hora. Quem já tem o antigo não vai " +
-                        "conseguir te encontrar.",
-                )
+                // O aviso é o ponto do diálogo: regenerar é a defesa contra importunação, mas
+                // tem custo — quem já recebeu seu código não te encontra mais. Uma string só:
+                // eram dois literais concatenados.
+                Text(stringResource(R.string.amigos_gerar_texto))
             },
             confirmButton = {
                 TextButton(onClick = { confirmarRegenerar = false; viewModel.regenerarCodigo() }) {
-                    Text("Gerar novo")
+                    Text(stringResource(R.string.amigos_gerar_confirmar))
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmarRegenerar = false }) { Text("Cancelar") } },
+            dismissButton = {
+                TextButton(onClick = { confirmarRegenerar = false }) {
+                    Text(stringResource(R.string.comum_cancelar))
+                }
+            },
         )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Amigos") },
+                title = { Text(stringResource(R.string.comum_amigos)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.comum_voltar),
+                        )
                     }
                 },
             )
@@ -148,7 +158,7 @@ fun AmigosScreen(
                         onClick = { escopo.launch { pager.animateScrollToPage(i) } },
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(aba.titulo)
+                                Text(stringResource(aba.titulo))
                                 if (aba == Aba.PEDIDOS && state.pendentes > 0) {
                                     Spacer(Modifier.width(6.dp))
                                     Badge { Text("${state.pendentes}") }
@@ -208,7 +218,7 @@ private fun AbaDeAmigos(
              * navegar entre duas telas no meio de uma conversa.
              */
             Text(
-                "ADICIONAR POR CÓDIGO",
+                stringResource(R.string.amigos_secao_adicionar),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -222,7 +232,7 @@ private fun AbaDeAmigos(
                     value = codigo,
                     onValueChange = { codigo = it.uppercase(); onLimparBusca() },
                     modifier = Modifier.weight(1f),
-                    label = { Text("Código de 8 caracteres") },
+                    label = { Text(stringResource(R.string.amigos_campo_codigo)) },
                     singleLine = true,
                     // Maiúsculas no teclado: o código é sempre maiúsculo, e obrigar a pessoa a
                     // trocar o shift oito vezes seria hostil. Quem normaliza de fato é o servidor.
@@ -232,7 +242,7 @@ private fun AbaDeAmigos(
                 Button(
                     onClick = { onBuscar(codigo) },
                     enabled = codigo.isNotBlank() && !state.buscando,
-                ) { Text("Buscar") }
+                ) { Text(stringResource(R.string.amigos_buscar)) }
             }
             state.erroDaBusca?.let {
                 Spacer(Modifier.height(6.dp))
@@ -241,7 +251,7 @@ private fun AbaDeAmigos(
 
             Spacer(Modifier.height(24.dp))
             Text(
-                "MEUS AMIGOS · ${state.amigos.size}",
+                stringResource(R.string.amigos_secao_lista, state.amigos.size),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -251,8 +261,7 @@ private fun AbaDeAmigos(
         if (state.amigos.isEmpty() && !state.carregando) {
             item {
                 Text(
-                    "Você ainda não tem amigos aqui. Passe seu código para alguém que treina " +
-                        "com você.",
+                    stringResource(R.string.amigos_lista_vazia),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 24.dp),
@@ -285,7 +294,7 @@ private fun MeuCodigo(codigo: String, onRegenerar: () -> Unit) {
             .padding(14.dp),
     ) {
         Text(
-            "SEU CÓDIGO",
+            stringResource(R.string.amigos_secao_meu_codigo),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -309,10 +318,16 @@ private fun MeuCodigo(codigo: String, onRegenerar: () -> Unit) {
                 },
                 enabled = codigo.isNotBlank(),
             ) {
-                Icon(Icons.Outlined.ContentCopy, contentDescription = "Copiar código")
+                Icon(
+                    Icons.Outlined.ContentCopy,
+                    contentDescription = stringResource(R.string.amigos_copiar_codigo),
+                )
             }
             IconButton(onClick = onRegenerar, enabled = codigo.isNotBlank()) {
-                Icon(Icons.Outlined.Refresh, contentDescription = "Gerar código novo")
+                Icon(
+                    Icons.Outlined.Refresh,
+                    contentDescription = stringResource(R.string.amigos_gerar_codigo),
+                )
             }
         }
     }
@@ -330,7 +345,7 @@ private fun AbaDePedidos(
     if (pedidos.isEmpty() && !carregando) {
         Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
-                "Nenhum pedido no momento.",
+                stringResource(R.string.amigos_pedidos_vazio),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -358,12 +373,12 @@ private fun AbaDePedidos(
                         onClick = { onAceitar(pedido.from.userId) },
                         enabled = !ocupado,
                         modifier = Modifier.weight(1f),
-                    ) { Text("Aceitar") }
+                    ) { Text(stringResource(R.string.comum_aceitar)) }
                     OutlinedButton(
                         onClick = { onRecusar(pedido.from.userId) },
                         enabled = !ocupado,
                         modifier = Modifier.weight(1f),
-                    ) { Text("Recusar") }
+                    ) { Text(stringResource(R.string.comum_recusar)) }
                 }
             }
         }

@@ -5,6 +5,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import androidx.core.content.getSystemService
+import dev.rafael.app.R
 
 /**
  * O canal de notificação do app (F.1).
@@ -28,13 +29,15 @@ object CanalDeNotificacao {
 
         val canal = NotificationChannel(
             ID,
-            "Notificações",
+            // Não é `stringResource`: isto roda fora de composição. O `Context` que o canal já
+            // recebe resolve o catálogo igual, e é o que o Android mostra nas configurações.
+            contexto.getString(R.string.comum_notificacoes),
             // DEFAULT e não HIGH: pedido de amizade não é urgente. HIGH abriria a notificação
             // sobre a tela (heads-up) e interromperia quem está no meio de um treino — que é
             // exatamente quando o app está aberto.
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
-            description = "Pedidos de amizade e avisos do app"
+            description = contexto.getString(R.string.notificacoes_canal_descricao)
         }
 
         contexto.getSystemService<NotificationManager>()?.createNotificationChannel(canal)

@@ -38,6 +38,7 @@ class ReagirASessao(
     private val sessao: TokenProvider,
     private val registrarAparelho: RegistrarAparelho,
     private val atualizarContador: AtualizarContador,
+    private val reconciliarIdioma: ReconciliarIdioma,
 ) {
 
     /** Registra o aparelho para push (F.1). */
@@ -48,6 +49,25 @@ class ReagirASessao(
     /** Relê o badge de notificações não lidas (F.1). */
     fun interface AtualizarContador {
         suspend fun atualizar()
+    }
+
+    /**
+     * Conta ao servidor em que idioma este aparelho está (G.4, V47).
+     *
+     * ## Por que aqui, e não na tela de idioma
+     *
+     * Trocar o idioma **destrói a Activity** — no Android 13+ quem recria é o sistema, abaixo dele
+     * é o nosso `recreate()`. Um PATCH disparado da tela correria contra a própria recriação e
+     * poderia morrer no meio.
+     *
+     * Reconciliar na abertura cobre os dois caminhos com UM ponto de escrita: a pessoa escolhe,
+     * a Activity renasce, e a reconciliação encontra a divergência. E cobre também o caminho que a
+     * tela nunca veria — **trocar o idioma pelos ajustes do sistema, com o app fechado**.
+     *
+     * > **Quando a ação derruba quem a disparou, o lugar de gravar é no que nasce depois.**
+     */
+    fun interface ReconciliarIdioma {
+        suspend fun reconciliar()
     }
 
     /**
@@ -64,6 +84,7 @@ class ReagirASessao(
             .collect {
                 registrarAparelho.registrar()
                 atualizarContador.atualizar()
+                reconciliarIdioma.reconciliar()
             }
     }
 }

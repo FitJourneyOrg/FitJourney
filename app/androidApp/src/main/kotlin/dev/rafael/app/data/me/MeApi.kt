@@ -15,4 +15,7 @@ class MeApi(private val ds: MeDataSource) {
 
     suspend fun renomear(nome: String): AppResult<UserDto> =
         httpResult { ds.updateDisplayName(nome) }
+
+    suspend fun definirIdioma(tag: String): AppResult<UserDto> =
+        httpResult { ds.updateLocale(tag) }
 }

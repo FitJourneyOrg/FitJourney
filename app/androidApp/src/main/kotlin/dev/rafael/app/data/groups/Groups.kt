@@ -5,6 +5,7 @@ import dev.rafael.contract.group.GroupDto
 import dev.rafael.contract.group.GroupInviteDto
 import dev.rafael.contract.group.GroupMemberDto
 import dev.rafael.contract.group.GroupPreviewDto
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import kotlinx.coroutines.flow.Flow
 
@@ -22,7 +23,25 @@ interface Groups {
     fun observar(): Flow<List<GroupDto>>
 
     /** Busca no servidor e grava no cache; o Flow re-emite. Offline: não faz nada, sem erro. */
-    suspend fun sincronizar(forcar: Boolean = false)
+    /**
+     * Baixa a lista do servidor e grava no cache.
+     *
+     * ⚠️ **Devolve o erro, e isso é uma correção de 2026-09-11.** Antes devolvia `Unit`: a falha
+     * era engolida com `is AppResult.Failure -> Unit  // mantém a última lista conhecida`. A
+     * política de cache estava certa — não apagar o que já se sabe —, mas jogar fora a INFORMAÇÃO
+     * de que falhou deixava a tela sem como distinguir "ainda não chegou" de "não vai chegar".
+     *
+     * Quando não havia lista nenhuma, "manter a última conhecida" significava manter nada, e a
+     * tela ficava em *"Carregando seus desafios"* para sempre. O `GruposState` já declarava um
+     * `erroSync` que **nunca teve como ser preenchido**, porque esta assinatura não entregava nada.
+     *
+     * > **Campo de erro que ninguém preenche é pior que nenhum: quem lê o estado conclui que o**
+     * > **erro está tratado.**
+     *
+     * @return `null` quando deu certo — inclusive quando não precisou sincronizar (sem sessão, ou
+     *   carimbo ainda fresco). O erro, quando a rede ou o servidor falharam.
+     */
+    suspend fun sincronizar(forcar: Boolean = false): AppError?
 
     /** Já sincronizou alguma vez nesta conta, neste aparelho? Distingue "não baixei" de "não tenho". */
     suspend fun jaSincronizou(): Boolean
