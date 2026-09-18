@@ -20,6 +20,9 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.data.session.SessaoLocal
 import dev.rafael.app.ui.ShimmerList
 import org.koin.androidx.compose.koinViewModel
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 
 @Composable
 fun ProgressScreen(
@@ -30,14 +33,18 @@ fun ProgressScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.sincronizar() }
 
     Column(Modifier.fillMaxSize().padding(20.dp)) {
-        Text("Progresso", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        Text(
+            stringResource(R.string.comum_progresso),
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+        )
         Spacer(Modifier.height(16.dp))
 
         state.stats?.let { s ->
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Metrica("Treinos", "${s.totalSessions}", Modifier.weight(1f))
-                Metrica("Nesta semana", "${s.sessionsThisWeek}", Modifier.weight(1f))
-                Metrica("Sequência", "${s.streakDays}", Modifier.weight(1f))
+                Metrica(stringResource(R.string.progresso_metrica_treinos), "${s.totalSessions}", Modifier.weight(1f))
+                Metrica(stringResource(R.string.progresso_metrica_semana), "${s.sessionsThisWeek}", Modifier.weight(1f))
+                Metrica(stringResource(R.string.progresso_metrica_sequencia), "${s.streakDays}", Modifier.weight(1f))
             }
             Spacer(Modifier.height(12.dp))
         }
@@ -64,7 +71,7 @@ fun ProgressScreen(
                         tint = MaterialTheme.colorScheme.tertiary,
                     )
                     Spacer(Modifier.width(12.dp))
-                    Text("Conquistas", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.comum_conquistas), fontWeight = FontWeight.Bold)
                 }
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowRight,
@@ -76,7 +83,7 @@ fun ProgressScreen(
         Spacer(Modifier.height(20.dp))
 
         Text(
-            "HISTÓRICO",
+            stringResource(R.string.progresso_secao_historico),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -86,7 +93,7 @@ fun ProgressScreen(
             state.carregandoInicial -> ShimmerList(rows = 5)
             state.historico.isEmpty() -> Box(Modifier.fillMaxWidth().padding(top = 40.dp), Alignment.Center) {
                 Text(
-                    "Nenhum treino registrado ainda.\nSeu histórico aparece aqui depois do primeiro treino.",
+                    stringResource(R.string.progresso_vazio),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
@@ -126,19 +133,21 @@ private fun LinhaSessao(sessao: SessaoLocal) {
             Column(Modifier.weight(1f)) {
                 Text(sessao.dto.workoutName, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
                 Text(
-                    "${dataCurta(sessao.dto.finishedAt)} · $feitas séries",
+                    dataCurta(sessao.dto.finishedAt) + " · " +
+                        pluralStringResource(R.plurals.progresso_series, feitas, feitas),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (sessao.pendente) {
                 Icon(
-                    Icons.Outlined.CloudQueue, contentDescription = "Aguardando sincronizar",
+                    Icons.Outlined.CloudQueue,
+                    contentDescription = stringResource(R.string.progresso_aguardando_sync),
                     tint = MaterialTheme.colorScheme.tertiaryContainer, modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    "pendente",
+                    stringResource(R.string.progresso_pendente),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.tertiaryContainer,
                 )
@@ -147,9 +156,23 @@ private fun LinhaSessao(sessao: SessaoLocal) {
     }
 }
 
-/** "2026-08-13T18:40:12" -> "13/08 18:40". Sem parse: o formato é fixo (ISO local). */
-private fun dataCurta(iso: String): String = runCatching {
-    val (data, hora) = iso.split("T")
-    val (_, mes, dia) = data.split("-")
-    "$dia/$mes ${hora.take(5)}"
-}.getOrDefault(iso.take(16))
+/**
+ * "2026-08-13T18:40:12" -> "13/08 18:40". Sem parse: o formato é fixo (ISO local).
+ *
+ * Virou `@Composable` na G.3: a ordem dia/mês é do pt-BR e precisa sair do Kotlin para o catálogo,
+ * onde en-US pode invertê-la.
+ *
+ * ⚠️ O `stringResource` fica FORA do `runCatching`. Chamada de composable dentro de `try/catch` é
+ * terreno em que o compilador do Compose já foi restritivo; separar o que pode falhar (a quebra da
+ * string) do que compõe (a formatação) custa três linhas e não depende dessa garantia.
+ */
+@Composable
+private fun dataCurta(iso: String): String {
+    val partes = runCatching {
+        val (data, hora) = iso.split("T")
+        val (_, mes, dia) = data.split("-")
+        Triple(dia, mes, hora.take(5))
+    }.getOrNull() ?: return iso.take(16)
+
+    return stringResource(R.string.progresso_data, partes.first, partes.second, partes.third)
+}

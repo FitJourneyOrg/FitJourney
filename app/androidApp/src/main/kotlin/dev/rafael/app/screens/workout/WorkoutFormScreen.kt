@@ -11,9 +11,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import dev.rafael.app.screens.exercise.ExercisePickerSheet
+import dev.rafael.app.R
 import dev.rafael.app.ui.ErroInline
+import dev.rafael.app.ui.rotuloDoDiaDaSemana
 import dev.rafael.app.ui.erroDoCampo
 import dev.rafael.contract.error.ErrorFields
 import dev.rafael.features.workout.presentation.state.WorkoutFormEvent
@@ -47,7 +50,14 @@ fun WorkoutFormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (state.isEditing) "Editar treino" else "Novo treino") },
+                title = {
+                    Text(
+                        stringResource(
+                            if (state.isEditing) R.string.treino_form_titulo_editar
+                            else R.string.treino_form_titulo_novo,
+                        ),
+                    )
+                },
                 navigationIcon = { IconButton(onClick = onBack) { Text("←") } },
             )
         },
@@ -58,7 +68,7 @@ fun WorkoutFormScreen(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
             ) {
                 if (state.isSaving) CircularProgressIndicator(Modifier.size(20.dp))
-                else Text("Salvar treino")
+                else Text(stringResource(R.string.treino_form_salvar))
             }
         },
     ) { padding ->
@@ -78,7 +88,7 @@ fun WorkoutFormScreen(
                 OutlinedTextField(
                     value = state.name,
                     onValueChange = { viewModel.onEvent(WorkoutFormEvent.NameChanged(it)) },
-                    label = { Text("Nome do treino") },
+                    label = { Text(stringResource(R.string.treino_form_nome)) },
                     singleLine = true,
                     isError = erroNome != null,
                     supportingText = erroNome?.let { { Text(it) } },
@@ -89,20 +99,21 @@ fun WorkoutFormScreen(
             // Dia da semana — só na criação (na edição o dia é gerido pela agenda do programa).
             if (!state.isEditing) {
                 item {
-                    Text("Dia da semana", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.treino_form_dia_da_semana), style = MaterialTheme.typography.labelLarge)
                     Spacer(Modifier.height(6.dp))
                     Row(
                         Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        listOf("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom").forEachIndexed { idx, lbl ->
-                            val d = idx + 1
+                        // Terceira cópia dos nomes dos dias no app, agora eliminada: o índice
+                        // ISO é a fonte e o rótulo vem de `rotuloDoDiaDaSemana`.
+                        (1..7).forEach { d ->
                             val taken = d in state.takenDays
                             FilterChip(
                                 selected = state.selectedDay == d,
                                 enabled = !taken,   // dia já ocupado por outro treino
                                 onClick = { viewModel.onEvent(WorkoutFormEvent.DaySelected(d)) },
-                                label = { Text(lbl) },
+                                label = { Text(stringResource(rotuloDoDiaDaSemana(d))) },
                             )
                         }
                     }
@@ -131,11 +142,11 @@ fun WorkoutFormScreen(
 
                         ex.sets.forEachIndexed { j, reps ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Série ${j + 1}", Modifier.width(72.dp))
+                                Text(stringResource(R.string.comum_serie, j + 1), Modifier.width(72.dp))
                                 OutlinedTextField(
                                     value = reps,
                                     onValueChange = { viewModel.onEvent(WorkoutFormEvent.SetRepsChanged(i, j, it)) },
-                                    label = { Text("reps") },
+                                    label = { Text(stringResource(R.string.comum_reps)) },
                                     singleLine = true,
                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                     modifier = Modifier.width(110.dp),
@@ -148,7 +159,7 @@ fun WorkoutFormScreen(
                         }
 
                         TextButton(onClick = { viewModel.onEvent(WorkoutFormEvent.SetAdded(i)) }) {
-                            Text("+ série")
+                            Text(stringResource(R.string.treino_form_add_serie))
                         }
                     }
                 }
@@ -158,7 +169,7 @@ fun WorkoutFormScreen(
                 OutlinedButton(
                     onClick = { showPicker = true },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("+ adicionar exercício") }
+                ) { Text(stringResource(R.string.treino_form_add_exercicio)) }
                 Spacer(Modifier.height(24.dp))
             }
         }

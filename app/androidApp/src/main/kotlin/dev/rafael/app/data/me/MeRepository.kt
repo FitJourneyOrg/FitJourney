@@ -2,6 +2,7 @@ package dev.rafael.app.data.me
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToOneOrNull
+import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.user.UserDto
 import dev.rafael.core.database.FitJourneyDatabase
 import dev.rafael.core.database.SyncStamps
@@ -81,6 +82,14 @@ class MeRepository(
             gravar(atualizado)
             stamps.marcar(SyncStamps.ME)
             atualizado.displayName
+        }
+
+    override suspend fun definirIdioma(idioma: Idioma): AppResult<Unit> =
+        api.definirIdioma(idioma.tag).map { atualizado ->
+            // Grava a resposta INTEIRA, como o renomear: o PATCH devolve o `/me` completo, então
+            // aproveitar a resposta evita um GET extra e mantém o cache coerente num passo só.
+            gravar(atualizado)
+            stamps.marcar(SyncStamps.ME)
         }
 
     private suspend fun gravar(dto: UserDto) {

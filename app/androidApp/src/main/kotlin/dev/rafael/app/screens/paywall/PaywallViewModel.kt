@@ -35,7 +35,10 @@ class PaywallViewModel(
             when (billing.subscribe()) {
                 is AppResult.Success -> _state.update { it.copy(isSubscribing = false, subscribed = true) }
                 is AppResult.Failure ->
-                    _state.update { it.copy(isSubscribing = false, error = AppError.Unexpected("Não deu pra concluir a assinatura. Tente de novo.")) }
+                    // ⚠️ SEM mensagem: `AppError.Unexpected` não carrega código, e o `ErrorUi`
+                    // escreve o texto da família e DESCARTA a `message`. A frase que estava aqui
+                    // nunca chegou a uma tela. Segunda ocorrência do mesmo padrão na G.3.
+                    _state.update { it.copy(isSubscribing = false, error = AppError.Unexpected()) }
             }
         }
     }

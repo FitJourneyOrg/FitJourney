@@ -85,12 +85,16 @@ data class PublicProfileDto(
  * o que a 9.3-A manteve privado.
  *
  * No perfil público existe a medalha, não o caminho até ela.
+ *
+ * ⚠️ `title` e `description` saíram na G.5, pelo mesmo motivo do [dev.rafael.contract.stats.AchievementDto]
+ * — o texto vive no `strings.xml` do cliente (ARCH #37), derivado do [id]. Este DTO tinha o defeito
+ * em dose dupla: **o perfil público é a tela que um usuário mostra para outro**, e duas pessoas em
+ * idiomas diferentes liam a mesma medalha em português.
  */
 @Serializable
 data class PublicAchievementDto(
+    /** Id estável. Ver [dev.rafael.contract.stats.ConquistaIds]. */
     val id: String,
-    val title: String,
-    val description: String,
     /** ISO. Nunca nulo: conquista bloqueada não entra na lista. */
     val unlockedAt: String,
 )

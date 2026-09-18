@@ -2,6 +2,7 @@ package dev.rafael.server.features.user.services
 
 import dev.rafael.contract.friendship.FriendStatus
 import dev.rafael.contract.i18n.Idioma
+import dev.rafael.contract.stats.ConquistaIds
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asSuccess
@@ -108,8 +109,19 @@ class PublicProfileServiceTest {
         assertTrue(meu is AppResult.Success && meu.value.me, "o servidor resolve, a tela não compara ids")
     }
 
+    /**
+     * O nome do teste mudou junto com o DTO (G.5): ele afirmava *"com titulo e descricao"* e
+     * comparava a medalha com `"Começou"`. O servidor não escreve mais essa palavra — manda o **id**,
+     * e quem escolhe a frase é o `strings.xml` do cliente (ARCH #37).
+     *
+     * O que sobra aqui é o que sempre foi a responsabilidade desta camada, e agora sem disfarce: o
+     * FILTRO (só desbloqueada) e o id certo. A cobertura do texto vive no `TextosDeConquistaTest`.
+     *
+     * > **Teste que afirmava a frase estava afirmando a camada errada; ele passava por acaso de o
+     * > texto morar aqui.**
+     */
     @Test
-    fun `so as conquistas desbloqueadas aparecem, com titulo e descricao`(): Unit = runBlocking {
+    fun `so as conquistas desbloqueadas aparecem, e viajam como id`(): Unit = runBlocking {
         val quando = LocalDateTime(2026, 8, 20, 10, 0)
         val conquistas = FakeConquistas(mapOf(AchievementPolicy.Conquista.PRIMEIRO_TREINO.name to quando))
 
@@ -118,8 +130,7 @@ class PublicProfileServiceTest {
         assertTrue(r is AppResult.Success)
         assertEquals(1, r.value.achievements.size, "as 8 bloqueadas NÃO entram — progresso é privado")
         val m = r.value.achievements.single()
-        assertEquals("PRIMEIRO_TREINO", m.id)
-        assertEquals("Começou", m.title)
+        assertEquals(ConquistaIds.PRIMEIRO_TREINO, m.id)
         assertEquals(quando.toString(), m.unlockedAt)
     }
 

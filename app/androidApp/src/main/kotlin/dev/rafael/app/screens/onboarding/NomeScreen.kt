@@ -20,9 +20,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.rafael.app.R
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.app.ui.erroDoCampo
 import dev.rafael.app.ui.erroGeral
@@ -56,13 +58,13 @@ fun NomeScreen(
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
-            "Como podemos te chamar?",
+            stringResource(R.string.nome_titulo),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Medium,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            "É esse nome que aparece para as outras pessoas nos desafios em grupo. Dá para mudar depois.",
+            stringResource(R.string.nome_explicacao),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -71,7 +73,7 @@ fun NomeScreen(
         OutlinedTextField(
             value = state.nome,
             onValueChange = viewModel::aoDigitar,
-            label = { Text("Seu nome") },
+            label = { Text(stringResource(R.string.comum_seu_nome)) },
             singleLine = true,
             enabled = !state.carregando && !state.salvando,
             isError = state.erro.erroDoCampo("displayName") != null,
@@ -91,7 +93,7 @@ fun NomeScreen(
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (state.salvando) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-            else Text("Continuar")
+            else Text(stringResource(R.string.comum_continuar))
         }
     }
 }

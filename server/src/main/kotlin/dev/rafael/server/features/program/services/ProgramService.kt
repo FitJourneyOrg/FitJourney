@@ -49,7 +49,7 @@ class ProgramService(
             return AppError.Validation(e.message ?: "Perfil incompleto para gerar programa.", code = ErrorCodes.PERFIL_INCOMPLETO_PARA_GERAR).asFailure()
         }
 
-        val model = dto.toModel(userId, origin = WorkoutOrigin.AI, name = autoName(dto), unavailable = profile.unavailableDays.toSet())
+        val model = dto.toModel(userId, origin = WorkoutOrigin.AI, name = SEM_NOME, unavailable = profile.unavailableDays.toSet())
         return repository.createForUser(userId, model).flatMap { saved ->
             saved.toDto().asSuccess()
         }
@@ -209,12 +209,27 @@ class ProgramService(
             }
         }
 
-    private fun autoName(dto: ProgramDto): String = "Programa ${dto.daysPerWeek}x — ${dto.split}"
 }
 
 // ---- conversões ProgramDto (motor) <-> Program (model) ----
 
 private const val PROGRAM_WEEKS = 8   // [INV] janela mínima/default do cronograma: 8 semanas (2 meses)
+
+/**
+ * **Programa gerado nasce SEM nome, e isso é a fatia G.5** (ARCH #37, V48).
+ *
+ * Até 2026-09-15 existia um `autoName` que devolvia `"Programa 4x — Push/Pull/Legs"` e o GRAVAVA.
+ * Português, com travessão, e persistido: nascia errado para quem usa o app em inglês e ficava
+ * errado para sempre, porque trocar o idioma não alcança dado já gravado.
+ *
+ * `""` significa **"sem nome escolhido, derive"**. O cliente monta o rótulo de `daysPerWeek` e
+ * `split`, que já viajam no DTO, no idioma da tela. A coluna continua existindo e continua
+ * obrigatória porque o usuário renomeia o programa (ARCH #27) — o que ela guarda, a partir daqui,
+ * é escolha dele.
+ *
+ * > **Estado que é função de outra coisa é DERIVADO, não persistido.**
+ */
+private const val SEM_NOME = ""
 
 /** Semana atual (1..durationWeeks) derivada do início — autoridade do servidor, não do cliente. */
 private fun currentWeekOf(startedAt: LocalDateTime, durationWeeks: Int): Int {

@@ -89,6 +89,16 @@ object BancoDeTeste {
      * **O catálogo de exercícios NÃO é limpo.** Ele vem das migrations de seed (V4, V9, V28…) e é
      * dado de referência, não dado de teste — o `WorkoutGenerationIntegrationTest` depende dele
      * para gerar um programa. Truncá-lo faria a suíte inteira depender de recriá-lo.
+     *
+     * ⚠️ **Mas `exercise_translations` É limpa** (fatia H), e a distinção importa: a V49 cria a
+     * tabela VAZIA, e a carga dos nomes traduzidos é migration de dado separada (H.3). Enquanto ela
+     * não existir, tudo que estiver ali foi um teste que inseriu — logo, é dado de teste.
+     *
+     * > **A tabela de referência é a que as migrations preenchem; a que nasce vazia pertence a
+     * > quem escreveu nela.**
+     *
+     * Quando a H.3 entrar, esta linha precisa sair da lista: aí as traduções passam a ser
+     * referência, e truncá-las faria todo teste de idioma ler o piso e passar verde por engano.
      */
     fun limpar() {
         // ⚠️ REIVINDICA O DEFAULT ANTES DE LIMPAR.
@@ -116,6 +126,7 @@ object BancoDeTeste {
                 st.execute(
                     """
                     TRUNCATE TABLE
+                        exercise_translations,
                         group_daily_notices,
                         moderation_actions,
                         group_reports,

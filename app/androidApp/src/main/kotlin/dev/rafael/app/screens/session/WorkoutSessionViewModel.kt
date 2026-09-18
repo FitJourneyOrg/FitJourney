@@ -24,7 +24,8 @@ import kotlin.uuid.Uuid
 /** Uma série editável na execução (reps/carga como texto p/ o input). */
 data class SetEntry(
     val exerciseId: String,
-    val exerciseName: String,
+    /** `null` quando o catálogo não conhece este id. Quem escreve a palavra é a TELA (G.3). */
+    val exerciseName: String?,
     val orderIndex: Int,
     val setIndex: Int,
     val targetReps: Int,
@@ -149,7 +150,9 @@ class WorkoutSessionViewModel(
                         ex.sets.sortedBy { it.orderIndex }.map { set ->
                             SetEntry(
                                 exerciseId = ex.exerciseId,
-                                exerciseName = refs[ex.exerciseId]?.name ?: "Exercício",
+                                // Sem fallback aqui: `null` significa "o catálogo não conhece
+                                // este id", e quem escreve a palavra é a TELA, do catálogo pt-BR.
+                                exerciseName = refs[ex.exerciseId]?.name,
                                 orderIndex = ex.orderIndex,
                                 setIndex = set.orderIndex,
                                 targetReps = set.reps,
@@ -193,7 +196,10 @@ class WorkoutSessionViewModel(
         viewModelScope.launch {
             runCatching { sync.record(dto) }.fold(
                 onSuccess = { _state.update { it.copy(isSaving = false, saved = true) } },   // salvo (local ao menos)
-                onFailure = { _state.update { it.copy(isSaving = false, error = AppError.Unexpected("Não deu pra salvar o treino.")) } },
+                // ⚠️ SEM mensagem: `AppError.Unexpected` não carrega código, e a política de
+                // apresentação (ErrorUi) escreve o texto da família. A frase que estava aqui
+                // NUNCA chegava à tela — era texto que ninguém lia.
+                onFailure = { _state.update { it.copy(isSaving = false, error = AppError.Unexpected()) } },
             )
         }
     }

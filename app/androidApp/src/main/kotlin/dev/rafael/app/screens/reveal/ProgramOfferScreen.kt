@@ -18,9 +18,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.R
 
 /**
  * Última tela do onboarding: pergunta se o usuário QUER o primeiro programa.
@@ -55,25 +57,26 @@ fun ProgramOfferScreen(
         )
         Spacer(Modifier.height(20.dp))
         Text(
-            "Quer que a gente monte seu primeiro programa?",
+            stringResource(R.string.programa_oferta_titulo),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            "Usamos suas respostas para montar uma semana de treinos sob medida. " +
-                "Se preferir, você pode explorar o app primeiro e criar seus treinos na mão.",
+            // Uma string só: no código eram dois literais concatenados, e a frase precisa
+            // chegar inteira ao tradutor — a segunda metade depende da primeira.
+            stringResource(R.string.programa_oferta_texto),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         Spacer(Modifier.height(32.dp))
         Button(onClick = onGerar, modifier = Modifier.fillMaxWidth()) {
-            Text("Montar meu programa")
+            Text(stringResource(R.string.programa_oferta_gerar))
         }
         TextButton(onClick = onPular, modifier = Modifier.fillMaxWidth()) {
-            Text("Agora não, quero explorar")
+            Text(stringResource(R.string.programa_oferta_pular))
         }
     }
 }

@@ -36,6 +36,8 @@ import dev.rafael.features.program.data.ExecutorDePrograma
 import dev.rafael.features.workout.data.ExecutorDeTreino
 import dev.rafael.core.database.outbox.Outbox
 import kotlin.time.Clock
+import dev.rafael.contract.i18n.Idioma
+import dev.rafael.app.idioma.IdiomaDoAparelho
 import dev.rafael.core.network.TokenProvider
 import org.koin.android.ext.koin.androidContext
 import dev.rafael.app.data.session.HistoricoDeSessoes
@@ -66,6 +68,22 @@ val appModule = module {
     // Injetável de propósito: é o que torna "achou o treino de hoje" testável sem depender
     // do dia em que a suíte roda.
     single<Clock> { Clock.System }
+
+    /*
+     * O IDIOMA EFETIVO, como porta estreita (fatia H, ARCH #37).
+     *
+     * Registrado aqui pelo mesmo motivo do `SyncStamps` logo abaixo: esta é a raiz de composição,
+     * o único ponto que vê ao mesmo tempo o `Context` do Android e os repositórios de
+     * `commonMain`. O `ExerciseRepositoryImpl` precisa saber o idioma para pedir o catálogo certo
+     * e para decidir se o cache serve — e não pode nem deve enxergar `IdiomaDoAparelho`.
+     *
+     * `efetivo` e não `escolhido`: quem nunca abriu a tela de idioma tem `escolhido = null`, e o
+     * catálogo tem de vir no idioma que a INTERFACE está mostrando, não em nenhum.
+     *
+     * ⚠️ Lido a cada chamada, nunca guardado: trocar de idioma recria a Activity, mas o Koin é
+     * `single` e sobrevive. Um valor capturado aqui ficaria congelado no idioma da abertura.
+     */
+    single<() -> Idioma> { { IdiomaDoAparelho.efetivo(androidContext()) } }
 
     // CARIMBOS DE SYNC persistidos (ARCH #30). Registrado aqui — na raiz de composição —
     // porque é o único ponto que vê ao mesmo tempo o banco (core:database) e o TokenProvider
@@ -150,10 +168,14 @@ val appModule = module {
     single {
         val push: dev.rafael.app.push.RegistroDePush = get()
         val contador: dev.rafael.app.data.notificacoes.ContadorDeNaoLidas = get()
+        // A reconciliação de idioma carrega `Context`, então entra pela mesma porta estreita que
+        // as outras duas: um verbo, não o objeto. Ver o KDoc de `ReconciliarIdioma`.
+        val idioma = dev.rafael.app.idioma.ReconciliarIdiomaDaConta(androidContext(), get())
         dev.rafael.app.data.sessao.ReagirASessao(
             sessao = get(),
             registrarAparelho = { push.registrar() },
             atualizarContador = { contador.atualizar() },
+            reconciliarIdioma = { idioma.reconciliar() },
         )
     }
     // Singleton: o badge vive na barra (acima das telas) e a central é outra tela. Sem estado

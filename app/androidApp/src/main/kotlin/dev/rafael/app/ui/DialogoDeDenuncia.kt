@@ -16,7 +16,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.R
 import dev.rafael.core.result.AppError
 
 /** Espelha o `ModeracaoPolicy.MAX_MOTIVO`. Divergir faria o servidor cortar o texto em silêncio. */
@@ -50,30 +52,49 @@ const val MAX_MOTIVO_DA_DENUNCIA = 300
  */
 @Composable
 fun DialogoDeDenuncia(
-    /** O que se está denunciando, em linguagem de gente: "o check-in de Ana". `null` = fechado. */
-    alvo: String?,
+    /**
+     * O nome de quem publicou o conteúdo. `null` = diálogo fechado.
+     *
+     * ⚠️ **É o NOME, e não a frase pronta.** Até a G.3 este parâmetro recebia `"o check-in de Ana"`
+     * já montado pela tela, e o título saía de `"Denunciar " + alvo + "?"` — duas concatenações
+     * encadeadas. Em inglês a frase inteira se reorganiza ("Report Ana's check-in?") e nenhuma das
+     * metades pode ser reordenada depois de colada.
+     *
+     * > **Frase montada por pedaços não se traduz: o tradutor recebe os pedaços, não a frase.**
+     */
+    nomeDoAutor: String?,
+    /** Decide QUAL frase inteira usar. O servidor já distingue os dois alvos; a tela não adivinha. */
+    ehComentario: Boolean,
     ocupado: Boolean,
     /** A falha da última tentativa. Mostrada DENTRO do diálogo — ver o KDoc acima. */
     erro: AppError?,
     aoFechar: () -> Unit,
     aoEnviar: (String) -> Unit,
 ) {
-    val titulo = alvo ?: return
+    val nome = nomeDoAutor ?: return
 
-    // `key(titulo)` zera o texto ao trocar de alvo: sem isso, abrir a denúncia de outro item
+    // `key(nome)` zera o texto ao trocar de alvo: sem isso, abrir a denúncia de outro item
     // traria o motivo escrito para o anterior — e a pessoa enviaria sem reparar.
-    key(titulo) {
+    key(nome) {
         var motivo by remember { mutableStateOf("") }
 
         AlertDialog(
             onDismissRequest = { if (!ocupado) aoFechar() },
-            title = { Text("Denunciar $titulo?") },
+            title = {
+                Text(
+                    stringResource(
+                        if (ehComentario) R.string.denuncia_titulo_comentario
+                        else R.string.denuncia_titulo_checkin,
+                        nome,
+                    ),
+                )
+            },
             text = {
                 Column {
                     Text(
                         // Diz o que ACONTECE, não o que a pessoa deve sentir. E diz que é anônimo
                         // porque é a informação que decide se ela denuncia num grupo de conhecidos.
-                        "O admin do desafio vai avaliar. Ele não vê quem denunciou.",
+                        stringResource(R.string.denuncia_explicacao),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     Spacer(Modifier.height(12.dp))
@@ -81,8 +102,8 @@ fun DialogoDeDenuncia(
                         value = motivo,
                         // Corta no limite em vez de recusar no envio — a lição do comentário (8.1).
                         onValueChange = { if (it.length <= MAX_MOTIVO_DA_DENUNCIA) motivo = it },
-                        label = { Text("Por quê?") },
-                        placeholder = { Text("Ex.: a foto não é de hoje") },
+                        label = { Text(stringResource(R.string.denuncia_campo_motivo)) },
+                        placeholder = { Text(stringResource(R.string.denuncia_campo_exemplo)) },
                         minLines = 2,
                         enabled = !ocupado,
                         isError = erro != null,
@@ -103,10 +124,14 @@ fun DialogoDeDenuncia(
                     enabled = motivo.isNotBlank() && !ocupado,
                     onClick = { aoEnviar(motivo.trim()) },
                 ) {
-                    Text("Denunciar", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.comum_denunciar), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = aoFechar, enabled = !ocupado) { Text("Cancelar") } },
+            dismissButton = {
+                TextButton(onClick = aoFechar, enabled = !ocupado) {
+                    Text(stringResource(R.string.comum_cancelar))
+                }
+            },
         )
     }
 }

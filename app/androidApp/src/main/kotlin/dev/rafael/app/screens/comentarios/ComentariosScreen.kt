@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -44,12 +43,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.rafael.app.R
 import dev.rafael.app.ui.AvatarInicial
 import dev.rafael.app.ui.DialogoDeDenuncia
 import dev.rafael.app.ui.ErroInline
@@ -87,7 +88,8 @@ fun ComentariosScreen(
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.carregar(groupId, checkInId) }
 
     DialogoDeDenuncia(
-        alvo = state.denunciando?.let { "o comentário de ${it.displayName}" },
+        nomeDoAutor = state.denunciando?.displayName,
+        ehComentario = true,
         ocupado = state.enviando,
         erro = state.erro,
         aoFechar = viewModel::cancelarDenuncia,
@@ -103,10 +105,13 @@ fun ComentariosScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Comentários") },
+                title = { Text(stringResource(R.string.comentarios_titulo)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.comum_voltar),
+                        )
                     }
                 },
             )
@@ -128,7 +133,7 @@ fun ComentariosScreen(
                     state.itens.isEmpty() ->
                         Box(Modifier.fillMaxSize(), Alignment.Center) {
                             Text(
-                                "Ninguém comentou ainda.",
+                                stringResource(R.string.comentarios_vazio),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -168,7 +173,7 @@ fun ComentariosScreen(
                     viewModel.avisoVisto()
                 }
                 Text(
-                    "Denúncia enviada. O admin do desafio vai avaliar.",
+                    stringResource(R.string.comentarios_denuncia_enviada),
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
@@ -227,21 +232,21 @@ private fun Comentario(
                 IconButton(onClick = { aberto = true }) {
                     Icon(
                         Icons.Outlined.MoreVert,
-                        contentDescription = "Ações deste comentário",
+                        contentDescription = stringResource(R.string.comentarios_acoes),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 DropdownMenu(expanded = aberto, onDismissRequest = { aberto = false }) {
                     if (comentario.canDelete) {
                         DropdownMenuItem(
-                            text = { Text("Apagar") },
+                            text = { Text(stringResource(R.string.comum_apagar)) },
                             leadingIcon = { Icon(Icons.Outlined.Delete, contentDescription = null) },
                             onClick = { aberto = false; onApagar() },
                         )
                     }
                     if (comentario.canReport) {
                         DropdownMenuItem(
-                            text = { Text("Denunciar") },
+                            text = { Text(stringResource(R.string.comum_denunciar)) },
                             leadingIcon = { Icon(Icons.Outlined.Flag, contentDescription = null) },
                             onClick = { aberto = false; onDenunciar() },
                         )
@@ -261,10 +266,16 @@ private fun CampoDeComentario(
     onDigitar: (String) -> Unit,
     onEnviar: () -> Unit,
 ) {
+    // Tinha um `.navigationBarsPadding()` aqui, e ele saiu com a padronização dos insets (ver a
+    // [REGRA] no `AppNavHost`). Este campo vive no CONTEÚDO do `Scaffold` desta tela, não numa
+    // `bottomBar` — então quem já o afasta da barra de navegação é o `padding` que o próprio
+    // `Scaffold` entrega. O modificador somava a mesma distância uma segunda vez.
+    //
+    // > **Modificador de inset dentro do conteúdo de um `Scaffold` está sempre duplicando algo:
+    // > o `Scaffold` existe exatamente para não precisar dele.**
     Row(
         Modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.Bottom,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -273,7 +284,7 @@ private fun CampoDeComentario(
             value = texto,
             onValueChange = onDigitar,
             modifier = Modifier.weight(1f),
-            placeholder = { Text("Escreva um comentário") },
+            placeholder = { Text(stringResource(R.string.comentarios_placeholder)) },
             // Sem `singleLine`: comentário de 500 caracteres numa linha só seria ilegível enquanto
             // se escreve. Teto de 4 linhas para o campo não engolir a conversa.
             maxLines = 4,
@@ -298,7 +309,10 @@ private fun CampoDeComentario(
             if (enviando) {
                 CircularProgressIndicator(Modifier.width(20.dp), strokeWidth = 2.dp)
             } else {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Enviar")
+                Icon(
+                    Icons.AutoMirrored.Filled.Send,
+                    contentDescription = stringResource(R.string.comentarios_enviar),
+                )
             }
         }
     }

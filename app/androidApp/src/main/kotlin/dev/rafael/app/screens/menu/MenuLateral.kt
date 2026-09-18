@@ -19,6 +19,7 @@ import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.HorizontalDivider
@@ -45,6 +46,8 @@ import dev.rafael.app.ui.AvatarInicial
 import dev.rafael.app.ui.DialogoDeSaida
 import dev.rafael.app.ui.shimmer
 import org.koin.androidx.compose.koinViewModel
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * MENU LATERAL (ARCH #34) — os destinos que não são tarefa do dia a dia.
@@ -71,6 +74,7 @@ fun MenuLateral(
     onWiki: () -> Unit,
     onDuvidas: () -> Unit,
     onConta: () -> Unit,
+    onIdioma: () -> Unit,
     viewModel: MenuViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -140,7 +144,7 @@ fun MenuLateral(
                         val nivel = state.nivel
                         if (nivel != null) {
                             Text(
-                                "Nível $nivel",
+                                stringResource(R.string.comum_nivel, nivel),
                                 style = MaterialTheme.typography.bodySmall,
                                 // lime: é recompensa do perfil individual ([REGRA] ARCH #16).
                                 color = MaterialTheme.colorScheme.tertiary,
@@ -153,18 +157,37 @@ fun MenuLateral(
             HorizontalDivider()
             Spacer(Modifier.height(8.dp))
 
-            ItemDoMenu("Meu perfil", Icons.Outlined.Person, onPerfil)
-            ItemDoMenu("Exercícios", Icons.Outlined.FitnessCenter, onExercicios)
+            ItemDoMenu(stringResource(R.string.menu_meu_perfil), Icons.Outlined.Person, onPerfil)
+            ItemDoMenu(stringResource(R.string.comum_exercicios), Icons.Outlined.FitnessCenter, onExercicios)
             // O selo de fase existe para o item não virar promessa vazia: quem toca e cai num
             // "em breve" sem aviso fica com a sensação de app inacabado.
-            ItemDoMenu("Wiki fitness", Icons.AutoMirrored.Outlined.MenuBook, onWiki, selo = "fase 8")
-            ItemDoMenu("Dúvidas frequentes", Icons.AutoMirrored.Outlined.HelpOutline, onDuvidas)
+            ItemDoMenu(
+                stringResource(R.string.menu_wiki),
+                Icons.AutoMirrored.Outlined.MenuBook,
+                onWiki,
+                selo = stringResource(R.string.menu_wiki_selo),
+            )
+            ItemDoMenu(
+                stringResource(R.string.menu_duvidas),
+                Icons.AutoMirrored.Outlined.HelpOutline,
+                onDuvidas,
+            )
 
             Spacer(Modifier.height(8.dp))
             HorizontalDivider(Modifier.padding(horizontal = 16.dp))
             Spacer(Modifier.height(8.dp))
 
-            ItemDoMenu("Configurações da conta", Icons.Outlined.Settings, onConta)
+            ItemDoMenu(stringResource(R.string.menu_conta), Icons.Outlined.Settings, onConta)
+            /*
+             * O idioma fica ao lado de Conta, e com ÍCONE DE GLOBO, que não é enfeite.
+             *
+             * Quem procura esta tela é quem abriu o app numa língua que não lê — e para essa
+             * pessoa a palavra "Idioma" é tão opaca quanto o resto da gaveta. O globo é o único
+             * elemento da linha que ela consegue interpretar.
+             *
+             * > **Num app que a pessoa não consegue ler, o ícone não é decoração: é o rótulo.**
+             */
+            ItemDoMenu(stringResource(R.string.comum_idioma), Icons.Outlined.Language, onIdioma)
 
             Spacer(Modifier.height(8.dp))
             HorizontalDivider(Modifier.padding(horizontal = 16.dp))
@@ -174,7 +197,12 @@ fun MenuLateral(
             // Configurações, porque a sequência de logout só existia lá — eu tinha protegido a
             // regra empurrando o usuário. Um item chamado "Sair" que leva a outra tela mente
             // sobre o que faz.
-            ItemDoMenu(rotulo = "Sair", icone = Icons.AutoMirrored.Outlined.Logout, onClick = {confirmarSaida = true})
+            ItemDoMenu(
+                // ⚠️ "Sair" da CONTA, não de um desafio. Ver o aviso cruzado no strings.xml.
+                rotulo = stringResource(R.string.menu_sair),
+                icone = Icons.AutoMirrored.Outlined.Logout,
+                onClick = { confirmarSaida = true },
+            )
             Spacer(Modifier.height(16.dp))
         }
     }

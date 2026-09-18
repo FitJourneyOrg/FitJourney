@@ -8,6 +8,8 @@ import androidx.compose.ui.unit.dp
 import dev.rafael.features.exercise.presentation.state.ExerciseListEvent
 import dev.rafael.features.exercise.presentation.viewmodel.ExerciseListViewModel
 import org.koin.androidx.compose.koinViewModel
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -21,7 +23,7 @@ fun ExercisePickerSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(Modifier.fillMaxHeight(0.9f).padding(horizontal = 16.dp)) {
-            Text("Adicionar exercícios", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.exercicios_adicionar_titulo), style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.height(12.dp))
 
             Box(Modifier.weight(1f)) {
@@ -40,7 +42,7 @@ fun ExercisePickerSheet(
                 enabled = selected.isNotEmpty(),
                 modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
             ) {
-                Text("Adicionar (${selected.size})")
+                Text(stringResource(R.string.exercicios_adicionar_acao, selected.size))
             }
         }
     }

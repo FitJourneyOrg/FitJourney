@@ -43,6 +43,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.contract.notificacao.NotificacaoDto
 import org.koin.androidx.compose.koinViewModel
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
 
 /** Os tipos que o servidor manda. Espelha `Aviso.TIPO_*`. */
 private const val TIPO_PEDIDO_DE_AMIZADE = "PEDIDO_DE_AMIZADE"
@@ -69,10 +71,13 @@ fun NotificacoesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Notificações") },
+                title = { Text(stringResource(R.string.comum_notificacoes)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.comum_voltar),
+                        )
                     }
                 },
             )
@@ -84,7 +89,7 @@ fun NotificacoesScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    "Nada por aqui ainda.",
+                    stringResource(R.string.notificacoes_vazio),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

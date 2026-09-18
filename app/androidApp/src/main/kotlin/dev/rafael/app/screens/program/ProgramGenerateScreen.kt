@@ -5,7 +5,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.R
+import dev.rafael.app.ui.Frase
+import dev.rafael.app.ui.resolver
 import dev.rafael.features.program.presentation.state.GenerateError
 import dev.rafael.features.program.presentation.state.ProgramGenerateEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramGenerateViewModel
@@ -38,8 +42,10 @@ fun ProgramGenerateScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Criar com IA") },
-                navigationIcon = { TextButton(onClick = onBack) { Text("Voltar") } },
+                title = { Text(stringResource(R.string.comum_criar_com_ia)) },
+                navigationIcon = {
+                    TextButton(onClick = onBack) { Text(stringResource(R.string.comum_voltar)) }
+                },
             )
         },
     ) { padding ->
@@ -48,12 +54,13 @@ fun ProgramGenerateScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             Text(
-                "O assistente monta um programa completo pra você, com base no seu perfil e objetivo.",
+                stringResource(R.string.programa_gerar_explicacao),
                 style = MaterialTheme.typography.bodyMedium,
             )
 
+            // ⚠️ TEXTO DO SERVIDOR, não traduzido. Enumerado no `TextoDoServidorTest`.
             (state.error as? GenerateError.Other)?.let {
-                Text(it.message, color = MaterialTheme.colorScheme.error)
+                Text(Frase.DoServidor(it.message).resolver(), color = MaterialTheme.colorScheme.error)
             }
 
             Button(
@@ -65,10 +72,10 @@ fun ProgramGenerateScreen(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CircularProgressIndicator(Modifier.size(20.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("Gerando seu programa...")
+                        Text(stringResource(R.string.programa_gerar_gerando))
                     }
                 } else {
-                    Text("Gerar programa")
+                    Text(stringResource(R.string.programa_gerar_acao))
                 }
             }
         }
@@ -79,9 +86,11 @@ fun ProgramGenerateScreen(
 private fun PremiumDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Limite de programas gratuitos") },
-        text = { Text("Você atingiu o limite de programas gerados no plano grátis. Assine o premium pra gerar mais.") },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Entendi") } },
+        title = { Text(stringResource(R.string.programa_gerar_limite_titulo)) },
+        text = { Text(stringResource(R.string.programa_gerar_limite_texto)) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.comum_entendi)) }
+        },
     )
 }
 
@@ -89,8 +98,10 @@ private fun PremiumDialog(onDismiss: () -> Unit) {
 private fun HealthGateDialog(onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Avaliação de saúde") },
-        text = { Text("Complete a avaliação de saúde do seu perfil antes de gerar treinos com IA.") },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Entendi") } },
+        title = { Text(stringResource(R.string.programa_gerar_saude_titulo)) },
+        text = { Text(stringResource(R.string.programa_gerar_saude_texto)) },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.comum_entendi)) }
+        },
     )
 }

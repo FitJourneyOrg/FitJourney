@@ -9,6 +9,7 @@ import dev.rafael.contract.group.GroupPreviewDto
 import dev.rafael.contract.group.GroupState
 import dev.rafael.contract.group.GroupType
 import dev.rafael.contract.group.ScoringModel
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -25,6 +26,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
 /**
@@ -61,17 +63,21 @@ class GruposViewModelTest {
      */
     private class FakeGroups(private val noServidor: List<GroupDto>) : Groups {
         val cache = MutableStateFlow<List<GroupDto>>(emptyList())
+
         private var sincronizouAlgumaVez = false
         var chamadasDeSync = 0
             private set
 
         override fun observar(): Flow<List<GroupDto>> = cache
+        var erroAoSincronizar: AppError? = null
 
-        override suspend fun sincronizar(forcar: Boolean) {
+        override suspend fun sincronizar(forcar: Boolean): AppError? {
             chamadasDeSync++
             yield()                     // a rede suspende
+            erroAoSincronizar?.let { return it }   // falhou: NÃO grava, mantém o cache como está
             cache.value = noServidor    // gravou no cache: o Flow re-emite
             sincronizouAlgumaVez = true
+            return null                 // este fake sempre dá certo
         }
 
         override suspend fun jaSincronizou(): Boolean {
@@ -93,7 +99,51 @@ class GruposViewModelTest {
 
         private fun naoUsado(): Nothing = error("a aba Grupos não chama isto")
     }
+    @Test
+    fun `sync que falha sem cache vira erro de tela, nao espera eterna`() = runTest(dispatcher) {
+        // REGRESSÃO (2026-09-11). Com o servidor inalcançável e o cache vazio, a tela ficava em
+        // "Carregando seus desafios" PARA SEMPRE: sem erro, sem retentativa. O `erroSync` já
+        // existia no estado e nunca era preenchido, porque `Groups.sincronizar` devolvia `Unit` e
+        // o repositório fazia `is AppResult.Failure -> Unit`.
+        //
+        // O servidor TEM grupos de propósito: é o que prova que a tela vazia não é "não tenho
+        // desafios", e sim "não consegui perguntar".
+        val fake = FakeGroups(listOf(grupo("g1"))).apply {
+            erroAoSincronizar = AppError.Connection()
+        }
+        val viewModel = GruposViewModel(fake)
 
+        viewModel.carregar()
+        advanceUntilIdle()
+
+        val estado = viewModel.state.value
+        assertNotNull(estado.erroSync, "cache vazio + sync falhado tem de virar erro, não espera")
+        assertTrue(estado.vazio, "o sync falhou, então nada foi gravado no cache")
+        assertFalse(estado.carregando, "quem termina o carregamento é o sync, mesmo falhando")
+        assertFalse(estado.jaSincronizou, "nunca sincronizou: não dá para afirmar 'nenhum desafio'")
+    }
+
+    @Test
+    fun `sync que falha COM cache nao esvazia a lista`() = runTest(dispatcher) {
+        // O outro lado da regra (ARCH #31): com dado local, falha de sync é nível 1, silêncio.
+        // Quem decide isso é a TELA, no ramo `vazio && erroSync != null` — este teste garante o
+        // insumo daquela decisão, que é `vazio` continuar falso. Um ViewModel não tem como
+        // afirmar "a tela ficou em silêncio"; afirmar isso aqui seria fingir alcance.
+        val cacheado = List(2) { grupo("c$it") }
+        val fake = FakeGroups(listOf(grupo("g1"))).apply {
+            cache.value = cacheado
+            erroAoSincronizar = AppError.Connection()
+        }
+        val viewModel = GruposViewModel(fake)
+
+        viewModel.carregar()
+        advanceUntilIdle()
+
+        val estado = viewModel.state.value
+        assertNotNull(estado.erroSync, "o erro é registrado mesmo quando não vai ser exibido")
+        assertFalse(estado.vazio, "falha de sync não pode apagar o que já se sabe")
+        assertEquals(cacheado, estado.grupos)
+    }
     @Test
     fun `o sync NAO apaga a lista que o cache entregou durante a suspensao`() = runTest(dispatcher) {
         // REGRESSÃO. Com 4 grupos no servidor, a tela mostrava "Nenhum desafio ainda" e só se
@@ -143,4 +193,6 @@ class GruposViewModelTest {
         assertTrue(viewModel.state.value.vazio)
         assertTrue(viewModel.state.value.jaSincronizou, "agora sim: 'Nenhum desafio ainda'")
     }
+
+
 }
