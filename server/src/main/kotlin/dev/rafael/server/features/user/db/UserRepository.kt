@@ -1,5 +1,6 @@
 package dev.rafael.server.features.user.db
 
+import dev.rafael.contract.i18n.Idioma
 import dev.rafael.core.result.AppResult
 import dev.rafael.server.features.user.models.User
 import kotlin.uuid.Uuid
@@ -53,4 +54,13 @@ interface UserRepository {
 
     /** Renomeia. O nome já vem validado por `DisplayNamePolicy`. Null = usuário não existe. */
     suspend fun updateDisplayName(userId: Uuid, displayName: String): AppResult<User?>
+
+    /**
+     * Troca o idioma (V47, ARCH #37). Null = usuário não existe.
+     *
+     * Recebe o **enum**, não a tag: quem chega aqui já passou por `IdiomaPolicy.valida`, e aceitar
+     * `String` deixaria a porta aberta para alguém mandar uma tag crua que o `CHECK` da V47 recusa
+     * com um erro de banco em vez de uma recusa de validação.
+     */
+    suspend fun updateIdioma(userId: Uuid, idioma: Idioma): AppResult<User?>
 }

@@ -32,6 +32,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,6 +41,10 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rafael.app.ui.shimmer
+import dev.rafael.app.R
+import dev.rafael.app.ui.ErroAcao
+import dev.rafael.app.ui.ErroDeTela
+import dev.rafael.app.ui.rotulo
 import dev.rafael.contract.group.GroupDto
 import dev.rafael.contract.group.GroupState
 import org.koin.androidx.compose.koinViewModel
@@ -67,7 +73,7 @@ fun GruposScreen(
                 ExtendedFloatingActionButton(
                     onClick = onCriar,
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                    text = { Text("Criar desafio") },
+                    text = { Text(stringResource(R.string.comum_criar_desafio)) },
                 )
             }
         },
@@ -75,6 +81,32 @@ fun GruposScreen(
         Box(Modifier.fillMaxSize().padding(padding)) {
             when {
                 state.carregando && state.vazio -> Esqueleto()
+
+                /*
+                 * ⭐ SEM DADO LOCAL E COM FALHA: a tela precisa DIZER, não girar.
+                 *
+                 * Este ramo não existia até 2026-09-11, e a ausência dele é o defeito que o
+                 * `MenuLateral.kt` já descreve num outro lugar: **carregar e falhar eram o mesmo
+                 * pixel**. Com o servidor inalcançável e o cache vazio, a tela ficava em
+                 * "Carregando seus desafios" para sempre — sem erro, sem retentativa, e com um
+                 * `erroSync` no estado que ninguém preenchia e ninguém lia.
+                 *
+                 * A ordem importa: vem ANTES de `vazio`, porque "falhou" é mais específico que
+                 * "está vazio", e depois de `carregando`, porque erro de uma tentativa anterior
+                 * não deve cobrir a tentativa em curso.
+                 *
+                 * `ErroDeTela` é o nível 2 do ARCH #31 e o KDoc dele já dizia a regra que faltava
+                 * aplicar: *"use SÓ quando não há dado local"*. Com lista em cache, falha de sync
+                 * continua sendo silêncio.
+                 */
+                state.vazio && state.erroSync != null ->
+                    ErroDeTela(
+                        erro = state.erroSync!!,
+                        onAcao = { acao ->
+                            if (acao == ErroAcao.TENTAR_DE_NOVO) viewModel.atualizar()
+                        },
+                    )
+
                 state.vazio -> Vazio(state.jaSincronizou, onCriar, onEntrarPorCodigo)
                 else -> PullToRefreshBox(
                     isRefreshing = state.atualizando,
@@ -87,7 +119,7 @@ fun GruposScreen(
                 ) {
                     item {
                         OutlinedButton(onClick = onEntrarPorCodigo, modifier = Modifier.fillMaxWidth()) {
-                            Text("Entrar com um código")
+                            Text(stringResource(R.string.comum_entrar_com_codigo))
                         }
                     }
                     items(state.grupos, key = { it.id }) { grupo ->
@@ -123,8 +155,8 @@ private fun CartaoDeGrupo(grupo: GroupDto, onClick: () -> Unit) {
         // Sem `lime` em lugar nenhum deste cartão: [REGRA] ARCH #16, a cor é exclusiva do perfil
         // individual e não pode aparecer em contexto de grupo.
         Text(
-            "${grupo.memberCount} ${if (grupo.memberCount == 1) "pessoa" else "pessoas"} · " +
-                "${grupo.startDate} a ${grupo.endDate}",
+            pluralStringResource(R.plurals.grupo_pessoas, grupo.memberCount, grupo.memberCount) +
+                " · " + stringResource(R.string.grupo_periodo, grupo.startDate, grupo.endDate),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -134,12 +166,12 @@ private fun CartaoDeGrupo(grupo: GroupDto, onClick: () -> Unit) {
 /** O estado vem RESOLVIDO do servidor — o cliente não recalcula com o próprio relógio. */
 @Composable
 private fun Selo(estado: GroupState) {
-    val (texto, cor) = when (estado) {
-        GroupState.AGENDADO -> "Começa em breve" to MaterialTheme.colorScheme.onSurfaceVariant
-        GroupState.ATIVO -> "Em andamento" to MaterialTheme.colorScheme.primary
-        GroupState.ENCERRADO -> "Encerrado" to MaterialTheme.colorScheme.outline
+    val cor = when (estado) {
+        GroupState.AGENDADO -> MaterialTheme.colorScheme.onSurfaceVariant
+        GroupState.ATIVO -> MaterialTheme.colorScheme.primary
+        GroupState.ENCERRADO -> MaterialTheme.colorScheme.outline
     }
-    Text(texto, style = MaterialTheme.typography.labelSmall, color = cor)
+    Text(stringResource(estado.rotulo()), style = MaterialTheme.typography.labelSmall, color = cor)
 }
 
 /**
@@ -189,26 +221,28 @@ private fun Vazio(jaSincronizou: Boolean, onCriar: () -> Unit, onEntrar: () -> U
         )
         Spacer(Modifier.height(14.dp))
         Text(
-            if (jaSincronizou) "Nenhum desafio ainda" else "Carregando seus desafios",
+            stringResource(
+                if (jaSincronizou) R.string.grupos_vazio_titulo else R.string.grupos_carregando_titulo,
+            ),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Medium,
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            if (jaSincronizou) {
-                "Crie um desafio e convide quem treina com você — ou entre em um com o código."
-            } else {
-                "Se você já participa de algum, ele aparece assim que a lista chegar."
-            },
+            stringResource(
+                if (jaSincronizou) R.string.grupos_vazio_texto else R.string.grupos_carregando_texto,
+            ),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
         )
         if (jaSincronizou) {
             Spacer(Modifier.height(20.dp))
-            Button(onClick = onCriar) { Text("Criar desafio") }
+            Button(onClick = onCriar) { Text(stringResource(R.string.comum_criar_desafio)) }
             Spacer(Modifier.height(8.dp))
-            OutlinedButton(onClick = onEntrar) { Text("Entrar com um código") }
+            OutlinedButton(onClick = onEntrar) {
+                Text(stringResource(R.string.comum_entrar_com_codigo))
+            }
         }
     }
 }

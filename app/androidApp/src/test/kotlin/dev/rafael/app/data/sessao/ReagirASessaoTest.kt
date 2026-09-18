@@ -72,10 +72,16 @@ class ReagirASessaoTest {
     private class Contagem {
         var registros = 0
         var atualizacoes = 0
+        var reconciliacoesDeIdioma = 0
     }
 
     private fun cenario(token: FakeToken, c: Contagem) =
-        ReagirASessao(token, { c.registros++ }, { c.atualizacoes++ })
+        ReagirASessao(
+            token,
+            { c.registros++ },
+            { c.atualizacoes++ },
+            { c.reconciliacoesDeIdioma++ },
+        )
 
     /**
      * ⭐ O TESTE QUE FALTAVA.

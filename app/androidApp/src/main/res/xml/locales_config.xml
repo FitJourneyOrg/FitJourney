@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Os idiomas que o app declara ao SISTEMA (fatia G.4, ARCH #37).
+
+  É este arquivo que faz o FitJourney aparecer em Ajustes → Apps → FitJourney → Idioma no
+  Android 13 ou mais recente. Sem ele, o `LocaleManager` continua funcionando quando o app chama,
+  mas a porta do sistema simplesmente não existe — e é justamente a porta que serve a quem abriu
+  o app num idioma que não lê.
+
+  ⚠️ A lista espelha o enum `Idioma` do shared-contract. Idioma novo entra nos dois lugares, e a
+  ordem aqui é a de preferência declarada, não a de exibição.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="pt-BR" />
+    <locale android:name="en" />
+</locale-config>

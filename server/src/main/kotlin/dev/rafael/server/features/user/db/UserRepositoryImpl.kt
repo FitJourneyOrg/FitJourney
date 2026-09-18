@@ -4,6 +4,8 @@ import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
+import dev.rafael.contract.i18n.Idioma
+import dev.rafael.contract.i18n.IdiomaPolicy
 import dev.rafael.server.features.user.models.User
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -48,6 +50,10 @@ class UserRepositoryImpl : UserRepository {
                 it[UsersTable.isPremium] = false
                 it[UsersTable.displayName] = displayName
                 it[UsersTable.code] = code
+                // V47: explícito, mesmo havendo DEFAULT na coluna. O objeto devolvido abaixo
+                // afirma `Idioma.PADRAO`, e deixar o banco decidir em silêncio abriria a chance de
+                // os dois discordarem no dia em que o DEFAULT mudar.
+                it[UsersTable.locale] = Idioma.PADRAO.tag
             }
             User(
                 id = id,
@@ -56,6 +62,7 @@ class UserRepositoryImpl : UserRepository {
                 isPremium = false,
                 displayName = displayName,
                 code = code,
+                idioma = Idioma.PADRAO,
             )
         }
 
@@ -90,6 +97,15 @@ class UserRepositoryImpl : UserRepository {
             else UsersTable.selectAll().where { UsersTable.id eq userId }.single().toUser()
         }
 
+    override suspend fun updateIdioma(userId: Uuid, idioma: Idioma): AppResult<User?> =
+        dbQuery {
+            val n = UsersTable.update({ UsersTable.id eq userId }) {
+                it[locale] = idioma.tag
+            }
+            if (n == 0) null
+            else UsersTable.selectAll().where { UsersTable.id eq userId }.single().toUser()
+        }
+
     /** Exposed é bloqueante -> IO. Qualquer exceção do banco vira AppError.Unexpected (não vaza). */
     private suspend fun <T> dbQuery(block: () -> T): AppResult<T> =
         withContext(Dispatchers.IO) {
@@ -110,4 +126,8 @@ private fun ResultRow.toUser(): User = User(
     // O `trim()` é rede de segurança: o CHECK da V40 já exige exatamente 8, mas uma
     // comparação que falhasse por espaço invisível seria muito cara de diagnosticar.
     code = this[UsersTable.code].trim(),
+    // V47. A conversão passa pelo IdiomaPolicy num lugar SÓ, e ela nunca falha: valor inesperado
+    // na coluna vira português em vez de derrubar a leitura do usuário. O CHECK da V47 deveria
+    // impedir que chegue aqui, mas quem escreve por script passa por dentro deste mapeamento.
+    idioma = IdiomaPolicy.de(this[UsersTable.locale]),
 )

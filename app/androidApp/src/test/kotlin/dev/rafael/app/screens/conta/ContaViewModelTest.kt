@@ -4,6 +4,7 @@ import dev.rafael.app.data.me.Me
 import dev.rafael.app.data.sessao.SairDaConta
 import dev.rafael.app.screens.home.FakeAuth
 import dev.rafael.app.screens.home.FakePerfil
+import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.user.UserDto
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -39,6 +40,7 @@ class ContaViewModelTest {
     @AfterTest fun tearDown() { Dispatchers.resetMain() }
 
     private class FakeMe(nomeInicial: String = "Rafael") : Me {
+        override suspend fun definirIdioma(idioma: Idioma): AppResult<Unit> = AppResult.Success(Unit)
         val fluxo = MutableStateFlow<UserDto?>(
             UserDto(id = "u1", displayName = nomeInicial, email = "r@x.com", isPremium = false),
         )

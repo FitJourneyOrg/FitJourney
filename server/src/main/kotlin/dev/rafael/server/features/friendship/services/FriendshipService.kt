@@ -16,6 +16,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
+import dev.rafael.contract.error.ErrorCodes
 
 /**
  * Amizades e bloqueios (ARCH #35).
@@ -174,8 +175,35 @@ class FriendshipService(
         novo: FriendshipPolicy.Estado,
     ): AppResult<Unit> = comAmbos(quemAge, email, outroId) { eu, outro ->
         repository.entre(eu, outro).flatMap { amizade ->
-            if (amizade == null || !FriendshipPolicy.podeResponder(eu, amizade.requestedBy, amizade.status)) {
-                return@flatMap AppError.NotFound("Pedido não encontrado").asFailure()
+            // Desmembrado na G.2: a guarda antiga era uma só e a frase dizia sempre "não
+            // encontrado", inclusive quando o pedido EXISTE e apenas não está mais esperando
+            // resposta. Dizer que não existe algo que existe e está resolvido é impreciso, e a
+            // pessoa fica procurando um pedido que ela vai continuar vendo na lista.
+            if (amizade == null) {
+                return@flatMap AppError.NotFound(
+                    "Este pedido não existe mais.",
+                    code = ErrorCodes.PEDIDO_NAO_EXISTE,
+                ).asFailure()
+            }
+            // `podeResponder` é UMA condição e barra por DOIS motivos. A primeira versão da G.2
+            // deu a mesma frase aos dois, e para o caso de baixo ela é falsa: ninguém respondeu
+            // nada, a pessoa é que está tentando aceitar o próprio pedido.
+            //
+            // > **Guarda que barra por dois motivos precisa de duas frases, mesmo quando a
+            // > condição é uma só no código.**
+            if (eu == amizade.requestedBy) {
+                // 403 e não 409: a tela nunca oferece este caminho. É a guarda de segurança que o
+                // `FriendshipPolicy` chama de "a falha mais óbvia de um fluxo com aceite".
+                return@flatMap AppError.Forbidden(
+                    "Você não pode aceitar um pedido que você mesmo enviou.",
+                    ErrorCodes.PEDIDO_E_MEU,
+                ).asFailure()
+            }
+            if (!FriendshipPolicy.podeResponder(eu, amizade.requestedBy, amizade.status)) {
+                return@flatMap AppError.Conflict(
+                    "Este pedido já foi respondido.",
+                    code = ErrorCodes.PEDIDO_JA_RESPONDIDO,
+                ).asFailure()
             }
 
             val checarTeto =
@@ -196,10 +224,14 @@ class FriendshipService(
 
             checarTeto.flatMap {
                 repository.responder(eu, outro, novo, agora()).flatMap { mudou ->
-                    // `false` = alguém respondeu entre a leitura e o update. Devolver 404 e não
-                    // 500: do ponto de vista de quem tocou, o pedido não está mais lá.
+                    // `false` = alguém respondeu entre a leitura e o update. É CORRIDA, e por isso
+                    // usa o mesmo código de "já respondido" da guarda acima, e não o de "não
+                    // existe": o pedido está lá, resolvido por quem chegou primeiro.
                     if (mudou) Unit.asSuccess()
-                    else AppError.NotFound("Pedido não encontrado").asFailure()
+                    else AppError.Conflict(
+                        "Este pedido já foi respondido.",
+                        code = ErrorCodes.PEDIDO_JA_RESPONDIDO,
+                    ).asFailure()
                 }
             }
         }
@@ -223,7 +255,7 @@ class FriendshipService(
                     FriendshipPolicy.podeCancelar(eu, amizade.requestedBy, amizade.status) ||
                         FriendshipPolicy.podeDesfazer(amizade.status)
                     )
-                if (!pode) AppError.NotFound("Relação não encontrada").asFailure()
+                if (!pode) AppError.NotFound("Isso já foi desfeito.", code = ErrorCodes.SEM_RELACAO).asFailure()
                 else repository.apagar(eu, outro).map { }
             }
         }
@@ -238,7 +270,7 @@ class FriendshipService(
     suspend fun bloquear(quemAge: String, email: String?, alvoId: String): AppResult<Unit> =
         comAmbos(quemAge, email, alvoId) { eu, alvo ->
             if (eu == alvo) {
-                AppError.Validation("Você não pode bloquear a si mesmo").asFailure()
+                AppError.Validation("Você não pode bloquear a si mesmo", code = ErrorCodes.BLOQUEAR_A_SI_MESMO).asFailure()
             } else {
                 repository.bloquear(eu, alvo, agora())
             }
@@ -316,11 +348,26 @@ class FriendshipService(
         bloco: suspend (eu: Uuid, alvo: Uuid) -> AppResult<Unit>,
     ): AppResult<Unit> = userService.findOrCreate(firebaseUid, email).flatMap { eu ->
         val alvo = runCatching { Uuid.parse(alvoId) }.getOrNull()
-            ?: return@flatMap AppError.NotFound("Usuário não encontrado").asFailure()
+            ?: return@flatMap pessoaNaoExiste()
 
         users.findById(alvo).flatMap { pessoa ->
-            if (pessoa == null) AppError.NotFound("Usuário não encontrado").asFailure()
+            if (pessoa == null) pessoaNaoExiste()
             else bloco(eu.id, alvo)
         }
     }
+
+    /**
+     * A OUTRA pessoa não existe.
+     *
+     * Desmembrado de "Usuário não encontrado" na G.2: a mesma frase servia aqui e no `UserService`,
+     * onde ela quer dizer que **a própria conta de quem pediu** sumiu. São coisas opostas, e a
+     * segunda é estado impossível, não algo que a pessoa possa entender ou resolver.
+     *
+     * O id malformado cai aqui de propósito, igual ao perfil público (C.1): distinguir "não existe"
+     * de "formato inválido" deixaria sondar quais ids existem.
+     */
+    private fun pessoaNaoExiste(): AppResult<Unit> = AppError.NotFound(
+        "Esta pessoa não está mais no FitJourney.",
+        code = ErrorCodes.PESSOA_NAO_EXISTE,
+    ).asFailure()
 }

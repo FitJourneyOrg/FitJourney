@@ -1,5 +1,6 @@
 package dev.rafael.server.features.user.services
 
+import dev.rafael.contract.i18n.Idioma
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.server.features.user.db.UserRepository
@@ -29,6 +30,12 @@ class UserServiceTest {
         var renomeadoPara: String? = null
         var criadoComCodigo: String? = null
         var codigoNovo: String? = null
+
+        /**
+         * `null` = o repositório NÃO foi chamado. É o que prova a metade difícil do PATCH: quando o
+         * idioma é inválido, nem o nome nem o idioma podem ter sido gravados.
+         */
+        var idiomaGravado: Idioma? = null
 
         override suspend fun findByFirebaseUid(firebaseUid: String) =
             AppResult.Success(if (jaExiste) user else null)
@@ -64,6 +71,11 @@ class UserServiceTest {
         override suspend fun updateDisplayName(userId: Uuid, displayName: String): AppResult<User?> {
             renomeadoPara = displayName
             return AppResult.Success(user.copy(displayName = displayName))
+        }
+
+        override suspend fun updateIdioma(userId: Uuid, idioma: Idioma): AppResult<User?> {
+            idiomaGravado = idioma
+            return AppResult.Success(user.copy(idioma = idioma))
         }
     }
 
@@ -116,6 +128,66 @@ class UserServiceTest {
 
         assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
         assertNull(repo.renomeadoPara, "o repositório não pode ter sido tocado")
+    }
+
+    // ---- o PATCH de dois campos (G.1, ARCH #37) ----
+
+    @Test
+    fun `atualizarMe grava o idioma`() = runBlocking {
+        val repo = FakeRepo()
+        val r = UserService(repo).atualizarMe("fb-uid", null, displayName = null, locale = "en")
+
+        assertTrue(r is AppResult.Success)
+        assertEquals(Idioma.EN, repo.idiomaGravado)
+        assertNull(repo.renomeadoPara, "não mexeu no nome, que veio nulo")
+    }
+
+    /**
+     * `null` nos dois campos é requisição VÁLIDA que não faz nada.
+     *
+     * Recusá-la como erro obrigaria o cliente a saber que nada mudou antes de mandar, e uma tela que
+     * salva formulário inteiro não sabe. É o que `null` significa num PATCH.
+     */
+    @Test
+    fun `patch vazio nao e erro e nao toca em nada`() = runBlocking {
+        val repo = FakeRepo()
+        val r = UserService(repo).atualizarMe("fb-uid", null, displayName = null, locale = null)
+
+        assertTrue(r is AppResult.Success)
+        assertNull(repo.renomeadoPara)
+        assertNull(repo.idiomaGravado)
+    }
+
+    @Test
+    fun `idioma nao suportado e recusado e nao chega ao banco`() = runBlocking {
+        val repo = FakeRepo()
+        val r = UserService(repo).atualizarMe("fb-uid", null, displayName = null, locale = "es")
+
+        assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
+        assertNull(repo.idiomaGravado, "o repositório não pode ter sido tocado")
+    }
+
+    /**
+     * ⭐ **Requisição que falha não pode ter mudado metade.**
+     *
+     * Este é o caso que só existe desde que o PATCH tem dois campos: nome VÁLIDO e idioma inválido.
+     *
+     * Validando na hora de escrever, o nome já teria sido gravado quando o idioma fosse recusado. A
+     * pessoa veria a mensagem de erro, tentaria de novo, e encontraria o nome já alterado sem
+     * entender por quê. Uma transação resolveria igual e custaria mais: validar antes não precisa
+     * do banco.
+     *
+     * A asserção que importa é a SEGUNDA. Sem ela, o teste passaria com a implementação errada,
+     * porque o erro é devolvido nos dois casos.
+     */
+    @Test
+    fun `nome valido com idioma invalido nao grava NENHUM dos dois`() = runBlocking {
+        val repo = FakeRepo()
+        val r = UserService(repo).atualizarMe("fb-uid", null, displayName = "Rafael", locale = "es")
+
+        assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
+        assertNull(repo.renomeadoPara, "o nome era válido, mas a requisição inteira falhou")
+        assertNull(repo.idiomaGravado)
     }
 
     /**

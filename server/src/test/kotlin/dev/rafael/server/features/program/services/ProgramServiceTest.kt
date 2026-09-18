@@ -111,7 +111,10 @@ class ProgramServiceTest {
         assertIs<AppResult.Success<ProgramDto>>(r)
         assertEquals(1, repo.store.size, "deveria ter persistido 1 programa")
         assertEquals(WorkoutOrigin.AI, r.value.origin)
-        assertTrue(r.value.name.startsWith("Programa"), "nome automático")
+        // G.5: programa gerado nasce SEM nome. Este teste afirmava o contrário até 2026-09-15
+        // (`startsWith("Programa")`), porque o servidor montava a frase em português e a gravava.
+        // Agora o vazio é o contrato: significa "ninguém escolheu, a tela deriva" (ARCH #37, V48).
+        assertEquals("", r.value.name, "programa gerado não nomeia: quem escreve a palavra é a tela")
     }
 
     @Test
@@ -210,7 +213,11 @@ class ProgramServiceTest {
         val r = svc.requireEditable(user, Uuid.parse(ai.id!!), isPremium = false)
 
         assertTrue(r is AppResult.Failure && r.error is AppError.Forbidden)
-        assertEquals(ErrorCodes.ENTITLEMENT_REQUIRED, ((r as AppResult.Failure).error as AppError.Forbidden).code)
+        // G.2: código próprio, para o texto poder ser próprio. O que a tela precisa saber é que é
+        // portão de plano, e isso está no conjunto.
+        val code = (r.error as AppError.Forbidden).code
+        assertEquals(ErrorCodes.EDICAO_DE_IA_E_PREMIUM, code)
+        assertTrue(code in ErrorCodes.PORTOES_DE_PLANO, "precisa abrir o paywall")
     }
 
     @Test

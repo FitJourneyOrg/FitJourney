@@ -1,5 +1,6 @@
 package dev.rafael.app.data.me
 
+import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.user.UserDto
 import dev.rafael.core.result.AppResult
 import kotlinx.coroutines.flow.Flow
@@ -44,4 +45,24 @@ interface Me {
      * uma releitura logo após a gravação pode pegar o valor antigo.
      */
     suspend fun renomear(nome: String): AppResult<String>
+
+    /**
+     * Grava o idioma da CONTA (V47, fatia G.4). É o que o servidor usa para montar o push (#36).
+     *
+     * ## Isto NÃO troca o idioma da interface
+     *
+     * A interface segue a locale ativa do APARELHO — decisão de 2026-09-11: idioma é preferência
+     * por aparelho, e dá para ter o app em inglês no celular do trabalho e em português no pessoal.
+     * Este campo existe porque o push é montado no servidor, que não tem como saber em que idioma
+     * a tela está.
+     *
+     * > **O aparelho manda na tela; o servidor só precisa saber em que idioma escrever o push.**
+     *
+     * A consequência, aceita: trocar o idioma no celular A não troca no B, e o push sai no idioma
+     * do último aparelho que abriu o app.
+     *
+     * Online-only, pelas mesmas razões do [renomear] — e aqui pesa menos ainda, porque falhar não
+     * perde nada: a próxima abertura do app reconcilia sozinha.
+     */
+    suspend fun definirIdioma(idioma: Idioma): AppResult<Unit>
 }

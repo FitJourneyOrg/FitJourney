@@ -11,6 +11,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
 
 /** Aba já presente na navegação, mas ainda sem implementação (Grupos/Progresso/Perfil). */
 @Composable
@@ -37,7 +39,7 @@ fun EmBreveScreen(titulo: String, descricao: String) {
         )
         Spacer(Modifier.height(12.dp))
         Text(
-            "Em breve",
+            stringResource(R.string.em_breve),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.tertiary,
         )

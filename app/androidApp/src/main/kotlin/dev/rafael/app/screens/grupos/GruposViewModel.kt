@@ -102,10 +102,18 @@ class GruposViewModel(private val groups: Groups) : ViewModel() {
     private fun sincronizar(forcar: Boolean) {
         if (forcar) _state.update { it.copy(atualizando = true) }
         viewModelScope.launch {
-            groups.sincronizar(forcar)
+            val erro = groups.sincronizar(forcar)
             val sincronizou = groups.jaSincronizou()
             _state.update {
-                it.copy(jaSincronizou = sincronizou, carregando = false, atualizando = false)
+                it.copy(
+                    jaSincronizou = sincronizou,
+                    carregando = false,
+                    atualizando = false,
+                    // Só conta como erro de TELA quando não há o que mostrar. Com lista em cache,
+                    // falha de sync é nível 1 do ARCH #31 (silêncio): assustar quem está vendo
+                    // uma lista que funciona é pior que não avisar.
+                    erroSync = erro,
+                )
             }
         }
     }

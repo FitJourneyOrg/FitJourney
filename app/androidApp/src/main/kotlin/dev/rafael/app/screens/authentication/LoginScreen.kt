@@ -5,7 +5,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.R
 import dev.rafael.app.ui.ErroContexto
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.features.auth.presentation.state.LoginEvent
@@ -29,12 +31,12 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("FitJourney — Login", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.login_titulo), style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(24.dp))
         OutlinedTextField(
             value = state.email,
             onValueChange = { viewModel.onEvent(LoginEvent.EmailChanged(it)) },
-            label = { Text("E-mail") },
+            label = { Text(stringResource(R.string.login_email)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -42,7 +44,7 @@ fun LoginScreen(
         OutlinedTextField(
             value = state.password,
             onValueChange = { viewModel.onEvent(LoginEvent.PasswordChanged(it)) },
-            label = { Text("Senha") },
+            label = { Text(stringResource(R.string.login_senha)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -54,11 +56,11 @@ fun LoginScreen(
                 Button(
                     onClick = { viewModel.onEvent(LoginEvent.SubmitLogin) },
                     modifier = Modifier.weight(1f),
-                ) { Text("Entrar") }
+                ) { Text(stringResource(R.string.login_entrar)) }
                 OutlinedButton(
                     onClick = { viewModel.onEvent(LoginEvent.SubmitSignUp) },
                     modifier = Modifier.weight(1f),
-                ) { Text("Cadastrar") }
+                ) { Text(stringResource(R.string.login_cadastrar)) }
             }
         }
         state.error?.let {

@@ -29,6 +29,7 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
+import dev.rafael.contract.error.ErrorCodes
 
 /**
  * O que a pessoa manda no check-in. Vem do multipart, já desmontado pela rota.
@@ -93,6 +94,7 @@ class CheckInService(
             return@comMembro AppError.Validation(
                 "Este desafio exige mais do que você enviou.",
                 faltando.associate { it.name.lowercase() to "Este desafio exige ${it.name.lowercase().replace('_', ' ')}." },
+                code = ErrorCodes.CHECKIN_SEM_AS_REGRAS,
             ).asFailure()
         }
 
@@ -215,7 +217,7 @@ class CheckInService(
         val agora = clock.now()
         val cursor = antesDe?.let { texto ->
             runCatching { Instant.parse(texto).toLocalDateTime(TimeZone.UTC) }.getOrNull()
-                ?: return@comMembro AppError.Validation("Cursor inválido.").asFailure()
+                ?: return@comMembro AppError.Validation("Não consegui carregar mais publicações. Puxe para atualizar.", code = ErrorCodes.CURSOR_INVALIDO).asFailure()
         }
         repository.doGrupo(grupo.id, (limite ?: PAGINA_PADRAO).coerceIn(1, PAGINA_MAXIMA), cursor)
             .flatMap { itens ->
@@ -323,18 +325,18 @@ class CheckInService(
         val nome = pedido.nomeDoLocal?.trim()
         if (nome.isNullOrEmpty()) {
             return if (pedido.latitude != null || pedido.longitude != null) {
-                AppError.Validation("Diga o nome do lugar.", mapOf("nomeDoLocal" to "Diga o nome do lugar."))
+                AppError.Validation("Escreva onde você treinou.", mapOf("nomeDoLocal" to "Escreva onde você treinou."), code = ErrorCodes.LOCAL_SEM_NOME)
             } else {
                 null   // sem local nenhum: legítimo quando o grupo não exige
             }
         }
         if (nome.length > CheckInPolicy.MAX_NOME_DO_LOCAL) {
             val msg = "Use até ${CheckInPolicy.MAX_NOME_DO_LOCAL} caracteres."
-            return AppError.Validation(msg, mapOf("nomeDoLocal" to msg))
+            return AppError.Validation(msg, mapOf("nomeDoLocal" to msg), ErrorCodes.NOME_DO_LOCAL_LONGO)
         }
         if (pedido.latitude == null || pedido.longitude == null) {
             val msg = "Não consegui localizar você. Tente de novo."
-            return AppError.Validation(msg, mapOf("nomeDoLocal" to msg))
+            return AppError.Validation(msg, mapOf("nomeDoLocal" to msg), ErrorCodes.SEM_COORDENADAS)
         }
         return null
     }
@@ -366,8 +368,20 @@ class CheckInService(
     private fun <T> recusa(bloqueio: CheckInBlock): AppResult<T> =
         AppError.Conflict(bloqueio.frase(), bloqueio.name).asFailure()
 
+    /**
+     * O desafio não existe, ou quem pediu não participa dele.
+     *
+     * ⚠️ **Aqui os dois casos continuam juntos**, ao contrário do `GroupService.porId`, que os
+     * desmembrou na G.2. A diferença é o gesto: lá a pessoa ABRE o desafio, e saber que ele existe
+     * e que ela saiu é útil; aqui ela tenta fazer check-in, comentar ou ver o ranking de algo que
+     * a tela dela não deveria nem oferecer. Um texto separado só existiria para um caminho que a
+     * interface não produz.
+     */
     private fun <T> naoEncontrado(): AppResult<T> =
-        AppError.NotFound("Grupo não encontrado").asFailure()
+        AppError.NotFound(
+            "Este desafio não está disponível para você.",
+            code = ErrorCodes.GRUPO_NAO_EXISTE,
+        ).asFailure()
 
     /**
      * A frase vai em `message` e o enum em `code` — a lição do 409 que dizia "dados
@@ -385,7 +399,8 @@ class CheckInService(
         /** Teto do que uma requisição pode pedir: cliente não decide a carga do servidor. */
         const val PAGINA_MAXIMA = 100
 
-        const val CODE_PRAZO_DE_EXCLUSAO = "PRAZO_DE_EXCLUSAO"
-        const val CODE_EM_ANALISE = "EM_ANALISE"
+        // G.2: apontam para o `ErrorCodes`, fonte única do vocabulário desde a fatia.
+        const val CODE_PRAZO_DE_EXCLUSAO = ErrorCodes.PRAZO_DE_EXCLUSAO
+        const val CODE_EM_ANALISE = ErrorCodes.CHECKIN_EM_ANALISE
     }
 }

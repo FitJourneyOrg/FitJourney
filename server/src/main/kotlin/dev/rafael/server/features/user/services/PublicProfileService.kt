@@ -13,6 +13,7 @@ import dev.rafael.server.features.stats.StatsService
 import dev.rafael.server.features.stats.db.AchievementRepository
 import dev.rafael.server.features.user.db.UserRepository
 import kotlin.uuid.Uuid
+import dev.rafael.contract.error.ErrorCodes
 
 /**
  * O perfil de alguém, público (ARCH #34, emenda 9.3-A).
@@ -104,7 +105,7 @@ class PublicProfileService(
         // A frase é sobre o CÓDIGO, não sobre "um perfil": quem digitou não sabe se errou uma
         // letra ou se a pessoa regenerou o dela. As duas respostas cabem nesta frase, e nenhuma
         // das duas acusa o usuário de ter apagado alguma coisa.
-        val naoAchou = AppError.NotFound("Nenhum usuário com esse código.").asFailure()
+        val naoAchou = AppError.NotFound("Nenhum usuário com esse código.", code = ErrorCodes.CODIGO_DE_USUARIO_NAO_EXISTE).asFailure()
 
         val normalizado = UserCodePolicy.normalizar(codigo) ?: return naoAchou
         return users.findByCode(normalizado).flatMap { pessoa ->
@@ -175,11 +176,14 @@ class PublicProfileService(
     )
 
     /**
-     * Traduz os ids gravados em medalhas com título e descrição.
+     * Os ids gravados viram medalhas. **Só o id e a data** — a frase é do cliente desde a G.5.
      *
      * Id que não existe mais no código — conquista removida numa versão futura — é ignorado em
      * silêncio. A linha órfã não faz mal a ninguém, e derrubar o perfil por causa dela seria
      * desproporcional. Mesma escolha que o catálogo do dono já fazia.
+     *
+     * A busca no enum continua existindo **por causa disso**, e não para pegar o texto: é ela que
+     * filtra id órfão. Trocá-la por `id` cru faria a linha morta chegar à tela sem frase.
      */
     private fun medalhas(concedidas: Map<String, kotlinx.datetime.LocalDateTime>): List<PublicAchievementDto> =
         concedidas.entries
@@ -188,8 +192,6 @@ class PublicProfileService(
                     ?: return@mapNotNull null
                 PublicAchievementDto(
                     id = c.name,
-                    title = c.titulo,
-                    description = c.descricao,
                     unlockedAt = quando.toString(),
                 )
             }
@@ -206,5 +208,8 @@ class PublicProfileService(
      * existência de uma conta que a pessoa não deveria conseguir sondar.
      */
     private fun naoEncontrado(): AppResult<Nothing> =
-        AppError.NotFound("Perfil não encontrado").asFailure()
+        AppError.NotFound(
+            "Este perfil não está disponível.",
+            code = ErrorCodes.PERFIL_DE_TERCEIRO_INDISPONIVEL,
+        ).asFailure()
 }

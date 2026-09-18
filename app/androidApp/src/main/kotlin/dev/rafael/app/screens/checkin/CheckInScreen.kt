@@ -63,6 +63,8 @@ import dev.rafael.app.ui.ErroInline
 import dev.rafael.app.ui.erroDoCampo
 import dev.rafael.app.ui.erroGeral
 import org.koin.androidx.compose.koinViewModel
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * Fazer check-in (fatia B).
@@ -175,9 +177,11 @@ fun CheckInScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Check-in") },
+                title = { Text(stringResource(R.string.checkin_titulo)) },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar") }
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.comum_voltar))
+                    }
                 },
             )
         },
@@ -198,8 +202,8 @@ fun CheckInScreen(
                 // A terceira barreira é o índice único no banco, que é quem realmente decide.
                 state.grupo?.myCheckInToday != null ->
                     Bloqueio(
-                        "Você já treinou hoje",
-                        "Só vale um check-in por dia neste desafio. Para refazer, apague o de hoje na tela do desafio.",
+                        R.string.checkin_ja_treinou_titulo,
+                        R.string.checkin_ja_treinou_texto,
                         contexto = contexto,
                         acao = null,
                     )
@@ -209,8 +213,8 @@ fun CheckInScreen(
                 // explicação é o pior desfecho possível.
                 state.exigeFoto && camaraNegada && !temCamera ->
                     Bloqueio(
-                        "Este desafio exige foto",
-                        "Sem acesso à câmera não dá para fazer check-in neste desafio. Você pode liberar nas configurações do sistema.",
+                        R.string.checkin_sem_camera_titulo,
+                        R.string.checkin_sem_camera_texto,
                         contexto = contexto,
                     )
 
@@ -273,7 +277,7 @@ fun CheckInScreen(
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         if (state.enviando) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                        else Text("Fazer check-in")
+                        else Text(stringResource(R.string.checkin_enviar))
                     }
 
                     Spacer(Modifier.height(8.dp))
@@ -281,7 +285,7 @@ fun CheckInScreen(
                         // Dito ANTES, não depois: check-in não tem edição, e só o dono apaga, no
                         // mesmo dia (4.11). Quem publica o endereço de casa e percebe amanhã não
                         // tem conserto.
-                        "Depois de enviar, dá para apagar só até o fim do dia — e não dá para editar.",
+                        stringResource(R.string.checkin_aviso_sem_edicao),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -304,7 +308,7 @@ fun CheckInScreen(
 @Composable
 private fun BlocoDoEmoji(emoji: String) {
     Text(
-        "EMOJI DE HOJE",
+        stringResource(R.string.checkin_secao_emoji),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -321,7 +325,7 @@ private fun BlocoDoEmoji(emoji: String) {
     ) {
         Text(emoji, style = MaterialTheme.typography.displaySmall)
         Text(
-            "Reproduza este emoji na sua foto.",
+            stringResource(R.string.checkin_emoji_instrucao),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -351,7 +355,7 @@ private fun BlocoDaFoto(
             )
         }
         Spacer(Modifier.height(8.dp))
-        OutlinedButton(onClick = onDescartar) { Text("Tirar outra") }
+        OutlinedButton(onClick = onDescartar) { Text(stringResource(R.string.checkin_tirar_outra)) }
     } else if (temPermissao) {
         CameraDoCheckIn(
             onFoto = onFoto,
@@ -371,13 +375,17 @@ private fun BlocoDoLocal(
     onAproximado: () -> Unit,
     onExato: () -> Unit,
 ) {
-    Text("ONDE VOCÊ TREINOU", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Text(
+        stringResource(R.string.checkin_secao_local),
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
     Spacer(Modifier.height(8.dp))
 
     if (negado && !temPermissao) {
         Bloqueio(
-            "Este desafio exige o local",
-            "Sem a localização não dá para fazer check-in neste desafio.",
+            R.string.checkin_sem_local_titulo,
+            R.string.checkin_sem_local_texto,
             contexto = contexto,
         )
         return
@@ -389,13 +397,13 @@ private fun BlocoDoLocal(
         FilterChip(
             selected = !querExata,
             onClick = onAproximado,
-            label = { Text("Bairro") },
+            label = { Text(stringResource(R.string.checkin_local_bairro)) },
             leadingIcon = { Icon(Icons.Outlined.LocationOn, null, Modifier.size(16.dp)) },
         )
         FilterChip(
             selected = querExata,
             onClick = onExato,
-            label = { Text("Exatamente aqui") },
+            label = { Text(stringResource(R.string.checkin_local_exato)) },
             leadingIcon = { Icon(Icons.Outlined.MyLocation, null, Modifier.size(16.dp)) },
         )
     }
@@ -404,14 +412,14 @@ private fun BlocoDoLocal(
     OutlinedTextField(
         value = state.nomeDoLocal,
         onValueChange = onDigitar,
-        label = { Text("Nome do lugar") },
-        placeholder = { Text("Smart Fit, Casa, Parque…") },
+        label = { Text(stringResource(R.string.checkin_campo_local)) },
+        placeholder = { Text(stringResource(R.string.checkin_campo_local_exemplo)) },
         supportingText = {
             Text(
                 state.erro.erroDoCampo("nomeDoLocal")
                     // A sugestão é ponto de partida, não resposta. Quem treina em casa escreve
                     // "Casa" e o endereço nunca chega às outras 49 pessoas (5.2).
-                    ?: "O grupo vê só este texto. Você pode trocar por um apelido.",
+                    ?: stringResource(R.string.checkin_campo_local_ajuda),
             )
         },
         isError = state.erro.erroDoCampo("nomeDoLocal") != null,
@@ -421,7 +429,7 @@ private fun BlocoDoLocal(
 
     if (state.buscandoLocal) {
         Spacer(Modifier.height(6.dp))
-        Text("Procurando você…", style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.checkin_procurando_local), style = MaterialTheme.typography.bodySmall)
     }
 }
 
@@ -459,15 +467,23 @@ private fun lerPermissoes(contexto: android.content.Context): Permissoes {
  */
 @Composable
 private fun Bloqueio(
-    titulo: String,
-    texto: String,
+    @androidx.annotation.StringRes titulo: Int,
+    @androidx.annotation.StringRes texto: Int,
     contexto: android.content.Context,
-    acao: String? = "Abrir configurações",
+    @androidx.annotation.StringRes acao: Int? = R.string.checkin_abrir_configuracoes,
 ) {
     Column {
-        Text(titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Medium)
+        Text(
+            stringResource(titulo),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Medium,
+        )
         Spacer(Modifier.height(6.dp))
-        Text(texto, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            stringResource(texto),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
         if (acao != null) {
             Spacer(Modifier.height(12.dp))
             TextButton(onClick = {
@@ -477,7 +493,7 @@ private fun Bloqueio(
                         Uri.fromParts("package", contexto.packageName, null),
                     ),
                 )
-            }) { Text(acao) }
+            }) { Text(stringResource(acao)) }
         }
     }
 }

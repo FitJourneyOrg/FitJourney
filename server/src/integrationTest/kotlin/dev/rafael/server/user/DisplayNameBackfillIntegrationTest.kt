@@ -29,6 +29,17 @@ import kotlin.uuid.Uuid
  * A mecânica: migra só até a V34, insere usuários como eles existiam ANTES da coluna, e então
  * roda a V35. É a única forma de exercitar o backfill; depois que ele roda uma vez, não roda
  * mais.
+ *
+ * ## Por que esta classe NÃO usa o `BancoDeTeste`
+ *
+ * É a segunda das duas exceções ao container compartilhado — e a mais irredutível. O `BancoDeTeste`
+ * entrega um banco na **V46**, com o backfill da V35 já consumido. Num banco assim este arquivo
+ * inteiro seria inútil: as cinco asserções leriam nomes que o backfill não escreveu.
+ *
+ * > **Um teste que precisa parar no meio das migrations precisa do próprio container.**
+ *
+ * Como o `MigrationIntegrationTest`, fala **JDBC cru** e nunca chama `Database.connect` — não toca
+ * no default global do Exposed, então derrubar o container aqui não afeta ninguém.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DisplayNameBackfillIntegrationTest {

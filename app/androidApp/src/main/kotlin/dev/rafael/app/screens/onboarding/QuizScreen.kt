@@ -4,7 +4,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.R
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.features.profile.presentation.state.QuizEvent
 import dev.rafael.features.profile.presentation.state.QuizStep
@@ -35,7 +37,10 @@ fun QuizScreen(
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(8.dp))
-        Text("${stepIndex + 1}/${steps.size}", style = MaterialTheme.typography.labelMedium)
+        Text(
+            stringResource(R.string.quiz_progresso, stepIndex + 1, steps.size),
+            style = MaterialTheme.typography.labelMedium,
+        )
         Spacer(Modifier.height(24.dp))
 
         // miolo: a pergunta do passo atual
@@ -87,7 +92,7 @@ fun QuizScreen(
                 OutlinedButton(
                     onClick = { viewModel.onEvent(QuizEvent.Back) },
                     enabled = !state.isSubmitting,
-                ) { Text("Voltar") }
+                ) { Text(stringResource(R.string.comum_voltar)) }
             }
             Button(
                 onClick = { viewModel.onEvent(QuizEvent.Next) },
@@ -97,7 +102,12 @@ fun QuizScreen(
                 if (state.isSubmitting) {
                     CircularProgressIndicator(modifier = Modifier.size(20.dp))
                 } else {
-                    Text(if (stepIndex == steps.lastIndex) "Concluir" else "Continuar")
+                    Text(
+                        stringResource(
+                            if (stepIndex == steps.lastIndex) R.string.quiz_concluir
+                            else R.string.comum_continuar,
+                        ),
+                    )
                 }
             }
         }

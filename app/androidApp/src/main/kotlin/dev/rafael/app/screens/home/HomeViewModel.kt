@@ -25,8 +25,18 @@ import kotlinx.datetime.toLocalDateTime
 /** O treino agendado para hoje (resolvido pelo schedule do programa). */
 data class TodayWorkout(
     val workoutId: String,
-    val name: String,
-    val programName: String,
+    /** `null` quando o programa não nomeou o treino. Quem escreve a palavra é a TELA (G.3). */
+    val name: String?,
+    /**
+     * O nome do programa como o SERVIDOR o guarda: a escolha do usuário, ou vazio quando o
+     * programa foi gerado e ninguém o renomeou (G.5).
+     *
+     * `daysPerWeek` e `split` vêm junto porque é deles que a tela deriva o rótulo no caso vazio —
+     * mesmo motivo do [name] logo acima: a palavra é da tela, não do ViewModel.
+     */
+    val programName: String?,
+    val programDaysPerWeek: Int,
+    val programSplit: String,
     val exerciseCount: Int,
     val minutes: Int,          // estimativa (ver estimarMinutos)
     val locked: Boolean,       // dia trancado p/ não-premium (ARCH #23)
@@ -152,8 +162,12 @@ class HomeViewModel(
                 semPrograma = false,
                 today = TodayWorkout(
                     workoutId = workoutId,
-                    name = resumo?.name ?: "Treino de hoje",
+                    // Sem fallback aqui: o ViewModel não tem `Context`, e mesmo que tivesse a
+                    // palavra é da tela. Mesmo arranjo do `SetEntry.exerciseName`.
+                    name = resumo?.name,
                     programName = programa.name,
+                    programDaysPerWeek = programa.daysPerWeek,
+                    programSplit = programa.split,
                     exerciseCount = resumo?.exerciseCount ?: 0,
                     minutes = minutos,
                     locked = resumo?.locked == true,

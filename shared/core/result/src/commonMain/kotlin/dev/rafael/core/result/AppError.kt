@@ -4,17 +4,37 @@ package dev.rafael.core.result
 sealed interface AppError {
     val message: String
 
+    /**
+     * O `code` chegou a TODAS as famílias na fatia G.2 (ARCH #37).
+     *
+     * Antes só `Forbidden` e `Conflict` o tinham, e o cliente exibia a `message` literalmente nas
+     * outras. Com dois idiomas isso deixa de funcionar: **o servidor não sabe em que idioma a tela
+     * está**, e por isso quem escolhe as palavras passa a ser o cliente, a partir do código.
+     *
+     * `null` continua válido e significa "use o genérico da família". É o que mantém compilando
+     * quem constrói o erro sem motivo específico, e o que faz o cliente ter um texto para código
+     * desconhecido.
+     */
     data class Validation(
         override val message: String = "Dados inválidos",
         val fieldErrors: Map<String, String> = emptyMap(),
+        val code: String? = null,
     ) : AppError
 
-    data class Unauthorized(override val message: String = "Não autenticado") : AppError
+    data class Unauthorized(
+        override val message: String = "Não autenticado",
+        val code: String? = null,
+    ) : AppError
+
     data class Forbidden(
         override val message: String = "Sem permissão",
         val code: String? = null,
     ) : AppError
-    data class NotFound(override val message: String = "Não encontrado") : AppError
+
+    data class NotFound(
+        override val message: String = "Não encontrado",
+        val code: String? = null,
+    ) : AppError
     /**
      * 409. **Regra de negócio recusando**, não dado velho.
      *

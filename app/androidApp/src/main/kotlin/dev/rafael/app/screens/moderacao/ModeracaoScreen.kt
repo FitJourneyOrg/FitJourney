@@ -38,8 +38,11 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.R
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -91,10 +94,13 @@ fun ModeracaoScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Denúncias") },
+                title = { Text(stringResource(R.string.comum_denuncias)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.comum_voltar),
+                        )
                     }
                 },
             )
@@ -149,10 +155,10 @@ private fun FilaVazia() {
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(12.dp))
-        Text("Nada para avaliar.", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.moderacao_vazio_titulo), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(4.dp))
         Text(
-            "Quando alguém denunciar um check-in ou comentário, ele aparece aqui.",
+            stringResource(R.string.moderacao_vazio_texto),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -214,7 +220,7 @@ private fun Caso(
                 Text(
                     // O contador é a informação da 6.11: uma pessoa reclamando é diferente de
                     // cinco, e é o que o admin tem no lugar dos nomes.
-                    if (item.count == 1) "1 denúncia" else "${item.count} denúncias",
+                    pluralStringResource(R.plurals.moderacao_denuncias, item.count, item.count),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Medium,
                 )
@@ -224,7 +230,7 @@ private fun Caso(
             // informação diferente de uma dizendo três, e só a lista preserva a distinção.
             item.reasons.forEach { motivo ->
                 Text(
-                    "• $motivo",
+                    stringResource(R.string.moderacao_motivo_item, motivo),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -238,7 +244,7 @@ private fun Caso(
                     onClick = { onJulgar(false) },
                     enabled = !ocupado,
                     modifier = Modifier.weight(1f),
-                ) { Text("Manter") }
+                ) { Text(stringResource(R.string.moderacao_manter)) }
 
                 OutlinedButton(
                     onClick = { onJulgar(true) },
@@ -249,7 +255,10 @@ private fun Caso(
                         CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                     } else {
                         Text(
-                            if (item.target == ReportTarget.CHECK_IN) "Invalidar" else "Remover",
+                            stringResource(
+                                if (item.target == ReportTarget.CHECK_IN) R.string.moderacao_invalidar
+                                else R.string.moderacao_remover,
+                            ),
                             color = MaterialTheme.colorScheme.error,
                         )
                     }
@@ -289,31 +298,30 @@ private fun DialogoDeJulgamento(
     val ehCheckIn = atual.item.target == ReportTarget.CHECK_IN
 
     val titulo = when {
-        !atual.acatar -> "Manter e encerrar o caso?"
-        ehCheckIn -> "Invalidar este check-in?"
-        else -> "Remover este comentário?"
+        !atual.acatar -> R.string.moderacao_manter_pergunta
+        ehCheckIn -> R.string.moderacao_invalidar_pergunta
+        else -> R.string.moderacao_remover_pergunta
     }
     val texto = when {
-        !atual.acatar ->
-            "O conteúdo continua como está e a denúncia sai da fila. A decisão não pode ser desfeita."
-        ehCheckIn ->
-            "A pessoa perde o ponto no ranking. O check-in continua visível, marcado como invalidado, " +
-                "e a decisão não pode ser desfeita."
-        else -> "O comentário some para todo mundo. A decisão não pode ser desfeita."
+        !atual.acatar -> R.string.moderacao_manter_texto
+        ehCheckIn -> R.string.moderacao_invalidar_texto
+        else -> R.string.moderacao_remover_texto
     }
 
     AlertDialog(
         onDismissRequest = aoFechar,
-        title = { Text(titulo) },
-        text = { Text(texto) },
+        title = { Text(stringResource(titulo)) },
+        text = { Text(stringResource(texto)) },
         confirmButton = {
             TextButton(onClick = aoConfirmar) {
                 Text(
-                    if (atual.acatar) "Confirmar" else "Manter",
+                    stringResource(
+                        if (atual.acatar) R.string.moderacao_confirmar else R.string.moderacao_manter,
+                    ),
                     color = if (atual.acatar) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                 )
             }
         },
-        dismissButton = { TextButton(onClick = aoFechar) { Text("Cancelar") } },
+        dismissButton = { TextButton(onClick = aoFechar) { Text(stringResource(R.string.comum_cancelar)) } },
     )
 }

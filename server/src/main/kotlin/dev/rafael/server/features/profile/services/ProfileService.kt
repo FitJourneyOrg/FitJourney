@@ -12,6 +12,7 @@ import dev.rafael.server.features.profile.db.ProfileRepository
 import dev.rafael.server.features.profile.models.Profile
 import dev.rafael.server.features.profile.models.toDto
 import dev.rafael.server.features.user.services.UserService
+import dev.rafael.contract.error.ErrorCodes
 
 class ProfileService(
     private val userService: UserService,
@@ -24,29 +25,37 @@ class ProfileService(
                 is AppResult.Failure -> found
                 is AppResult.Success ->
                     found.value?.toDto()?.asSuccess()
-                        ?: AppError.NotFound("Perfil não encontrado").asFailure()
+                        // Desmembrado do "Perfil não encontrado" na G.2. É o PRÓPRIO perfil, e ele
+                        // não existe porque o questionário ainda não foi feito. Não é erro: é um
+                        // passo que falta, e com código próprio a tela pode oferecer o onboarding
+                        // em vez de mostrar cara de erro.
+                        ?: AppError.NotFound(
+                            "Você ainda não completou o questionário.",
+                            code = ErrorCodes.MEU_PERFIL_INCOMPLETO,
+                        ).asFailure()
             }
         }
 
     /** Cria/atualiza o perfil. Validação autoritativa do servidor. */
     suspend fun saveProfile(firebaseUid: String, email: String?, dto: ProfileDto): AppResult<ProfileDto> {
         if (dto.daysPerWeek !in 2..6) {
-            return AppError.Validation("Escolha entre 2 e 6 dias por semana", mapOf(ErrorFields.DAYS_PER_WEEK to "Escolha entre 2 e 6 dias por semana")).asFailure()
+            return AppError.Validation("Escolha entre 2 e 6 dias por semana", mapOf(ErrorFields.DAYS_PER_WEEK to "Escolha entre 2 e 6 dias por semana"), code = ErrorCodes.DIAS_POR_SEMANA_INVALIDO).asFailure()
         }
         if (dto.focusAreas.size > 2) {
-            return AppError.Validation("Escolha no máximo 2 grupos de foco", mapOf(ErrorFields.FOCUS_AREAS to "Escolha no máximo 2 grupos de foco")).asFailure()
+            return AppError.Validation("Escolha no máximo 2 grupos de foco", mapOf(ErrorFields.FOCUS_AREAS to "Escolha no máximo 2 grupos de foco"), code = ErrorCodes.FOCO_ALEM_DO_LIMITE).asFailure()
         }
         if (dto.age != null && dto.age !in 5..120) {
-            return AppError.Validation("Idade fora do intervalo válido", mapOf(ErrorFields.AGE to "Idade fora do intervalo válido")).asFailure()
+            return AppError.Validation("Digite uma idade entre 5 e 120 anos.", mapOf(ErrorFields.AGE to "Digite uma idade entre 5 e 120 anos."), code = ErrorCodes.IDADE_INVALIDA).asFailure()
         }
         // Estágio 2 (descanso): dias off válidos e sobra dia p/ treinar.
         if (dto.unavailableDays.any { it !in 1..7 } || dto.unavailableDays.toSet().size != dto.unavailableDays.size) {
-            return AppError.Validation("Dias indisponíveis inválidos", mapOf(ErrorFields.UNAVAILABLE_DAYS to "Dias indisponíveis inválidos")).asFailure()
+            return AppError.Validation("Dias indisponíveis inválidos", mapOf(ErrorFields.UNAVAILABLE_DAYS to "Dias indisponíveis inválidos"), code = ErrorCodes.DIAS_INDISPONIVEIS_INVALIDOS).asFailure()
         }
         if (7 - dto.unavailableDays.size < dto.daysPerWeek) {
             return AppError.Validation(
                 "Dias livres insuficientes para treinar ${dto.daysPerWeek}x na semana",
                 mapOf(ErrorFields.UNAVAILABLE_DAYS to "Sobram poucos dias livres para essa frequência"),
+                code = ErrorCodes.DIAS_LIVRES_INSUFICIENTES,
             ).asFailure()
         }
         return userService.findOrCreate(firebaseUid, email).flatMap { user ->

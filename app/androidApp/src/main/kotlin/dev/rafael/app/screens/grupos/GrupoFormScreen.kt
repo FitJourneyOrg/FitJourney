@@ -40,9 +40,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import dev.rafael.app.R
 import dev.rafael.app.ui.ErroInline
+import dev.rafael.app.ui.rotulo
 import dev.rafael.app.ui.erroDoCampo
 import dev.rafael.app.ui.erroGeral
 import dev.rafael.contract.group.GroupRule
@@ -95,10 +98,13 @@ fun GrupoFormScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Criar desafio") },
+                title = { Text(stringResource(R.string.comum_criar_desafio)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.comum_voltar),
+                        )
                     }
                 },
             )
@@ -116,7 +122,7 @@ fun GrupoFormScreen(
             OutlinedTextField(
                 value = state.titulo,
                 onValueChange = viewModel::aoDigitarTitulo,
-                label = { Text("Nome do desafio") },
+                label = { Text(stringResource(R.string.grupo_form_nome)) },
                 singleLine = true,
                 isError = state.erro.erroDoCampo("title") != null,
                 supportingText = { state.erro.erroDoCampo("title")?.let { Text(it) } },
@@ -127,7 +133,7 @@ fun GrupoFormScreen(
             OutlinedTextField(
                 value = state.descricao,
                 onValueChange = viewModel::aoDigitarDescricao,
-                label = { Text("Descrição (opcional)") },
+                label = { Text(stringResource(R.string.grupo_form_descricao)) },
                 minLines = 2,
                 isError = state.erro.erroDoCampo("description") != null,
                 supportingText = { state.erro.erroDoCampo("description")?.let { Text(it) } },
@@ -135,16 +141,16 @@ fun GrupoFormScreen(
             )
             Spacer(Modifier.height(16.dp))
 
-            Data("Começa em", state.inicio, state.erro.erroDoCampo("startDate")) {
+            Data(R.string.grupo_form_comeca_em, state.inicio, state.erro.erroDoCampo("startDate")) {
                 escolhendo = CampoDeData.INICIO
             }
             Spacer(Modifier.height(10.dp))
-            Data("Termina em", state.fim, state.erro.erroDoCampo("endDate")) {
+            Data(R.string.grupo_form_termina_em, state.fim, state.erro.erroDoCampo("endDate")) {
                 escolhendo = CampoDeData.FIM
             }
             Spacer(Modifier.height(10.dp))
             OutlinedButton(onClick = { escolhendoFuso = true }, modifier = Modifier.fillMaxWidth()) {
-                Text("Fuso: ${state.fuso}")
+                Text(stringResource(R.string.grupo_form_fuso_botao, state.fuso))
             }
             state.erro.erroDoCampo("timezone")?.let {
                 Spacer(Modifier.height(4.dp))
@@ -152,22 +158,22 @@ fun GrupoFormScreen(
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                "O dia vira nesse fuso para todo mundo, inclusive para quem estiver em outro país.",
+                stringResource(R.string.grupo_form_fuso_ajuda),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Spacer(Modifier.height(20.dp))
             Text(
-                "O QUE O CHECK-IN EXIGE",
+                stringResource(R.string.grupo_form_regras_titulo),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(8.dp))
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Regra("Foto", GroupRule.FOTO, state.regras, viewModel::alternarRegra)
-                Regra("Localização", GroupRule.LOCALIZACAO, state.regras, viewModel::alternarRegra)
-                Regra("Emoji do dia", GroupRule.EMOJI_DO_DIA, state.regras, viewModel::alternarRegra)
+                Regra(GroupRule.FOTO, state.regras, viewModel::alternarRegra)
+                Regra(GroupRule.LOCALIZACAO, state.regras, viewModel::alternarRegra)
+                Regra(GroupRule.EMOJI_DO_DIA, state.regras, viewModel::alternarRegra)
             }
             state.erro.erroDoCampo("rules")?.let {
                 Spacer(Modifier.height(6.dp))
@@ -175,7 +181,7 @@ fun GrupoFormScreen(
             }
             Spacer(Modifier.height(6.dp))
             Text(
-                "Quem entrar vê essas exigências antes de aceitar.",
+                stringResource(R.string.grupo_form_regras_ajuda),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -195,7 +201,7 @@ fun GrupoFormScreen(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 if (state.salvando) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                else Text("Criar desafio")
+                else Text(stringResource(R.string.comum_criar_desafio))
             }
             Spacer(Modifier.height(24.dp))
         }
@@ -211,10 +217,17 @@ private val CAMPOS_VISIVEIS = setOf("title", "description", "startDate", "endDat
 private enum class CampoDeData { INICIO, FIM }
 
 @Composable
-private fun Data(rotulo: String, valor: LocalDate, erro: String?, onClick: () -> Unit) {
+private fun Data(
+    @androidx.annotation.StringRes rotulo: Int,
+    valor: LocalDate,
+    erro: String?,
+    onClick: () -> Unit,
+) {
     Column {
         OutlinedButton(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
-            Text("$rotulo: $valor")
+            // Frase inteira com dois parâmetros, e não `"$rotulo: $valor"`: em japonês a data vem
+            // antes do rótulo, e concatenação com dois-pontos cravados não deixa reordenar.
+            Text(stringResource(R.string.grupo_form_data_botao, stringResource(rotulo), valor.toString()))
         }
         erro?.let {
             Spacer(Modifier.height(4.dp))
@@ -225,7 +238,6 @@ private fun Data(rotulo: String, valor: LocalDate, erro: String?, onClick: () ->
 
 @Composable
 private fun Regra(
-    rotulo: String,
     regra: GroupRule,
     marcadas: Set<GroupRule>,
     onAlternar: (GroupRule) -> Unit,
@@ -233,7 +245,9 @@ private fun Regra(
     FilterChip(
         selected = regra in marcadas,
         onClick = { onAlternar(regra) },
-        label = { Text(rotulo) },
+        // O rótulo vem do enum e não do ponto de chamada: era aqui que a terceira grafia de
+        // `GroupRule` nascia. Ver `GroupRule.rotulo()` em ui/Rotulos.kt.
+        label = { Text(stringResource(regra.rotulo())) },
     )
 }
 
@@ -266,13 +280,13 @@ private fun SeletorDeFuso(atual: String, onEscolher: (String) -> Unit, onFechar:
 
     AlertDialog(
         onDismissRequest = onFechar,
-        title = { Text("Fuso do desafio") },
+        title = { Text(stringResource(R.string.grupo_form_fuso_dialogo)) },
         text = {
             Column {
                 OutlinedTextField(
                     value = busca,
                     onValueChange = { busca = it },
-                    label = { Text("Procurar (ex.: Sao_Paulo)") },
+                    label = { Text(stringResource(R.string.grupo_form_fuso_busca)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -293,7 +307,9 @@ private fun SeletorDeFuso(atual: String, onEscolher: (String) -> Unit, onFechar:
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onFechar) { Text("Fechar") } },
+        confirmButton = {
+            TextButton(onClick = onFechar) { Text(stringResource(R.string.comum_fechar)) }
+        },
     )
 }
 
@@ -312,9 +328,11 @@ private fun SeletorDeData(inicial: LocalDate, onEscolher: (LocalDate) -> Unit, o
                 estado.selectedDateMillis?.let { millis ->
                     onEscolher(Instant.fromEpochMilliseconds(millis).toLocalDateTime(TimeZone.UTC).date)
                 }
-            }) { Text("Escolher") }
+            }) { Text(stringResource(R.string.grupo_form_data_escolher)) }
         },
-        dismissButton = { TextButton(onClick = onFechar) { Text("Cancelar") } },
+        dismissButton = {
+            TextButton(onClick = onFechar) { Text(stringResource(R.string.comum_cancelar)) }
+        },
     ) {
         DatePicker(state = estado)
     }

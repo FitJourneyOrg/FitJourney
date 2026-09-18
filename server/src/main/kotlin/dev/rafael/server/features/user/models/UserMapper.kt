@@ -15,4 +15,7 @@ fun User.toDto(): UserDto = UserDto(
     email = email,
     isPremium = isPremium,
     code = code,
+    // V47. O enum vira tag AQUI, porque o fio é String. Serializar o enum direto quebraria cliente
+    // antigo no dia em que um idioma novo entrasse, e quebraria o `/me` INTEIRO, não só o idioma.
+    locale = idioma.tag,
 )

@@ -1,7 +1,6 @@
 package dev.rafael.server.features.notificacao.services
 
 import com.google.firebase.messaging.FirebaseMessaging
-import com.google.firebase.messaging.FirebaseMessagingException
 import com.google.firebase.messaging.MessagingErrorCode
 import com.google.firebase.messaging.MulticastMessage
 import com.google.firebase.messaging.Notification
@@ -34,7 +33,7 @@ class NotificadorFcm(
 
     private val log = LoggerFactory.getLogger(NotificadorFcm::class.java)
 
-    override suspend fun notificar(destinatario: Uuid, aviso: Aviso) {
+    override suspend fun notificar(destinatario: Uuid, aviso: AvisoRenderizado) {
         val alvos = when (val r = tokens.doUsuario(destinatario)) {
             is AppResult.Success -> r.value
             is AppResult.Failure -> {
@@ -54,7 +53,7 @@ class NotificadorFcm(
             }
     }
 
-    private suspend fun enviar(alvos: List<String>, aviso: Aviso) = withContext(Dispatchers.IO) {
+    private suspend fun enviar(alvos: List<String>, aviso: AvisoRenderizado) = withContext(Dispatchers.IO) {
         val mensagem = MulticastMessage.builder()
             .setNotification(
                 Notification.builder()
@@ -104,11 +103,10 @@ class NotificadorFcm(
                     it.messagingErrorCode == MessagingErrorCode.INVALID_ARGUMENT
             }
             .forEach {
-                log.warn(
-                    "Push falhou num aparelho ({}): {}",
-                    (it as FirebaseMessagingException).messagingErrorCode,
-                    it.message,
-                )
+                // Sem cast: `it` já é `FirebaseMessagingException`, e o compilador avisava. Não é
+                // meu, é anterior a esta fatia, mas fica num arquivo que acabei de tocar e passaria
+                // a parecer que era.
+                log.warn("Push falhou num aparelho ({}): {}", it.messagingErrorCode, it.message)
             }
     }
 }

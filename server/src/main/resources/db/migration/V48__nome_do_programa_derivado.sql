@@ -1,0 +1,58 @@
+-- Nome do programa gerado deixa de ser prosa do servidor (fatia G.5, ARCH #37).
+--
+-- ============================================================================
+-- O QUE ESTAVA ERRADO
+-- ============================================================================
+--
+-- O `ProgramService.autoName` montava `'Programa ' || dias || 'x — ' || split` e GRAVAVA aqui. Três
+-- problemas num literal só:
+--
+--   1. está em português, e aparece na Home, na lista, no detalhe e na revelação;
+--   2. usa travessão, que o #37 proíbe em todo texto de usuário desde 2026-09-10;
+--   3. está PERSISTIDO, então nasce errado e fica — trocar o idioma do app não o alcança.
+--
+-- > Estado que é função de outra coisa é DERIVADO, não persistido.
+--
+-- O nome de um programa gerado é função pura de `days_per_week` e `split`, que já viajam no DTO. O
+-- cliente monta a frase no idioma da tela, e programas ANTIGOS passam a ficar certos também — que é
+-- a vantagem que nenhuma tradução de dado gravado consegue dar.
+--
+--
+-- ============================================================================
+-- POR QUE A COLUNA FICA, DIFERENTE DO `rationale`
+-- ============================================================================
+--
+-- O `rationale` vai virar coluna vestigial quando sair, porque ninguém escreve um rationale à mão.
+-- O `name` não: **o usuário renomeia o programa** (`PUT /programs/{id}`, ARCH #27), e esse nome é
+-- dado dele, não texto nosso. A coluna continua obrigatória e continua servindo.
+--
+-- O que muda é o SIGNIFICADO do vazio: a partir daqui, `name = ''` quer dizer "sem nome escolhido,
+-- derive", e qualquer outra coisa é escolha de quem usa. É o mesmo desenho do `display_name`, em
+-- que o servidor guarda o que a pessoa escreveu e a tela preenche o resto.
+--
+--
+-- ============================================================================
+-- O FILTRO, E POR QUE ELE É SEGURO
+-- ============================================================================
+--
+-- Zerar demais apagaria um nome que a pessoa escolheu — dano que nenhuma migration seguinte desfaz,
+-- porque o valor anterior não existe mais em lugar nenhum. Por isso o predicado é conservador em
+-- três camadas, e as três precisam valer:
+--
+--   * `origin = 'AI'`       — programa manual nunca teve nome gerado, o usuário sempre deu o dele;
+--   * `LIKE 'Programa %x — %'` — o formato exato do `autoName`, incluindo o `x` colado no número;
+--   * o TRAVESSÃO (U+2014)  — e é ele que fecha a questão.
+--
+-- O travessão é o detalhe que torna o filtro quase infalsificável: ele não existe no teclado do
+-- celular, o projeto inteiro o proíbe desde 2026-09-10, e uma pessoa que quisesse batizar o próprio
+-- programa de "Programa 4x — Push/Pull/Legs" teria de digitar exatamente a frase que a máquina
+-- gerava. Errar para menos aqui custa um nome velho numa tela; errar para mais custa o nome que
+-- alguém escolheu.
+--
+-- > Migration que apaga dado do usuário tem de errar para o lado de não apagar.
+--
+-- Idempotente: rodar de novo não casa mais nada, porque as linhas já estão em ''.
+UPDATE programs
+SET name = ''
+WHERE origin = 'AI'
+  AND name LIKE 'Programa %x — %';

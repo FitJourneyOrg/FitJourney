@@ -1,15 +1,13 @@
 package dev.rafael.server.group
 
+import dev.rafael.server.BancoDeTeste
 import dev.rafael.server.CodigoDeTeste
 
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
 import dev.rafael.contract.group.GroupRule
 import dev.rafael.contract.group.GroupType
 import dev.rafael.contract.group.MemberRole
 import dev.rafael.contract.group.ScoringModel
 import dev.rafael.core.result.AppResult
-import dev.rafael.server.db.Migrations
 import dev.rafael.server.features.group.db.GroupRepositoryImpl
 import dev.rafael.server.features.group.db.NovoGrupo
 import dev.rafael.server.features.group.services.GroupPolicy
@@ -17,10 +15,8 @@ import dev.rafael.server.features.user.db.UsersTable
 import kotlinx.coroutines.runBlocking
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
-import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertNull
@@ -28,7 +24,6 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.testcontainers.postgresql.PostgreSQLContainer
 import kotlin.uuid.Uuid
 
 /**
@@ -45,28 +40,12 @@ import kotlin.uuid.Uuid
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class GroupCreationIntegrationTest {
 
-    private val postgres = PostgreSQLContainer("postgres:16-alpine")
-    private lateinit var ds: HikariDataSource
     private val repo = GroupRepositoryImpl()
 
     @BeforeAll
     fun setup() {
-        postgres.start()
-        ds = HikariConfig().apply {
-            jdbcUrl = postgres.jdbcUrl
-            username = postgres.username
-            password = postgres.password
-            driverClassName = "org.postgresql.Driver"
-            isAutoCommit = false
-        }.let(::HikariDataSource)
-        Migrations.run(ds)   // inclui V36
-        Database.connect(ds)
-    }
-
-    @AfterAll
-    fun teardown() {
-        ds.close()
-        postgres.stop()
+        BancoDeTeste.dataSource
+        BancoDeTeste.limpar()
     }
 
     /** Cada teste cria o SEU usuário — mesma lição do teste de conquistas: isolar pela CHAVE. */
@@ -177,8 +156,12 @@ class GroupCreationIntegrationTest {
         // GroupPolicy já barra pelo formulário; isto prova a segunda linha de defesa.
         val dono = novoUsuario()
         // SQL cru, fora do Exposed: o ponto é justamente escrever SEM passar pelo Kotlin.
+        //
+        // Conexão tirada do pool compartilhado. O `use` devolve ao pool, e o Hikari faz `rollback`
+        // na devolução porque o `autoCommit` é `false` — a transação abortada pelo CHECK não
+        // contamina quem pegar esta conexão depois.
         val erro = runCatching {
-            ds.connection.use { c ->
+            BancoDeTeste.dataSource.connection.use { c ->
                 c.createStatement().use { s ->
                     s.executeUpdate(
                         """

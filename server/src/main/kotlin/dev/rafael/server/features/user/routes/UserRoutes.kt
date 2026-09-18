@@ -1,5 +1,6 @@
 package dev.rafael.server.features.user.routes
 
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.user.UpdateMeRequest
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -63,7 +64,7 @@ fun Route.userRoutes(
                 return@get call.respondResult(
                     AppError.Conflict(
                         "Muitas tentativas. Tente de novo daqui a pouco.",
-                        "RATE_LIMIT_CODIGO",
+                        ErrorCodes.RATE_LIMIT_CODIGO,
                     ).asFailure(),
                 )
             }
@@ -98,17 +99,24 @@ fun Route.userRoutes(
         }
 
         /**
-         * Renomeia o usuário (V35, ARCH #33/#34). Devolve o `UserDto` inteiro, não só o nome:
-         * o cliente guarda o `/me` em cache, e devolver o recurso completo deixa a resposta
-         * substituir a cópia local sem uma segunda requisição.
+         * Edita o usuário: nome (V35, #33/#34) e idioma (V47, #37).
          *
-         * Sem gate de premium — o nome é identidade, não recurso pago (#25).
+         * Devolve o `UserDto` inteiro, não só o campo mexido: o cliente guarda o `/me` em cache, e
+         * devolver o recurso completo deixa a resposta substituir a cópia local sem uma segunda
+         * requisição.
+         *
+         * **`null` significa não mexer**, que é o que um PATCH quer dizer. Corpo com os dois campos
+         * nulos é requisição válida que não faz nada, e não erro: recusá-la obrigaria o cliente a
+         * saber que nada mudou antes de mandar, o que uma tela que salva formulário inteiro não sabe.
+         *
+         * Sem gate de premium em nenhum dos dois. Nome é identidade e idioma é acessibilidade;
+         * nenhum é recurso pago (#25).
          */
         patch("/me") {
             val principal = call.principal<FirebaseUser>()!!
             val body = call.receive<UpdateMeRequest>()
             val result = service
-                .updateDisplayName(principal.uid, principal.email, body.displayName)
+                .atualizarMe(principal.uid, principal.email, body.displayName, body.locale)
                 .map { it.toDto() }
             call.respondResult(result)
         }

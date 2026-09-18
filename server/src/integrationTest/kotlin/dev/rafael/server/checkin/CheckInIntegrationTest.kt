@@ -1,15 +1,13 @@
 package dev.rafael.server.checkin
 
+import dev.rafael.server.BancoDeTeste
 import dev.rafael.server.CodigoDeTeste
 
-import com.zaxxer.hikari.HikariConfig
-import com.zaxxer.hikari.HikariDataSource
 import dev.rafael.contract.checkin.CheckInStatus
 import dev.rafael.contract.group.GroupRule
 import dev.rafael.contract.group.GroupType
 import dev.rafael.contract.group.ScoringModel
 import dev.rafael.core.result.AppResult
-import dev.rafael.server.db.Migrations
 import dev.rafael.server.features.checkin.db.CheckInRepositoryImpl
 import dev.rafael.server.features.checkin.db.CheckInsTable
 import dev.rafael.server.features.checkin.models.NovoCheckIn
@@ -26,13 +24,11 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.Database
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.jetbrains.exposed.v1.jdbc.update
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.Assertions.assertNotNull
@@ -42,7 +38,6 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.assertThrows
-import org.testcontainers.postgresql.PostgreSQLContainer
 import java.math.BigDecimal
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
@@ -61,33 +56,22 @@ import kotlin.uuid.Uuid
  *   suíte de unidade avisa no cabeçalho que não a reproduz
  *
  * O último é o mais importante do arquivo: é uma operação **irreversível**.
+ *
+ * Usa o [BancoDeTeste] — container compartilhado, limpo uma vez por CLASSE. O isolamento que esta
+ * classe tem é o mesmo de quando subia o próprio container (banco vazio no `@BeforeAll`, dados
+ * acumulando entre os testes), então nenhuma asserção mudou. Ver o KDoc do objeto para a regra:
+ * afirme sobre o cenário, nunca sobre um `count()` global.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CheckInIntegrationTest {
 
-    private val postgres = PostgreSQLContainer("postgres:16-alpine")
-    private lateinit var ds: HikariDataSource
     private val checkIns = CheckInRepositoryImpl()
     private val grupos = GroupRepositoryImpl()
 
     @BeforeAll
     fun setup() {
-        postgres.start()
-        ds = HikariConfig().apply {
-            jdbcUrl = postgres.jdbcUrl
-            username = postgres.username
-            password = postgres.password
-            driverClassName = "org.postgresql.Driver"
-            isAutoCommit = false
-        }.let(::HikariDataSource)
-        Migrations.run(ds)   // inclui V38
-        Database.connect(ds)
-    }
-
-    @AfterAll
-    fun teardown() {
-        ds.close()
-        postgres.stop()
+        BancoDeTeste.dataSource   // sobe o container na primeira classe que chegar
+        BancoDeTeste.limpar()     // e esta classe começa de um banco vazio, como antes
     }
 
     // ---- utilidades ----

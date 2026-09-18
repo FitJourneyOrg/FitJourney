@@ -26,28 +26,41 @@ object AchievementPolicy {
     /**
      * [REGRA] Os ids são CONTRATO — vão para o banco e nunca mudam de significado. Renomear um
      * id existente reescreveria a história de quem já o tem; conquista nova ganha id novo.
+     *
+     * ⚠️ **Não tem título nem descrição, e isso é a fatia G.5 (ARCH #37).** Até 2026-09-15 este
+     * enum carregava as duas frases em português e o `AchievementDto` as transportava prontas, o
+     * que deixava a tela de Conquistas INTEIRA em português para quem escolheu inglês.
+     *
+     * O texto agora vive no `strings.xml` do cliente, com a chave derivada do id
+     * (`PRIMEIRO_TREINO` → `conquista_primeiro_treino_titulo`). O que fica aqui é o que é regra:
+     * a métrica e o alvo.
+     *
+     * > **Enum de servidor com propriedade `String` é texto de UI escondido num lugar onde a
+     * > varredura de literais não procura.** Quinta ocorrência deste padrão nesta base.
+     *
+     * O vocabulário de ids está em [dev.rafael.contract.stats.ConquistaIds] e o
+     * `AchievementIdsTest` amarra os dois conjuntos: conquista nova aqui sem entrada lá quebra o
+     * build, e é lá que o cliente descobre que ela existe.
      */
     enum class Conquista(
-        val titulo: String,
-        val descricao: String,
         val metrica: Metrica,
         val alvo: Int,
     ) {
-        PRIMEIRO_TREINO("Começou", "Registre seu primeiro treino", Metrica.SESSOES, 1),
-        TREINOS_10("Dez na conta", "Registre 10 treinos", Metrica.SESSOES, 10),
-        TREINOS_50("Cinquenta treinos", "Registre 50 treinos", Metrica.SESSOES, 50),
-        TREINOS_100("Cem treinos", "Registre 100 treinos", Metrica.SESSOES, 100),
+        PRIMEIRO_TREINO(Metrica.SESSOES, 1),
+        TREINOS_10(Metrica.SESSOES, 10),
+        TREINOS_50(Metrica.SESSOES, 50),
+        TREINOS_100(Metrica.SESSOES, 100),
 
         // Streak reusa a definição do XpPolicy, em que DIA DE DESCANSO AGENDADO conta como
         // cumprido. É deliberado: premiar "treinou todo dia" empurraria o usuário contra o
         // próprio programa, que prescreve descanso (#22/#26). A conquista recompensa seguir
         // o plano, não ignorá-lo.
-        STREAK_7("Uma semana", "7 dias seguindo o plano", Metrica.STREAK, 7),
-        STREAK_30("Um mês", "30 dias seguindo o plano", Metrica.STREAK, 30),
-        STREAK_90("Três meses", "90 dias seguindo o plano", Metrica.STREAK, 90),
+        STREAK_7(Metrica.STREAK, 7),
+        STREAK_30(Metrica.STREAK, 30),
+        STREAK_90(Metrica.STREAK, 90),
 
-        NIVEL_5("Nível 5", "Alcance o nível 5", Metrica.NIVEL, 5),
-        NIVEL_10("Nível 10", "Alcance o nível 10", Metrica.NIVEL, 10),
+        NIVEL_5(Metrica.NIVEL, 5),
+        NIVEL_10(Metrica.NIVEL, 10),
         ;
     }
 

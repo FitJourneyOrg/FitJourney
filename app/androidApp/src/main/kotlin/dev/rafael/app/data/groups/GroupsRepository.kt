@@ -10,6 +10,7 @@ import dev.rafael.contract.group.GroupPreviewDto
 import dev.rafael.core.database.FitJourneyDatabase
 import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.TokenProvider
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.map
 import kotlinx.coroutines.Dispatchers
@@ -60,15 +61,19 @@ class GroupsRepository(
                 }
         }
 
-    override suspend fun sincronizar(forcar: Boolean) {
-        if (tokenProvider.currentUid() == null) return   // sem sessão, sincronizar só produz 401
-        if (!forcar && stamps.fresco(SyncStamps.GRUPOS, TTL_MS)) return
-        when (val r = api.listar()) {
+    override suspend fun sincronizar(forcar: Boolean): AppError? {
+        if (tokenProvider.currentUid() == null) return null   // sem sessão, sincronizar só produz 401
+        if (!forcar && stamps.fresco(SyncStamps.GRUPOS, TTL_MS)) return null
+        return when (val r = api.listar()) {
             is AppResult.Success -> {
                 gravar(r.value)
                 stamps.marcar(SyncStamps.GRUPOS)
+                null
             }
-            is AppResult.Failure -> Unit   // mantém a última lista conhecida
+            // Continua MANTENDO a última lista conhecida — a política de cache não mudou. O que
+            // mudou é que a falha deixa de ser engolida: quem chamou decide se ela importa, e ela
+            // importa exatamente quando não há lista nenhuma para manter.
+            is AppResult.Failure -> r.error
         }
     }
 

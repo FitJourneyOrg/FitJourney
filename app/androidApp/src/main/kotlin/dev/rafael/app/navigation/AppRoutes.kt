@@ -93,6 +93,14 @@ sealed interface AppRoute {
     @Serializable data object Conta : AppRoute
 
     /**
+     * Escolha do idioma da interface (G.4, ARCH #37).
+     *
+     * Alcançada pela gaveta E por Conta, de propósito: quem não lê o idioma atual vai procurar um
+     * ícone, não uma palavra, e a gaveta é onde os ícones ficam.
+     */
+    @Serializable data object IdiomaDaInterface : AppRoute
+
+    /**
      * Amigos e pedidos (#35). Alcançada por **Perfil → Amigos**, e não pelo drawer.
      *
      * Fica dentro do perfil porque amizade é uma extensão da identidade, não uma seção do app —

@@ -32,14 +32,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
+import dev.rafael.app.R
 import dev.rafael.app.ui.ErroInline
+import dev.rafael.app.ui.descricao
+import dev.rafael.app.ui.frase
 import dev.rafael.contract.group.GroupPreviewDto
-import dev.rafael.contract.group.GroupRule
-import dev.rafael.contract.group.JoinBlock
 import dev.rafael.core.network.HttpClientFactory
 import org.koin.androidx.compose.koinViewModel
 
@@ -66,10 +69,13 @@ fun EntrarScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Entrar num desafio") },
+                title = { Text(stringResource(R.string.entrar_titulo)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.comum_voltar),
+                        )
                     }
                 },
             )
@@ -88,9 +94,9 @@ fun EntrarScreen(
                 OutlinedTextField(
                     value = state.codigo,
                     onValueChange = viewModel::aoDigitarCodigo,
-                    label = { Text("Código do desafio") },
+                    label = { Text(stringResource(R.string.comum_codigo_do_desafio)) },
                     singleLine = true,
-                    supportingText = { Text("6 caracteres, como aparece para quem convidou você.") },
+                    supportingText = { Text(stringResource(R.string.entrar_campo_ajuda)) },
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(10.dp))
@@ -100,7 +106,7 @@ fun EntrarScreen(
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     if (state.carregando) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                    else Text("Procurar")
+                    else Text(stringResource(R.string.entrar_procurar))
                 }
             }
 
@@ -153,13 +159,13 @@ private fun Preview(preview: GroupPreviewDto, entrando: Boolean, onEntrar: () ->
 
         Spacer(Modifier.height(12.dp))
         Text(
-            "${preview.memberCount} ${if (preview.memberCount == 1) "pessoa" else "pessoas"} · " +
-                "${preview.startDate} a ${preview.endDate}",
+            pluralStringResource(R.plurals.grupo_pessoas, preview.memberCount, preview.memberCount) +
+                " · " + stringResource(R.string.grupo_periodo, preview.startDate, preview.endDate),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(
-            "O dia vira no fuso ${preview.timezone}.",
+            stringResource(R.string.entrar_fuso, preview.timezone),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -167,13 +173,18 @@ private fun Preview(preview: GroupPreviewDto, entrando: Boolean, onEntrar: () ->
         if (preview.rules.isNotEmpty()) {
             Spacer(Modifier.height(18.dp))
             Text(
-                "PARA O CHECK-IN VALER",
+                stringResource(R.string.entrar_regras_titulo),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(6.dp))
             // AQUI é o opt-in do #17: a exigência aparece ANTES do aceite.
-            preview.rules.forEach { Text("· ${it.emPortugues()}", style = MaterialTheme.typography.bodyMedium) }
+            preview.rules.forEach { regra ->
+                Text(
+                    stringResource(R.string.entrar_regra_item, stringResource(regra.descricao())),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            }
         }
 
         Spacer(Modifier.height(22.dp))
@@ -183,7 +194,7 @@ private fun Preview(preview: GroupPreviewDto, entrando: Boolean, onEntrar: () ->
             modifier = Modifier.fillMaxWidth(),
         ) {
             if (entrando) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-            else Text("Entrar no desafio")
+            else Text(stringResource(R.string.entrar_confirmar))
         }
 
         // Botão desabilitado sem explicação é um mistério. O motivo vem do servidor como enum,
@@ -191,7 +202,7 @@ private fun Preview(preview: GroupPreviewDto, entrando: Boolean, onEntrar: () ->
         preview.blockedReason?.let {
             Spacer(Modifier.height(8.dp))
             Text(
-                it.emPortugues(),
+                stringResource(it.frase()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -210,17 +221,3 @@ private fun Preview(preview: GroupPreviewDto, entrando: Boolean, onEntrar: () ->
  */
 const val BANNER_RATIO = 2.5f
 
-private fun GroupRule.emPortugues(): String = when (this) {
-    GroupRule.FOTO -> "Uma foto, tirada na hora pelo app"
-    GroupRule.LOCALIZACAO -> "O nome do lugar onde você treinou"
-    GroupRule.EMOJI_DO_DIA -> "Reproduzir o emoji do dia na foto"
-    GroupRule.GYM_PASS -> "Gympass (ainda não disponível)"
-}
-
-private fun JoinBlock.emPortugues(): String = when (this) {
-    JoinBlock.JA_COMECOU -> "Este desafio já começou — a entrada fecha quando ele começa."
-    JoinBlock.ENCERRADO -> "Este desafio já terminou."
-    JoinBlock.LOTADO -> "Este desafio já tem 50 participantes."
-    JoinBlock.JA_E_MEMBRO -> "Você já participa deste desafio."
-    JoinBlock.CONVITE_INVALIDO -> "Este link expirou ou foi revogado. Peça o código do desafio."
-}

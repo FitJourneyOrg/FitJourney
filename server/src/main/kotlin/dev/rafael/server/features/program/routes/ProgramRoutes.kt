@@ -45,10 +45,13 @@ fun Route.programRoutes(
                 // 1. GATE DE SAÚDE (§3.2 [INV]) — pré-condição pra gerar, vale p/ todos.
                 when (val pr = profileService.getProfile(principal.uid, principal.email)) {
                     is AppResult.Failure ->
+                        // Desmembrado na G.2: aqui NÃO falta a avaliação de saúde, falta o
+                        // questionário INTEIRO. A frase antiga mandava completar a saúde, e a
+                        // pessoa ia procurar uma seção que ela nunca chegou a ver.
                         if (pr.error is AppError.NotFound)
                             AppError.Forbidden(
-                                "Complete a avaliação de saúde antes de gerar treinos.",
-                                ErrorCodes.HEALTH_GATE_REQUIRED,
+                                "Complete o questionário antes de gerar treinos.",
+                                ErrorCodes.PERFIL_AUSENTE_PARA_GERAR,
                             ).asFailure()
                         else pr
                     is AppResult.Success -> {
@@ -108,7 +111,7 @@ fun Route.programRoutes(
             val programId = call.programIdParam()
             val body = call.receive<RenameProgramRequest>()
             val result = if (programId == null) {
-                AppError.Validation("id de programa inválido").asFailure()
+                AppError.Validation("Não consegui abrir este programa.", code = ErrorCodes.ID_DE_PROGRAMA_INVALIDO).asFailure()
             } else {
                 userService.findOrCreate(principal.uid, principal.email)
                     .flatMap { user ->
@@ -125,7 +128,7 @@ fun Route.programRoutes(
             val programId = call.programIdParam()
             val body = call.receive<SetScheduleRequest>()
             val result = if (programId == null) {
-                AppError.Validation("id de programa inválido").asFailure()
+                AppError.Validation("Não consegui abrir este programa.", code = ErrorCodes.ID_DE_PROGRAMA_INVALIDO).asFailure()
             } else {
                 userService.findOrCreate(principal.uid, principal.email).flatMap { user ->
                     // GATE (#25): agendar programa IA exige premium — evita furar o blur (#23).
@@ -140,12 +143,12 @@ fun Route.programRoutes(
             val principal = call.principal<FirebaseUser>()!!
             val programId = call.programIdParam()
             val result = if (programId == null) {
-                AppError.Validation("id de programa inválido").asFailure()
+                AppError.Validation("Não consegui abrir este programa.", code = ErrorCodes.ID_DE_PROGRAMA_INVALIDO).asFailure()
             } else {
                 userService.findOrCreate(principal.uid, principal.email).flatMap { user ->
                     programService.delete(user.id, programId).flatMap { deleted ->
                         if (deleted) Unit.asSuccess()
-                        else AppError.NotFound("Programa não encontrado").asFailure()
+                        else AppError.NotFound("Programa não encontrado", code = ErrorCodes.PROGRAMA_NAO_EXISTE).asFailure()
                     }
                 }
             }

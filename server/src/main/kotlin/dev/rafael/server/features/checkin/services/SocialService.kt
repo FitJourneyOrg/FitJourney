@@ -19,6 +19,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.uuid.Uuid
+import dev.rafael.contract.error.ErrorCodes
 
 /**
  * Comentários e reações (fatia E.1, decisões 8.1 a 8.4).
@@ -89,6 +90,7 @@ class SocialService(
             ?: return@comMembro AppError.Validation(
                 "Escreva algo, com até ${SocialPolicy.MAX_COMENTARIO} caracteres.",
                 mapOf("body" to "Escreva algo, com até ${SocialPolicy.MAX_COMENTARIO} caracteres."),
+                code = ErrorCodes.COMENTARIO_INVALIDO,
             ).asFailure()
 
         comCheckIn(groupId, checkInId) { alvo, donoDoCheckIn ->
@@ -155,6 +157,7 @@ class SocialService(
                     return@flatMap AppError.Forbidden(
                         "Só quem escreveu, quem fez o check-in, ou o admin do desafio pode apagar " +
                             "este comentário.",
+                        ErrorCodes.SEM_PERMISSAO_PARA_APAGAR_COMENTARIO,
                     ).asFailure()
                 }
                 repository.apagarComentario(id)
@@ -177,7 +180,7 @@ class SocialService(
         emoji: String,
     ): AppResult<Unit> = comMembro(firebaseUid, email, groupId) { user, _ ->
         if (!SocialPolicy.reacaoValida(emoji)) {
-            return@comMembro AppError.Validation("Esta reação não existe.").asFailure()
+            return@comMembro AppError.Validation("Esta reação não existe.", code = ErrorCodes.REACAO_INVALIDA).asFailure()
         }
         comCheckIn(groupId, checkInId) { alvo, _ ->
             repository.reagir(alvo, Uuid.parse(groupId), user.id, emoji, agora())
@@ -272,5 +275,5 @@ class SocialService(
 
     /** 404 para tudo que não é meu, nunca 403 — "sem permissão" confirmaria a existência. */
     private fun <T> naoEncontrado(): AppResult<T> =
-        AppError.NotFound("Não encontramos este item.").asFailure()
+        AppError.NotFound("Este conteúdo não está mais disponível.", code = ErrorCodes.ALVO_INDISPONIVEL).asFailure()
 }
