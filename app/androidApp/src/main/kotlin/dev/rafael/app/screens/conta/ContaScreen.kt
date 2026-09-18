@@ -42,6 +42,8 @@ import dev.rafael.app.ui.ErroInline
 import dev.rafael.app.ui.erroDoCampo
 import dev.rafael.core.result.AppError
 import org.koin.androidx.compose.koinViewModel
+import dev.rafael.app.R
+import androidx.compose.ui.res.stringResource
 
 /**
  * Configurações da conta (ARCH #34): nome, e-mail, plano e sair.
@@ -55,6 +57,7 @@ fun ContaScreen(
     onBack: () -> Unit,
     onSaiu: () -> Unit,
     onVerBloqueados: () -> Unit,
+    onIdioma: () -> Unit,
     viewModel: ContaViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -73,10 +76,13 @@ fun ContaScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Conta") },
+                title = { Text(stringResource(R.string.conta_titulo)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Voltar")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.comum_voltar),
+                        )
                     }
                 },
             )
@@ -91,7 +97,7 @@ fun ContaScreen(
         ) {
             Spacer(Modifier.height(8.dp))
             Text(
-                "SEU NOME",
+                stringResource(R.string.comum_seu_nome),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -105,11 +111,11 @@ fun ContaScreen(
                 OutlinedTextField(
                     value = state.rascunho,
                     onValueChange = viewModel::aoDigitar,
-                    label = { Text("Nome") },
+                    label = { Text(stringResource(R.string.comum_nome)) },
                     singleLine = true,
                     isError = erroDoNome != null,
                     supportingText = {
-                        Text(erroDoNome ?: "Como as outras pessoas vão te ver nos grupos.")
+                        Text(erroDoNome ?: stringResource(R.string.conta_nome_ajuda))
                     },
                     enabled = !state.salvando,
                     modifier = Modifier.fillMaxWidth(),
@@ -127,11 +133,11 @@ fun ContaScreen(
                         if (state.salvando) {
                             CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                         } else {
-                            Text("Salvar")
+                            Text(stringResource(R.string.comum_salvar))
                         }
                     }
                     OutlinedButton(onClick = viewModel::cancelar, enabled = !state.salvando) {
-                        Text("Cancelar")
+                        Text(stringResource(R.string.comum_cancelar))
                     }
                 }
             } else {
@@ -141,10 +147,12 @@ fun ContaScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        state.nome.ifBlank { "—" },
+                        state.nome.ifBlank { stringResource(R.string.comum_sem_valor) },
                         style = MaterialTheme.typography.bodyLarge,
                     )
-                    TextButton(onClick = viewModel::editar) { Text("Editar") }
+                    TextButton(onClick = viewModel::editar) {
+                        Text(stringResource(R.string.comum_editar))
+                    }
                 }
             }
 
@@ -152,9 +160,15 @@ fun ContaScreen(
             HorizontalDivider()
             Spacer(Modifier.height(20.dp))
 
-            Linha("E-mail", state.email ?: "—")
+            Linha(
+                stringResource(R.string.conta_email),
+                state.email ?: stringResource(R.string.comum_sem_valor),
+            )
             Spacer(Modifier.height(14.dp))
-            Linha("Plano", if (state.premium) "Premium" else "Grátis")
+            Linha(
+                stringResource(R.string.conta_plano),
+                stringResource(if (state.premium) R.string.comum_premium else R.string.comum_gratis),
+            )
 
             Spacer(Modifier.height(28.dp))
             HorizontalDivider()
@@ -167,10 +181,22 @@ fun ContaScreen(
              * bloqueou alguém descobre por que o app recusou um "Adicionar". A mensagem de erro
              * não conta isso de propósito, para o bloqueio não virar recado.
              */
-            TextButton(onClick = onVerBloqueados) { Text("Bloqueados") }
+            TextButton(onClick = onVerBloqueados) { Text(stringResource(R.string.comum_bloqueados)) }
+
+            /*
+             * IDIOMA aparece aqui E na gaveta, por decisão de 2026-09-11.
+             *
+             * Duas entradas para a MESMA tela não são duas fontes de verdade: a preferência mora
+             * num lugar só (`IdiomaDoAparelho`), e estas são portas. A duplicação que custaria
+             * caro seria duas telas, ou duas gravações.
+             *
+             * A entrada da gaveta é a que serve a quem não lê o idioma atual, porque lá existe o
+             * ícone de globo. Esta aqui é a que serve a quem procura onde ficam os ajustes.
+             */
+            TextButton(onClick = onIdioma) { Text(stringResource(R.string.comum_idioma)) }
 
             TextButton(onClick = { confirmarSaida = true }) {
-                Text("Sair da conta", color = MaterialTheme.colorScheme.error)
+                Text(stringResource(R.string.conta_sair), color = MaterialTheme.colorScheme.error)
             }
             Spacer(Modifier.height(24.dp))
         }

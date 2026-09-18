@@ -97,4 +97,64 @@ class ArchitectureKonsistTest {
                 !it.hasPackage("dev.rafael..")
             }
     }
+
+    // ===== Regras de UI =====
+
+    /**
+     * ⭐ **Inset de barra do sistema é do `Scaffold`, nunca de um modificador solto.**
+     *
+     * O app tem `Scaffold` aninhado: um no `AppNavHost` (menu e abas) e um em cada uma das 24
+     * telas. A [REGRA] de quem aplica o quê está escrita lá, e ela custou dois defeitos seguidos —
+     * faixa preta em cima e embaixo de toda tela, e depois a status bar sobrando sem cor.
+     *
+     * O que esta regra impede é a terceira rodada. O `Scaffold` da tela já entrega no `padding`
+     * tudo que precisa ser afastado das barras; um `systemBarsPadding()` escrito por cima **soma
+     * a mesma distância outra vez**, e volta a faixa — agora numa tela só, que é o modo mais caro
+     * de o defeito voltar.
+     *
+     * > **Modificador de inset dentro do conteúdo de um `Scaffold` está sempre duplicando algo: o
+     * > `Scaffold` existe exatamente para não precisar dele.**
+     *
+     * O caminho que leva até aqui é sempre o mesmo: alguém vê um espaçamento errado, acrescenta
+     * o modificador naquela tela, e o problema de verdade — que é de quem declarou os insets —
+     * fica escondido atrás da tentativa.
+     *
+     * ⚠️ **`imePadding` NÃO entra na lista, de propósito.** Teclado não é barra fixa: ele aparece
+     * e some, ninguém o consome no topo, e é responsabilidade de quem tem campo de texto.
+     *
+     * ## As exceções são três, e cada uma tem motivo
+     *
+     * - **`AppNavHost`** é o dono, e é onde a decisão mora.
+     * - **`MainActivity`** chama o `enableEdgeToEdge`, que é o que faz tudo isto existir.
+     * - **`MenuLateral`** é a gaveta, e a gaveta fica **fora** do `Scaffold`, dentro do
+     *   `ModalNavigationDrawer`. O consumo do `AppNavHost` não a alcança, então ela é o único
+     *   lugar do app onde um `statusBarsPadding` continua somando pixel de verdade.
+     *
+     * A terceira é a que importa: sem ela, esta regra proibiria o conserto legítimo da gaveta e
+     * empurraria quem fosse arrumá-la para um contorno pior.
+     *
+     * > **Regra que bloqueia a correção certa ensina a contornar a regra.**
+     */
+    @Test
+    fun `so o AppNavHost mexe em inset de barra do sistema`() {
+        val insetsDeBarra = setOf(
+            "androidx.compose.foundation.layout.statusBarsPadding",
+            "androidx.compose.foundation.layout.navigationBarsPadding",
+            "androidx.compose.foundation.layout.systemBarsPadding",
+        )
+
+        val donosLegitimos = setOf("AppNavHost", "MainActivity", "MenuLateral")
+
+        production
+            .files
+            .withPackage("dev.rafael.app..")
+            .filterNot { it.name in donosLegitimos }
+            .imports
+            .assertFalse(
+                additionalMessage = "Quem afasta o conteúdo das barras do sistema é o Scaffold da " +
+                    "tela, pelo padding que ele entrega. Um modificador de inset por cima soma a " +
+                    "mesma distância duas vezes. Se o espaçamento está errado, a [REGRA] com a " +
+                    "divisão de responsabilidade está no AppNavHost.",
+            ) { it.name in insetsDeBarra }
+    }
 }

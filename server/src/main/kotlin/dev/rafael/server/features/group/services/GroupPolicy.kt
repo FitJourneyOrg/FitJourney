@@ -16,6 +16,7 @@ import kotlin.random.Random
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
+import dev.rafael.contract.error.ErrorCodes
 
 /**
  * Regras do GRUPO (ARCH #33, fatia A.1). Kotlin PURO, sem I/O — como `XpPolicy`,
@@ -157,7 +158,7 @@ object GroupPolicy {
         }
 
         if (erros.isNotEmpty()) {
-            return AppError.Validation("Revise os campos do grupo.", erros).asFailure()
+            return AppError.Validation("Revise os campos do grupo.", erros, code = ErrorCodes.CAMPOS_DO_GRUPO_INVALIDOS).asFailure()
         }
         return GrupoValidado(
             titulo = titulo,

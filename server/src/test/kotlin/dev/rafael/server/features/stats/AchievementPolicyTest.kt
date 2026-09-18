@@ -1,5 +1,6 @@
 package dev.rafael.server.features.stats
 
+import dev.rafael.contract.stats.ConquistaIds
 import dev.rafael.server.features.stats.AchievementPolicy.Conquista
 import dev.rafael.server.features.stats.AchievementPolicy.Progresso
 import kotlin.test.Test
@@ -13,6 +14,42 @@ class AchievementPolicyTest {
 
     private fun progresso(sessoes: Int = 0, streak: Int = 0, nivel: Int = 1) =
         Progresso(sessoesValidas = sessoes, streakDias = streak, nivel = nivel)
+
+    /**
+     * ⭐ **O enum do servidor e o vocabulário do contrato são o MESMO conjunto** (G.5, ARCH #37).
+     *
+     * Este teste é a metade servidor da cobertura de textos; a outra é o `TextosDeConquistaTest`
+     * no cliente, que percorre o [ConquistaIds] cobrando frase para cada id.
+     *
+     * Sem ele a corrente arrebenta no elo do meio, **e arrebenta calada**: uma conquista nova aqui
+     * sem entrada lá seria concedida, gravada no banco e mandada no DTO, e a tela simplesmente não
+     * a desenharia — o `TextosDeConquista.de` devolve `null` e o cliente pula o id que não conhece,
+     * que é o comportamento certo para app antigo e o errado para conquista recém-criada.
+     *
+     * > **Medalha que o servidor concede e a tela não mostra é pior que medalha que não existe.**
+     *
+     * Nos dois sentidos, porque os dois erros acontecem: id sobrando no contrato é lixo de uma
+     * conquista apagada, e o tradutor recebe uma frase que ninguém vai ler.
+     */
+    @Test
+    fun `o vocabulario do contrato cobre exatamente o enum do servidor`() {
+        assertEquals(
+            Conquista.entries.map { it.name }.toSet(),
+            ConquistaIds.TODOS,
+            "AchievementPolicy.Conquista e ConquistaIds.TODOS divergiram. " +
+                "Conquista nova precisa da constante no contrato e da frase no strings.xml.",
+        )
+    }
+
+    /**
+     * O alvo é o que sobrou de regra no enum depois que o texto saiu, e alvo zero ou negativo
+     * faria `current / target` estourar na barra de progresso da tela.
+     */
+    @Test
+    fun `toda conquista tem alvo positivo`() {
+        val invalidas = Conquista.entries.filter { it.alvo <= 0 }
+        assertTrue(invalidas.isEmpty(), "conquista com alvo não positivo: $invalidas")
+    }
 
     @Test
     fun `usuario zerado nao ganha nada`() {

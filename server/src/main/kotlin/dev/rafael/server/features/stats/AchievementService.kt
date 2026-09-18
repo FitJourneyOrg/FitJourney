@@ -62,8 +62,6 @@ class AchievementService(
             .map { c ->
                 AchievementDto(
                     id = c.name,
-                    title = c.titulo,
-                    description = c.descricao,
                     unlockedAt = concedidas[c.name]?.toString(),
                     // Limitado ao alvo: "150 de 100" não faz sentido numa barra de progresso.
                     current = progresso.valorDe(c.metrica).coerceAtMost(c.alvo),

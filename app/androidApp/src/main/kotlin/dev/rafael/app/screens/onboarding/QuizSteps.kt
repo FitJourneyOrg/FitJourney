@@ -6,7 +6,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.R
+import dev.rafael.app.ui.descricao
+import dev.rafael.app.ui.rotulo
+import dev.rafael.app.ui.rotuloDoDiaDaSemana
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.HealthScreening
@@ -17,15 +23,26 @@ import dev.rafael.contract.profile.SplitCatalog
 import dev.rafael.contract.profile.SplitType
 import dev.rafael.features.profile.presentation.state.QuizEvent
 
+/**
+ * O teto de grupos de foco (#26). Espelha o `FOCO_ALEM_DO_LIMITE` do servidor, que é quem recusa.
+ *
+ * Existe como constante porque o número aparece no contador da tela: cravá-lo dentro da frase
+ * faria a tradução carregar uma regra de negócio, e mudá-la exigiria mexer em todo idioma.
+ */
+private const val MAX_GRUPOS_DE_FOCO = 2
+
+/** Sete. Nomeado porque `7 - selected.size` não diz de que sete se trata. */
+private const val DIAS_DA_SEMANA = 7
+
 @Composable
 fun SplitStep(daysPerWeek: Int, selected: SplitType?, onSelect: (SplitType) -> Unit) {
     val options = SplitCatalog.optionsFor(daysPerWeek)
     // recomendado pré-selecionado; se o usuário não tocar, fica null e o server usa o recomendado.
     val effective = selected ?: SplitCatalog.recommendedFor(daysPerWeek)
     Column {
-        Text("Qual modelo de treino?", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.quiz_split_titulo), style = MaterialTheme.typography.headlineSmall)
         Text(
-            "Montamos com base nos seus $daysPerWeek dias. O recomendado já vem marcado — mantenha ou troque.",
+            stringResource(R.string.quiz_split_ajuda, daysPerWeek),
             style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(Modifier.height(16.dp))
@@ -38,17 +55,20 @@ fun SplitStep(daysPerWeek: Int, selected: SplitType?, onSelect: (SplitType) -> U
                 Spacer(Modifier.width(8.dp))
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(opt.type.label, style = MaterialTheme.typography.titleMedium)
+                        // NÃO `opt.type.label`: aquele campo do contrato é dado do servidor
+                        // (o `StructureEngine` o compara e o costura no rationale). Ver
+                        // `SplitType.rotulo()` em ui/Rotulos.kt.
+                        Text(stringResource(opt.type.rotulo()), style = MaterialTheme.typography.titleMedium)
                         if (opt.recommended) {
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                "★ Recomendado",
+                                stringResource(R.string.quiz_split_recomendado),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.primary,
                             )
                         }
                     }
-                    Text(opt.type.description, style = MaterialTheme.typography.bodySmall)
+                    Text(stringResource(opt.type.descricao()), style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
@@ -58,16 +78,14 @@ fun SplitStep(daysPerWeek: Int, selected: SplitType?, onSelect: (SplitType) -> U
 @Composable
 fun GoalStep(selected: Goal?, onSelect: (Goal) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Qual seu objetivo principal?", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.quiz_objetivo_titulo), style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
         Goal.entries.forEach { g ->
-            val label = when (g) {
-                Goal.GAIN_MUSCLE -> "Ganhar massa"
-                Goal.LOSE_FAT -> "Perder gordura"
-                Goal.MAINTAIN -> "Manter a forma"
-                Goal.GENERAL_HEALTH -> "Saúde geral"
-            }
-            FilterChip(selected = selected == g, onClick = { onSelect(g) }, label = { Text(label) })
+            FilterChip(
+                selected = selected == g,
+                onClick = { onSelect(g) },
+                label = { Text(stringResource(g.rotulo())) },
+            )
         }
     }
 }
@@ -75,15 +93,14 @@ fun GoalStep(selected: Goal?, onSelect: (Goal) -> Unit) {
 @Composable
 fun LevelStep(selected: Level?, onSelect: (Level) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Qual seu nível hoje?", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.quiz_nivel_titulo), style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
         Level.entries.forEach { l ->
-            val label = when (l) {
-                Level.BEGINNER -> "Iniciante"
-                Level.INTERMEDIATE -> "Intermediário"
-                Level.ADVANCED -> "Avançado"
-            }
-            FilterChip(selected = selected == l, onClick = { onSelect(l) }, label = { Text(label) })
+            FilterChip(
+                selected = selected == l,
+                onClick = { onSelect(l) },
+                label = { Text(stringResource(l.rotulo())) },
+            )
         }
     }
 }
@@ -96,17 +113,17 @@ fun AgeStep(
     onToggleSupervised: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Qual sua idade?", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.quiz_idade_titulo), style = MaterialTheme.typography.headlineSmall)
         OutlinedTextField(
             value = age?.toString() ?: "",
             onValueChange = { onAge(it.filter(Char::isDigit).take(3).toIntOrNull()) },
-            label = { Text("Idade") },
+            label = { Text(stringResource(R.string.quiz_idade_campo)) },
             singleLine = true,
             isError = age != null && age !in 5..120,
         )
         if (age != null && age !in 5..120) {
             Text(
-                "Digite uma idade válida (5 a 120).",
+                stringResource(R.string.quiz_idade_invalida),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.labelSmall,
             )
@@ -116,14 +133,14 @@ fun AgeStep(
                 Checkbox(checked = minorSupervised, onCheckedChange = { onToggleSupervised() })
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Um responsável ou profissional supervisiona meu treino.",
+                    stringResource(R.string.quiz_idade_supervisao),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
         }
         if (age != null && age in 69..120) {
             Text(
-                "Acima de 69: recomendamos acompanhamento médico regular.",
+                stringResource(R.string.quiz_idade_aviso_idoso),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -134,7 +151,7 @@ fun AgeStep(
 @Composable
 fun DaysStep(selected: Int?, onSelect: (Int) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Quantos dias por semana?", style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.quiz_dias_titulo), style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             (2..6).forEach { d ->
@@ -147,24 +164,28 @@ fun DaysStep(selected: Int?, onSelect: (Int) -> Unit) {
 @Composable
 fun FocusStep(selected: List<MuscleGroup>, onToggle: (MuscleGroup) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Quer focar em algum músculo?", style = MaterialTheme.typography.headlineSmall)
-        Text("Escolha até 2 grupos (ou deixe vazio = equilibrado).", style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.quiz_foco_titulo), style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.quiz_foco_ajuda), style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(8.dp))
+        // ⚠️ Estes rótulos estavam DUPLICADOS aqui e no `ExerciseDetailScreen`, e já tinham
+        // divergido: "Antebraço" aqui, "Antebraços" lá. É exatamente o que a `Rotulos.kt` existe
+        // para impedir, e a prova de que uma cópia sobrevive num idioma e diverge no segundo.
         MuscleGroup.entries.forEach { m ->
-            val label = when (m) {
-                MuscleGroup.CHEST -> "Peito"
-                MuscleGroup.BACK -> "Costas"
-                MuscleGroup.BICEPS -> "Bíceps"
-                MuscleGroup.TRICEPS -> "Tríceps"
-                MuscleGroup.FOREARMS -> "Antebraço"
-                MuscleGroup.SHOULDERS -> "Ombros"
-                MuscleGroup.LEGS -> "Pernas"
-                MuscleGroup.GLUTES -> "Glúteos"
-                MuscleGroup.CORE -> "Core"
-            }
-            FilterChip(selected = m in selected, onClick = { onToggle(m) }, label = { Text(label) })
+            FilterChip(
+                selected = m in selected,
+                onClick = { onToggle(m) },
+                label = { Text(stringResource(m.rotulo())) },
+            )
         }
-        Text("${selected.size}/2 selecionados", style = MaterialTheme.typography.labelSmall)
+        Text(
+            pluralStringResource(
+                R.plurals.quiz_foco_contador,
+                selected.size,
+                selected.size,
+                MAX_GRUPOS_DE_FOCO,
+            ),
+            style = MaterialTheme.typography.labelSmall,
+        )
     }
 }
 
@@ -172,22 +193,31 @@ fun FocusStep(selected: List<MuscleGroup>, onToggle: (MuscleGroup) -> Unit) {
 @Composable
 fun RestDaysStep(selected: List<Int>, daysPerWeek: Int, onToggle: (Int) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Tem dia que você NÃO quer treinar?", style = MaterialTheme.typography.headlineSmall)
-        Text("Marque seus dias de descanso (opcional). A IA distribui os treinos nos dias livres.", style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.quiz_descanso_titulo), style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.quiz_descanso_ajuda), style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(8.dp))
-        listOf("Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom").forEachIndexed { idx, lbl ->
-            val d = idx + 1
-            FilterChip(selected = d in selected, onClick = { onToggle(d) }, label = { Text(lbl) })
+        // O índice ISO (segunda = 1) é o que vai para o servidor, e por isso ele — e não uma
+        // lista de rótulos — é a fonte da iteração. Ver `rotuloDoDiaDaSemana`.
+        (1..7).forEach { d ->
+            FilterChip(
+                selected = d in selected,
+                onClick = { onToggle(d) },
+                label = { Text(stringResource(rotuloDoDiaDaSemana(d))) },
+            )
         }
-        val free = 7 - selected.size
+        val free = DIAS_DA_SEMANA - selected.size
         if (free < daysPerWeek) {
             Text(
-                "Você precisa de ao menos $daysPerWeek dias livres (tem $free).",
+                // A concordância segue o PRIMEIRO número, que é o que a frase exige.
+                pluralStringResource(R.plurals.quiz_descanso_insuficiente, daysPerWeek, daysPerWeek, free),
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.labelSmall,
             )
         } else {
-            Text("$free dias livres para treinar.", style = MaterialTheme.typography.labelSmall)
+            Text(
+                pluralStringResource(R.plurals.quiz_descanso_livres, free, free),
+                style = MaterialTheme.typography.labelSmall,
+            )
         }
     }
 }
@@ -200,19 +230,19 @@ fun BodyStep(
     onHeight: (Double?) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text("Peso e altura (opcional)", style = MaterialTheme.typography.headlineSmall)
-        Text("Dado privado, usado só pro seu plano. Você pode pular.", style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(R.string.quiz_corpo_titulo), style = MaterialTheme.typography.headlineSmall)
+        Text(stringResource(R.string.quiz_corpo_ajuda), style = MaterialTheme.typography.bodySmall)
         Spacer(Modifier.height(8.dp))
         OutlinedTextField(
             value = weight?.toString() ?: "",
             onValueChange = { onWeight(it.toDoubleOrNull()) },
-            label = { Text("Peso (kg)") },
+            label = { Text(stringResource(R.string.quiz_corpo_peso)) },
             singleLine = true,
         )
         OutlinedTextField(
             value = height?.toString() ?: "",
             onValueChange = { onHeight(it.toDoubleOrNull()) },
-            label = { Text("Altura (cm)") },
+            label = { Text(stringResource(R.string.quiz_corpo_altura)) },
             singleLine = true,
         )
     }
@@ -224,12 +254,8 @@ fun EnvironmentStep(
     onSelect: (TrainingEnvironment) -> Unit,
 ) {
     Column {
-        Text("Onde você treina?", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.quiz_ambiente_titulo), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(16.dp))
-        val labels = mapOf(
-            TrainingEnvironment.ACADEMIA to "Academia (máquinas, barras, cabos, halteres)",
-            TrainingEnvironment.CASA to "Casa (halteres, peso do corpo, elásticos)",
-        )
         TrainingEnvironment.entries.forEach { env ->
             Row(
                 Modifier.fillMaxWidth().clickable { onSelect(env) }.padding(vertical = 8.dp),
@@ -237,7 +263,9 @@ fun EnvironmentStep(
             ) {
                 RadioButton(selected = selected == env, onClick = { onSelect(env) })
                 Spacer(Modifier.width(8.dp))
-                Text(labels[env] ?: env.name)
+                // `env.name` como fallback era rótulo derivado do identificador — o defeito que
+                // esta fatia já achou duas vezes. Agora o catálogo é exaustivo e não há fallback.
+                Text(stringResource(env.descricao()))
             }
         }
     }
@@ -250,21 +278,25 @@ fun HealthStep(
     onAck: () -> Unit,
 ) {
     Column {
-        Text("Antes de gerar treinos com IA", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.quiz_saude_titulo), style = MaterialTheme.typography.titleLarge)
         Text(
-            "Algumas perguntas de segurança. Responda com sinceridade.",
+            stringResource(R.string.quiz_saude_ajuda),
             style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(Modifier.height(16.dp))
 
-        HealthSwitch("Tenho condição cardíaca diagnosticada", health.hasCardiacCondition) { onToggle(
-            QuizEvent.HealthField.CARDIAC) }
-        HealthSwitch("Sinto dor no peito ao me exercitar", health.hasChestPainDuringActivity) { onToggle(
-            QuizEvent.HealthField.CHEST_PAIN) }
-        HealthSwitch("Tenho lesão óssea/articular que piora com exercício", health.hasJointOrBoneIssue) { onToggle(
-            QuizEvent.HealthField.JOINT) }
-        HealthSwitch("Tomo medicação contínua relevante", health.takesContinuousMedication) { onToggle(
-            QuizEvent.HealthField.MEDICATION) }
+        HealthSwitch(R.string.quiz_saude_cardiaca, health.hasCardiacCondition) {
+            onToggle(QuizEvent.HealthField.CARDIAC)
+        }
+        HealthSwitch(R.string.quiz_saude_dor_no_peito, health.hasChestPainDuringActivity) {
+            onToggle(QuizEvent.HealthField.CHEST_PAIN)
+        }
+        HealthSwitch(R.string.quiz_saude_articulacao, health.hasJointOrBoneIssue) {
+            onToggle(QuizEvent.HealthField.JOINT)
+        }
+        HealthSwitch(R.string.quiz_saude_medicacao, health.takesContinuousMedication) {
+            onToggle(QuizEvent.HealthField.MEDICATION)
+        }
 
         if (health.hasAnyRisk) {
             Spacer(Modifier.height(16.dp))
@@ -274,7 +306,7 @@ fun HealthStep(
                 Checkbox(checked = health.acknowledgedRisk, onCheckedChange = { onAck() })
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Estou ciente de que devo consultar um médico antes de treinar.",
+                    stringResource(R.string.quiz_saude_ciente),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
@@ -285,19 +317,12 @@ fun HealthStep(
 @Composable
 fun LimitationsStep(selected: List<BodyLimitation>, onToggle: (BodyLimitation) -> Unit) {
     Column {
-        Text("Alguma limitação?", style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(R.string.quiz_limitacoes_titulo), style = MaterialTheme.typography.titleLarge)
         Text(
-            "Vamos evitar exercícios que forcem essas regiões. Pode deixar em branco.",
+            stringResource(R.string.quiz_limitacoes_ajuda),
             style = MaterialTheme.typography.bodyMedium,
         )
         Spacer(Modifier.height(16.dp))
-        val labels = mapOf(
-            BodyLimitation.SHOULDER to "Ombro",
-            BodyLimitation.KNEE to "Joelho",
-            BodyLimitation.LUMBAR to "Lombar / coluna",
-            BodyLimitation.WRIST to "Punho",
-            BodyLimitation.IMPACT to "Não posso fazer impacto (saltos)",
-        )
         BodyLimitation.entries.forEach { lim ->
             Row(
                 Modifier.fillMaxWidth().clickable { onToggle(lim) }.padding(vertical = 8.dp),
@@ -305,7 +330,7 @@ fun LimitationsStep(selected: List<BodyLimitation>, onToggle: (BodyLimitation) -
             ) {
                 Checkbox(checked = lim in selected, onCheckedChange = { onToggle(lim) })
                 Spacer(Modifier.width(8.dp))
-                Text(labels[lim] ?: lim.name)
+                Text(stringResource(lim.rotulo()))
             }
         }
     }
@@ -313,12 +338,16 @@ fun LimitationsStep(selected: List<BodyLimitation>, onToggle: (BodyLimitation) -
 
 
 @Composable
-private fun HealthSwitch(label: String, checked: Boolean, onToggle: () -> Unit) {
+private fun HealthSwitch(
+    @androidx.annotation.StringRes label: Int,
+    checked: Boolean,
+    onToggle: () -> Unit,
+) {
     Row(
         Modifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(label), Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
         Switch(checked = checked, onCheckedChange = { onToggle() })
     }
 }

@@ -18,6 +18,7 @@ import io.ktor.server.routing.post
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
+import dev.rafael.contract.error.ErrorCodes
 
 /**
  * Registro de aparelho para push (fatia F.1).
@@ -42,7 +43,7 @@ fun Route.deviceRoutes(service: UserService, tokens: DeviceTokenRepository) {
             val body = call.receive<RegistrarDispositivoRequest>()
 
             if (body.token.isBlank()) {
-                return@post call.respondResult(AppError.Validation("Token vazio").asFailure())
+                return@post call.respondResult(AppError.Validation("Não consegui preparar as notificações neste aparelho.", code = ErrorCodes.TOKEN_DE_PUSH_VAZIO).asFailure())
             }
 
             val agora = Clock.System.now().toLocalDateTime(TimeZone.UTC)

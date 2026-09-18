@@ -1,0 +1,1094 @@
+<resources>
+
+    <!--
+      ============================================================================================
+      UI TEXT — ENGLISH (slice G.4, ARCH #37)
+      ============================================================================================
+
+      This file is the TRANSLATION. The SOURCE is `values/strings.xml`, in pt-BR, and that is
+      where the context comments live: what each string is, where it appears on screen, and how
+      much room it has.
+
+      The comments are NOT duplicated here, on purpose. Two copies of the same explanation is two
+      places to update and one place to forget, which is the exact failure #37 exists to prevent.
+      Read the pt-BR file — or `docs/gerados/strings.md`, which merges it with the call sites.
+
+      Only a handful of comments survive here: the ones that record a decision specific to
+      ENGLISH, which someone will otherwise "fix" back into a bug.
+
+      ============================================================================================
+      A MISSING KEY DOES NOT FAIL. IT FALLS BACK TO PORTUGUESE.
+      ============================================================================================
+
+      Android resolves a missing key by walking up to the default resource folder, silently. The
+      app runs, nothing is logged, and an English-speaking user is shown Portuguese. Nobody finds
+      out until somebody complains.
+
+      That is why `CatalogoEmInglesTest` pins the two catalogs to the same key set, in both
+      directions, and to the same positional parameters per key. The build is the only thing that
+      will ever notice.
+
+      ============================================================================================
+      APOSTROPHES ARE ESCAPED
+      ============================================================================================
+
+      `\'` is not a typo. Android's resource compiler rejects a bare apostrophe, and English is
+      full of them — this is the one mechanical difference from the pt-BR file.
+    -->
+
+    <!-- Brand. Never translated. -->
+    <string name="app_name">FitJourney</string>
+
+
+    <!-- ============================ Login ============================ -->
+
+    <string name="login_titulo">FitJourney</string>
+    <string name="login_email">Email</string>
+    <string name="login_senha">Password</string>
+    <string name="login_entrar">Log in</string>
+    <string name="login_cadastrar">Sign up</string>
+
+
+    <!-- ====================== Exercise detail ====================== -->
+
+    <string name="exercicio_secao_sobre">About this exercise</string>
+    <string name="exercicio_secao_musculos">Muscles worked</string>
+    <string name="exercicio_secao_equipamento">Equipment</string>
+    <string name="exercicio_secao_como_treinar">How to train it</string>
+
+    <string name="exercicio_musculos_secundarios">Also: %1$s</string>
+
+    <string name="exercicio_info_nivel">Level</string>
+    <string name="exercicio_info_prescricao">Prescription</string>
+    <string name="exercicio_info_tipo">Type</string>
+    <string name="exercicio_info_execucao">Execution</string>
+
+    <string name="exercicio_tipo_composto">Compound</string>
+    <string name="exercicio_tipo_isolamento">Isolation</string>
+
+    <string name="exercicio_execucao_unilateral">Unilateral</string>
+    <string name="exercicio_execucao_bilateral">Bilateral</string>
+
+
+    <!-- ====================== Enum labels (see ui/Rotulos.kt) ====================== -->
+
+    <string name="enum_musculo_chest">Chest</string>
+    <string name="enum_musculo_back">Back</string>
+    <string name="enum_musculo_biceps">Biceps</string>
+    <string name="enum_musculo_triceps">Triceps</string>
+    <string name="enum_musculo_forearms">Forearms</string>
+    <string name="enum_musculo_shoulders">Shoulders</string>
+    <string name="enum_musculo_legs">Legs</string>
+    <string name="enum_musculo_glutes">Glutes</string>
+    <string name="enum_musculo_core">Core</string>
+
+    <string name="enum_nivel_beginner">Beginner</string>
+    <string name="enum_nivel_intermediate">Intermediate</string>
+    <string name="enum_nivel_advanced">Advanced</string>
+
+    <string name="enum_objetivo_gain_muscle">Build muscle</string>
+    <string name="enum_objetivo_lose_fat">Lose fat</string>
+    <string name="enum_objetivo_maintain">Stay in shape</string>
+    <string name="enum_objetivo_general_health">General health</string>
+
+    <string name="enum_ambiente_academia">Gym</string>
+    <string name="enum_ambiente_casa">Home</string>
+    <string name="enum_ambiente_academia_descricao">Gym (machines, barbells, cables, dumbbells)</string>
+    <string name="enum_ambiente_casa_descricao">Home (dumbbells, bodyweight, bands)</string>
+
+    <string name="enum_categoria_core">Core</string>
+    <string name="enum_categoria_functional_hit">Functional / HIIT</string>
+    <string name="enum_categoria_mobility">Mobility</string>
+    <string name="enum_categoria_calisthenics">Calisthenics</string>
+    <string name="enum_categoria_legs">Legs</string>
+    <string name="enum_categoria_shoulders">Shoulders</string>
+    <string name="enum_categoria_chest">Chest</string>
+    <string name="enum_categoria_back">Back</string>
+    <string name="enum_categoria_crossfit">CrossFit</string>
+    <string name="enum_categoria_biceps">Biceps</string>
+    <string name="enum_categoria_triceps">Triceps</string>
+    <string name="enum_categoria_trapezius">Trapezius</string>
+    <string name="enum_categoria_glutes">Glutes</string>
+    <string name="enum_categoria_calves">Calves</string>
+    <string name="enum_categoria_forearms">Forearms</string>
+    <string name="enum_categoria_cardio">Cardio</string>
+    <string name="enum_categoria_lower_back">Lower back</string>
+
+    <string name="enum_equipamento_barbell">Barbell</string>
+    <string name="enum_equipamento_dumbbell">Dumbbells</string>
+    <string name="enum_equipamento_machine">Machine</string>
+    <string name="enum_equipamento_cable">Cable / Pulley</string>
+    <string name="enum_equipamento_bodyweight">Bodyweight</string>
+    <string name="enum_equipamento_kettlebell">Kettlebell</string>
+    <string name="enum_equipamento_band">Resistance band</string>
+    <string name="enum_equipamento_smith">Smith machine</string>
+    <string name="enum_equipamento_ez_bar">EZ bar</string>
+    <string name="enum_equipamento_plate">Weight plate</string>
+    <string name="enum_equipamento_medicine_ball">Medicine ball</string>
+    <string name="enum_equipamento_stability_ball">Stability ball</string>
+    <string name="enum_equipamento_bosu">Bosu</string>
+    <string name="enum_equipamento_suspension">Suspension / TRX</string>
+    <string name="enum_equipamento_rope">Rope</string>
+    <string name="enum_equipamento_agility_ladder">Agility ladder</string>
+    <string name="enum_equipamento_nenhum">None</string>
+
+    <string name="enum_prescricao_reps">Reps</string>
+    <string name="enum_prescricao_time">Time</string>
+
+
+    <!-- ============================ Errors ============================ -->
+
+    <string name="erro_acao_tentar_de_novo">Try again</string>
+    <string name="erro_acao_entrar_de_novo">Log in again</string>
+    <string name="erro_acao_ver_planos">See plans</string>
+    <string name="erro_acao_voltar">Back</string>
+
+    <string name="erro_titulo_servidor_mudo">We couldn\'t reach FitJourney</string>
+    <string name="erro_texto_servidor_mudo">The app is up, but the server didn\'t answer. Try again in a moment.</string>
+
+    <string name="erro_titulo_sem_conexao">No connection</string>
+    <string name="erro_texto_sem_conexao">You\'re offline. Connect to sync. Anything already downloaded still works.</string>
+
+    <string name="erro_titulo_credenciais">Wrong email or password</string>
+    <string name="erro_texto_credenciais">Check your details and try again.</string>
+
+    <string name="erro_titulo_sessao_expirada">Session expired</string>
+    <string name="erro_texto_sessao_expirada">Log in again to continue.</string>
+
+    <string name="erro_titulo_recurso_premium">Premium plan feature</string>
+
+    <string name="erro_titulo_sem_permissao">Not allowed</string>
+
+    <string name="erro_titulo_nao_encontrado">Not found</string>
+    <string name="erro_texto_nao_encontrado">This doesn\'t exist anymore. It may have been removed on another device.</string>
+
+    <string name="erro_titulo_conflito">You can\'t do that right now</string>
+
+    <string name="erro_titulo_dados_invalidos">Invalid data</string>
+
+    <string name="erro_titulo_falha_nossa">Something went wrong on our side</string>
+    <string name="erro_texto_falha_nossa">We already know about it. Try again in a moment.</string>
+
+    <string name="erro_pedido_nao_existe">This request no longer exists.</string>
+    <string name="erro_pedido_ja_respondido">This request has already been answered.</string>
+    <string name="erro_pedido_e_meu">You can\'t accept a request you sent yourself.</string>
+    <string name="erro_sem_relacao">That has already been undone.</string>
+    <string name="erro_bloquear_a_si_mesmo">You can\'t block yourself.</string>
+    <string name="erro_pessoa_nao_existe">This person is no longer on FitJourney.</string>
+
+    <string name="erro_token_invalido">Your session expired. Log in again to continue.</string>
+    <string name="erro_minha_conta_sumiu">We couldn\'t load your account right now. Try again in a moment.</string>
+    <string name="erro_codigo_de_usuario_nao_existe">No user with that code.</string>
+    <string name="erro_rate_limit_codigo">Too many attempts. Try again shortly.</string>
+    <string name="erro_idioma_nao_suportado">This language isn\'t available yet.</string>
+
+    <string name="erro_meu_perfil_incompleto">You haven\'t finished the questionnaire yet.</string>
+    <string name="erro_perfil_de_terceiro_indisponivel">This profile isn\'t available.</string>
+    <string name="erro_dias_por_semana_invalido">Pick between 2 and 6 days a week.</string>
+    <string name="erro_foco_alem_do_limite">Pick at most 2 focus groups.</string>
+    <string name="erro_idade_invalida">Enter an age between 5 and 120.</string>
+    <string name="erro_dias_indisponiveis_invalidos">We couldn\'t save your schedule. Try again.</string>
+
+    <string name="erro_perfil_ausente_para_gerar">Finish the questionnaire before generating workouts.</string>
+    <string name="erro_health_gate_required">Complete the health screening before generating workouts.</string>
+    <string name="erro_age_gate_required">Under 18: a parent or guardian has to acknowledge supervision.</string>
+    <string name="erro_perfil_incompleto_para_gerar">Finish the questionnaire to generate a workout.</string>
+    <string name="erro_edicao_de_ia_e_premium">Editing an AI-generated program is a premium feature.</string>
+    <string name="erro_treino_bloqueado_premium">This workout is part of the Premium plan.</string>
+
+    <string name="erro_id_de_programa_invalido">We couldn\'t open this program.</string>
+    <string name="erro_programa_nao_existe">This program is no longer available.</string>
+    <string name="erro_nome_de_programa_vazio">Give the program a name.</string>
+    <string name="erro_treino_nao_existe">This workout is no longer available.</string>
+    <string name="erro_treino_sem_programa">We couldn\'t save this workout.</string>
+    <string name="erro_treino_duplicado">We couldn\'t save this workout. Try creating it again.</string>
+    <string name="erro_nome_de_treino_vazio">Give the workout a name.</string>
+    <string name="erro_treino_sem_exercicio">Add at least one exercise to the workout.</string>
+    <string name="erro_exercicio_sem_serie">Every exercise needs at least one set.</string>
+    <string name="erro_repeticoes_invalidas">Reps have to be greater than zero.</string>
+    <string name="erro_id_de_exercicio_invalido">We couldn\'t open this exercise.</string>
+    <string name="erro_exercicio_fora_do_catalogo">One of the exercises in this workout no longer exists.</string>
+    <string name="erro_exercicio_nao_existe">This exercise is no longer in the catalog.</string>
+    <string name="erro_ambiente_nao_definido">Finish the questionnaire to see alternatives.</string>
+
+    <string name="erro_agenda_vazia">Place at least one workout in the week.</string>
+    <string name="erro_dia_da_semana_invalido">We couldn\'t save the schedule. Try again.</string>
+    <string name="erro_dia_ja_ocupado">You already have a workout on this day. Pick another.</string>
+    <string name="erro_agenda_com_treino_repetido">The same workout can\'t take two days.</string>
+    <string name="erro_agenda_incompleta">The schedule has to cover exactly the workouts in the program.</string>
+    <string name="erro_id_de_treino_invalido">We couldn\'t save the schedule. Try again.</string>
+
+    <string name="erro_sessao_sem_serie">Log at least one set to finish the workout.</string>
+    <string name="erro_sessao_invalida">We couldn\'t save this finished workout. It\'s still in the queue and we\'ll try again.</string>
+    <string name="erro_sessao_com_fim_antes_do_inicio">The workout can\'t end before it starts.</string>
+
+    <string name="erro_grupo_nao_existe">This challenge isn\'t available to you.</string>
+    <string name="erro_nao_sou_membro">You\'re not part of this challenge.</string>
+    <string name="erro_admin_precisa_transferir">Hand over the admin role before leaving the group.</string>
+    <string name="erro_use_sair_em_vez_de_expulsar">To leave the group, use the leave option.</string>
+    <string name="erro_ja_sou_o_admin">You\'re already the admin.</string>
+    <string name="erro_desafio_ja_comecou">The challenge has started and joining is closed.</string>
+    <string name="erro_so_o_admin_do_grupo">Only the challenge admin can do that.</string>
+    <string name="erro_campos_do_grupo_invalidos">Check the challenge fields.</string>
+
+    <string name="erro_checkin_sem_as_regras">This challenge requires more than you sent.</string>
+    <string name="erro_prazo_de_exclusao">A check-in can only be deleted on the same day it was made.</string>
+    <string name="erro_checkin_em_analise">This check-in is under review and can\'t be deleted.</string>
+    <string name="erro_cursor_invalido">We couldn\'t load more posts. Pull to refresh.</string>
+    <string name="erro_local_sem_nome">Write where you trained.</string>
+    <string name="erro_sem_coordenadas">We couldn\'t locate you. Try again.</string>
+    <string name="erro_foto_ausente">Add a photo to finish the check-in.</string>
+    <string name="erro_foto_grande_demais">This photo is too heavy. Pick another or take one with the camera.</string>
+    <string name="erro_foto_invalida">We couldn\'t read this image. Pick another or take one with the camera.</string>
+
+    <string name="erro_sem_permissao_para_apagar_comentario">Only the author, the person who checked in, or the challenge admin can delete this comment.</string>
+    <string name="erro_reacao_invalida">This reaction doesn\'t exist.</string>
+    <string name="erro_ja_denunciei">You already reported this.</string>
+    <string name="erro_so_o_admin_julga">Only the challenge admin reviews reports.</string>
+    <string name="erro_denuncia_do_proprio_conteudo">You can\'t report your own content.</string>
+    <string name="erro_checkin_ja_invalidado">This check-in has already been invalidated.</string>
+    <string name="erro_denuncia_sem_motivo">Write why you\'re reporting this.</string>
+    <string name="erro_alvo_indisponivel">This content is no longer available.</string>
+
+    <string name="erro_token_de_push_vazio">We couldn\'t set up notifications on this device.</string>
+
+
+    <!-- ============================ Common ============================ -->
+
+    <string name="comum_voltar">Back</string>
+    <string name="comum_cancelar">Cancel</string>
+    <string name="comum_apagar">Delete</string>
+    <string name="comum_denunciar">Report</string>
+    <string name="comum_denuncias">Reports</string>
+    <string name="comum_criar_desafio">Create challenge</string>
+    <string name="comum_entrar_com_codigo">Join with a code</string>
+
+
+    <!-- ============================ Plurals ============================ -->
+
+    <!--
+      English has `one` and `other`, and `other` covers ZERO — "0 people", not "0 person".
+      That is a different rule from pt-BR, and it is the reason these are `plurals` and not an
+      `if` in Kotlin.
+    -->
+
+    <plurals name="grupo_pessoas">
+        <item quantity="one">%1$d person</item>
+        <item quantity="other">%1$d people</item>
+    </plurals>
+
+    <plurals name="checkin_comentarios">
+        <item quantity="one">%1$d comment</item>
+        <item quantity="other">%1$d comments</item>
+    </plurals>
+
+    <plurals name="moderacao_denuncias">
+        <item quantity="one">%1$d report</item>
+        <item quantity="other">%1$d reports</item>
+    </plurals>
+
+
+    <!-- ====================== Group enum labels ====================== -->
+
+    <string name="enum_regra_foto">Photo</string>
+    <string name="enum_regra_localizacao">Location</string>
+    <string name="enum_regra_emoji_do_dia">Emoji of the day</string>
+    <string name="enum_regra_gym_pass">Gympass</string>
+
+    <string name="enum_regra_foto_descricao">A photo, taken in the app right then</string>
+    <string name="enum_regra_localizacao_descricao">The name of the place where you trained</string>
+    <string name="enum_regra_emoji_do_dia_descricao">Recreate the emoji of the day in your photo</string>
+    <string name="enum_regra_gym_pass_descricao">Gympass (not available yet)</string>
+
+    <string name="enum_estado_agendado">Starting soon</string>
+    <string name="enum_estado_ativo">In progress</string>
+    <string name="enum_estado_encerrado">Ended</string>
+
+    <string name="enum_estado_agendado_detalhe">Starting soon · joining open</string>
+    <string name="enum_estado_ativo_detalhe">In progress · joining closed</string>
+
+    <string name="enum_bloqueio_ja_comecou">This challenge has already started. Joining closes when it begins.</string>
+    <string name="enum_bloqueio_encerrado">This challenge has already ended.</string>
+    <string name="enum_bloqueio_lotado">This challenge already has 50 participants.</string>
+    <string name="enum_bloqueio_ja_e_membro">You\'re already in this challenge.</string>
+    <string name="enum_bloqueio_convite_invalido">This link expired or was revoked. Ask for the challenge code.</string>
+
+    <string name="enum_checkin_em_analise">Under admin review · still counts as a point</string>
+    <string name="enum_checkin_invalidado">Invalidated by the admin</string>
+
+
+    <!-- ============================ Challenge list ============================ -->
+
+    <string name="grupos_vazio_titulo">No challenges yet</string>
+    <string name="grupos_vazio_texto">Create a challenge and invite the people you train with, or join one with a code.</string>
+    <string name="grupos_carregando_titulo">Loading your challenges</string>
+    <string name="grupos_carregando_texto">If you\'re already in one, it shows up as soon as the list arrives.</string>
+
+    <string name="grupo_periodo">%1$s to %2$s</string>
+
+
+    <!-- ============================ Join a challenge ============================ -->
+
+    <string name="entrar_titulo">Join a challenge</string>
+    <string name="entrar_campo_ajuda">6 characters, exactly as the person who invited you sees it.</string>
+    <string name="entrar_procurar">Search</string>
+    <string name="entrar_fuso">The day rolls over in the %1$s time zone.</string>
+    <string name="entrar_regras_titulo">For a check-in to count</string>
+    <string name="entrar_regra_item">· %1$s</string>
+    <string name="entrar_confirmar">Join the challenge</string>
+
+
+    <!-- ============================ Create a challenge ============================ -->
+
+    <string name="grupo_form_nome">Challenge name</string>
+    <string name="grupo_form_descricao">Description (optional)</string>
+    <string name="grupo_form_comeca_em">Starts on</string>
+    <string name="grupo_form_termina_em">Ends on</string>
+    <string name="grupo_form_data_botao">%1$s: %2$s</string>
+    <string name="grupo_form_fuso_botao">Time zone: %1$s</string>
+    <string name="grupo_form_fuso_ajuda">The day rolls over in that time zone for everyone, including people in other countries.</string>
+    <string name="grupo_form_regras_titulo">What a check-in requires</string>
+    <string name="grupo_form_regras_ajuda">Anyone joining sees these requirements before accepting.</string>
+    <string name="grupo_form_fuso_dialogo">Challenge time zone</string>
+    <string name="grupo_form_fuso_busca">Search (e.g. Sao_Paulo)</string>
+    <string name="grupo_form_data_escolher">Choose</string>
+
+
+    <!-- ============================ Challenge detail ============================ -->
+
+    <string name="grupo_detalhe_aba_sobre">About</string>
+    <string name="grupo_detalhe_aba_ranking">Ranking</string>
+    <string name="grupo_detalhe_aba_posts">Posts</string>
+    <string name="grupo_detalhe_aba_membros">Members</string>
+
+    <string name="grupo_detalhe_periodo">Period</string>
+    <string name="grupo_detalhe_fuso">Time zone</string>
+    <string name="grupo_detalhe_regras">Check-in requires</string>
+
+    <string name="comum_codigo_do_desafio">Challenge code</string>
+    <string name="grupo_detalhe_copiar">Copy</string>
+    <string name="grupo_detalhe_convidar">Invite</string>
+    <string name="grupo_detalhe_convite_chooser">Invite to the challenge</string>
+    <string name="grupo_detalhe_convite_texto">Join my challenge on FitJourney: \"%1$s\".\nUse the code %2$s to join.</string>
+
+    <string name="grupo_detalhe_sair">Leave the challenge</string>
+    <string name="grupo_detalhe_excluir">Delete the challenge</string>
+    <string name="grupo_detalhe_admin_precisa_transferir">As the admin, you have to hand the role to someone before you leave.</string>
+
+    <!--
+      ⚠️ "Check in" here and "Submit check-in" in `checkin_enviar`. Identical in pt-BR ("Fazer
+      check-in"), and they must NOT be identical here: this one OPENS the check-in screen, that
+      one SENDS the filled-in check-in. This is one of the five pairs the parity test forces apart.
+    -->
+    <string name="grupo_detalhe_fazer_checkin">Check in</string>
+    <string name="grupo_detalhe_ja_treinou">You already trained today. To redo it, delete your check-in on the Posts tab.</string>
+
+    <string name="grupo_detalhe_feed_vazio">Nobody has trained yet. Be the first.</string>
+    <string name="grupo_detalhe_carregar_mais">See older check-ins</string>
+
+    <string name="grupo_detalhe_participantes">Participants · %1$d</string>
+    <string name="grupo_detalhe_admin">Admin</string>
+    <string name="grupo_detalhe_gerenciar">Manage</string>
+
+    <string name="grupo_detalhe_membro_pergunta">What do you want to do with this person?</string>
+    <string name="grupo_detalhe_tornar_admin">Make admin</string>
+    <string name="grupo_detalhe_remover">Remove from group</string>
+
+    <string name="grupo_detalhe_excluir_pergunta">Delete the challenge?</string>
+    <string name="grupo_detalhe_excluir_texto">You\'re the only person here. Leaving deletes this challenge: the code stops working and it can\'t be undone.</string>
+    <string name="grupo_detalhe_sair_pergunta">Leave the challenge?</string>
+    <string name="grupo_detalhe_sair_texto">You stop appearing in the ranking. Your check-ins stay in the group history.</string>
+    <!--
+      ⚠️ "Leave", NOT "Log out". Identical to `menu_sair` in pt-BR ("Sair"), and the whole reason
+      the two keys were never merged: this leaves ONE CHALLENGE, that one ends the account session.
+    -->
+    <string name="grupo_detalhe_sair_confirmar">Leave</string>
+
+
+    <!-- ============================ Check-in in the feed ============================ -->
+
+    <string name="checkin_hoje_as">Today at %1$s</string>
+    <string name="checkin_ontem_as">Yesterday at %1$s</string>
+    <!--
+      ⚠️ MONTH BEFORE DAY, the opposite of pt-BR. %1$02d is still the day and %2$02d still the
+      month — the numbers keep their meaning and the SENTENCE reorders them. This is exactly what
+      positional placeholders are for, and it is the one line where copying the pt-BR order would
+      silently produce "09/13" for an American reader.
+    -->
+    <string name="checkin_data_as">%2$02d/%1$02d at %3$s</string>
+
+    <string name="checkin_acoes">Actions for this check-in</string>
+    <string name="checkin_apagar_meu">Delete my check-in</string>
+    <string name="checkin_invalidar_menu">Invalidate (removes the point)</string>
+    <string name="checkin_reagir">React</string>
+    <string name="checkin_comentar">Comment</string>
+
+    <string name="checkin_apagar_pergunta">Delete this check-in?</string>
+    <string name="checkin_apagar_texto">The day opens up again: you can check in once more today. After midnight it can no longer be deleted.</string>
+
+    <string name="checkin_invalidar_pergunta">Invalidate %1$s\'s check-in?</string>
+    <string name="checkin_invalidar_texto">They lose the point in the ranking and it can\'t be undone. The check-in stays visible, marked as invalidated.</string>
+    <string name="checkin_invalidar_confirmar">Invalidate</string>
+
+
+    <!-- ============================ Comments ============================ -->
+
+    <string name="comentarios_titulo">Comments</string>
+    <string name="comentarios_vazio">No comments yet.</string>
+    <string name="comentarios_acoes">Actions for this comment</string>
+    <string name="comentarios_placeholder">Write a comment</string>
+    <string name="comentarios_enviar">Send</string>
+    <string name="comentarios_denuncia_enviada">Report sent. The challenge admin will review it.</string>
+
+
+    <!-- ============================ Report ============================ -->
+
+    <string name="denuncia_titulo_checkin">Report %1$s\'s check-in?</string>
+    <string name="denuncia_titulo_comentario">Report %1$s\'s comment?</string>
+    <string name="denuncia_explicacao">The challenge admin will review it. They don\'t see who reported it.</string>
+    <string name="denuncia_campo_motivo">Why?</string>
+    <string name="denuncia_campo_exemplo">E.g. the photo isn\'t from today</string>
+
+
+    <!-- ============================ Moderation ============================ -->
+
+    <string name="moderacao_vazio_titulo">Nothing to review.</string>
+    <string name="moderacao_vazio_texto">When someone reports a check-in or a comment, it shows up here.</string>
+    <string name="moderacao_motivo_item">• %1$s</string>
+    <string name="moderacao_manter">Keep</string>
+    <string name="moderacao_invalidar">Invalidate</string>
+    <string name="moderacao_remover">Remove</string>
+
+    <string name="moderacao_manter_pergunta">Keep it and close the case?</string>
+    <string name="moderacao_manter_texto">The content stays as it is and the report leaves the queue. The decision can\'t be undone.</string>
+    <string name="moderacao_invalidar_pergunta">Invalidate this check-in?</string>
+    <string name="moderacao_invalidar_texto">The person loses the point in the ranking. The check-in stays visible, marked as invalidated, and the decision can\'t be undone.</string>
+    <string name="moderacao_remover_pergunta">Remove this comment?</string>
+    <string name="moderacao_remover_texto">The comment disappears for everyone. The decision can\'t be undone.</string>
+    <string name="moderacao_confirmar">Confirm</string>
+
+
+    <!-- ============================ Common (onboarding) ============================ -->
+
+    <string name="comum_continuar">Continue</string>
+
+
+    <!-- ====================== Profile enum labels ====================== -->
+
+    <string name="enum_split_full_body">Full Body</string>
+    <string name="enum_split_upper_lower">Upper/Lower</string>
+    <string name="enum_split_upper_lower_full">Upper/Lower/Full</string>
+    <string name="enum_split_push_pull_legs">Push/Pull/Legs</string>
+    <string name="enum_split_ul_ppl">Upper/Lower + PPL</string>
+    <string name="enum_split_arnold">Arnold</string>
+
+    <string name="enum_split_full_body_descricao">Whole body in every workout.</string>
+    <string name="enum_split_upper_lower_descricao">Upper body one day, lower body the next.</string>
+    <string name="enum_split_upper_lower_full_descricao">Upper, lower and one full-body day.</string>
+    <string name="enum_split_push_pull_legs_descricao">Push, pull and legs.</string>
+    <string name="enum_split_ul_ppl_descricao">Hybrid: opens with Upper/Lower and closes with Push/Pull/Legs.</string>
+    <string name="enum_split_arnold_descricao">Chest+Back, Legs, Shoulders+Arms.</string>
+
+    <string name="enum_limitacao_shoulder">Shoulder</string>
+    <string name="enum_limitacao_knee">Knee</string>
+    <string name="enum_limitacao_lumbar">Lower back / spine</string>
+    <string name="enum_limitacao_wrist">Wrist</string>
+    <string name="enum_limitacao_impact">I can\'t do impact (jumping)</string>
+
+
+    <!-- ============================ Name ============================ -->
+
+    <string name="nome_titulo">What should we call you?</string>
+    <string name="nome_explicacao">This is the name other people see in group challenges. You can change it later.</string>
+
+
+    <!-- ============================ Quiz ============================ -->
+
+    <string name="quiz_progresso">%1$d/%2$d</string>
+    <string name="quiz_concluir">Finish</string>
+
+    <string name="quiz_objetivo_titulo">What\'s your main goal?</string>
+    <string name="quiz_nivel_titulo">What\'s your level today?</string>
+
+    <string name="quiz_idade_titulo">How old are you?</string>
+    <string name="quiz_idade_campo">Age</string>
+    <string name="quiz_idade_invalida">Enter a valid age (5 to 120).</string>
+    <string name="quiz_idade_supervisao">A parent, guardian or professional supervises my training.</string>
+    <string name="quiz_idade_aviso_idoso">Over 69: we recommend regular medical supervision.</string>
+
+    <string name="quiz_dias_titulo">How many days a week?</string>
+
+    <string name="quiz_foco_titulo">Want to focus on a muscle?</string>
+    <string name="quiz_foco_ajuda">Pick up to 2 groups (or leave it empty = balanced).</string>
+    <!-- English does not inflect "selected"; both forms are the same sentence, on purpose. -->
+    <plurals name="quiz_foco_contador">
+        <item quantity="one">%1$d/%2$d selected</item>
+        <item quantity="other">%1$d/%2$d selected</item>
+    </plurals>
+
+    <string name="quiz_descanso_titulo">Is there a day you do NOT want to train?</string>
+    <string name="quiz_descanso_ajuda">Mark your rest days (optional). The AI spreads the workouts across the free days.</string>
+
+    <!-- ⚠️ The ORDER is ISO 8601 (Monday first) and is contract, not presentation. -->
+    <string name="quiz_dia_seg">Mon</string>
+    <string name="quiz_dia_ter">Tue</string>
+    <string name="quiz_dia_qua">Wed</string>
+    <string name="quiz_dia_qui">Thu</string>
+    <string name="quiz_dia_sex">Fri</string>
+    <string name="quiz_dia_sab">Sat</string>
+    <string name="quiz_dia_dom">Sun</string>
+
+    <plurals name="quiz_descanso_insuficiente">
+        <item quantity="one">You need at least %1$d free day (you have %2$d).</item>
+        <item quantity="other">You need at least %1$d free days (you have %2$d).</item>
+    </plurals>
+    <plurals name="quiz_descanso_livres">
+        <item quantity="one">%1$d free day to train.</item>
+        <item quantity="other">%1$d free days to train.</item>
+    </plurals>
+
+    <string name="quiz_corpo_titulo">Weight and height (optional)</string>
+    <string name="quiz_corpo_ajuda">Private data, used only for your plan. You can skip it.</string>
+    <!-- Metric units are NOT converted per language. -->
+    <string name="quiz_corpo_peso">Weight (kg)</string>
+    <string name="quiz_corpo_altura">Height (cm)</string>
+
+    <string name="quiz_ambiente_titulo">Where do you train?</string>
+
+    <string name="quiz_split_titulo">Which training model?</string>
+    <string name="quiz_split_ajuda">Built around your %1$d days. The recommended one is already selected. Keep it or change it.</string>
+    <string name="quiz_split_recomendado">★ Recommended</string>
+
+    <string name="quiz_saude_titulo">Before generating workouts with AI</string>
+    <string name="quiz_saude_ajuda">A few safety questions. Answer honestly.</string>
+    <string name="quiz_saude_cardiaca">I have a diagnosed heart condition</string>
+    <string name="quiz_saude_dor_no_peito">I feel chest pain when I exercise</string>
+    <string name="quiz_saude_articulacao">I have a bone or joint injury that gets worse with exercise</string>
+    <string name="quiz_saude_medicacao">I take relevant ongoing medication</string>
+    <string name="quiz_saude_ciente">I understand that I should see a doctor before training.</string>
+
+    <string name="quiz_limitacoes_titulo">Any limitations?</string>
+    <string name="quiz_limitacoes_ajuda">We\'ll avoid exercises that strain those areas. You can leave this blank.</string>
+
+
+    <!-- ============================ Common (programs and workouts) ============================ -->
+
+    <string name="comum_excluir">Delete</string>
+    <string name="comum_entendi">Got it</string>
+    <string name="comum_fechar">Close</string>
+    <string name="comum_nome">Name</string>
+    <string name="comum_criar_com_ia">Create with AI</string>
+    <string name="comum_desbloquear_treinos">Unlock all workouts</string>
+    <string name="comum_serie">Set %1$d</string>
+    <string name="comum_reps">reps</string>
+    <string name="comum_kg">kg</string>
+
+    <plurals name="programa_treinos">
+        <item quantity="one">%1$d workout</item>
+        <item quantity="other">%1$d workouts</item>
+    </plurals>
+    <plurals name="treino_exercicios">
+        <item quantity="one">%1$d exercise</item>
+        <item quantity="other">%1$d exercises</item>
+    </plurals>
+
+
+    <!-- ============================ Program list ============================ -->
+
+    <string name="programa_lista_titulo">My programs</string>
+    <string name="programa_lista_vazio">No programs yet.</string>
+    <string name="programa_lista_semana">Week %1$d/%2$d</string>
+    <string name="programa_lista_novo">New program</string>
+    <string name="programa_lista_criar">Create</string>
+    <string name="programa_lista_pendente">Pending</string>
+    <string name="programa_lista_nao_sincronizou">Didn\'t sync</string>
+
+
+    <!-- ============================ Generate with AI ============================ -->
+
+    <string name="programa_gerar_explicacao">The assistant builds a complete program for you, based on your profile and goal.</string>
+    <!--
+      ⚠️ Single ellipsis character here and in `programa_reveal_montando`. The pt-BR file still has
+      three dots in one of the two, a divergence it inherited and has not closed. English does not
+      inherit an open defect: both are "…". When pt-BR unifies, the two files agree again.
+    -->
+    <string name="programa_gerar_gerando">Generating your program…</string>
+    <string name="programa_gerar_acao">Generate program</string>
+    <string name="programa_gerar_limite_titulo">Free program limit</string>
+    <string name="programa_gerar_limite_texto">You\'ve hit the limit of generated programs on the free plan. Subscribe to premium to generate more.</string>
+    <string name="programa_gerar_saude_titulo">Health screening</string>
+    <string name="programa_gerar_saude_texto">Complete the health screening in your profile before generating workouts with AI.</string>
+
+
+    <!-- ============================ Program detail ============================ -->
+
+    <string name="programa_detalhe_titulo_padrao">Program</string>
+    <!--
+      ⚠️ "Program" stays in front of the number, the way the pt-BR does, because the split that
+      follows is a proper name ("Push/Pull/Legs") and reads as an apposition either way. The split
+      itself is NOT translated: it is the engine key the server compares.
+    -->
+    <string name="programa_nome_derivado">%1$dx Program · %2$s</string>
+    <string name="programa_detalhe_renomear">Rename</string>
+    <string name="programa_detalhe_vazio">No workouts in this program yet.</string>
+    <!--
+      ⚠️ "Rest day", NOT "Rest". Identical to `sessao_descanso` in pt-BR ("Descanso"): this is a
+      DAY with no workout scheduled, that one is the timer between sets.
+    -->
+    <string name="programa_detalhe_descanso">Rest day</string>
+    <string name="programa_detalhe_assine">Subscribe to unlock</string>
+    <string name="programa_detalhe_bloqueado">Locked</string>
+    <string name="programa_detalhe_semana">Week %1$d of %2$d</string>
+    <string name="programa_detalhe_concluido_titulo">Program complete</string>
+    <string name="programa_detalhe_concluido_texto">Time to switch. Generate a new one with AI or create one by hand.</string>
+    <string name="programa_detalhe_gerar_ia">Generate with AI</string>
+    <string name="programa_detalhe_criar_manual">Create by hand</string>
+    <string name="programa_detalhe_dia_atual">%1$s  ✓</string>
+    <string name="programa_detalhe_excluir_pergunta">Delete program?</string>
+    <string name="programa_detalhe_excluir_texto">This deletes the program and every workout inside it. It can\'t be undone.</string>
+    <string name="programa_detalhe_renomear_titulo">Rename program</string>
+
+
+    <!-- ============================ First program offer ============================ -->
+
+    <string name="programa_oferta_titulo">Want us to build your first program?</string>
+    <string name="programa_oferta_texto">We use your answers to build a week of workouts made for you. If you\'d rather, you can explore the app first and create your workouts by hand.</string>
+    <string name="programa_oferta_gerar">Build my program</string>
+    <string name="programa_oferta_pular">Not now, I want to explore</string>
+
+
+    <!-- ============================ Program reveal ============================ -->
+
+    <string name="programa_reveal_montando">Building your program…</string>
+    <string name="programa_reveal_montando_texto">We\'re calibrating the workouts to your goal and level.</string>
+    <string name="programa_reveal_erro">We couldn\'t build your program.</string>
+    <string name="programa_reveal_tentar_de_novo">Try again</string>
+    <string name="programa_reveal_pronto_trancado">Your plan is ready 🎉</string>
+    <string name="programa_reveal_pronto_liberado">Everything unlocked! 🎉</string>
+    <string name="programa_reveal_resumo">%1$dx a week · %2$s</string>
+    <string name="programa_reveal_semana">Your week</string>
+    <string name="programa_reveal_dia">Day %1$d</string>
+    <string name="programa_reveal_trancado">Locked</string>
+    <string name="programa_reveal_liberado">Unlocked</string>
+    <string name="programa_reveal_beneficios_titulo">With premium you get:</string>
+    <string name="programa_reveal_beneficio_treinos">All %1$d workouts of the week, not just Day 1</string>
+    <string name="programa_reveal_beneficio_trocar">Swap exercises and adjust them your way</string>
+    <string name="programa_reveal_beneficio_reagendar">Reschedule the days however you like</string>
+    <string name="programa_reveal_comecar_gratis">Start with Day 1, free</string>
+    <string name="programa_reveal_comecar">Start training</string>
+
+
+    <!-- ============================ Workout detail ============================ -->
+
+    <string name="treino_detalhe_titulo_padrao">Workout</string>
+    <string name="treino_detalhe_vazio">No exercises in this workout.</string>
+    <string name="treino_detalhe_excluir_pergunta">Delete workout?</string>
+    <string name="treino_detalhe_excluir_texto">This can\'t be undone.</string>
+    <string name="treino_detalhe_trocar_exercicio">🔁  Swap exercise</string>
+    <string name="treino_detalhe_excluir_exercicio">🗑  Delete exercise</string>
+    <string name="treino_detalhe_trocar_por">Swap for</string>
+    <string name="treino_detalhe_sem_alternativas">No alternative of the same type available.</string>
+    <string name="treino_detalhe_premium_titulo">Premium feature</string>
+    <string name="treino_detalhe_premium_texto">Editing an AI-generated program is part of the premium plan. Subscriptions coming soon.</string>
+
+
+    <!-- ============================ Build/edit a workout ============================ -->
+
+    <string name="treino_form_titulo_editar">Edit workout</string>
+    <string name="treino_form_titulo_novo">New workout</string>
+    <string name="treino_form_salvar">Save workout</string>
+    <string name="treino_form_nome">Workout name</string>
+    <string name="treino_form_dia_da_semana">Day of the week</string>
+    <string name="treino_form_add_serie">+ set</string>
+    <string name="treino_form_add_exercicio">+ add exercise</string>
+
+
+    <!-- ============================ Workout session ============================ -->
+
+    <string name="sessao_finalizar">Finish workout</string>
+    <string name="comum_exercicio">Exercise</string>
+    <!-- ⚠️ "Rest", NOT "Rest day": this is the timer between sets. See `programa_detalhe_descanso`. -->
+    <string name="sessao_descanso">Rest</string>
+    <string name="sessao_tempo">%1$d:%2$02d</string>
+    <string name="sessao_mais_30s">+30s</string>
+    <string name="sessao_pular">Skip</string>
+    <string name="sessao_alvo">target %1$d</string>
+
+
+    <!-- ============================ Common (paywall and account) ============================ -->
+
+    <string name="comum_salvar">Save</string>
+    <string name="comum_editar">Edit</string>
+    <string name="comum_conquistas">Achievements</string>
+    <string name="comum_nivel">Level %1$d</string>
+    <string name="comum_x_de_y">%1$d of %2$d</string>
+    <string name="comum_premium">Premium</string>
+    <string name="comum_gratis">Free</string>
+    <string name="comum_sem_valor">Not provided</string>
+    <string name="comum_bloquear">Block</string>
+
+
+    <!-- ============================ Paywall ============================ -->
+
+    <!--
+      ⚠️ This screen is NOT fully in the catalog, by decision. The comparison table keeps each cell
+      as a `String?` and the code branches on the Portuguese word ("Sim"), so the VALUE column
+      stays in Kotlin until the closed type replaces the sentinel. Only the labels are here.
+    -->
+
+    <string name="paywall_chamada">Unlock everything with Premium</string>
+    <string name="paywall_subchamada">Compare what you get on free and what premium unlocks.</string>
+    <string name="paywall_assinar">Subscribe to premium</string>
+    <string name="paywall_agora_nao">Not now</string>
+
+    <string name="paywall_coluna_recurso">Feature</string>
+    <string name="paywall_coluna_free">Free</string>
+
+    <string name="paywall_celula_sim">Yes</string>
+    <string name="paywall_celula_nao">No</string>
+
+    <string name="paywall_grupo_ia">AI workouts</string>
+    <string name="paywall_grupo_manuais">Manual workouts</string>
+    <string name="paywall_grupo_geral">General</string>
+
+    <string name="paywall_recurso_gerar_ia">Generate a program with AI</string>
+    <string name="paywall_recurso_ver_dias">See every day of the program</string>
+    <string name="paywall_recurso_trocar_exercicio">Swap an exercise for an alternative</string>
+    <string name="paywall_recurso_add_remover">Add / remove exercises</string>
+    <string name="paywall_recurso_editar_series">Edit sets and reps</string>
+    <string name="paywall_recurso_reagendar">Reschedule the days of the week</string>
+    <string name="paywall_recurso_criar_manual">Create a manual program</string>
+    <string name="paywall_recurso_add_editar_treinos">Add and edit workouts</string>
+    <string name="paywall_recurso_escolher_dia">Choose the day when creating</string>
+    <string name="paywall_recurso_onboarding">Guided onboarding (split, rest)</string>
+    <string name="paywall_recurso_descanso_ia">Rest days spread by the AI</string>
+    <string name="paywall_recurso_biblioteca">Exercise library</string>
+
+
+    <!-- ============================ Account settings ============================ -->
+
+    <string name="conta_titulo">Account</string>
+    <string name="comum_seu_nome">Your name</string>
+    <string name="conta_nome_ajuda">How other people will see you in groups.</string>
+    <string name="conta_email">Email</string>
+    <string name="conta_plano">Plan</string>
+    <string name="conta_sair">Log out of your account</string>
+
+
+    <!-- ============================ Side drawer ============================ -->
+
+    <string name="menu_meu_perfil">My profile</string>
+    <string name="menu_wiki">Fitness wiki</string>
+    <string name="menu_wiki_selo">phase 8</string>
+    <string name="menu_duvidas">FAQ</string>
+    <string name="menu_conta">Account settings</string>
+    <!--
+      ⚠️ "Log out", NOT "Leave". Identical to `grupo_detalhe_sair_confirmar` in pt-BR ("Sair"):
+      that one leaves a challenge, this one ends the account session.
+    -->
+    <string name="menu_sair">Log out</string>
+
+
+    <!-- ============================ My profile ============================ -->
+
+    <string name="perfil_titulo">Profile</string>
+    <string name="perfil_editar">Edit profile</string>
+    <string name="perfil_sem_nome">You</string>
+    <string name="perfil_metrica_treinos">workouts</string>
+    <string name="perfil_metrica_semana">this week</string>
+
+
+    <!-- ====================== Achievements: the catalogue ====================== -->
+
+    <!--
+      ⚠️ The TITLE is the medal's name, not an instruction, and it is deliberately not a literal
+      rendering of the pt-BR: "Começou" is a past tense that English turns into a stiff "Started".
+      "First one down" keeps the tone of a trophy, which is what the title is for. The description
+      right below already says what to do.
+    -->
+    <string name="conquista_primeiro_treino_titulo">First one down</string>
+    <string name="conquista_primeiro_treino_descricao">Log your first workout</string>
+
+    <string name="conquista_treinos_10_titulo">Ten in the bank</string>
+    <string name="conquista_treinos_10_descricao">Log 10 workouts</string>
+
+    <string name="conquista_treinos_50_titulo">Fifty workouts</string>
+    <string name="conquista_treinos_50_descricao">Log 50 workouts</string>
+
+    <string name="conquista_treinos_100_titulo">One hundred workouts</string>
+    <string name="conquista_treinos_100_descricao">Log 100 workouts</string>
+
+    <!--
+      ⚠️ "on plan" and NOT "in a row". A SCHEDULED rest day counts as met (#22/#26), so a streak is
+      not a run of training days. "7 days in a row" would promise something the rule does not ask
+      for, and the medal would land on a day the person rested. The pt-BR carries the same warning.
+    -->
+    <string name="conquista_streak_7_titulo">One week</string>
+    <string name="conquista_streak_7_descricao">7 days on plan</string>
+
+    <string name="conquista_streak_30_titulo">One month</string>
+    <string name="conquista_streak_30_descricao">30 days on plan</string>
+
+    <string name="conquista_streak_90_titulo">Three months</string>
+    <string name="conquista_streak_90_descricao">90 days on plan</string>
+
+    <string name="conquista_nivel_5_titulo">Level 5</string>
+    <string name="conquista_nivel_5_descricao">Reach level 5</string>
+
+    <string name="conquista_nivel_10_titulo">Level 10</string>
+    <string name="conquista_nivel_10_descricao">Reach level 10</string>
+
+
+    <!-- ============================ Someone else's profile ============================ -->
+
+    <string name="perfil_publico_e_voce">This is your profile, the way others see it. Tap to open yours.</string>
+    <string name="perfil_publico_xp">%1$d XP</string>
+    <string name="perfil_publico_sem_conquistas">No achievements yet.</string>
+    <string name="perfil_publico_adicionar">Add</string>
+    <string name="perfil_publico_cancelar_pedido">Cancel request</string>
+    <string name="perfil_publico_desfazer">Remove friend</string>
+    <string name="perfil_publico_bloquear_pergunta">Block this person?</string>
+    <string name="perfil_publico_bloquear_texto">They won\'t be able to find you or send you requests anymore. If you\'re friends, the friendship is undone, and unblocking later does not restore it.</string>
+
+
+    <!-- ============================ Progress ============================ -->
+
+    <string name="progresso_metrica_treinos">Workouts</string>
+    <string name="progresso_metrica_semana">This week</string>
+    <string name="progresso_metrica_sequencia">Streak</string>
+    <string name="progresso_secao_historico">History</string>
+    <string name="progresso_vazio">No workouts logged yet.\nYour history shows up here after your first workout.</string>
+    <plurals name="progresso_series">
+        <item quantity="one">%1$d set</item>
+        <item quantity="other">%1$d sets</item>
+    </plurals>
+    <!-- ⚠️ MONTH BEFORE DAY, the opposite of pt-BR. %1$s is still the day, %2$s still the month. -->
+    <string name="progresso_data">%2$s %1$s %3$s</string>
+    <string name="progresso_aguardando_sync">Waiting to sync</string>
+    <string name="progresso_pendente">pending</string>
+
+
+    <!-- ============================ Common (social and the rest) ============================ -->
+
+    <string name="comum_aceitar">Accept</string>
+    <string name="comum_recusar">Decline</string>
+    <string name="comum_desbloquear">Unblock</string>
+    <string name="comum_notificacoes">Notifications</string>
+    <string name="comum_exercicios">Exercises</string>
+    <string name="comum_amigos">Friends</string>
+    <string name="comum_bloqueados">Blocked</string>
+    <string name="comum_iniciar_treino">Start workout</string>
+    <string name="comum_progresso">Progress</string>
+    <string name="comum_xp_do_nivel">%1$d / %2$d XP</string>
+
+
+    <!-- ====================== Dates, compact form ====================== -->
+
+    <!--
+      ⚠️ CAPITALIZED, unlike pt-BR. The pt-BR file keeps these lowercase ("sáb · 13 set") and the
+      `quiz_dia_*` family capitalized, because a capital inside a date line looks wrong in
+      Portuguese. English capitalizes day and month abbreviations everywhere, so the two families
+      end up IDENTICAL here. That is correct, and it is not a reason to merge the keys: the
+      distinction is real in pt-BR and may be real in the next language.
+    -->
+    <string name="data_dia_seg">Mon</string>
+    <string name="data_dia_ter">Tue</string>
+    <string name="data_dia_qua">Wed</string>
+    <string name="data_dia_qui">Thu</string>
+    <string name="data_dia_sex">Fri</string>
+    <string name="data_dia_sab">Sat</string>
+    <string name="data_dia_dom">Sun</string>
+
+    <string name="data_mes_jan">Jan</string>
+    <string name="data_mes_fev">Feb</string>
+    <string name="data_mes_mar">Mar</string>
+    <string name="data_mes_abr">Apr</string>
+    <string name="data_mes_mai">May</string>
+    <string name="data_mes_jun">Jun</string>
+    <string name="data_mes_jul">Jul</string>
+    <string name="data_mes_ago">Aug</string>
+    <string name="data_mes_set">Sep</string>
+    <string name="data_mes_out">Oct</string>
+    <string name="data_mes_nov">Nov</string>
+    <string name="data_mes_dez">Dec</string>
+
+
+    <!-- ============================ Home ============================ -->
+
+    <string name="home_bom_dia">Good morning</string>
+    <string name="home_boa_tarde">Good afternoon</string>
+    <string name="home_boa_noite">Good evening</string>
+    <!-- ⚠️ MONTH BEFORE DAY: "Sat · Sep 13". %2$d is still the day, %3$s still the month. -->
+    <string name="home_data">%1$s · %3$s %2$d</string>
+
+    <string name="home_secao_atalhos">Shortcuts</string>
+    <string name="home_atalho_criar_treino">Create workout</string>
+    <string name="home_atalho_grupos">Groups</string>
+
+    <plurals name="home_dias_seguidos">
+        <item quantity="one">day in a row</item>
+        <item quantity="other">days in a row</item>
+    </plurals>
+    <plurals name="home_treinos_pendentes">
+        <item quantity="one">%1$d workout waiting to sync: the XP lands once you\'re online</item>
+        <item quantity="other">%1$d workouts waiting to sync: the XP lands once you\'re online</item>
+    </plurals>
+
+    <!--
+      ⚠️ "Today", NOT "Today\'s workout". Identical to `home_treino_de_hoje` in pt-BR ("Treino de
+      hoje"), and the two are different kinds of thing: this is the card's LABEL, that one is the
+      NAME of a workout the program left unnamed. Label and data.
+    -->
+    <string name="home_secao_treino_de_hoje">Today</string>
+    <string name="home_treino_minutos">~%1$d min</string>
+    <string name="home_treino_semana">week %1$d/%2$d</string>
+    <string name="home_desbloquear_treino">Unlock workout</string>
+
+    <string name="home_concluido_titulo">Workout complete</string>
+    <string name="home_xp_de_hoje">+%1$d XP</string>
+    <string name="home_sequencia_mantida">%1$d day streak kept. Rest: the next workout shows up tomorrow.</string>
+    <string name="home_sequencia_iniciada">Streak started. Rest: the next workout shows up tomorrow.</string>
+    <string name="home_ver_progresso">See progress</string>
+
+    <string name="home_descanso_titulo">Rest day</string>
+    <string name="home_descanso_texto">Recovering is part of progress: muscle is built while you rest.</string>
+    <string name="home_treino_avulso">One-off workout</string>
+
+    <string name="home_sem_programa_titulo">Start your first program</string>
+    <string name="home_sem_programa_texto">Build a program and the workout of the day shows up here, ready to start.</string>
+    <string name="home_montar_com_ia">Build with AI</string>
+    <string name="home_criar_manual">Create a workout by hand</string>
+    <!-- ⚠️ This is DATA, not a label: see the note on `home_secao_treino_de_hoje`. -->
+    <string name="home_treino_de_hoje">Today\'s workout</string>
+
+
+    <!-- ============================ Friends ============================ -->
+
+    <string name="amigos_aba_pedidos">Requests</string>
+    <string name="amigos_secao_adicionar">Add by code</string>
+    <string name="amigos_campo_codigo">8-character code</string>
+    <string name="amigos_buscar">Find</string>
+    <string name="amigos_secao_lista">My friends · %1$d</string>
+    <string name="amigos_lista_vazia">You don\'t have any friends here yet. Give your code to someone you train with.</string>
+    <string name="amigos_secao_meu_codigo">Your code</string>
+    <string name="amigos_copiar_codigo">Copy code</string>
+    <string name="amigos_gerar_codigo">Generate a new code</string>
+    <string name="amigos_pedidos_vazio">No requests right now.</string>
+    <string name="amigos_gerar_pergunta">Generate a new code?</string>
+    <string name="amigos_gerar_texto">The current code stops working immediately. Anyone who has the old one won\'t be able to find you.</string>
+    <string name="amigos_gerar_confirmar">Generate new</string>
+
+
+    <!-- ============================ Blocked ============================ -->
+
+    <string name="bloqueados_vazio">You haven\'t blocked anyone.</string>
+    <string name="bloqueados_aviso">Unblocking does not restore the friendship. If you both want it back, one of you sends a new request.</string>
+
+
+    <!-- ============================ Check-in ============================ -->
+
+    <string name="checkin_titulo">Check-in</string>
+    <string name="checkin_ja_treinou_titulo">You already trained today</string>
+    <string name="checkin_ja_treinou_texto">Only one check-in a day counts in this challenge. To redo it, delete today\'s one on the challenge screen.</string>
+    <string name="checkin_sem_camera_titulo">This challenge requires a photo</string>
+    <string name="checkin_sem_camera_texto">Without camera access you can\'t check in to this challenge. You can allow it in your system settings.</string>
+    <string name="checkin_sem_local_titulo">This challenge requires the location</string>
+    <string name="checkin_sem_local_texto">Without the location you can\'t check in to this challenge.</string>
+    <string name="checkin_abrir_configuracoes">Open settings</string>
+    <!-- ⚠️ "Submit check-in", NOT "Check in": see `grupo_detalhe_fazer_checkin`. -->
+    <string name="checkin_enviar">Submit check-in</string>
+    <string name="checkin_aviso_sem_edicao">Once sent, you can delete it only until the end of the day, and you can\'t edit it.</string>
+    <string name="checkin_secao_emoji">Today\'s emoji</string>
+    <string name="checkin_emoji_instrucao">Recreate this emoji in your photo.</string>
+    <string name="checkin_tirar_outra">Take another</string>
+    <string name="checkin_trocar_camera">Switch camera</string>
+    <string name="checkin_secao_local">Where you trained</string>
+    <string name="checkin_local_bairro">Neighborhood</string>
+    <string name="checkin_local_exato">Exactly here</string>
+    <string name="checkin_campo_local">Place name</string>
+    <string name="checkin_campo_local_exemplo">Smart Fit, Home, Park…</string>
+    <string name="checkin_campo_local_ajuda">The group sees only this text. You can replace it with a nickname.</string>
+    <string name="checkin_procurando_local">Locating you…</string>
+
+
+    <!-- ============================ Notifications ============================ -->
+
+    <string name="notificacoes_vazio">Nothing here yet.</string>
+    <plurals name="notificacoes_nao_lidas">
+        <item quantity="one">Notifications, %1$d unread</item>
+        <item quantity="other">Notifications, %1$d unread</item>
+    </plurals>
+    <string name="notificacoes_canal_descricao">Friend requests and app alerts</string>
+
+
+    <!-- ============================ Navigation and screens to come ============================ -->
+
+    <string name="nav_abrir_menu">Open menu</string>
+    <string name="nav_wiki_descricao">Content about training, technique and recovery. Arrives in Phase 8.</string>
+    <string name="nav_duvidas_descricao">The most common questions about the app and the workouts.</string>
+    <string name="em_breve">Coming soon</string>
+
+
+    <!-- ============================ Exercise library ============================ -->
+
+    <string name="exercicios_todas">All</string>
+    <string name="exercicios_vazio">No exercises.</string>
+    <string name="exercicio_nao_encontrado">Exercise not found</string>
+    <string name="exercicios_adicionar_titulo">Add exercises</string>
+    <string name="exercicios_adicionar_acao">Add (%1$d)</string>
+
+
+    <!-- ============================ Log out ============================ -->
+
+    <string name="sair_pergunta">Log out of your account?</string>
+    <string name="sair_texto">You\'ll need to log in again to reach your programs.</string>
+
+    <!-- ============================ Language ============================ -->
+
+    <string name="comum_idioma">Language</string>
+    <string name="idioma_ajuda">This choice applies to this device. On Android 13 and newer it also appears in your system settings.</string>
+    <string name="idioma_seguir_sistema">Follow the device language</string>
+
+    <!--
+      ⚠️ LANGUAGE NAMES ARE NEVER TRANSLATED, in any locale. Each one always appears in its own
+      language, identical to the pt-BR file. The person who needs this screen is the one who opened
+      the app in a language they cannot read, and they recognize "Português (Brasil)", not
+      "Portuguese". Translating this list makes unreadable the one screen that exists to escape an
+      unreadable language.
+    -->
+    <string name="idioma_pt_br">Português (Brasil)</string>
+    <string name="idioma_en">English</string>
+
+    <string name="idioma_selecionado">Selected</string>
+
+    <!-- ============================ Bottom tabs ============================ -->
+
+    <!-- ⚠️ VERY tight: the bar splits the screen width four ways. Keep under ~10 characters. -->
+    <string name="nav_aba_inicio">Home</string>
+    <string name="nav_aba_treino">Training</string>
+    <string name="nav_aba_grupos">Groups</string>
+    <string name="nav_aba_progresso">Progress</string>
+
+    <!-- ============================ Paywall: value column ============================ -->
+
+    <!-- Narrow column: keep under ~14 characters. -->
+    <string name="paywall_valor_um_programa">1 program</string>
+    <string name="paywall_valor_varios">Several</string>
+    <string name="paywall_valor_so_dia_1">Day 1 only</string>
+    <string name="paywall_valor_todos">All</string>
+    <string name="paywall_valor_ate_2">Up to 2</string>
+
+    <!-- ====== Errors that used to carry a server-side number ====== -->
+
+    <!-- ⚠️ The numbers are product rules living in the server. See the pt-BR file for which constant each one mirrors. -->
+    <string name="erro_nome_curto">Use at least 2 characters.</string>
+    <string name="erro_nome_longo">Use at most 30 characters.</string>
+    <string name="erro_comentario_invalido">Write something, up to 500 characters.</string>
+    <string name="erro_nome_do_local_longo">Use up to 60 characters.</string>
+    <string name="erro_prazo_da_denuncia">Reports are only valid up to 7 days after the check-in.</string>
+    <string name="erro_limite_de_ia_gratis">The free plan generates 1 program with AI. Subscribe to premium to generate more.</string>
+    <string name="erro_limite_de_manuais_gratis">The free plan creates up to 2 programs. Subscribe to premium to create more.</string>
+    <string name="erro_limite_de_programas_premium">You have reached the limit of 10 programs.</string>
+    <string name="erro_dias_livres_insuficientes">You marked too many rest days to train that often.</string>
+
+</resources>

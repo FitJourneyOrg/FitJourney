@@ -18,10 +18,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import dev.rafael.app.ui.ErroDeTela
+import dev.rafael.app.R
 import dev.rafael.app.ui.ShimmerContent
 import org.koin.androidx.compose.koinViewModel
 import org.koin.core.parameter.parametersOf
@@ -47,8 +49,14 @@ fun WorkoutSessionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.workoutName.ifBlank { "Treino" }) },
-                navigationIcon = { IconButton(onClick = onDone) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar") } },
+                title = {
+                    Text(state.workoutName.ifBlank { stringResource(R.string.treino_detalhe_titulo_padrao) })
+                },
+                navigationIcon = {
+                    IconButton(onClick = onDone) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.comum_voltar))
+                    }
+                },
             )
         },
         bottomBar = {
@@ -69,7 +77,7 @@ fun WorkoutSessionScreen(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
                         ) {
                             if (state.isSaving) CircularProgressIndicator(Modifier.size(20.dp))
-                            else Text("Finalizar treino")
+                            else Text(stringResource(R.string.sessao_finalizar))
                         }
                     }
                 }
@@ -86,7 +94,13 @@ fun WorkoutSessionScreen(
                         val firstOfExercise = i == 0 || state.entries[i - 1].orderIndex != e.orderIndex
                         if (firstOfExercise) {
                             Spacer(Modifier.height(12.dp))
-                            Text(e.exerciseName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                // O catálogo pode não conhecer o id gravado no treino; o fallback
+                                // é da TELA, não do ViewModel, para poder vir do catálogo pt-BR.
+                                e.exerciseName ?: stringResource(R.string.comum_exercicio),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold,
+                            )
                         }
                         SetRow(
                             entry = e,
@@ -138,10 +152,11 @@ private fun RestTimerBar(
                 tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.width(8.dp))
-            Text("Descanso", style = MaterialTheme.typography.bodyMedium)
+            // NÃO é o mesmo "Descanso" do dia sem treino no programa: aqui é o cronômetro.
+            Text(stringResource(R.string.sessao_descanso), style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.weight(1f))
             Text(
-                "%d:%02d".format(remaining / 60, remaining % 60),
+                stringResource(R.string.sessao_tempo, remaining / 60, remaining % 60),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Medium,
                 color = MaterialTheme.colorScheme.primary,
@@ -151,8 +166,12 @@ private fun RestTimerBar(
         LinearProgressIndicator(progress = { progresso }, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onAdd30, modifier = Modifier.weight(1f)) { Text("+30s") }
-            OutlinedButton(onClick = onSkip, modifier = Modifier.weight(1f)) { Text("Pular") }
+            OutlinedButton(onClick = onAdd30, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.sessao_mais_30s))
+            }
+            OutlinedButton(onClick = onSkip, modifier = Modifier.weight(1f)) {
+                Text(stringResource(R.string.sessao_pular))
+            }
         }
     }
 }
@@ -169,12 +188,16 @@ private fun SetRow(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text("Série ${entry.setIndex + 1}", Modifier.width(64.dp), style = MaterialTheme.typography.bodySmall)
+        Text(
+            stringResource(R.string.comum_serie, entry.setIndex + 1),
+            Modifier.width(64.dp),
+            style = MaterialTheme.typography.bodySmall,
+        )
         OutlinedTextField(
             value = entry.repsDone,
             onValueChange = onReps,
-            label = { Text("reps") },
-            supportingText = { Text("alvo ${entry.targetReps}") },
+            label = { Text(stringResource(R.string.comum_reps)) },
+            supportingText = { Text(stringResource(R.string.sessao_alvo, entry.targetReps)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.weight(1f),
@@ -182,7 +205,7 @@ private fun SetRow(
         OutlinedTextField(
             value = entry.weight,
             onValueChange = onWeight,
-            label = { Text("kg") },
+            label = { Text(stringResource(R.string.comum_kg)) },
             singleLine = true,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             modifier = Modifier.weight(1f),

@@ -14,10 +14,14 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.ui.ErroDeTela
+import dev.rafael.app.ui.Frase
+import dev.rafael.app.ui.resolver
+import dev.rafael.app.R
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.model.Exercise
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
@@ -61,12 +65,17 @@ fun WorkoutDetailScreen(
     if (showConfirm) {
         AlertDialog(
             onDismissRequest = { showConfirm = false },
-            title = { Text("Excluir treino?") },
-            text = { Text("Esta ação não pode ser desfeita.") },
+            title = { Text(stringResource(R.string.treino_detalhe_excluir_pergunta)) },
+            text = { Text(stringResource(R.string.treino_detalhe_excluir_texto)) },
             confirmButton = {
-                TextButton(onClick = { showConfirm = false; viewModel.onEvent(WorkoutDetailEvent.Delete) }) { Text("Excluir") }
+                TextButton(onClick = {
+                    showConfirm = false
+                    viewModel.onEvent(WorkoutDetailEvent.Delete)
+                }) { Text(stringResource(R.string.comum_excluir)) }
             },
-            dismissButton = { TextButton(onClick = { showConfirm = false }) { Text("Cancelar") } },
+            dismissButton = {
+                TextButton(onClick = { showConfirm = false }) { Text(stringResource(R.string.comum_cancelar)) }
+            },
         )
     }
 
@@ -86,27 +95,31 @@ fun WorkoutDetailScreen(
                                 is AppResult.Failure -> altError = r.error.message
                             }
                         }
-                    }) { Text("🔁  Trocar exercício") }
+                    }) { Text(stringResource(R.string.treino_detalhe_trocar_exercicio)) }
                     TextButton(onClick = {
                         actionFor = null
                         viewModel.onEvent(WorkoutDetailEvent.RemoveExercise(ex.orderIndex))
-                    }) { Text("🗑  Excluir exercício") }
+                    }) { Text(stringResource(R.string.treino_detalhe_excluir_exercicio)) }
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { actionFor = null }) { Text("Cancelar") } },
+            dismissButton = {
+                TextButton(onClick = { actionFor = null }) { Text(stringResource(R.string.comum_cancelar)) }
+            },
         )
     }
 
     swapFor?.let { ex ->
         AlertDialog(
             onDismissRequest = { swapFor = null },
-            title = { Text("Trocar por") },
+            title = { Text(stringResource(R.string.treino_detalhe_trocar_por)) },
             text = {
                 when {
-                    altError != null -> Text(altError!!, color = MaterialTheme.colorScheme.error)
+                    // ⚠️ TEXTO DO SERVIDOR, não traduzido. Ver `TextoDoServidorTest`.
+                    altError != null ->
+                        Text(Frase.DoServidor(altError!!).resolver(), color = MaterialTheme.colorScheme.error)
                     alternatives == null -> ShimmerList(rows = 4)
-                    alternatives!!.isEmpty() -> Text("Nenhuma alternativa do mesmo tipo disponível.")
+                    alternatives!!.isEmpty() -> Text(stringResource(R.string.treino_detalhe_sem_alternativas))
                     else -> LazyColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
                         items(alternatives!!) { alt ->
                             Text(
@@ -124,34 +137,44 @@ fun WorkoutDetailScreen(
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { swapFor = null }) { Text("Fechar") } },
+            dismissButton = {
+                TextButton(onClick = { swapFor = null }) { Text(stringResource(R.string.comum_fechar)) }
+            },
         )
     }
 
     if (state.showPaywall) {
         AlertDialog(
             onDismissRequest = { viewModel.onEvent(WorkoutDetailEvent.DismissPaywall) },
-            title = { Text("Recurso premium") },
-            text = { Text("Editar um programa gerado por IA faz parte do plano premium. Assinatura em breve.") },
-            confirmButton = { TextButton(onClick = { viewModel.onEvent(WorkoutDetailEvent.DismissPaywall) }) { Text("Entendi") } },
+            title = { Text(stringResource(R.string.treino_detalhe_premium_titulo)) },
+            text = { Text(stringResource(R.string.treino_detalhe_premium_texto)) },
+            confirmButton = {
+                TextButton(onClick = { viewModel.onEvent(WorkoutDetailEvent.DismissPaywall) }) {
+                    Text(stringResource(R.string.comum_entendi))
+                }
+            },
         )
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.name.ifBlank { "Treino" }) },
+                title = {
+                    Text(state.name.ifBlank { stringResource(R.string.treino_detalhe_titulo_padrao) })
+                },
                 navigationIcon = {
                     IconButton(onClick = { onBack(state.alterado) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Voltar")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.comum_voltar))
                     }
                 },
                 actions = {
                     IconButton(onClick = {
                         // programa IA trancado (free): não entra na edição, mostra paywall
                         if (editLocked) viewModel.onEvent(WorkoutDetailEvent.ShowPaywall) else onEdit()
-                    }) { Icon(Icons.Default.Edit, "Editar") }
-                    IconButton(onClick = { showConfirm = true }) { Icon(Icons.Default.Delete, "Excluir") }
+                    }) { Icon(Icons.Default.Edit, stringResource(R.string.comum_editar)) }
+                    IconButton(onClick = { showConfirm = true }) {
+                        Icon(Icons.Default.Delete, stringResource(R.string.comum_excluir))
+                    }
                 },
             )
         },
@@ -162,7 +185,7 @@ fun WorkoutDetailScreen(
                     Button(
                         onClick = onStartSession,
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
-                    ) { Text("Iniciar treino") }
+                    ) { Text(stringResource(R.string.comum_iniciar_treino)) }
                 }
             }
         },
@@ -178,7 +201,7 @@ fun WorkoutDetailScreen(
                         onAcao = { viewModel.onEvent(WorkoutDetailEvent.Retry) },
                     )
                 state.exercises.isEmpty() ->
-                    Text("Nenhum exercício neste treino.", Modifier.align(Alignment.Center))
+                    Text(stringResource(R.string.treino_detalhe_vazio), Modifier.align(Alignment.Center))
                 else ->
                     LazyColumn(Modifier.padding(16.dp)) {
                         items(state.exercises) { ex ->

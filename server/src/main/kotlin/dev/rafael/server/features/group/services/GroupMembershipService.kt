@@ -21,6 +21,7 @@ import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
+import dev.rafael.contract.error.ErrorCodes
 
 /**
  * ENTRAR, SAIR e mandar no grupo (ARCH #33, fatia A.2).
@@ -149,7 +150,10 @@ class GroupMembershipService(
                 // AGENDADO, com o código circulando). Agora há para quem transferir, e a recusa
                 // de 2.5 volta a ser a resposta certa.
                 if (apagou) Unit.asSuccess()
-                else AppError.Conflict("Transfira o cargo de admin antes de sair do grupo.").asFailure()
+                else AppError.Conflict(
+                    "Transfira o cargo de admin antes de sair do grupo.",
+                    code = ErrorCodes.ADMIN_PRECISA_TRANSFERIR,
+                ).asFailure()
             }
         }
 
@@ -164,7 +168,7 @@ class GroupMembershipService(
             if (papel != MemberRole.ADMIN) return@comMembro semPermissao()
             val alvo = runCatching { Uuid.parse(alvoId) }.getOrNull() ?: return@comMembro naoEncontrado()
             if (alvo == user) {
-                return@comMembro AppError.Validation("Para sair do grupo, use a opção de sair.").asFailure()
+                return@comMembro AppError.Validation("Para sair do grupo, use a opção de sair.", code = ErrorCodes.USE_SAIR_EM_VEZ_DE_EXPULSAR).asFailure()
             }
             repository.roleOf(id, alvo).flatMap { papelDoAlvo ->
                 if (papelDoAlvo == null) return@flatMap naoEncontrado()
@@ -189,7 +193,7 @@ class GroupMembershipService(
         comMembro(firebaseUid, email, groupId) { id, user, papel ->
             if (papel != MemberRole.ADMIN) return@comMembro semPermissao()
             val novo = runCatching { Uuid.parse(novoAdminId) }.getOrNull() ?: return@comMembro naoEncontrado()
-            if (novo == user) return@comMembro AppError.Validation("Você já é o admin.").asFailure()
+            if (novo == user) return@comMembro AppError.Validation("Você já é o admin.", code = ErrorCodes.JA_SOU_O_ADMIN).asFailure()
 
             repository.roleOf(id, novo).flatMap { papelDoNovo ->
                 if (papelDoNovo == null) return@flatMap naoEncontrado()
@@ -209,7 +213,12 @@ class GroupMembershipService(
                 val validade = GroupPolicy.validadeDoConvite(agora, grupo.startDate, grupo.timezone)
                 if (validade <= agora) {
                     // O grupo já começou: gerar link que nasce vencido enganaria o admin.
-                    return@flatMap AppError.Conflict("O desafio já começou — a entrada está fechada.").asFailure()
+                    // Sem travessão (#37, seção 8). A frase antiga usava um, e era a única
+                    // violação da convenção em todo o catálogo de erros.
+                    return@flatMap AppError.Conflict(
+                        "O desafio já começou e a entrada está fechada.",
+                        code = ErrorCodes.DESAFIO_JA_COMECOU,
+                    ).asFailure()
                 }
                 val token = Uuid.random()
                 repository.createInvite(
@@ -331,8 +340,13 @@ class GroupMembershipService(
         JoinBlock.CONVITE_INVALIDO -> "Este link expirou ou foi revogado. Peça o código do desafio."
     }
 
-    private fun <T> naoEncontrado(): AppResult<T> = AppError.NotFound("Grupo não encontrado").asFailure()
-    private fun <T> semPermissao(): AppResult<T> = AppError.Forbidden("Só o admin do grupo pode fazer isso.").asFailure()
+    // Os dois casos juntos, pela mesma razão do `CheckInService`: entrar, sair, convidar e
+    // administrar são gestos que a tela só oferece a quem já está dentro.
+    private fun <T> naoEncontrado(): AppResult<T> = AppError.NotFound(
+        "Este desafio não está disponível para você.",
+        code = ErrorCodes.GRUPO_NAO_EXISTE,
+    ).asFailure()
+    private fun <T> semPermissao(): AppResult<T> = AppError.Forbidden("Só o admin do grupo pode fazer isso.", code = ErrorCodes.SO_O_ADMIN_DO_GRUPO).asFailure()
 
     private fun String?.paraPapel(): MemberRole =
         runCatching { MemberRole.valueOf(this!!) }.getOrDefault(MemberRole.MEMBRO)

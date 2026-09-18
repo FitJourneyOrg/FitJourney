@@ -25,14 +25,17 @@ import kotlin.time.Duration.Companion.seconds
 /**
  * O que está sendo denunciado, enquanto o diálogo está aberto (fatia E.2).
  *
- * Carrega o `titulo` já pronto em vez de o id sozinho: a tela precisa dizer O QUE se está
- * denunciando ("o check-in de Ana", "o comentário de João"), e buscar isso de novo na lista no
- * momento de desenhar exporia o diálogo ao polling — o item pode ter saído do feed.
+ * Carrega o `nome` do autor em vez de o id sozinho: o diálogo precisa dizer DE QUEM é o conteúdo,
+ * e buscar isso de novo na lista no momento de desenhar exporia o diálogo ao polling — o item pode
+ * ter saído do feed.
+ *
+ * ⚠️ Guarda o NOME, não a frase. Até a G.3 este campo era um `titulo` com `"o check-in de Ana"`
+ * pronto, e o diálogo o concatenava num título maior. Frase montada por pedaços não se traduz.
  */
 data class AlvoDeDenuncia(
     val id: String,
     val ehComentario: Boolean,
-    val titulo: String,
+    val nome: String,
 )
 
 data class GrupoDetalheState(

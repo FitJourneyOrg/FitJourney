@@ -1,5 +1,6 @@
 package dev.rafael.server.features.group.services
 
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.group.CreateGroupRequest
 import dev.rafael.contract.group.GroupDto
 import dev.rafael.contract.group.GroupType
@@ -99,19 +100,43 @@ class GroupService(
     /**
      * Um grupo, para QUEM É MEMBRO.
      *
-     * Não-membro recebe **NotFound**, não Forbidden. Forbidden confirmaria que o grupo existe,
-     * e com o id na mão daria para enumerar grupos alheios — o mesmo cuidado que a regra de
-     * visibilidade do perfil (#34) toma com o `userId`.
+     * ## O não-membro passou a saber que não é membro (G.2, ARCH #37)
+     *
+     * Antes os três caminhos daqui devolviam a MESMA frase, *"Grupo não encontrado"*, e a versão
+     * anterior deste KDoc justificava: *"Forbidden confirmaria que o grupo existe, e com o id na
+     * mão daria para enumerar grupos alheios"*.
+     *
+     * A troca foi reavaliada e **desfeita para o caso do não-membro**, com o motivo escrito:
+     *
+     * - o id do grupo é **UUID**, e ninguém enumera 2¹²² valores. A defesa protegia contra um
+     *   ataque que não existe;
+     * - o caso REAL é sair de um desafio e abrir depois uma notificação antiga dele. Dizer "não
+     *   encontrado" ali faz a pessoa acreditar que o desafio **foi apagado**, quando ele está lá e
+     *   ela é que saiu.
+     *
+     * Continua sendo **404**, e não 403: o status não muda, só o código e o texto. O que se ganha é
+     * a pessoa entender o que aconteceu; o que se perde é a confirmação de existência, e ela custa
+     * pouco aqui.
+     *
+     * ⚠️ **Isto NÃO vale para o perfil de terceiro** (`PERFIL_DE_TERCEIRO_INDISPONIVEL`). Lá o id
+     * circula em notificação, link e feed, e a confirmação teria valor para quem estivesse
+     * colecionando contas.
      */
     suspend fun porId(firebaseUid: String, email: String?, groupId: String): AppResult<GroupDto> =
         userService.findOrCreate(firebaseUid, email).flatMap { user ->
             val id = runCatching { Uuid.parse(groupId) }.getOrNull()
-                ?: return@flatMap AppError.NotFound("Grupo não encontrado").asFailure()
+                ?: return@flatMap grupoNaoExiste()
 
             repository.roleOf(id, user.id).flatMap { papel ->
-                if (papel == null) return@flatMap AppError.NotFound("Grupo não encontrado").asFailure()
+                if (papel == null) {
+                    return@flatMap AppError.NotFound(
+                        "Você não faz parte deste desafio.",
+                        code = ErrorCodes.NAO_SOU_MEMBRO,
+                    ).asFailure()
+                }
                 repository.findById(id).flatMap { grupo ->
-                    if (grupo == null) return@flatMap AppError.NotFound("Grupo não encontrado").asFailure()
+                    // Corrida: a filiação existia e o grupo sumiu entre uma consulta e a outra.
+                    if (grupo == null) return@flatMap grupoNaoExiste()
                     val agora = clock.now()
                     // "Hoje" no fuso do GRUPO (4.6) — a mesma conta do check-in, e por isso ela
                     // mora numa política só. Se cada lado calculasse o seu, um deles ficaria para
@@ -124,6 +149,17 @@ class GroupService(
                 }
             }
         }
+
+    /**
+     * O desafio não existe mesmo: id malformado, ou apagado.
+     *
+     * Separado do [ErrorCodes.NAO_SOU_MEMBRO] na G.2. O id malformado cai aqui porque não há o que
+     * confirmar: não existe grupo com aquele id em lugar nenhum.
+     */
+    private fun grupoNaoExiste(): AppResult<GroupDto> = AppError.NotFound(
+        "Este desafio não existe mais.",
+        code = ErrorCodes.GRUPO_NAO_EXISTE,
+    ).asFailure()
 
     /** Papel gravado que não existe mais no enum: trata como MEMBRO, o menos privilegiado. */
     private fun String.paraPapel(): MemberRole =

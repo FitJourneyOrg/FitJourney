@@ -4,6 +4,7 @@ import dev.rafael.contract.group.GroupRule
 import dev.rafael.contract.group.GroupType
 import dev.rafael.contract.group.MemberRole
 import dev.rafael.contract.group.ScoringModel
+import dev.rafael.contract.i18n.Idioma
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asSuccess
 import dev.rafael.server.features.group.db.GroupMemberRow
@@ -222,6 +223,16 @@ class FakeUserRepository(usuarios: List<User> = emptyList()) : UserRepository {
 
     override suspend fun updateDisplayName(userId: Uuid, displayName: String): AppResult<User?> =
         atualizar(userId) { it.copy(displayName = displayName) }
+
+    /**
+     * V47 (#37). Guarda de verdade, e não `error("não deveria ser chamado")`.
+     *
+     * O `NotificacaoService` LÊ este idioma para escolher o texto do aviso, então um dublê que não
+     * guardasse faria todo teste de notificação sair em português por construção, inclusive um que
+     * afirmasse o contrário.
+     */
+    override suspend fun updateIdioma(userId: Uuid, idioma: Idioma): AppResult<User?> =
+        atualizar(userId) { it.copy(idioma = idioma) }
 
     private fun atualizar(userId: Uuid, bloco: (User) -> User): AppResult<User?> {
         val atual = porUid.values.firstOrNull { it.id == userId } ?: return null.asSuccess()

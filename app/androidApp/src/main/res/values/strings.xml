@@ -1,3 +1,1755 @@
 <resources>
+
+    <!--
+      ============================================================================================
+      TEXTO DA INTERFACE (fatia G.3, ARCH #37)
+      ============================================================================================
+
+      CONVENÇÃO DE CHAVE: <area>_<elemento>, em snake_case.
+
+        login_titulo          tela de login
+        grupo_detalhe_aba_posts
+        comum_voltar          usado em mais de uma tela
+        enum_musculo_chest    rótulo de valor de enum
+        erro_pessoa_nao_existe  frase de erro, chaveada pelo ErrorCodes
+
+      A área vem do PACOTE da tela, não do que a frase diz. Chave que descreve o texto
+      (`erro_nao_encontrado`) envelhece quando o texto muda; chave que descreve o LUGAR sobrevive.
+
+      ============================================================================================
+      TODO STRING TEM COMENTÁRIO DE CONTEXTO, E ISSO NÃO É OPCIONAL
+      ============================================================================================
+
+      Quem traduz não tem o app aberto. "Denunciar" sozinho pode virar *Report*, *Flag* ou
+      *Denounce*, e as três estão certas em algum contexto e erradas neste.
+
+      O comentário diz ONDE aparece e, quando o espaço é apertado (botão, chip, aba), qual é o
+      limite. Extrair sem comentar seria mais rápido e entregaria um catálogo que só serve para
+      quem já conhece o app — ou seja, para ninguém que vá traduzi-lo.
+
+      > O tradutor não tem o app aberto. Contexto que não está no documento não existe.
+
+      ============================================================================================
+      SEM TRAVESSÃO, SEM CAIXA ALTA (#37, seção 8)
+      ============================================================================================
+
+      Nem — nem –, em nenhum idioma. Os 15 que vieram do código foram extraídos como estavam e
+      reescritos no portão do pt-BR, em 2026-09-10: onde o travessão introduzia a consequência
+      virou `:` ou `.`; onde juntava orações coordenadas, virou `,`.
+
+      Caixa alta também não. Doze cabeçalhos vinham em maiúsculas cravadas no texto e passaram a
+      caixa normal na mesma data — **as telas mudaram de aparência de propósito**. Caixa é decisão
+      de desenho, e o Compose não tem `text-transform`: deixá-la no dado obrigaria todo idioma a
+      herdar uma escolha tipográfica feita olhando só para o português.
+
+      As duas deixaram de ser lista de pendência e viraram invariante: o `CatalogoDeStringsTest`
+      PROÍBE as duas, e uma reincidência quebra o build.
+
+      ============================================================================================
+      RETICÊNCIAS SÃO O CARACTERE `…`, NUNCA TRÊS PONTOS
+      ============================================================================================
+
+      Três das quatro frases já usavam `…`; uma usava `...`, e a divergência atravessou o portão do
+      pt-BR porque ninguém enxerga a diferença lendo. O leitor de tela enxerga: `…` é anunciado
+      como reticência, `...` vira três pausas. E numa fonte proporcional os três pontos ficam
+      espaçados diferente do resto do texto.
+
+      Unificado em 2026-09-11 e proibido pelo mesmo teste. É a terceira convenção tipográfica desta
+      faixa, e as três têm a mesma forma: **decisão de desenho não viaja dentro do dado**.
+    -->
+
+    <!-- Nome do app na gaveta e no launcher. NÃO se traduz: é marca. -->
     <string name="app_name">FitJourney</string>
+
+
+    <!-- ============================ Login ============================ -->
+
+    <!-- Título da tela de entrada, acima dos campos. -->
+    <string name="login_titulo">FitJourney</string>
+
+    <!-- Rótulo do campo de e-mail. Espaço curto: cabe ~20 caracteres. -->
+    <string name="login_email">E-mail</string>
+
+    <!-- Rótulo do campo de senha. Espaço curto: cabe ~20 caracteres. -->
+    <string name="login_senha">Senha</string>
+
+    <!-- Botão primário: entra com uma conta que JÁ existe. Botão, ~15 caracteres. -->
+    <string name="login_entrar">Entrar</string>
+
+    <!-- Botão secundário, ao lado do anterior: cria conta nova. Botão, ~15 caracteres. -->
+    <string name="login_cadastrar">Cadastrar</string>
+
+
+    <!-- ====================== Detalhe do exercício ====================== -->
+
+    <!-- Cabeçalhos das seções da tela, um por bloco de informação. -->
+    <string name="exercicio_secao_sobre">Sobre o exercício</string>
+    <string name="exercicio_secao_musculos">Músculos trabalhados</string>
+    <string name="exercicio_secao_equipamento">Equipamento</string>
+    <string name="exercicio_secao_como_treinar">Como treinar</string>
+
+    <!--
+      Linha abaixo dos chips de músculo primário, listando os secundários.
+      %1$s é a lista já formatada e separada por vírgula: "Tríceps, Ombros".
+    -->
+    <string name="exercicio_musculos_secundarios">Também: %1$s</string>
+
+    <!-- Rótulos da coluna esquerda do bloco "Como treinar". Curtos: ~15 caracteres. -->
+    <string name="exercicio_info_nivel">Nível</string>
+    <string name="exercicio_info_prescricao">Prescrição</string>
+    <string name="exercicio_info_tipo">Tipo</string>
+    <string name="exercicio_info_execucao">Execução</string>
+
+    <!-- Valores do "Tipo": exercício que move várias articulações, ou uma só. -->
+    <string name="exercicio_tipo_composto">Composto</string>
+    <string name="exercicio_tipo_isolamento">Isolamento</string>
+
+    <!-- Valores da "Execução": um lado por vez, ou os dois juntos. -->
+    <string name="exercicio_execucao_unilateral">Unilateral</string>
+    <string name="exercicio_execucao_bilateral">Bilateral</string>
+
+
+    <!--
+      ====================== Rótulos de enum (ver ui/Rotulos.kt) ======================
+
+      Traduzidos UMA vez e usados em toda tela. Antes desta fatia, "Peito" e "Iniciante" estavam
+      duplicados em duas telas: duplicata de texto sobrevive num idioma e diverge no segundo.
+
+      Todos são rótulo curto: cabem em chip, aba e linha de resumo. ~20 caracteres.
+    -->
+
+    <!-- Grupos musculares. Aparecem em chip na tela de exercício e como escolha no quiz. -->
+    <string name="enum_musculo_chest">Peito</string>
+    <string name="enum_musculo_back">Costas</string>
+    <string name="enum_musculo_biceps">Bíceps</string>
+    <string name="enum_musculo_triceps">Tríceps</string>
+    <string name="enum_musculo_forearms">Antebraços</string>
+    <string name="enum_musculo_shoulders">Ombros</string>
+    <string name="enum_musculo_legs">Pernas</string>
+    <string name="enum_musculo_glutes">Glúteos</string>
+    <!-- Região abdominal e lombar. "Core" é o termo usado em academia, não se traduz. -->
+    <string name="enum_musculo_core">Core</string>
+
+    <!-- Nível de experiência. Escolhido no quiz e exibido no exercício. -->
+    <string name="enum_nivel_beginner">Iniciante</string>
+    <string name="enum_nivel_intermediate">Intermediário</string>
+    <string name="enum_nivel_advanced">Avançado</string>
+
+    <!-- Objetivo do treino. Escolha do quiz, uma opção por cartão. -->
+    <string name="enum_objetivo_gain_muscle">Ganhar massa</string>
+    <string name="enum_objetivo_lose_fat">Perder gordura</string>
+    <string name="enum_objetivo_maintain">Manter a forma</string>
+    <string name="enum_objetivo_general_health">Saúde geral</string>
+
+    <!-- Onde a pessoa treina. Rótulo curto, para chip e resumo. -->
+    <string name="enum_ambiente_academia">Academia</string>
+    <string name="enum_ambiente_casa">Casa</string>
+    <!-- A frase de escolha do quiz, com exemplos do que existe em cada ambiente. Linha inteira. -->
+    <string name="enum_ambiente_academia_descricao">Academia (máquinas, barras, cabos, halteres)</string>
+    <string name="enum_ambiente_casa_descricao">Casa (halteres, peso do corpo, elásticos)</string>
+
+    <!--
+      Categoria do exercício, no chip do topo da tela de detalhe.
+      ⚠️ Antes desta fatia isto mostrava o nome do enum em INGLÊS ("Chest", "Lower back") para o
+      usuário brasileiro, porque o rótulo era derivado de `name`. Corrigido aqui.
+    -->
+    <string name="enum_categoria_core">Core</string>
+    <string name="enum_categoria_functional_hit">Funcional / HIIT</string>
+    <string name="enum_categoria_mobility">Mobilidade</string>
+    <string name="enum_categoria_calisthenics">Calistenia</string>
+    <string name="enum_categoria_legs">Pernas</string>
+    <string name="enum_categoria_shoulders">Ombros</string>
+    <string name="enum_categoria_chest">Peito</string>
+    <string name="enum_categoria_back">Costas</string>
+    <string name="enum_categoria_crossfit">CrossFit</string>
+    <string name="enum_categoria_biceps">Bíceps</string>
+    <string name="enum_categoria_triceps">Tríceps</string>
+    <string name="enum_categoria_trapezius">Trapézio</string>
+    <string name="enum_categoria_glutes">Glúteos</string>
+    <string name="enum_categoria_calves">Panturrilhas</string>
+    <string name="enum_categoria_forearms">Antebraços</string>
+    <string name="enum_categoria_cardio">Cardio</string>
+    <string name="enum_categoria_lower_back">Lombar</string>
+
+    <!-- Equipamento necessário, na linha de informação do exercício. -->
+    <string name="enum_equipamento_barbell">Barra</string>
+    <string name="enum_equipamento_dumbbell">Halteres</string>
+    <string name="enum_equipamento_machine">Máquina</string>
+    <string name="enum_equipamento_cable">Cabo / Polia</string>
+    <string name="enum_equipamento_bodyweight">Peso do corpo</string>
+    <string name="enum_equipamento_kettlebell">Kettlebell</string>
+    <string name="enum_equipamento_band">Elástico</string>
+    <string name="enum_equipamento_smith">Smith</string>
+    <string name="enum_equipamento_ez_bar">Barra W</string>
+    <string name="enum_equipamento_plate">Anilha</string>
+    <string name="enum_equipamento_medicine_ball">Bola medicinal</string>
+    <string name="enum_equipamento_stability_ball">Bola de estabilidade</string>
+    <string name="enum_equipamento_bosu">Bosu</string>
+    <string name="enum_equipamento_suspension">Suspensão / TRX</string>
+    <string name="enum_equipamento_rope">Corda</string>
+    <string name="enum_equipamento_agility_ladder">Escada de agilidade</string>
+    <!-- Exercício que não usa equipamento nenhum. Antes era um travessão solto. -->
+    <string name="enum_equipamento_nenhum">Nenhum</string>
+
+    <!-- Como o exercício é prescrito: por repetições ou por tempo. -->
+    <string name="enum_prescricao_reps">Repetições</string>
+    <string name="enum_prescricao_time">Tempo</string>
+
+
+    <!--
+      ============================================================================================
+      ERROS (fatia G.3, ARCH #31 e #37)
+      ============================================================================================
+
+      Duas famílias de chave, e a diferença importa para quem traduz:
+
+        erro_titulo_*, erro_texto_*, erro_acao_*   a CATEGORIA do erro, escolhida por família
+                                                   (sem conexão, sessão expirada, 500...)
+        erro_<CODIGO em minúsculo>                 a frase do que aconteceu, uma por ErrorCode
+
+      O nome da chave de código é DERIVADO do `ErrorCodes`: `PESSOA_NAO_EXISTE` vira
+      `erro_pessoa_nao_existe`. Não é estilo — o `TextosDeErroTest` confere a derivação, então
+      chave fora do padrão quebra o build em vez de virar string órfã.
+
+      Título e texto NÃO dizem a mesma coisa e não se traduzem juntos: o título é a categoria
+      ("Sem conexão"), o texto é o que houve e o que fazer. Numa tela de erro inteira aparecem os
+      dois; numa linha ao lado do botão que falhou, só o texto.
+
+      ⚠️ NEM TODO ERRO PASSA POR AQUI. Nove códigos continuam usando a frase do servidor porque ela
+      carrega um número que só o servidor conhece (prazos, limites de plano) — estão enumerados em
+      `TextosDeErro.SEM_TEXTO_PROPRIO`. E código desconhecido também cai na frase do servidor, de
+      propósito: é o que faz um app antigo continuar explicando bem um erro novo.
+    -->
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Categoria: rótulos de ação ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <!-- Botão da tela de erro e ação do snackbar. Espaço apertado: até ~18 caracteres. -->
+    <string name="erro_acao_tentar_de_novo">Tentar de novo</string>
+    <!-- Leva de volta ao login depois de a sessão expirar. Botão, ~18 caracteres. -->
+    <string name="erro_acao_entrar_de_novo">Entrar de novo</string>
+    <!-- Leva ao paywall quando o erro é um portão de plano. Botão, ~18 caracteres. -->
+    <string name="erro_acao_ver_planos">Ver planos</string>
+    <!-- Sai da tela que falhou. Botão, ~18 caracteres. -->
+    <string name="erro_acao_voltar">Voltar</string>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Categoria: títulos e textos de família ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <!--
+      O aparelho TEM internet e mesmo assim não houve resposta: o servidor é que está calado.
+      Título de tela de erro e texto do snackbar; cabe ~40 caracteres numa linha.
+    -->
+    <string name="erro_titulo_servidor_mudo">Não conseguimos falar com o FitJourney</string>
+    <!-- Corpo do caso acima. Frase inteira, sem limite de espaço. -->
+    <string name="erro_texto_servidor_mudo">O aplicativo está no ar, mas o servidor não respondeu. Tente de novo em instantes.</string>
+
+    <!-- O aparelho está offline. Título de tela de erro, ~40 caracteres. -->
+    <string name="erro_titulo_sem_conexao">Sem conexão</string>
+    <!-- Corpo do caso acima. Frase inteira, sem limite de espaço. -->
+    <string name="erro_texto_sem_conexao">Você está offline. Conecte-se para sincronizar. O que já foi baixado continua funcionando.</string>
+
+    <!--
+      401 na tela de LOGIN: a senha está errada, a sessão não morreu. Nunca use este par numa tela
+      já logada — mandar pro login quem já está no login não faz sentido.
+    -->
+    <string name="erro_titulo_credenciais">E-mail ou senha incorretos</string>
+    <string name="erro_texto_credenciais">Confira os dados e tente de novo.</string>
+
+    <!-- 401 numa tela LOGADA: o token morreu. Nenhum retry resolve. -->
+    <string name="erro_titulo_sessao_expirada">Sessão expirada</string>
+    <string name="erro_texto_sessao_expirada">Faça login novamente para continuar.</string>
+
+    <!--
+      403 num portão de plano (ARCH #23). Só o título é nosso: o texto vem do código do erro ou do
+      servidor, porque é ele que sabe QUAL limite foi batido.
+    -->
+    <string name="erro_titulo_recurso_premium">Recurso do plano Premium</string>
+
+    <!-- 403 que não é portão de plano: bloqueio de verdade. Só o título é nosso. -->
+    <string name="erro_titulo_sem_permissao">Sem permissão</string>
+
+    <!-- 404. Título é a categoria; o texto abaixo só aparece quando o servidor não mandou frase. -->
+    <string name="erro_titulo_nao_encontrado">Não encontrado</string>
+    <!--
+      Último recurso do 404, escrito pensando em conteúdo do PRÓPRIO usuário (um treino apagado
+      no outro aparelho). Quando o servidor manda frase, ela vence — ver ARCH #31.
+    -->
+    <string name="erro_texto_nao_encontrado">Isto não existe mais. Pode ter sido removido em outro aparelho.</string>
+
+    <!-- 409: uma regra recusando, não dado velho. Só o título é nosso. -->
+    <string name="erro_titulo_conflito">Não dá para fazer isso agora</string>
+
+    <!-- 422: o detalhe fica embaixo do campo. Só o título é nosso. -->
+    <string name="erro_titulo_dados_invalidos">Dados inválidos</string>
+
+    <!-- 500. Culpa nossa, e o texto não manda o usuário "verificar a conexão". -->
+    <string name="erro_titulo_falha_nossa">Algo deu errado do nosso lado</string>
+    <string name="erro_texto_falha_nossa">Já sabemos do problema. Tente de novo em instantes.</string>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Amizades ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <!-- O pedido foi cancelado por quem enviou, ou a conta sumiu. -->
+    <string name="erro_pedido_nao_existe">Este pedido não existe mais.</string>
+    <!-- Já aceito ou recusado, possivelmente em outro aparelho. -->
+    <string name="erro_pedido_ja_respondido">Este pedido já foi respondido.</string>
+    <!-- Tocou "aceitar" num pedido que quem envia foi ele mesmo. -->
+    <string name="erro_pedido_e_meu">Você não pode aceitar um pedido que você mesmo enviou.</string>
+    <!-- Desfazer amizade ou desbloquear quando já não havia relação nenhuma. -->
+    <string name="erro_sem_relacao">Isso já foi desfeito.</string>
+    <string name="erro_bloquear_a_si_mesmo">Você não pode bloquear a si mesmo.</string>
+    <!-- A conta do outro foi apagada. Diferente de "não consegui carregar a MINHA conta". -->
+    <string name="erro_pessoa_nao_existe">Esta pessoa não está mais no FitJourney.</string>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Conta e sessão ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <string name="erro_token_invalido">Sua sessão expirou. Entre de novo para continuar.</string>
+    <!-- Falha ao carregar a conta do PRÓPRIO usuário. É transitório, dá para tentar de novo. -->
+    <string name="erro_minha_conta_sumiu">Não consegui carregar sua conta agora. Tente de novo em instantes.</string>
+    <!-- Buscou um amigo pelo código e não achou. Não afirma que o código existiu. -->
+    <string name="erro_codigo_de_usuario_nao_existe">Nenhum usuário com esse código.</string>
+    <string name="erro_rate_limit_codigo">Muitas tentativas. Tente de novo daqui a pouco.</string>
+    <!-- Escolheu um idioma que o app ainda não tem (fatia G.4). -->
+    <string name="erro_idioma_nao_suportado">Este idioma ainda não está disponível.</string>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Perfil e onboarding ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <string name="erro_meu_perfil_incompleto">Você ainda não completou o questionário.</string>
+    <!-- Perfil de OUTRA pessoa, privado ou removido. Não revela qual dos dois. -->
+    <string name="erro_perfil_de_terceiro_indisponivel">Este perfil não está disponível.</string>
+    <!-- Os números 2 e 6 são a regra do produto, não um limite de aparelho. -->
+    <string name="erro_dias_por_semana_invalido">Escolha entre 2 e 6 dias por semana.</string>
+    <string name="erro_foco_alem_do_limite">Escolha no máximo 2 grupos de foco.</string>
+    <string name="erro_idade_invalida">Digite uma idade entre 5 e 120 anos.</string>
+    <!-- Falha ao salvar os dias indisponíveis da semana. -->
+    <string name="erro_dias_indisponiveis_invalidos">Não consegui salvar sua agenda. Tente de novo.</string>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Portões de geração ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <string name="erro_perfil_ausente_para_gerar">Complete o questionário antes de gerar treinos.</string>
+    <string name="erro_health_gate_required">Complete a avaliação de saúde antes de gerar treinos.</string>
+    <!-- Portão de idade (ARCH #24). "Menor de 18" é a regra, não um exemplo. -->
+    <string name="erro_age_gate_required">Menor de 18: é preciso o reconhecimento de supervisão de um responsável.</string>
+    <string name="erro_perfil_incompleto_para_gerar">Complete o questionário para gerar um treino.</string>
+    <!-- Portão de plano (ARCH #25): editar o que a IA gerou é premium. -->
+    <string name="erro_edicao_de_ia_e_premium">Editar um programa gerado por IA é um recurso premium.</string>
+    <string name="erro_treino_bloqueado_premium">Este treino faz parte do plano Premium.</string>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Programas e treinos ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <!-- Id malformado: falha nossa, não do usuário. Por isso não manda ele corrigir nada. -->
+    <string name="erro_id_de_programa_invalido">Não consegui abrir este programa.</string>
+    <string name="erro_programa_nao_existe">Este programa não está mais disponível.</string>
+    <string name="erro_nome_de_programa_vazio">Dê um nome ao programa.</string>
+    <string name="erro_treino_nao_existe">Este treino não está mais disponível.</string>
+    <string name="erro_treino_sem_programa">Não consegui salvar este treino.</string>
+    <string name="erro_treino_duplicado">Não consegui salvar este treino. Tente criar de novo.</string>
+    <string name="erro_nome_de_treino_vazio">Dê um nome ao treino.</string>
+    <string name="erro_treino_sem_exercicio">Adicione ao menos um exercício ao treino.</string>
+    <string name="erro_exercicio_sem_serie">Cada exercício precisa de ao menos uma série.</string>
+    <string name="erro_repeticoes_invalidas">As repetições precisam ser maiores que zero.</string>
+    <string name="erro_id_de_exercicio_invalido">Não consegui abrir este exercício.</string>
+    <!-- O catálogo mudou embaixo de um treino que já existia. -->
+    <string name="erro_exercicio_fora_do_catalogo">Um dos exercícios deste treino não existe mais.</string>
+    <string name="erro_exercicio_nao_existe">Este exercício não está mais no catálogo.</string>
+    <!-- Sem ambiente definido não dá para sugerir alternativa de equipamento (ARCH #28). -->
+    <string name="erro_ambiente_nao_definido">Complete o questionário para ver alternativas.</string>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Cronograma semanal (ARCH #22) ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <string name="erro_agenda_vazia">Posicione ao menos um treino na semana.</string>
+    <string name="erro_dia_da_semana_invalido">Não consegui salvar o cronograma. Tente de novo.</string>
+    <string name="erro_dia_ja_ocupado">Você já tem um treino neste dia. Escolha outro.</string>
+    <string name="erro_agenda_com_treino_repetido">O mesmo treino não pode ocupar dois dias.</string>
+    <string name="erro_agenda_incompleta">A agenda precisa cobrir exatamente os treinos do programa.</string>
+    <string name="erro_id_de_treino_invalido">Não consegui salvar o cronograma. Tente de novo.</string>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Execução de treino ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <string name="erro_sessao_sem_serie">Registre ao menos uma série para concluir o treino.</string>
+    <!-- Offline-first (ARCH #30): a sessão fica na outbox, então a frase promete a retentativa. -->
+    <string name="erro_sessao_invalida">Não consegui salvar este treino concluído. Ele continua na fila e vou tentar de novo.</string>
+    <string name="erro_sessao_com_fim_antes_do_inicio">O fim do treino não pode ser antes do início.</string>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Grupos e desafios (ARCH #33) ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <!--
+      "Desafio" é o nome do produto para o que o código chama de grupo. A palavra do usuário é
+      DESAFIO, e é ela que aparece em toda frase desta seção.
+    -->
+    <string name="erro_grupo_nao_existe">Este desafio não está disponível para você.</string>
+    <string name="erro_nao_sou_membro">Você não faz parte deste desafio.</string>
+    <string name="erro_admin_precisa_transferir">Transfira o cargo de admin antes de sair do grupo.</string>
+    <string name="erro_use_sair_em_vez_de_expulsar">Para sair do grupo, use a opção de sair.</string>
+    <string name="erro_ja_sou_o_admin">Você já é o admin.</string>
+    <string name="erro_desafio_ja_comecou">O desafio já começou e a entrada está fechada.</string>
+    <string name="erro_so_o_admin_do_grupo">Só o admin do desafio pode fazer isso.</string>
+    <string name="erro_campos_do_grupo_invalidos">Revise os campos do desafio.</string>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Check-in ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <!-- O desafio exige foto e/ou local, e veio menos do que isso. -->
+    <string name="erro_checkin_sem_as_regras">Este desafio exige mais do que você enviou.</string>
+    <string name="erro_prazo_de_exclusao">Só dá para apagar um check-in no mesmo dia em que ele foi feito.</string>
+    <string name="erro_checkin_em_analise">Este check-in está sob moderação e não pode ser apagado.</string>
+    <!-- Paginação do feed quebrou. "Puxe para atualizar" é o gesto, não um botão. -->
+    <string name="erro_cursor_invalido">Não consegui carregar mais publicações. Puxe para atualizar.</string>
+    <string name="erro_local_sem_nome">Escreva onde você treinou.</string>
+    <!-- GPS não devolveu posição. Localização é opt-in (#17), então isto só aparece a quem optou. -->
+    <string name="erro_sem_coordenadas">Não consegui localizar você. Tente de novo.</string>
+    <string name="erro_foto_ausente">Adicione uma foto para concluir o check-in.</string>
+    <string name="erro_foto_grande_demais">Esta foto é pesada demais. Escolha outra ou tire uma pela câmera.</string>
+    <string name="erro_foto_invalida">Não consegui ler esta imagem. Escolha outra ou tire uma pela câmera.</string>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Social e moderação ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <!-- Enumera os três que PODEM apagar, porque quem tocou quer saber por que não pôde. -->
+    <string name="erro_sem_permissao_para_apagar_comentario">Só quem escreveu, quem fez o check-in, ou o admin do desafio pode apagar este comentário.</string>
+    <string name="erro_reacao_invalida">Esta reação não existe.</string>
+    <string name="erro_ja_denunciei">Você já denunciou isto.</string>
+    <string name="erro_so_o_admin_julga">Só o admin do desafio julga denúncias.</string>
+    <string name="erro_denuncia_do_proprio_conteudo">Não dá para denunciar o próprio conteúdo.</string>
+    <string name="erro_checkin_ja_invalidado">Este check-in já foi invalidado.</string>
+    <string name="erro_denuncia_sem_motivo">Escreva o motivo da denúncia.</string>
+    <!-- O conteúdo denunciado sumiu antes do julgamento. -->
+    <string name="erro_alvo_indisponivel">Este conteúdo não está mais disponível.</string>
+
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Notificações (fatia F.1) ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <!-- Falha ao registrar o token de push. "Neste aparelho" porque é local, não da conta. -->
+    <string name="erro_token_de_push_vazio">Não consegui preparar as notificações neste aparelho.</string>
+
+
+    <!--
+      ============================================================================================
+      COMUM (fatia G.3) — texto que aparece em MAIS DE UMA tela
+      ============================================================================================
+
+      Só entra aqui o que é a MESMA ação em telas diferentes. Duas palavras iguais por acaso, que
+      um idioma pode querer separar, ficam em duas chaves de área.
+
+      > Duplicata de texto sobrevive num idioma e diverge no segundo.
+    -->
+
+    <!--
+      Volta um passo. Serve à seta da barra de topo (só descrição de acessibilidade, nunca
+      visível) E ao botão visível do quiz, onde cabem ~18 caracteres. É a mesma ação e a mesma
+      palavra: separar em duas chaves só criaria duas traduções que precisariam combinar.
+    -->
+    <string name="comum_voltar">Voltar</string>
+    <!-- Botão que fecha um diálogo sem fazer nada. Botão de diálogo, ~15 caracteres. -->
+    <string name="comum_cancelar">Cancelar</string>
+    <!-- Apaga conteúdo próprio (check-in, comentário). Item de menu e botão, ~18 caracteres. -->
+    <string name="comum_apagar">Apagar</string>
+    <!-- Manda conteúdo de outra pessoa para o admin avaliar. Item de menu e botão, ~18 caracteres. -->
+    <string name="comum_denunciar">Denunciar</string>
+    <!-- A fila de denúncias do admin: título da tela e descrição do ícone que leva a ela. -->
+    <string name="comum_denuncias">Denúncias</string>
+    <!-- Abre o formulário de criação. Botão flutuante, título de tela e botão, ~20 caracteres. -->
+    <string name="comum_criar_desafio">Criar desafio</string>
+    <!-- Abre a tela de entrar com o código de 6 caracteres. Botão, ~24 caracteres. -->
+    <string name="comum_entrar_com_codigo">Entrar com um código</string>
+
+    <!--
+      ============================================================================================
+      PLURAIS (fatia G.3) — contagem que muda a palavra
+      ============================================================================================
+
+      ⚠️ NÃO troque um `plurals` por dois `string` com um `if` na tela. O português tem duas formas
+      e o inglês também, mas o russo tem três e o árabe seis — e o inglês trata ZERO como plural
+      ("0 people") enquanto o francês o trata como singular ("0 personne").
+
+      Escrever `if (n == 1)` no Kotlin crava a gramática do português no cliente: traduzir a palavra
+      não conserta a regra, e o tradutor não tem onde dizer que o idioma dele precisa de mais formas.
+
+      > Extrair a palavra e deixar a concordância no código traduz o vocabulário, não o idioma.
+
+      pt-BR usa `one` e `other`. Outros idiomas acrescentam `zero`, `two`, `few`, `many` — quem
+      traduz preenche o que o idioma dele pedir; `other` é obrigatório em todos.
+    -->
+
+    <!-- Quantas pessoas participam do desafio. Aparece no cartão da lista e no preview do convite. -->
+    <plurals name="grupo_pessoas">
+        <item quantity="one">%1$d pessoa</item>
+        <item quantity="other">%1$d pessoas</item>
+    </plurals>
+
+    <!-- Botão que abre os comentários de um check-in. Com zero usa `checkin_comentar`. -->
+    <plurals name="checkin_comentarios">
+        <item quantity="one">%1$d comentário</item>
+        <item quantity="other">%1$d comentários</item>
+    </plurals>
+
+    <!-- Quantas pessoas denunciaram o mesmo conteúdo. Na fila do admin. -->
+    <plurals name="moderacao_denuncias">
+        <item quantity="one">%1$d denúncia</item>
+        <item quantity="other">%1$d denúncias</item>
+    </plurals>
+
+    <!--
+      ====================== Rótulos de enum de grupo (ver ui/Rotulos.kt) ======================
+    -->
+
+    <!--
+      ⚠️ O que o check-in exige. Antes desta fatia existia em TRÊS grafias: a descrição longa no
+      preview do convite, o rótulo curto no formulário, e no detalhe do desafio o `name` do enum
+      rebaixado (`foto, localizacao, emoji do dia` — sem cedilha, em minúscula). Corrigido aqui.
+
+      Rótulo curto: chip do formulário e linha "Check-in exige". ~20 caracteres.
+    -->
+    <string name="enum_regra_foto">Foto</string>
+    <string name="enum_regra_localizacao">Localização</string>
+    <string name="enum_regra_emoji_do_dia">Emoji do dia</string>
+    <!-- Ainda não implementado; nunca é oferecido na criação, só listado se vier do servidor. -->
+    <string name="enum_regra_gym_pass">Gympass</string>
+
+    <!--
+      A mesma exigência explicada por extenso, no preview do convite. É ali que o opt-in de
+      localização acontece (#17), então a frase diz o que será pedido, não só o nome da regra.
+    -->
+    <string name="enum_regra_foto_descricao">Uma foto, tirada na hora pelo app</string>
+    <string name="enum_regra_localizacao_descricao">O nome do lugar onde você treinou</string>
+    <string name="enum_regra_emoji_do_dia_descricao">Reproduzir o emoji do dia na foto</string>
+    <string name="enum_regra_gym_pass_descricao">Gympass (ainda não disponível)</string>
+
+    <!-- Em que fase o desafio está. Selo do cartão da lista. Curto: ~18 caracteres. -->
+    <string name="enum_estado_agendado">Começa em breve</string>
+    <string name="enum_estado_ativo">Em andamento</string>
+    <string name="enum_estado_encerrado">Encerrado</string>
+
+    <!--
+      O mesmo estado no DETALHE do desafio, onde cabe dizer o que ele significa para quem quer
+      entrar. Separado do rótulo curto porque a linha do cartão não comporta a segunda metade.
+    -->
+    <string name="enum_estado_agendado_detalhe">Começa em breve · entrada aberta</string>
+    <string name="enum_estado_ativo_detalhe">Em andamento · entrada fechada</string>
+
+    <!--
+      Por que o botão de entrar está desabilitado. O motivo vem do servidor como enum e a frase é
+      escolhida aqui: botão desabilitado sem explicação é um mistério.
+    -->
+    <string name="enum_bloqueio_ja_comecou">Este desafio já começou. A entrada fecha quando ele começa.</string>
+    <string name="enum_bloqueio_encerrado">Este desafio já terminou.</string>
+    <!-- O 50 é o teto do produto, não um limite de aparelho. -->
+    <string name="enum_bloqueio_lotado">Este desafio já tem 50 participantes.</string>
+    <string name="enum_bloqueio_ja_e_membro">Você já participa deste desafio.</string>
+    <string name="enum_bloqueio_convite_invalido">Este link expirou ou foi revogado. Peça o código do desafio.</string>
+
+    <!--
+      Faixa de moderação sobre o check-in no feed. `VALIDO` não tem rótulo: a ausência da faixa é
+      o estado normal.
+    -->
+    <string name="enum_checkin_em_analise">Em análise pelo admin · continua contando ponto</string>
+    <string name="enum_checkin_invalidado">Invalidado pelo admin</string>
+
+    <!-- ============================ Lista de desafios ============================ -->
+
+    <!-- Estado vazio, quando a lista JÁ chegou do servidor e está mesmo vazia. -->
+    <string name="grupos_vazio_titulo">Nenhum desafio ainda</string>
+    <string name="grupos_vazio_texto">Crie um desafio e convide quem treina com você, ou entre em um com o código.</string>
+    <!-- Estado vazio enquanto a primeira sincronização não terminou. Dizer "nenhum" aqui mentiria. -->
+    <string name="grupos_carregando_titulo">Carregando seus desafios</string>
+    <string name="grupos_carregando_texto">Se você já participa de algum, ele aparece assim que a lista chegar.</string>
+
+    <!--
+      Período do desafio no cartão da lista e no preview.
+      %1$s é a data de início e %2$s a de fim, já formatadas.
+    -->
+    <string name="grupo_periodo">%1$s a %2$s</string>
+
+    <!-- ============================ Entrar num desafio ============================ -->
+
+    <!-- Título da tela onde se digita o código ou se chega por link de convite. -->
+    <string name="entrar_titulo">Entrar num desafio</string>
+    <!-- Abaixo do campo. O 6 é o tamanho fixo do código. -->
+    <string name="entrar_campo_ajuda">6 caracteres, como aparece para quem convidou você.</string>
+    <!-- Busca o desafio pelo código digitado. Botão, ~18 caracteres. -->
+    <string name="entrar_procurar">Procurar</string>
+    <!-- Diz em que fuso o dia vira, no preview. %1$s é o identificador IANA ("America/Sao_Paulo"). -->
+    <string name="entrar_fuso">O dia vira no fuso %1$s.</string>
+    <!-- Cabeçalho da lista de exigências. Curto: ~24 caracteres. -->
+    <string name="entrar_regras_titulo">Para o check-in valer</string>
+    <!-- Um item da lista de exigências. %1$s é a descrição da regra. O marcador faz parte do item. -->
+    <string name="entrar_regra_item">· %1$s</string>
+    <!-- Aceita o convite e entra. Botão principal da tela, ~22 caracteres. -->
+    <string name="entrar_confirmar">Entrar no desafio</string>
+
+    <!-- ============================ Criar desafio ============================ -->
+
+    <!-- Rótulo do campo do nome. Espaço curto: ~22 caracteres. -->
+    <string name="grupo_form_nome">Nome do desafio</string>
+    <!-- Rótulo do campo de descrição. "(opcional)" é parte do rótulo e precisa ser traduzido. -->
+    <string name="grupo_form_descricao">Descrição (opcional)</string>
+    <!-- Rótulos dos dois seletores de data. Curtos: ~14 caracteres. -->
+    <string name="grupo_form_comeca_em">Começa em</string>
+    <string name="grupo_form_termina_em">Termina em</string>
+    <!-- Botão que abre o seletor de data. %1$s é o rótulo acima e %2$s a data escolhida. -->
+    <string name="grupo_form_data_botao">%1$s: %2$s</string>
+    <!-- Botão que abre o seletor de fuso. %1$s é o identificador IANA já escolhido. -->
+    <string name="grupo_form_fuso_botao">Fuso: %1$s</string>
+    <string name="grupo_form_fuso_ajuda">O dia vira nesse fuso para todo mundo, inclusive para quem estiver em outro país.</string>
+    <!-- Cabeçalho da fileira de chips de regra. ~24 caracteres. -->
+    <string name="grupo_form_regras_titulo">O que o check-in exige</string>
+    <string name="grupo_form_regras_ajuda">Quem entrar vê essas exigências antes de aceitar.</string>
+    <!-- Diálogo de escolha do fuso. -->
+    <string name="grupo_form_fuso_dialogo">Fuso do desafio</string>
+    <!-- Campo de busca do fuso. O exemplo é um identificador IANA e NÃO se traduz. -->
+    <string name="grupo_form_fuso_busca">Procurar (ex.: Sao_Paulo)</string>
+    <!-- Confirma a data no seletor do Material. Botão, ~14 caracteres. -->
+    <string name="grupo_form_data_escolher">Escolher</string>
+
+    <!-- ============================ Detalhe do desafio ============================ -->
+
+    <!-- As quatro abas. Espaço MUITO curto: cabem ~10 caracteres cada. -->
+    <string name="grupo_detalhe_aba_sobre">Sobre</string>
+    <string name="grupo_detalhe_aba_ranking">Ranking</string>
+    <string name="grupo_detalhe_aba_posts">Posts</string>
+    <string name="grupo_detalhe_aba_membros">Membros</string>
+
+    <!-- Rótulos da ficha do desafio, na coluna esquerda. Curtos: cabem ~16 caracteres. -->
+    <string name="grupo_detalhe_periodo">Período</string>
+    <string name="grupo_detalhe_fuso">Fuso</string>
+    <string name="grupo_detalhe_regras">Check-in exige</string>
+
+    <!--
+      O código de 6 caracteres do desafio: rótulo do campo onde ele é DIGITADO (entrar) e do
+      bloco onde ele é LIDO (detalhe). Mesmo rótulo para a mesma coisa. ~22 caracteres.
+      O bloco do detalhe só existe enquanto o desafio não começou.
+    -->
+    <string name="comum_codigo_do_desafio">Código do desafio</string>
+    <!-- Copia o código para a área de transferência. Botão, ~14 caracteres. -->
+    <string name="grupo_detalhe_copiar">Copiar</string>
+    <!-- Abre o menu de compartilhar do sistema. Botão, ~18 caracteres. -->
+    <string name="grupo_detalhe_convidar">Convidar</string>
+    <!-- Título da folha de compartilhamento do Android. -->
+    <string name="grupo_detalhe_convite_chooser">Convidar para o desafio</string>
+    <!--
+      O texto que a pessoa envia pelo WhatsApp. %1$s é o nome do desafio e %2$s o código.
+      As aspas em volta do nome são parte da frase; \n é a quebra de linha.
+    -->
+    <string name="grupo_detalhe_convite_texto">Entra no meu desafio no FitJourney: \"%1$s\".\nUse o código %2$s para entrar.</string>
+
+    <!-- Sair do desafio. As duas metades da mesma decisão: sozinho, sair APAGA o desafio. -->
+    <string name="grupo_detalhe_sair">Sair do desafio</string>
+    <string name="grupo_detalhe_excluir">Excluir o desafio</string>
+    <string name="grupo_detalhe_admin_precisa_transferir">Como admin, você precisa passar o cargo para alguém antes de sair.</string>
+
+    <!--
+      Botão principal da aba Sobre com o desafio ativo. ~22 caracteres.
+      ⚠️ NÃO É a mesma ação de `checkin_enviar`, apesar de idêntica em português: este ABRE a
+      tela de check-in, aquele ENVIA o check-in preenchido. Um idioma pode querer "Check in" e
+      "Submit"; unificar as chaves tiraria essa escolha do tradutor.
+    -->
+    <string name="grupo_detalhe_fazer_checkin">Fazer check-in</string>
+    <!-- Substitui o botão depois do check-in do dia. Aponta a ABA, não uma direção na tela. -->
+    <string name="grupo_detalhe_ja_treinou">Você já treinou hoje. Para refazer, apague o seu check-in na aba Posts.</string>
+
+    <!-- Feed vazio. Convite, e não constatação. -->
+    <string name="grupo_detalhe_feed_vazio">Ninguém treinou ainda. Seja o primeiro.</string>
+    <!-- Paginação do feed. Botão de largura inteira, ~30 caracteres. -->
+    <string name="grupo_detalhe_carregar_mais">Ver check-ins mais antigos</string>
+
+    <!-- Cabeçalho da aba Membros. %1$d é quantos são.  -->
+    <string name="grupo_detalhe_participantes">Participantes · %1$d</string>
+    <!-- Descrições de acessibilidade dos ícones da linha do membro. Nunca visíveis. -->
+    <string name="grupo_detalhe_admin">Admin</string>
+    <string name="grupo_detalhe_gerenciar">Gerenciar</string>
+
+    <!-- Diálogo de ação sobre um membro. O título do diálogo é o nome da pessoa. -->
+    <string name="grupo_detalhe_membro_pergunta">O que você quer fazer com esta pessoa?</string>
+    <string name="grupo_detalhe_tornar_admin">Tornar admin</string>
+    <string name="grupo_detalhe_remover">Remover do grupo</string>
+
+    <!-- Diálogo de saída, na versão de quem é o ÚLTIMO: sair apaga o desafio. -->
+    <string name="grupo_detalhe_excluir_pergunta">Excluir o desafio?</string>
+    <string name="grupo_detalhe_excluir_texto">Você é a única pessoa aqui. Sair apaga este desafio: o código deixa de valer e não dá para desfazer.</string>
+    <!-- E na versão de quem só sai: o desafio continua, e os check-ins ficam. -->
+    <string name="grupo_detalhe_sair_pergunta">Sair do desafio?</string>
+    <string name="grupo_detalhe_sair_texto">Você deixa de aparecer no ranking. Os seus check-ins continuam no histórico do grupo.</string>
+    <!--
+      ⚠️ NÃO É a mesma palavra de `menu_sair`, apesar de idêntica em português. Aqui é sair de UM
+      DESAFIO (o grupo continua existindo); lá é encerrar a sessão da conta. Em inglês viram
+      "Leave" e "Log out". Unificar as duas chaves quebraria uma das telas em todo idioma que
+      distingue os dois verbos.
+    -->
+    <string name="grupo_detalhe_sair_confirmar">Sair</string>
+
+    <!-- ============================ Check-in no feed ============================ -->
+
+    <!-- Quando o check-in foi feito, no fuso do GRUPO. %1$s é a hora, já formatada como "07:15". -->
+    <string name="checkin_hoje_as">Hoje às %1$s</string>
+    <string name="checkin_ontem_as">Ontem às %1$s</string>
+    <!--
+      Data absoluta para o que já saiu da memória recente.
+      %1$02d é o dia, %2$02d o mês e %3$s a hora. ⚠️ A ORDEM dia/mês é do pt-BR; em en-US inverte.
+    -->
+    <string name="checkin_data_as">%1$02d/%2$02d às %3$s</string>
+
+    <!-- Descrição do menu de três pontos do card. Nunca visível. -->
+    <string name="checkin_acoes">Ações deste check-in</string>
+    <!-- Apaga o próprio check-in do dia. Item de menu, ~24 caracteres. -->
+    <string name="checkin_apagar_meu">Apagar meu check-in</string>
+    <!--
+      Ação de admin. O texto diz o EFEITO e não o gesto: "invalidar" sozinho não conta que a
+      pessoa perde o ponto. Item de menu, ~26 caracteres.
+    -->
+    <string name="checkin_invalidar_menu">Invalidar (tira o ponto)</string>
+    <!-- Descrição do botão que abre a fileira de emojis. Nunca visível. -->
+    <string name="checkin_reagir">Reagir</string>
+    <!-- Com ZERO comentários o botão convida em vez de contar. Com um ou mais, ver o plurals. -->
+    <string name="checkin_comentar">Comentar</string>
+
+    <!-- Diálogo de exclusão do próprio check-in. -->
+    <string name="checkin_apagar_pergunta">Apagar este check-in?</string>
+    <!-- Diz o que se GANHA antes do que se perde: apagar libera o dia. -->
+    <string name="checkin_apagar_texto">O dia fica livre de novo: você pode fazer outro check-in hoje. Depois da meia-noite não dá mais para apagar.</string>
+
+    <!-- Diálogo de invalidação pelo admin. %1$s é o nome de quem fez o check-in. -->
+    <string name="checkin_invalidar_pergunta">Invalidar o check-in de %1$s?</string>
+    <string name="checkin_invalidar_texto">Ele perde o ponto no ranking e a decisão não pode ser desfeita. O check-in continua visível, marcado como invalidado.</string>
+    <string name="checkin_invalidar_confirmar">Invalidar</string>
+
+    <!-- ============================ Comentários ============================ -->
+
+    <!-- Barra do topo da lista de comentários de um check-in. -->
+    <string name="comentarios_titulo">Comentários</string>
+    <!-- Estado vazio da lista de comentários. -->
+    <string name="comentarios_vazio">Ninguém comentou ainda.</string>
+    <!-- Descrição do menu de três pontos do comentário. Nunca visível. -->
+    <string name="comentarios_acoes">Ações deste comentário</string>
+    <!-- Dentro do campo, enquanto ele está vazio. ~26 caracteres. -->
+    <string name="comentarios_placeholder">Escreva um comentário</string>
+    <!-- Descrição do botão de enviar. Nunca visível. -->
+    <string name="comentarios_enviar">Enviar</string>
+    <!-- Aviso inline que some sozinho depois de denunciar. -->
+    <string name="comentarios_denuncia_enviada">Denúncia enviada. O admin do desafio vai avaliar.</string>
+
+    <!-- ============================ Denunciar ============================ -->
+
+    <!--
+      ⚠️ FRASE INTEIRA, com o nome como parâmetro. Antes desta fatia o diálogo recebia
+      "o check-in de Ana" já montado e escrevia "Denunciar $alvo?" — duas concatenações
+      encadeadas que nenhum idioma consegue reordenar depois de prontas.
+      %1$s é o nome de quem publicou.
+    -->
+    <string name="denuncia_titulo_checkin">Denunciar o check-in de %1$s?</string>
+    <string name="denuncia_titulo_comentario">Denunciar o comentário de %1$s?</string>
+    <!-- O anonimato é a informação que decide se a pessoa denuncia num grupo de conhecidos. -->
+    <string name="denuncia_explicacao">O admin do desafio vai avaliar. Ele não vê quem denunciou.</string>
+    <!-- Rótulo do campo do motivo. MUITO curto: ~12 caracteres. -->
+    <string name="denuncia_campo_motivo">Por quê?</string>
+    <!-- Exemplo dentro do campo vazio. É um exemplo, não uma instrução: pode ser adaptado. -->
+    <string name="denuncia_campo_exemplo">Ex.: a foto não é de hoje</string>
+
+    <!-- ============================ Moderação (fila do admin) ============================ -->
+
+    <!-- Estado vazio da fila de moderação. Só o admin do grupo vê esta tela. -->
+    <string name="moderacao_vazio_titulo">Nada para avaliar.</string>
+    <!-- Explica o estado vazio acima: a fila só enche quando alguém denuncia. -->
+    <string name="moderacao_vazio_texto">Quando alguém denunciar um check-in ou comentário, ele aparece aqui.</string>
+    <!-- Um motivo escrito por quem denunciou. %1$s é o texto da pessoa. O marcador é do item. -->
+    <string name="moderacao_motivo_item">• %1$s</string>
+    <!-- Recusa a denúncia e fecha o caso. Botão, ~16 caracteres. -->
+    <string name="moderacao_manter">Manter</string>
+    <!-- Acata a denúncia. A palavra muda com o tipo do alvo. Botão, ~16 caracteres. -->
+    <string name="moderacao_invalidar">Invalidar</string>
+    <string name="moderacao_remover">Remover</string>
+
+    <!--
+      Confirmação, TAMBÉM para "manter": manter fecha o caso e grava decisão que ninguém desfaz.
+      Confirmar só o destrutivo ensinaria que o outro botão é reversível.
+    -->
+    <string name="moderacao_manter_pergunta">Manter e encerrar o caso?</string>
+    <string name="moderacao_manter_texto">O conteúdo continua como está e a denúncia sai da fila. A decisão não pode ser desfeita.</string>
+    <string name="moderacao_invalidar_pergunta">Invalidar este check-in?</string>
+    <string name="moderacao_invalidar_texto">A pessoa perde o ponto no ranking. O check-in continua visível, marcado como invalidado, e a decisão não pode ser desfeita.</string>
+    <string name="moderacao_remover_pergunta">Remover este comentário?</string>
+    <string name="moderacao_remover_texto">O comentário some para todo mundo. A decisão não pode ser desfeita.</string>
+    <!-- Confirma a decisão destrutiva. Botão de diálogo, ~16 caracteres. -->
+    <string name="moderacao_confirmar">Confirmar</string>
+
+
+    <!-- ============================ Comum (acrescentado na área de Onboarding) ============================ -->
+
+    <!-- Avança para o passo seguinte, no quiz e na tela de nome. Botão, ~18 caracteres. -->
+    <string name="comum_continuar">Continuar</string>
+
+    <!--
+      ====================== Rótulos de enum de perfil (ver ui/Rotulos.kt) ======================
+    -->
+
+    <!--
+      ⚠️ Modelo de divisão de treino (ARCH #29). Os nomes NÃO se traduzem: "Full Body",
+      "Push/Pull/Legs" e "Arnold" são o jargão que a pessoa encontra em qualquer academia, e
+      traduzi-los tornaria o app mais difícil de entender, não menos.
+
+      Ficam no catálogo mesmo assim, porque a DESCRIÇÃO abaixo se traduz e as duas andam juntas.
+    -->
+    <string name="enum_split_full_body">Full Body</string>
+    <string name="enum_split_upper_lower">Upper/Lower</string>
+    <string name="enum_split_upper_lower_full">Upper/Lower/Full</string>
+    <string name="enum_split_push_pull_legs">Push/Pull/Legs</string>
+    <string name="enum_split_ul_ppl">Upper/Lower + PPL</string>
+    <string name="enum_split_arnold">Arnold</string>
+
+    <!-- A frase que explica o split, abaixo do nome, na escolha do quiz. Uma linha. -->
+    <string name="enum_split_full_body_descricao">Corpo inteiro em todo treino.</string>
+    <string name="enum_split_upper_lower_descricao">Superiores num dia, inferiores no outro.</string>
+    <string name="enum_split_upper_lower_full_descricao">Superior, inferior e um dia de corpo inteiro.</string>
+    <string name="enum_split_push_pull_legs_descricao">Empurrar, puxar e pernas.</string>
+    <string name="enum_split_ul_ppl_descricao">Híbrido: abre com Upper/Lower e fecha com Push/Pull/Legs.</string>
+    <string name="enum_split_arnold_descricao">Peito+Costas, Pernas, Ombros+Braços.</string>
+
+    <!--
+      Limitação do corpo que o gerador deve evitar. Rótulo de linha com caixa de marcação.
+      O último não é uma parte do corpo e sim um tipo de movimento — por isso a frase inteira.
+    -->
+    <string name="enum_limitacao_shoulder">Ombro</string>
+    <string name="enum_limitacao_knee">Joelho</string>
+    <string name="enum_limitacao_lumbar">Lombar / coluna</string>
+    <string name="enum_limitacao_wrist">Punho</string>
+    <string name="enum_limitacao_impact">Não posso fazer impacto (saltos)</string>
+
+    <!-- ============================ Nome (primeiro passo do onboarding) ============================ -->
+
+    <!-- Pergunta principal da tela, logo depois do cadastro. -->
+    <string name="nome_titulo">Como podemos te chamar?</string>
+    <!-- Diz ONDE o nome aparece e que dá para mudar: é o que tira o peso da decisão. -->
+    <string name="nome_explicacao">É esse nome que aparece para as outras pessoas nos desafios em grupo. Dá para mudar depois.</string>
+
+    <!-- ============================ Quiz ============================ -->
+
+    <!--
+      Contador de progresso acima da barra: passo atual e total.
+      %1$d é o passo (começa em 1) e %2$d o total. O total VARIA — iniciante e "saúde geral"
+      não veem o passo de foco (#26/#24).
+    -->
+    <string name="quiz_progresso">%1$d/%2$d</string>
+    <!-- Botão do último passo, no lugar de "Continuar". Botão, ~18 caracteres. -->
+    <string name="quiz_concluir">Concluir</string>
+
+    <!-- Passo OBJETIVO. Os rótulos das opções são `enum_objetivo_*`. -->
+    <string name="quiz_objetivo_titulo">Qual seu objetivo principal?</string>
+
+    <!-- Passo NÍVEL. Os rótulos das opções são `enum_nivel_*`. -->
+    <string name="quiz_nivel_titulo">Qual seu nível hoje?</string>
+
+    <!-- Passo IDADE. -->
+    <string name="quiz_idade_titulo">Qual sua idade?</string>
+    <!-- Rótulo do campo. MUITO curto: ~10 caracteres. -->
+    <string name="quiz_idade_campo">Idade</string>
+    <!-- Os números 5 e 120 são a regra do produto, a mesma que o servidor valida. -->
+    <string name="quiz_idade_invalida">Digite uma idade válida (5 a 120).</string>
+    <!-- Portão de idade (ARCH #24): aparece só para menores de 18. -->
+    <string name="quiz_idade_supervisao">Um responsável ou profissional supervisiona meu treino.</string>
+    <!-- Aviso para 69 anos ou mais. É recomendação, não bloqueio: não impede de continuar. -->
+    <string name="quiz_idade_aviso_idoso">Acima de 69: recomendamos acompanhamento médico regular.</string>
+
+    <!-- Passo DIAS POR SEMANA. As opções são os números 2 a 6, que não se traduzem. -->
+    <string name="quiz_dias_titulo">Quantos dias por semana?</string>
+
+    <!-- Passo FOCO. Os rótulos das opções são `enum_musculo_*`. -->
+    <string name="quiz_foco_titulo">Quer focar em algum músculo?</string>
+    <!-- O 2 é o teto do produto (o servidor recusa mais). "vazio = equilibrado" é a saída padrão. -->
+    <string name="quiz_foco_ajuda">Escolha até 2 grupos (ou deixe vazio = equilibrado).</string>
+    <!-- Contador abaixo dos chips. %1$d é quantos foram marcados e %2$d o teto. -->
+    <plurals name="quiz_foco_contador">
+        <item quantity="one">%1$d/%2$d selecionado</item>
+        <item quantity="other">%1$d/%2$d selecionados</item>
+    </plurals>
+
+    <!-- Passo DIAS DE DESCANSO. O "NÃO" em caixa alta é ênfase da pergunta, e é intencional. -->
+    <string name="quiz_descanso_titulo">Tem dia que você NÃO quer treinar?</string>
+    <string name="quiz_descanso_ajuda">Marque seus dias de descanso (opcional). A IA distribui os treinos nos dias livres.</string>
+
+    <!--
+      Os sete dias da semana, abreviados para caber no chip. ~4 caracteres cada.
+
+      ⚠️ A ORDEM é ISO 8601 (segunda = 1) e NÃO é escolha de desenho: o índice vira o número do
+      dia que vai para o servidor. Traduza os nomes; a ordem é contrato, não apresentação.
+      Que semanas comecem no domingo em outros países é débito conhecido, não descuido.
+    -->
+    <string name="quiz_dia_seg">Seg</string>
+    <string name="quiz_dia_ter">Ter</string>
+    <string name="quiz_dia_qua">Qua</string>
+    <string name="quiz_dia_qui">Qui</string>
+    <string name="quiz_dia_sex">Sex</string>
+    <string name="quiz_dia_sab">Sáb</string>
+    <string name="quiz_dia_dom">Dom</string>
+
+    <!--
+      Recusa: marcou tantos descansos que não sobram dias para os treinos pedidos.
+      %1$d é quantos dias livres seriam necessários e %2$d quantos sobraram. A concordância
+      segue o PRIMEIRO número, que é o que a frase está exigindo.
+    -->
+    <plurals name="quiz_descanso_insuficiente">
+        <item quantity="one">Você precisa de ao menos %1$d dia livre (tem %2$d).</item>
+        <item quantity="other">Você precisa de ao menos %1$d dias livres (tem %2$d).</item>
+    </plurals>
+    <!-- Confirmação, quando sobram dias suficientes. %1$d é quantos. -->
+    <plurals name="quiz_descanso_livres">
+        <item quantity="one">%1$d dia livre para treinar.</item>
+        <item quantity="other">%1$d dias livres para treinar.</item>
+    </plurals>
+
+    <!-- Passo CORPO. "(opcional)" é parte do título e precisa ser traduzido. -->
+    <string name="quiz_corpo_titulo">Peso e altura (opcional)</string>
+    <string name="quiz_corpo_ajuda">Dado privado, usado só pro seu plano. Você pode pular.</string>
+    <!-- Rótulos dos campos. As unidades são métricas e NÃO se convertem por idioma. -->
+    <string name="quiz_corpo_peso">Peso (kg)</string>
+    <string name="quiz_corpo_altura">Altura (cm)</string>
+
+    <!-- Passo AMBIENTE. As opções são `enum_ambiente_*_descricao`. -->
+    <string name="quiz_ambiente_titulo">Onde você treina?</string>
+
+    <!-- Passo SPLIT (ARCH #29). %1$d é o número de dias que a pessoa escolheu no passo anterior. -->
+    <string name="quiz_split_titulo">Qual modelo de treino?</string>
+    <string name="quiz_split_ajuda">Montamos com base nos seus %1$d dias. O recomendado já vem marcado. Mantenha ou troque.</string>
+    <!-- Marca a opção que o motor escolheria sozinho. A estrela faz parte do rótulo. -->
+    <string name="quiz_split_recomendado">★ Recomendado</string>
+
+    <!--
+      Passo SAÚDE (ARCH #23). Perguntas de triagem: a resposta abre o portão de geração por IA.
+      São afirmações em primeira pessoa, de propósito — quem lê está respondendo sobre si.
+    -->
+    <string name="quiz_saude_titulo">Antes de gerar treinos com IA</string>
+    <string name="quiz_saude_ajuda">Algumas perguntas de segurança. Responda com sinceridade.</string>
+    <string name="quiz_saude_cardiaca">Tenho condição cardíaca diagnosticada</string>
+    <string name="quiz_saude_dor_no_peito">Sinto dor no peito ao me exercitar</string>
+    <string name="quiz_saude_articulacao">Tenho lesão óssea/articular que piora com exercício</string>
+    <string name="quiz_saude_medicacao">Tomo medicação contínua relevante</string>
+    <!-- Aparece só se alguma resposta acima for sim. É o aceite que libera a geração. -->
+    <string name="quiz_saude_ciente">Estou ciente de que devo consultar um médico antes de treinar.</string>
+
+    <!-- Passo LIMITAÇÕES. Os rótulos das opções são `enum_limitacao_*`. -->
+    <string name="quiz_limitacoes_titulo">Alguma limitação?</string>
+    <string name="quiz_limitacoes_ajuda">Vamos evitar exercícios que forcem essas regiões. Pode deixar em branco.</string>
+
+
+    <!-- ============================ Comum (acrescentado na área de Programas e treino) ============================ -->
+
+    <!-- Apaga um programa ou um treino. Item de barra, botão de diálogo e descrição de ícone. ~16. -->
+    <string name="comum_excluir">Excluir</string>
+    <!-- Fecha um aviso que não pede decisão nenhuma. Botão de diálogo, ~14 caracteres. -->
+    <string name="comum_entendi">Entendi</string>
+    <!-- Fecha um diálogo de escolha sem escolher. Botão, ~14 caracteres. -->
+    <string name="comum_fechar">Fechar</string>
+    <!-- Rótulo do campo de nome, na criação e na renomeação. MUITO curto: ~10 caracteres. -->
+    <string name="comum_nome">Nome</string>
+    <!-- Abre a geração por IA. Título de tela e botão flutuante. ~18 caracteres. -->
+    <string name="comum_criar_com_ia">Criar com IA</string>
+    <!-- CTA do paywall, no detalhe do programa e na revelação. Botão largo, ~34 caracteres. -->
+    <string name="comum_desbloquear_treinos">Desbloquear todos os treinos</string>
+    <!-- Rótulo da linha de uma série, na montagem e na execução. %1$d é o número (começa em 1). -->
+    <string name="comum_serie">Série %1$d</string>
+    <!--
+      Rótulos dos dois campos numéricos da série. "reps" é a abreviação de repetições usada em
+      academia — mantenha curta. "kg" é unidade e NÃO se converte por idioma.
+    -->
+    <string name="comum_reps">reps</string>
+    <string name="comum_kg">kg</string>
+
+    <!-- Quantos treinos um programa tem. No cartão da lista de programas. -->
+    <plurals name="programa_treinos">
+        <item quantity="one">%1$d treino</item>
+        <item quantity="other">%1$d treinos</item>
+    </plurals>
+    <!-- Quantos exercícios um treino tem. Na semana do programa e na revelação. -->
+    <plurals name="treino_exercicios">
+        <item quantity="one">%1$d exercício</item>
+        <item quantity="other">%1$d exercícios</item>
+    </plurals>
+
+    <!-- ============================ Lista de programas ============================ -->
+
+    <!-- Barra do topo da lista de programas do usuário. -->
+    <string name="programa_lista_titulo">Meus programas</string>
+    <!-- Estado vazio da lista de programas. -->
+    <string name="programa_lista_vazio">Nenhum programa ainda.</string>
+    <!-- Progresso no cartão. %1$d é a semana atual e %2$d o total. -->
+    <string name="programa_lista_semana">Semana %1$d/%2$d</string>
+    <!-- Diálogo de criação manual. -->
+    <string name="programa_lista_novo">Novo programa</string>
+    <string name="programa_lista_criar">Criar</string>
+    <!--
+      Selo de sincronização (ARCH #30). "Pendente" é o caso normal do offline-first e some
+      sozinho; "Não sincronizou" é falha permanente e aparece em vermelho.
+      Chip: cabem ~18 caracteres.
+    -->
+    <string name="programa_lista_pendente">Pendente</string>
+    <string name="programa_lista_nao_sincronizou">Não sincronizou</string>
+
+    <!-- ============================ Gerar com IA ============================ -->
+
+    <!-- Texto de apoio da tela que gera o programa com o assistente, acima do botão. -->
+    <string name="programa_gerar_explicacao">O assistente monta um programa completo pra você, com base no seu perfil e objetivo.</string>
+    <!--
+      Botão enquanto a geração corre.
+      As reticências são o CARACTERE `…`, não três pontos. Ver a faixa de convenção no topo.
+    -->
+    <string name="programa_gerar_gerando">Gerando seu programa…</string>
+    <string name="programa_gerar_acao">Gerar programa</string>
+    <!-- Portão de plano: bateu o teto de programas gerados no grátis. -->
+    <string name="programa_gerar_limite_titulo">Limite de programas gratuitos</string>
+    <string name="programa_gerar_limite_texto">Você atingiu o limite de programas gerados no plano grátis. Assine o premium pra gerar mais.</string>
+    <!-- Portão de saúde (ARCH #23): a triagem do quiz precisa estar respondida. -->
+    <string name="programa_gerar_saude_titulo">Avaliação de saúde</string>
+    <string name="programa_gerar_saude_texto">Complete a avaliação de saúde do seu perfil antes de gerar treinos com IA.</string>
+
+    <!-- ============================ Detalhe do programa ============================ -->
+
+    <!-- Título da barra quando o programa ainda não carregou. -->
+    <string name="programa_detalhe_titulo_padrao">Programa</string>
+    <!--
+      O nome de um programa GERADO, que o servidor deixa em branco desde a G.5 para o cliente
+      derivar no idioma da tela. %1$d é a frequência semanal e %2$s o nome do split.
+
+      ⚠️ O split ("Push/Pull/Legs", "Full Body") NÃO se traduz: é chave do motor de geração, que o
+      servidor compara, e é jargão de academia igual em qualquer idioma. Mesma regra do
+      `programa_reveal_resumo`.
+
+      Some assim que a pessoa renomeia o programa: aí o nome é dela e aparece intacto.
+    -->
+    <string name="programa_nome_derivado">Programa %1$dx · %2$s</string>
+    <!-- Descrição do ícone que abre a renomeação. Nunca visível. -->
+    <string name="programa_detalhe_renomear">Renomear</string>
+    <string name="programa_detalhe_vazio">Nenhum treino neste programa ainda.</string>
+    <!-- Dia da semana sem treino agendado. O descanso é implícito: não é um treino de descanso. -->
+    <string name="programa_detalhe_descanso">Descanso</string>
+    <!-- Sufixo do treino trancado, depois da contagem de exercícios. -->
+    <string name="programa_detalhe_assine">Assine para desbloquear</string>
+    <!-- Descrição do cadeado do treino trancado. Nunca visível. -->
+    <string name="programa_detalhe_bloqueado">Bloqueado</string>
+    <!-- Progresso do programa. %1$d é a semana atual e %2$d a duração. -->
+    <string name="programa_detalhe_semana">Semana %1$d de %2$d</string>
+    <!-- Banner de fim de programa, com as duas saídas. -->
+    <string name="programa_detalhe_concluido_titulo">Programa concluído</string>
+    <string name="programa_detalhe_concluido_texto">Hora de trocar. Gere um novo com IA ou crie um manual.</string>
+    <string name="programa_detalhe_gerar_ia">Gerar com IA</string>
+    <string name="programa_detalhe_criar_manual">Criar manual</string>
+    <!-- O dia já escolhido, no menu de reagendamento. %1$s é o dia; o ✓ marca o atual. -->
+    <string name="programa_detalhe_dia_atual">%1$s  ✓</string>
+    <!-- Diálogos. -->
+    <string name="programa_detalhe_excluir_pergunta">Excluir programa?</string>
+    <string name="programa_detalhe_excluir_texto">Isso apaga o programa e todos os treinos dentro dele. Não pode ser desfeito.</string>
+    <string name="programa_detalhe_renomear_titulo">Renomear programa</string>
+
+    <!-- ============================ Oferta do primeiro programa ============================ -->
+
+    <!-- Título da oferta do primeiro programa, mostrada logo depois do quiz. -->
+    <string name="programa_oferta_titulo">Quer que a gente monte seu primeiro programa?</string>
+    <!--
+      Parágrafo único. ⚠️ No código eram DOIS literais concatenados: a frase inteira precisa
+      chegar junta ao tradutor, porque a segunda metade depende da primeira.
+    -->
+    <string name="programa_oferta_texto">Usamos suas respostas para montar uma semana de treinos sob medida. Se preferir, você pode explorar o app primeiro e criar seus treinos na mão.</string>
+    <string name="programa_oferta_gerar">Montar meu programa</string>
+    <!-- A saída sem culpa: recusar não é abandonar o app. Botão, ~30 caracteres. -->
+    <string name="programa_oferta_pular">Agora não, quero explorar</string>
+
+    <!-- ============================ Revelação do programa ============================ -->
+
+    <!--
+      Os quatro estados da espera, enquanto a IA monta o programa: a frase do progresso, o texto
+      de apoio abaixo dela, a falha e o botão que tenta outra vez.
+    -->
+    <string name="programa_reveal_montando">Montando seu programa…</string>
+    <string name="programa_reveal_montando_texto">Estamos calibrando os treinos pro seu objetivo e nível.</string>
+    <string name="programa_reveal_erro">Não deu pra montar seu programa.</string>
+    <string name="programa_reveal_tentar_de_novo">Tentar de novo</string>
+    <!-- Duas comemorações: a primeira para quem ainda vai assinar, a segunda para quem já assinou. -->
+    <string name="programa_reveal_pronto_trancado">Seu plano está pronto 🎉</string>
+    <string name="programa_reveal_pronto_liberado">Tudo liberado! 🎉</string>
+    <!--
+      Resumo do programa. %1$d é a frequência e %2$s o nome do split ("Push/Pull/Legs"), que vem
+      do servidor e é jargão de academia — não se traduz.
+    -->
+    <string name="programa_reveal_resumo">%1$dx por semana · %2$s</string>
+    <string name="programa_reveal_semana">Sua semana</string>
+    <string name="programa_reveal_dia">Dia %1$d</string>
+    <!-- Descrições dos ícones de cadeado e visto. Nunca visíveis. -->
+    <string name="programa_reveal_trancado">Trancado</string>
+    <string name="programa_reveal_liberado">Liberado</string>
+    <!-- Cartão de conversão, só para quem ainda não assinou. -->
+    <string name="programa_reveal_beneficios_titulo">Com o premium você tem:</string>
+    <!-- %1$d é a frequência escolhida no quiz. "Dia 1" é o treino grátis. -->
+    <string name="programa_reveal_beneficio_treinos">Todos os %1$d treinos da semana, não só o Dia 1</string>
+    <string name="programa_reveal_beneficio_trocar">Trocar exercícios e ajustar do seu jeito</string>
+    <string name="programa_reveal_beneficio_reagendar">Reagendar os dias como quiser</string>
+    <!-- Aceita ficar no plano grátis e treinar só o primeiro dia. Botão, ~34 caracteres. -->
+    <string name="programa_reveal_comecar_gratis">Começar com o Dia 1 grátis</string>
+    <string name="programa_reveal_comecar">Começar a treinar</string>
+
+    <!-- ============================ Detalhe do treino ============================ -->
+
+    <!-- Título da barra quando o treino não tem nome. -->
+    <string name="treino_detalhe_titulo_padrao">Treino</string>
+    <string name="treino_detalhe_vazio">Nenhum exercício neste treino.</string>
+    <!-- Diálogo de exclusão do treino. -->
+    <string name="treino_detalhe_excluir_pergunta">Excluir treino?</string>
+    <string name="treino_detalhe_excluir_texto">Esta ação não pode ser desfeita.</string>
+    <!-- Ações de toque longo num exercício. O emoji faz parte do rótulo, com dois espaços. -->
+    <string name="treino_detalhe_trocar_exercicio">🔁  Trocar exercício</string>
+    <string name="treino_detalhe_excluir_exercicio">🗑  Excluir exercício</string>
+    <!-- Diálogo de troca: lista as alternativas do mesmo tipo (ARCH #28). -->
+    <string name="treino_detalhe_trocar_por">Trocar por</string>
+    <string name="treino_detalhe_sem_alternativas">Nenhuma alternativa do mesmo tipo disponível.</string>
+    <!-- Portão de plano (ARCH #25): editar programa de IA é premium. -->
+    <string name="treino_detalhe_premium_titulo">Recurso premium</string>
+    <string name="treino_detalhe_premium_texto">Editar um programa gerado por IA faz parte do plano premium. Assinatura em breve.</string>
+
+    <!-- ============================ Montar/editar treino ============================ -->
+
+    <!-- Barra do topo quando a tela abre sobre um treino que já existe. -->
+    <string name="treino_form_titulo_editar">Editar treino</string>
+    <!-- Barra do topo quando a tela abre para criar um treino do zero. -->
+    <string name="treino_form_titulo_novo">Novo treino</string>
+    <!-- Botão que confirma o formulário de treino. -->
+    <string name="treino_form_salvar">Salvar treino</string>
+    <!-- Rótulo do campo de nome, dentro do formulário de treino. -->
+    <string name="treino_form_nome">Nome do treino</string>
+    <!-- Cabeçalho da fileira de dias. Só aparece na CRIAÇÃO. -->
+    <string name="treino_form_dia_da_semana">Dia da semana</string>
+    <!-- Botões de composição da lista de séries e exercícios. Curtos: ~22 caracteres. -->
+    <string name="treino_form_add_serie">+ série</string>
+    <string name="treino_form_add_exercicio">+ adicionar exercício</string>
+
+    <!-- ============================ Execução do treino ============================ -->
+
+    <!-- Botão que encerra o treino em execução e grava a sessão. -->
+    <string name="sessao_finalizar">Finalizar treino</string>
+    <!--
+      O exercício que ainda não tem nome: o catálogo não conhece o id gravado no treino, ou a
+      tela de detalhe ainda não carregou. Serve às duas telas — é a mesma palavra pelo mesmo
+      motivo. ~18 caracteres.
+    -->
+    <string name="comum_exercicio">Exercício</string>
+    <!-- Cronômetro entre séries. NÃO é o mesmo "Descanso" do dia sem treino no programa. -->
+    <string name="sessao_descanso">Descanso</string>
+    <!-- O tempo restante. %1$d são os minutos e %2$02d os segundos. -->
+    <string name="sessao_tempo">%1$d:%2$02d</string>
+    <!-- Acrescenta meio minuto ao descanso. Botão estreito: ~8 caracteres. -->
+    <string name="sessao_mais_30s">+30s</string>
+    <!-- Encerra o descanso antes da hora. Botão estreito: ~8 caracteres. -->
+    <string name="sessao_pular">Pular</string>
+    <!-- Abaixo do campo de repetições: quantas o motor prescreveu. %1$d é o alvo. -->
+    <string name="sessao_alvo">alvo %1$d</string>
+
+
+    <!-- ============================ Comum (acrescentado na área de Paywall e conta) ============================ -->
+
+    <!-- Confirma a edição de um campo. Botão, ~14 caracteres. -->
+    <string name="comum_salvar">Salvar</string>
+    <!-- Abre a edição. Botão de texto e descrição de ícone. ~14 caracteres. -->
+    <string name="comum_editar">Editar</string>
+    <!-- A tela de conquistas: título dela e o item que leva até ela. ~18 caracteres. -->
+    <string name="comum_conquistas">Conquistas</string>
+    <!-- Nível do perfil individual (#16). %1$d é o número. Aparece na gaveta e nos dois perfis. -->
+    <string name="comum_nivel">Nível %1$d</string>
+    <!--
+      Contagem "quantos de quantos": conquistas desbloqueadas, progresso de uma conquista.
+      %1$d é o que já foi e %2$d o total.
+    -->
+    <string name="comum_x_de_y">%1$d de %2$d</string>
+    <!--
+      Os dois planos. "Premium" é nome de plano e normalmente NÃO se traduz; "Grátis" traduz.
+      ⚠️ A tabela do paywall chama a coluna de "Free", em inglês — divergência herdada, a
+      unificar no portão do pt-BR. Ver `paywall_coluna_free`.
+    -->
+    <string name="comum_premium">Premium</string>
+    <string name="comum_gratis">Grátis</string>
+    <!--
+      O valor que a pessoa não preencheu, nas linhas de informação da Conta (nome e e-mail).
+
+      Era um travessão solto até 2026-09-10, o mesmo defeito que o equipamento do exercício já
+      tinha tido nesta fatia. Marcador tipográfico não é palavra: quem usa leitor de tela ouve um
+      traço, e nenhum idioma herda o significado que o português deu a ele.
+    -->
+    <string name="comum_sem_valor">Não informado</string>
+
+    <!-- Impede a pessoa de te achar e desfaz a amizade. Botão de diálogo e de perfil. ~20. -->
+    <string name="comum_bloquear">Bloquear</string>
+
+    <!-- ============================ Paywall ============================ -->
+
+    <!--
+      ⚠️ ESTA TELA NÃO ESTÁ INTEIRA NO CATÁLOGO, POR DECISÃO.
+
+      A tabela comparativa guarda o valor de cada célula como `String?`, e o código faz
+      `value == "Sim"` para escolher entre ✓, ✗ e texto. Extrair essas palavras quebraria a
+      comparação, então a coluna de VALOR ("Sim", "Vários", "Só o Dia 1", "Até 2", "1 programa",
+      "Todos") continua em português dentro do Kotlin e vai para a G.4, junto com o tipo fechado
+      que substitui o sentinela.
+
+      As ETIQUETAS de recurso e os títulos de grupo, que são a maior parte do texto, estão aqui.
+
+      > Sentinela escrito em português é código ramificando em idioma, não texto de tela.
+    -->
+
+    <!-- Chamada principal e subtítulo, acima da tabela. -->
+    <string name="paywall_chamada">Destrave tudo com o Premium</string>
+    <string name="paywall_subchamada">Compare o que você tem no grátis e o que o premium libera.</string>
+    <!-- Botão que inicia a assinatura. Botão largo, ~24 caracteres. -->
+    <string name="paywall_assinar">Assinar premium</string>
+    <!-- A saída sem culpa. Botão de texto, ~18 caracteres. -->
+    <string name="paywall_agora_nao">Agora não</string>
+
+    <!-- Cabeçalhos das três colunas da tabela. MUITO curtos: ~12 caracteres. -->
+    <string name="paywall_coluna_recurso">Recurso</string>
+    <!-- ⚠️ Em inglês no app em português. Divergência herdada; ver `comum_gratis`. -->
+    <string name="paywall_coluna_free">Free</string>
+
+    <!--
+      Descrições dos ícones ✓ e ✗ das células. Nunca visíveis.
+      ⚠️ Iguais às palavras que o código compara, mas NÃO são elas: estas só são lidas em voz
+      alta. Traduzir aqui é seguro; traduzir o sentinela não é.
+    -->
+    <string name="paywall_celula_sim">Sim</string>
+    <string name="paywall_celula_nao">Não</string>
+
+    <!-- Os três grupos da tabela. Cabeçalho de seção, ~24 caracteres. -->
+    <string name="paywall_grupo_ia">Treinos com IA</string>
+    <string name="paywall_grupo_manuais">Treinos manuais</string>
+    <string name="paywall_grupo_geral">Geral</string>
+
+    <!-- Uma etiqueta por linha da tabela. Coluna estreita: cabem ~34 caracteres em duas linhas. -->
+    <string name="paywall_recurso_gerar_ia">Gerar programa com IA</string>
+    <string name="paywall_recurso_ver_dias">Ver todos os dias do programa</string>
+    <string name="paywall_recurso_trocar_exercicio">Trocar exercício por alternativa</string>
+    <string name="paywall_recurso_add_remover">Adicionar / remover exercício</string>
+    <string name="paywall_recurso_editar_series">Editar séries e repetições</string>
+    <!-- Usada DUAS vezes: no grupo de IA e no de treinos manuais. É a mesma capacidade. -->
+    <string name="paywall_recurso_reagendar">Reagendar os dias da semana</string>
+    <string name="paywall_recurso_criar_manual">Criar programa manual</string>
+    <string name="paywall_recurso_add_editar_treinos">Adicionar e editar treinos</string>
+    <string name="paywall_recurso_escolher_dia">Escolher o dia ao criar</string>
+    <!-- "split" e "descanso" são os dois passos do quiz a que a linha se refere. -->
+    <string name="paywall_recurso_onboarding">Onboarding guiado (split, descanso)</string>
+    <string name="paywall_recurso_descanso_ia">Descanso distribuído pela IA</string>
+    <string name="paywall_recurso_biblioteca">Biblioteca de exercícios</string>
+
+    <!-- ============================ Configurações da conta ============================ -->
+
+    <!-- Barra do topo das configurações da conta. -->
+    <string name="conta_titulo">Conta</string>
+    <!--
+      O nome que aparece para as outras pessoas: rótulo do campo no onboarding e cabeçalho do
+      bloco em Conta. ~16 caracteres.
+    -->
+    <string name="comum_seu_nome">Seu nome</string>
+    <string name="conta_nome_ajuda">Como as outras pessoas vão te ver nos grupos.</string>
+    <!-- Rótulos da coluna esquerda das linhas de informação. Curtos: ~14 caracteres. -->
+    <string name="conta_email">E-mail</string>
+    <string name="conta_plano">Plano</string>
+    <!-- Encerra a sessão neste aparelho. Item destrutivo, ~20 caracteres. -->
+    <string name="conta_sair">Sair da conta</string>
+
+    <!-- ============================ Gaveta lateral ============================ -->
+
+    <!-- Item da gaveta lateral que leva ao perfil do próprio usuário. -->
+    <string name="menu_meu_perfil">Meu perfil</string>
+    <!-- Item da gaveta lateral que leva à wiki de exercícios. Também é o título da tela. -->
+    <string name="menu_wiki">Wiki fitness</string>
+    <!--
+      Selo do item que ainda não existe. Diz em que FASE do roadmap ele entra — o item não vira
+      promessa vazia, e quem toca já sabe que vai cair num "em breve". ~10 caracteres.
+    -->
+    <string name="menu_wiki_selo">fase 8</string>
+    <string name="menu_duvidas">Dúvidas frequentes</string>
+    <string name="menu_conta">Configurações da conta</string>
+    <!--
+      Rodapé da gaveta. E ele SAI de verdade: não leva a Configurações. ~14 caracteres.
+      ⚠️ NÃO É a mesma palavra de `grupo_detalhe_sair_confirmar`: aquilo é sair de um desafio,
+      isto é encerrar a sessão. "Leave" e "Log out" em inglês.
+    -->
+    <string name="menu_sair">Sair</string>
+
+    <!-- ============================ Meu perfil ============================ -->
+
+    <!-- Barra do topo do perfil — serve tanto para o próprio quanto para o de outra pessoa. -->
+    <string name="perfil_titulo">Perfil</string>
+    <!-- Botão que abre a edição do próprio perfil. -->
+    <string name="perfil_editar">Editar perfil</string>
+    <!-- Substitui o nome enquanto ele não chegou do servidor. ~10 caracteres. -->
+    <string name="perfil_sem_nome">Você</string>
+    <!-- Rótulos abaixo dos dois números do cartão de progresso. MUITO curtos: ~14 caracteres. -->
+    <string name="perfil_metrica_treinos">treinos</string>
+    <string name="perfil_metrica_semana">nesta semana</string>
+
+    <!--
+      ====================== Conquistas: o catálogo (ver ui/TextosDeConquista.kt) ======================
+
+      Uma medalha da gamificação do PERFIL INDIVIDUAL (ARCH #16). Aparece em três telas: a grade de
+      Conquistas, a fileira de medalhas do próprio perfil e o perfil público, que é o lugar onde
+      OUTRA pessoa lê a sua medalha — possivelmente em outro idioma.
+
+      A chave é derivada do id que o servidor manda: PRIMEIRO_TREINO -> conquista_primeiro_treino_*.
+      O `TextosDeConquistaTest` confere a derivação nos dois sentidos; chave fora do padrão quebra
+      o build.
+
+      ⚠️ PARA QUEM TRADUZ, DUAS COISAS:
+
+      1. O TÍTULO é o nome da medalha, não uma instrução. Curto (~20 caracteres), e vale mais soar
+         como um troféu do que ser literal: "Começou" é melhor que "Primeiro treino registrado".
+         A descrição logo abaixo já diz o que fazer.
+      2. Os NÚMEROS das descrições espelham limiares do servidor (AchievementPolicy). Traduza o
+         número junto com a frase e NÃO o altere: 10 treinos são 10 treinos em qualquer idioma.
+    -->
+
+    <!-- Alvo: 1 sessão válida. O título celebra o gesto de começar, não a contagem. -->
+    <string name="conquista_primeiro_treino_titulo">Começou</string>
+    <string name="conquista_primeiro_treino_descricao">Registre seu primeiro treino</string>
+
+    <!-- Alvo: 10 sessões válidas. "Dez na conta" é expressão de contagem acumulada. -->
+    <string name="conquista_treinos_10_titulo">Dez na conta</string>
+    <string name="conquista_treinos_10_descricao">Registre 10 treinos</string>
+
+    <!-- Alvo: 50 sessões válidas. -->
+    <string name="conquista_treinos_50_titulo">Cinquenta treinos</string>
+    <string name="conquista_treinos_50_descricao">Registre 50 treinos</string>
+
+    <!-- Alvo: 100 sessões válidas. -->
+    <string name="conquista_treinos_100_titulo">Cem treinos</string>
+    <string name="conquista_treinos_100_descricao">Registre 100 treinos</string>
+
+    <!--
+      Streak. ⚠️ "seguindo o plano" é deliberado e NÃO é o mesmo que "treinando todo dia": dia de
+      descanso AGENDADO conta como cumprido (#22/#26). Uma tradução que diga "treinou N dias
+      seguidos" promete algo que a regra não cobra, e a medalha cairia num dia em que a pessoa
+      descansou. É o único lugar do catálogo em que a palavra escolhida muda o que a regra parece
+      ser, então vale reler a regra antes de traduzir.
+    -->
+    <string name="conquista_streak_7_titulo">Uma semana</string>
+    <string name="conquista_streak_7_descricao">7 dias seguindo o plano</string>
+
+    <string name="conquista_streak_30_titulo">Um mês</string>
+    <string name="conquista_streak_30_descricao">30 dias seguindo o plano</string>
+
+    <string name="conquista_streak_90_titulo">Três meses</string>
+    <string name="conquista_streak_90_descricao">90 dias seguindo o plano</string>
+
+    <!--
+      Nível do perfil. O título repete o número de propósito: é assim que a pessoa fala da medalha
+      ("cheguei no nível 5"), e um nome poético aqui esconderia qual nível é.
+    -->
+    <string name="conquista_nivel_5_titulo">Nível 5</string>
+    <string name="conquista_nivel_5_descricao">Alcance o nível 5</string>
+
+    <string name="conquista_nivel_10_titulo">Nível 10</string>
+    <string name="conquista_nivel_10_descricao">Alcance o nível 10</string>
+
+    <!-- ============================ Perfil de outra pessoa ============================ -->
+
+    <!-- Aviso quando a pessoa abre o próprio perfil pelo caminho público. -->
+    <string name="perfil_publico_e_voce">Este é o seu perfil, como os outros veem. Toque para abrir o seu.</string>
+    <!-- XP total, ao lado do nível. %1$d é o valor. "XP" é sigla e não se traduz. -->
+    <string name="perfil_publico_xp">%1$d XP</string>
+    <string name="perfil_publico_sem_conquistas">Nenhuma conquista ainda.</string>
+    <!-- As ações de amizade (#35). Botões, ~22 caracteres cada. -->
+    <string name="perfil_publico_adicionar">Adicionar</string>
+    <string name="perfil_publico_cancelar_pedido">Cancelar pedido</string>
+    <string name="perfil_publico_desfazer">Desfazer amizade</string>
+    <!-- Diálogo de bloqueio. -->
+    <string name="perfil_publico_bloquear_pergunta">Bloquear esta pessoa?</string>
+    <!--
+      Parágrafo único. ⚠️ No código eram DOIS literais concatenados, e a frase precisa chegar
+      inteira: ela diz os dois efeitos, e o segundo (a amizade é desfeita e não volta) é o que
+      surpreende.
+    -->
+    <string name="perfil_publico_bloquear_texto">Ela não vai mais conseguir te encontrar nem te enviar pedidos. Se vocês forem amigos, a amizade é desfeita, e desbloquear depois não a restaura.</string>
+
+    <!-- ============================ Progresso ============================ -->
+
+    <!-- Rótulos dos três números do topo. MUITO curtos: ~14 caracteres. -->
+    <string name="progresso_metrica_treinos">Treinos</string>
+    <string name="progresso_metrica_semana">Nesta semana</string>
+    <!-- Dias seguidos treinando. -->
+    <string name="progresso_metrica_sequencia">Sequência</string>
+    <!-- Cabeçalho do histórico. ~16 caracteres. -->
+    <string name="progresso_secao_historico">Histórico</string>
+    <!-- Estado vazio. \n é a quebra de linha entre as duas frases. -->
+    <string name="progresso_vazio">Nenhum treino registrado ainda.\nSeu histórico aparece aqui depois do primeiro treino.</string>
+    <!-- Séries concluídas num treino do histórico. -->
+    <plurals name="progresso_series">
+        <item quantity="one">%1$d série</item>
+        <item quantity="other">%1$d séries</item>
+    </plurals>
+    <!--
+      Data curta do histórico. %1$s é o dia, %2$s o mês e %3$s a hora "18:40".
+      ⚠️ A ORDEM dia/mês é do pt-BR; en-US inverte.
+    -->
+    <string name="progresso_data">%1$s/%2$s %3$s</string>
+    <!-- Selo de sync do item do histórico: descrição do ícone e a palavra ao lado. -->
+    <string name="progresso_aguardando_sync">Aguardando sincronizar</string>
+    <string name="progresso_pendente">pendente</string>
+
+
+    <!-- ============================ Comum (acrescentado na área Social e resto) ============================ -->
+
+    <!-- Aceita ou recusa um pedido de amizade. Na lista de pedidos e no perfil da pessoa. ~18. -->
+    <string name="comum_aceitar">Aceitar</string>
+    <string name="comum_recusar">Recusar</string>
+    <!-- Desfaz um bloqueio. Na lista de bloqueados e no perfil da pessoa. ~20 caracteres. -->
+    <string name="comum_desbloquear">Desbloquear</string>
+    <!-- A tela de notificações: título, descrição do ícone e nome do canal do sistema Android. -->
+    <string name="comum_notificacoes">Notificações</string>
+    <!-- A biblioteca de exercícios: título da tela, item da gaveta e atalho da Home. ~18. -->
+    <string name="comum_exercicios">Exercícios</string>
+    <!-- A lista de amigos: título da tela, aba e item do perfil. ~14 caracteres. -->
+    <string name="comum_amigos">Amigos</string>
+    <!-- A lista de pessoas bloqueadas: título da tela e item da Conta. ~18 caracteres. -->
+    <string name="comum_bloqueados">Bloqueados</string>
+    <!-- Começa a execução de um treino. No detalhe do treino e no card da Home. ~22. -->
+    <string name="comum_iniciar_treino">Iniciar treino</string>
+    <!-- A tela de progresso: título dela e o botão que leva até ela. ~16 caracteres. -->
+    <string name="comum_progresso">Progresso</string>
+    <!-- Progresso dentro do nível. %1$d é o XP no nível e %2$d o necessário para o próximo. -->
+    <string name="comum_xp_do_nivel">%1$d / %2$d XP</string>
+
+    <!--
+      ====================== Data por extenso, forma COMPACTA ======================
+
+      ⚠️ Estes rótulos são MINÚSCULOS e existem em paralelo aos `quiz_dia_*`, que são capitalizados.
+      Não é descuido: os `quiz_dia_*` são etiqueta de chip, isolada; estes compõem uma linha de
+      data ("sáb · 13 set") em que a caixa alta destoaria. Em inglês a distinção também existe.
+
+      Se o portão do pt-BR decidir unificar a caixa, as duas famílias viram uma.
+
+      A ORDEM é ISO 8601 (segunda primeiro) para os dias e janeiro-a-dezembro para os meses: em
+      ambos o índice vem do `kotlinx.datetime`, não da apresentação.
+    -->
+    <string name="data_dia_seg">seg</string>
+    <string name="data_dia_ter">ter</string>
+    <string name="data_dia_qua">qua</string>
+    <string name="data_dia_qui">qui</string>
+    <string name="data_dia_sex">sex</string>
+    <string name="data_dia_sab">sáb</string>
+    <string name="data_dia_dom">dom</string>
+
+    <string name="data_mes_jan">jan</string>
+    <string name="data_mes_fev">fev</string>
+    <string name="data_mes_mar">mar</string>
+    <string name="data_mes_abr">abr</string>
+    <string name="data_mes_mai">mai</string>
+    <string name="data_mes_jun">jun</string>
+    <string name="data_mes_jul">jul</string>
+    <string name="data_mes_ago">ago</string>
+    <string name="data_mes_set">set</string>
+    <string name="data_mes_out">out</string>
+    <string name="data_mes_nov">nov</string>
+    <string name="data_mes_dez">dez</string>
+
+    <!-- ============================ Home ============================ -->
+
+    <!-- Saudação pelo horário do aparelho. Título grande da tela. ~20 caracteres. -->
+    <string name="home_bom_dia">Bom dia</string>
+    <string name="home_boa_tarde">Boa tarde</string>
+    <string name="home_boa_noite">Boa noite</string>
+    <!--
+      A linha de data abaixo da saudação. %1$s é o dia da semana abreviado, %2$d o dia do mês e
+      %3$s o mês abreviado. ⚠️ A ORDEM dia-antes-do-mês é do pt-BR; en-US inverte.
+    -->
+    <string name="home_data">%1$s · %2$d %3$s</string>
+
+    <!-- Cabeçalho da fileira de atalhos. ~14 caracteres. -->
+    <string name="home_secao_atalhos">Atalhos</string>
+    <string name="home_atalho_criar_treino">Criar treino</string>
+    <string name="home_atalho_grupos">Grupos</string>
+
+    <!--
+      Rótulo abaixo do número da sequência. Não carrega o número: ele é desenhado maior, logo
+      acima. A forma plural segue a contagem mesmo assim.
+    -->
+    <plurals name="home_dias_seguidos">
+        <item quantity="one">dia seguido</item>
+        <item quantity="other">dias seguidos</item>
+    </plurals>
+    <!--
+      Aviso de XP retido pelo offline-first (ARCH #30): o servidor é a autoridade do XP, então
+      treino que não subiu ainda não pontuou. %1$d é quantos estão na fila.
+    -->
+    <plurals name="home_treinos_pendentes">
+        <item quantity="one">%1$d treino aguardando sincronizar: o XP entra quando houver conexão</item>
+        <item quantity="other">%1$d treinos aguardando sincronizar: o XP entra quando houver conexão</item>
+    </plurals>
+
+    <!--
+      Cabeçalho do card do dia. ~18 caracteres.
+      ⚠️ NÃO É a mesma string de `home_treino_de_hoje`, apesar de idêntica: esta é o RÓTULO do
+      card; aquela é o NOME de um treino que o programa não nomeou. Rótulo e dado, e um idioma
+      pode querer separá-los ("Today" × "Today's workout").
+    -->
+    <string name="home_secao_treino_de_hoje">Treino de hoje</string>
+    <!--
+      Os dois sufixos da linha de detalhe do treino, depois da contagem de exercícios.
+      O "~" marca estimativa. %1$d são os minutos; %2$d e %3$d a semana atual e o total.
+    -->
+    <string name="home_treino_minutos">~%1$d min</string>
+    <string name="home_treino_semana">semana %1$d/%2$d</string>
+    <!-- Dia trancado para quem não é premium (ARCH #23). Botão largo, ~26 caracteres. -->
+    <string name="home_desbloquear_treino">Desbloquear treino</string>
+
+    <!-- Card de treino já concluído hoje. -->
+    <string name="home_concluido_titulo">Treino concluído</string>
+    <!-- O XP ganho hoje, em destaque. %1$d é o valor. O "+" faz parte do rótulo. -->
+    <string name="home_xp_de_hoje">+%1$d XP</string>
+    <!-- %1$d são os dias seguidos. -->
+    <string name="home_sequencia_mantida">Sequência de %1$d dias mantida. Descanse: o próximo treino aparece amanhã.</string>
+    <string name="home_sequencia_iniciada">Sequência iniciada. Descanse: o próximo treino aparece amanhã.</string>
+    <string name="home_ver_progresso">Ver progresso</string>
+
+    <!-- Card de dia sem treino agendado. Descanso é parte do plano, não ausência dele. -->
+    <string name="home_descanso_titulo">Dia de descanso</string>
+    <string name="home_descanso_texto">Recuperar faz parte do progresso: é no descanso que o músculo se constrói.</string>
+    <!-- Treino fora do programa, feito por conta. Botão, ~20 caracteres. -->
+    <string name="home_treino_avulso">Treino avulso</string>
+
+    <!-- Card de quem ainda não tem programa nenhum. -->
+    <string name="home_sem_programa_titulo">Comece seu primeiro programa</string>
+    <string name="home_sem_programa_texto">Monte um programa e o treino do dia aparece aqui, pronto pra começar.</string>
+    <!-- As DUAS saídas: quem recusou a IA no onboarding precisa da segunda. -->
+    <string name="home_montar_com_ia">Montar com IA</string>
+    <string name="home_criar_manual">Criar treino manualmente</string>
+    <!--
+      Nome do treino quando o programa não o nomeou. ⚠️ É DADO, não rótulo: ver o aviso em
+      `home_secao_treino_de_hoje`.
+    -->
+    <string name="home_treino_de_hoje">Treino de hoje</string>
+
+    <!-- ============================ Amigos ============================ -->
+
+    <!-- Aba dos pedidos de amizade recebidos, ao lado da aba de amigos. -->
+    <string name="amigos_aba_pedidos">Pedidos</string>
+    <!-- Cabeçalho do bloco de busca. ~24 caracteres. -->
+    <string name="amigos_secao_adicionar">Adicionar por código</string>
+    <!-- Rótulo do campo. O 8 é o tamanho fixo do código de amizade. ~24 caracteres. -->
+    <string name="amigos_campo_codigo">Código de 8 caracteres</string>
+    <string name="amigos_buscar">Buscar</string>
+    <!-- Cabeçalho da lista. %1$d é quantos amigos. -->
+    <string name="amigos_secao_lista">Meus amigos · %1$d</string>
+    <string name="amigos_lista_vazia">Você ainda não tem amigos aqui. Passe seu código para alguém que treina com você.</string>
+    <!-- Cabeçalho do bloco do próprio código. ~16 caracteres. -->
+    <string name="amigos_secao_meu_codigo">Seu código</string>
+    <string name="amigos_copiar_codigo">Copiar código</string>
+    <string name="amigos_gerar_codigo">Gerar código novo</string>
+    <string name="amigos_pedidos_vazio">Nenhum pedido no momento.</string>
+    <!-- Diálogo de regeneração: o código antigo morre na hora, e isso surpreende. -->
+    <string name="amigos_gerar_pergunta">Gerar um código novo?</string>
+    <string name="amigos_gerar_texto">O código atual para de funcionar na hora. Quem já tem o antigo não vai conseguir te encontrar.</string>
+    <string name="amigos_gerar_confirmar">Gerar novo</string>
+
+    <!-- ============================ Bloqueados ============================ -->
+
+    <!-- Estado vazio da lista de pessoas bloqueadas. -->
+    <string name="bloqueados_vazio">Você não bloqueou ninguém.</string>
+    <!--
+      Dito ao desbloquear: desbloquear NÃO desfaz o que o bloqueio apagou.
+    -->
+    <string name="bloqueados_aviso">Desbloquear não restaura a amizade. Se quiserem, um dos dois envia um pedido novo.</string>
+
+    <!-- ============================ Check-in ============================ -->
+
+    <!-- Barra do topo da tela onde se preenche e envia o check-in do dia. -->
+    <string name="checkin_titulo">Check-in</string>
+    <!-- Bloqueio: já fez o check-in do dia, possivelmente em outro aparelho. -->
+    <string name="checkin_ja_treinou_titulo">Você já treinou hoje</string>
+    <string name="checkin_ja_treinou_texto">Só vale um check-in por dia neste desafio. Para refazer, apague o de hoje na tela do desafio.</string>
+    <!-- Bloqueio: o desafio exige foto e a permissão de câmera foi negada (5.3). -->
+    <string name="checkin_sem_camera_titulo">Este desafio exige foto</string>
+    <string name="checkin_sem_camera_texto">Sem acesso à câmera não dá para fazer check-in neste desafio. Você pode liberar nas configurações do sistema.</string>
+    <!-- Bloqueio: o desafio exige local e a permissão foi negada. -->
+    <string name="checkin_sem_local_titulo">Este desafio exige o local</string>
+    <string name="checkin_sem_local_texto">Sem a localização não dá para fazer check-in neste desafio.</string>
+    <!-- Leva às configurações do sistema, onde a permissão pode ser liberada. Botão, ~26. -->
+    <string name="checkin_abrir_configuracoes">Abrir configurações</string>
+    <!--
+      Botão principal da tela: ENVIA o check-in. ~22 caracteres.
+      ⚠️ NÃO É a mesma ação de `grupo_detalhe_fazer_checkin`, que só abre esta tela.
+    -->
+    <string name="checkin_enviar">Fazer check-in</string>
+    <!--
+      Dito ANTES do envio: check-in não tem edição e só o dono apaga, no mesmo dia (4.11).
+    -->
+    <string name="checkin_aviso_sem_edicao">Depois de enviar, dá para apagar só até o fim do dia, e não dá para editar.</string>
+    <!-- Cabeçalho do bloco do emoji. ~18 caracteres. -->
+    <string name="checkin_secao_emoji">Emoji de hoje</string>
+    <string name="checkin_emoji_instrucao">Reproduza este emoji na sua foto.</string>
+    <!-- Descarta a foto tirada e abre a câmera de novo. Botão, ~18 caracteres. -->
+    <string name="checkin_tirar_outra">Tirar outra</string>
+    <!-- Descrição do botão que alterna entre a câmera frontal e a traseira. Nunca visível. -->
+    <string name="checkin_trocar_camera">Trocar de câmera</string>
+    <!-- Cabeçalho do bloco de local. ~22 caracteres. -->
+    <string name="checkin_secao_local">Onde você treinou</string>
+    <!--
+      As duas precisões. O padrão é a APROXIMADA: em escolha de privacidade o padrão pesa mais
+      que a opção. Chips: ~20 caracteres cada.
+    -->
+    <string name="checkin_local_bairro">Bairro</string>
+    <string name="checkin_local_exato">Exatamente aqui</string>
+    <!-- Rótulo do campo do nome do lugar. ~22 caracteres. -->
+    <string name="checkin_campo_local">Nome do lugar</string>
+    <!-- Exemplos dentro do campo vazio. São exemplos e podem ser adaptados ao país. -->
+    <string name="checkin_campo_local_exemplo">Smart Fit, Casa, Parque…</string>
+    <!-- Abaixo do campo: o grupo NÃO vê o endereço, só este texto (5.2). -->
+    <string name="checkin_campo_local_ajuda">O grupo vê só este texto. Você pode trocar por um apelido.</string>
+    <string name="checkin_procurando_local">Procurando você…</string>
+
+    <!-- ============================ Notificações ============================ -->
+
+    <!-- Estado vazio da lista de notificações. -->
+    <string name="notificacoes_vazio">Nada por aqui ainda.</string>
+    <!-- Descrição do ícone da barra quando há não lidas. %1$d é quantas. -->
+    <plurals name="notificacoes_nao_lidas">
+        <item quantity="one">Notificações, %1$d não lida</item>
+        <item quantity="other">Notificações, %1$d não lidas</item>
+    </plurals>
+    <!-- Descrição do canal de notificação, nas configurações do sistema Android. -->
+    <string name="notificacoes_canal_descricao">Pedidos de amizade e avisos do app</string>
+
+    <!-- ============================ Navegação e telas em construção ============================ -->
+
+    <!-- Descrição do ícone que abre a gaveta lateral. Nunca visível. -->
+    <string name="nav_abrir_menu">Abrir menu</string>
+    <!-- Explicações das duas telas que ainda não existem. Ver `EmBreveScreen`. -->
+    <string name="nav_wiki_descricao">Conteúdo sobre treino, técnica e recuperação. Chega na Fase 8.</string>
+    <string name="nav_duvidas_descricao">As perguntas mais comuns sobre o app e os treinos.</string>
+    <!-- Selo da tela ainda não implementada. ~14 caracteres. -->
+    <string name="em_breve">Em breve</string>
+
+    <!-- ============================ Biblioteca de exercícios ============================ -->
+
+    <!-- Chip que remove o filtro de categoria. Concorda com "categorias". ~14 caracteres. -->
+    <string name="exercicios_todas">Todas</string>
+    <string name="exercicios_vazio">Nenhum exercício.</string>
+    <string name="exercicio_nao_encontrado">Exercício não encontrado</string>
+    <!-- Folha de seleção de exercícios, ao montar um treino. -->
+    <string name="exercicios_adicionar_titulo">Adicionar exercícios</string>
+    <!-- Confirma a seleção. %1$d é quantos foram marcados. Botão, ~22 caracteres. -->
+    <string name="exercicios_adicionar_acao">Adicionar (%1$d)</string>
+
+    <!-- ============================ Sair da conta ============================ -->
+
+    <!-- Pergunta do diálogo que confirma encerrar a sessão da conta. Não é sair de grupo. -->
+    <string name="sair_pergunta">Sair da conta?</string>
+    <!-- Explica a consequência de encerrar a sessão, abaixo da pergunta. -->
+    <string name="sair_texto">Você precisará entrar de novo para acessar seus programas.</string>
+
+    <!-- ============================ Idioma (fatia G.4) ============================ -->
+
+    <!--
+      O rótulo da escolha de idioma: item da gaveta, linha em Conta e título da tela. ~16 caracteres.
+      Três lugares, a mesma palavra e a mesma ação, então uma chave só.
+    -->
+    <string name="comum_idioma">Idioma</string>
+
+    <!--
+      Abaixo da lista. Diz as duas coisas que surpreendem: a escolha é DESTE aparelho (a conta não
+      carrega o idioma para o outro celular), e no Android 13+ ela também vive nos ajustes do
+      sistema, onde a pessoa pode trocar sem abrir o app.
+    -->
+    <string name="idioma_ajuda">A escolha vale neste aparelho. No Android 13 ou mais recente ela também aparece nos ajustes do sistema.</string>
+
+    <!-- Volta a preferência para o que o aparelho pedir. É o estado de quem nunca escolheu. -->
+    <string name="idioma_seguir_sistema">Seguir o idioma do aparelho</string>
+
+    <!--
+      ⚠️ OS NOMES DOS IDIOMAS NÃO SE TRADUZEM, EM IDIOMA NENHUM.
+
+      Cada um aparece SEMPRE na própria língua: "Português (Brasil)" e "English", idênticos no
+      `values` e no `values-en`. Quem precisa desta tela é justamente quem abriu o app num idioma
+      que não lê — e essa pessoa reconhece "English", não "Inglês". Traduzir a lista é o erro
+      clássico de internacionalização: deixa ilegível exatamente a tela que serve para sair do
+      idioma ilegível.
+
+      O `CatalogoEmInglesTest` fixa as duas na lista de chaves iguais nos dois idiomas.
+    -->
+    <string name="idioma_pt_br">Português (Brasil)</string>
+    <string name="idioma_en">English</string>
+
+    <!-- Descrição do visto ao lado do idioma em uso. Nunca visível. -->
+    <string name="idioma_selecionado">Selecionado</string>
+
+    <!-- ============================ Barra de abas (fatia G.4) ============================ -->
+
+    <!--
+      ⚠️ AS QUATRO ABAS DA BARRA DE BAIXO. Espaço MUITO curto: cabem ~10 caracteres, e a barra
+      divide a largura da tela por quatro. Rótulo que não cabe é truncado pelo Compose.
+
+      Ficam em chave própria, e NÃO reaproveitam `comum_progresso`, `comum_exercicios` ou
+      `home_atalho_grupos`, apesar de coincidirem em português. O motivo é o espaço: a aba é o
+      lugar mais apertado do app, e um idioma pode precisar abreviar aqui sem abreviar no título
+      da tela. Duas palavras iguais por acaso que um idioma pode querer separar ficam em duas
+      chaves de área.
+
+      Estes quatro eram literais dentro do enum `BottomTab`, em `val label: String`, e
+      atravessaram a G.3 inteira: o literal estava num argumento de construtor de enum, e o ponto
+      de uso (`Text(tab.label)`) não tinha literal nenhum. Nenhuma das duas metades era visível
+      para uma varredura que procura texto em posição de UI.
+    -->
+    <string name="nav_aba_inicio">Início</string>
+    <string name="nav_aba_treino">Treino</string>
+    <string name="nav_aba_grupos">Grupos</string>
+    <string name="nav_aba_progresso">Progresso</string>
+
+    <!-- ============================ Paywall: coluna de valor (fatia G.4) ============================ -->
+
+    <!--
+      ⚠️ ESTAS CINCO ERAM AS ÚLTIMAS PALAVRAS DO APP FORA DO CATÁLOGO, e ficaram fora por um motivo
+      que deixou de existir em 2026-09-11.
+
+      A tabela do paywall guardava cada célula como `String?` e o código fazia `value == "Sim"` para
+      escolher entre ✓, ✗ e texto. Traduzir estas palavras teria quebrado a comparação EM SILÊNCIO:
+      a tabela passaria a mostrar ✗ onde deveria ✓, sem erro nenhum. O `Sim` virou o tipo
+      `Celula.Sim`, o `null` virou `Celula.Nao`, e o que sobrou é texto de verdade.
+
+      Coluna estreita: cabem ~14 caracteres.
+    -->
+    <string name="paywall_valor_um_programa">1 programa</string>
+    <string name="paywall_valor_varios">Vários</string>
+    <string name="paywall_valor_so_dia_1">Só o Dia 1</string>
+    <string name="paywall_valor_todos">Todos</string>
+    <string name="paywall_valor_ate_2">Até 2</string>
+
+    <!-- ====== Erros que carregavam número do servidor (fatia G.4, 2026-09-11) ====== -->
+
+    <!--
+      ⚠️ OS NÚMEROS AQUI SÃO REGRA DE PRODUTO, E VIVEM NO SERVIDOR.
+      Cada comentário diz de qual constante o número veio. Se a constante mudar lá, ESTA frase
+      mente — o servidor recusa num limite e o app anuncia outro. Não há guarda automática:
+      é débito registrado, não descuido.
+
+      Mesma convenção já usada em `erro_dias_por_semana_invalido`, `erro_idade_invalida`,
+      `erro_foco_alem_do_limite` e `enum_bloqueio_lotado`, todos anteriores a esta fatia.
+
+      Estes nove eram o `TextosDeErro.SEM_TEXTO_PROPRIO`: ficavam em português porque a frase do
+      servidor carregava o número e o `ErrorResponse` não tinha como mandá-lo separado.
+    -->
+
+    <!-- Nome de exibição curto demais. `DisplayNamePolicy.MIN` = 2. -->
+    <string name="erro_nome_curto">Use pelo menos 2 caracteres.</string>
+    <!-- Nome de exibição longo demais. `DisplayNamePolicy.MAX` = 30. -->
+    <string name="erro_nome_longo">Use no máximo 30 caracteres.</string>
+    <!-- Comentário vazio ou longo demais. `SocialPolicy.MAX_COMENTARIO` = 500. -->
+    <string name="erro_comentario_invalido">Escreva algo, com até 500 caracteres.</string>
+    <!-- Nome do lugar do check-in. `CheckInPolicy.MAX_NOME_DO_LOCAL` = 60. -->
+    <string name="erro_nome_do_local_longo">Use até 60 caracteres.</string>
+    <!-- Denúncia fora do prazo. `ModeracaoPolicy.PRAZO_EM_DIAS` = 7. -->
+    <string name="erro_prazo_da_denuncia">Denúncias só valem até 7 dias depois do check-in.</string>
+    <!-- Teto de geração por IA no grátis. `ProgramLimits.FREE_AI_LIMIT` = 1. -->
+    <string name="erro_limite_de_ia_gratis">O plano grátis gera 1 programa com IA. Assine o premium para gerar mais.</string>
+    <!-- Teto de programas manuais no grátis. `ProgramLimits.FREE_MANUAL_LIMIT` = 2. -->
+    <string name="erro_limite_de_manuais_gratis">O plano grátis cria até 2 programas. Assine o premium para criar mais.</string>
+    <!-- Teto total, já no premium. `ProgramLimits.PREMIUM_TOTAL_LIMIT` = 10. -->
+    <string name="erro_limite_de_programas_premium">Você atingiu o limite de 10 programas.</string>
+
+    <!--
+      ⚠️ ESTE É O ÚNICO DOS NOVE SEM NÚMERO, e é de propósito.
+
+      A frase do servidor é "precisa de N dias livres, tem M" — e N e M vêm das RESPOSTAS da
+      pessoa, não de uma regra fixa. Não há número para cravar.
+
+      Ele é backstop: o quiz já calcula isso no cliente, com plural e com os dois números
+      (`quiz_descanso_insuficiente`). Esta frase só aparece se o servidor recusar mesmo assim, e
+      aí dizer o que houve vale mais que dizer quanto.
+    -->
+    <string name="erro_dias_livres_insuficientes">Você marcou dias de descanso demais para treinar nessa frequência.</string>
+
 </resources>

@@ -8,10 +8,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.ui.erroDoCampo
+import dev.rafael.app.R
 import dev.rafael.contract.error.ErrorFields
 import dev.rafael.core.result.AppError
 import dev.rafael.features.program.domain.model.PendenciaDeSync
@@ -19,6 +22,7 @@ import dev.rafael.features.program.presentation.state.ProgramListEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramListViewModel
 import dev.rafael.app.ui.ErroDeTela
 import dev.rafael.app.ui.ErroEmSnackbar
+import dev.rafael.app.ui.nomeDoPrograma
 import dev.rafael.app.ui.ShimmerList
 import org.koin.androidx.compose.koinViewModel
 
@@ -69,7 +73,7 @@ fun ProgramListScreen(
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 ExtendedFloatingActionButton(
                     onClick = onGenerateWithAI,
-                    text = { Text("Criar com IA") },
+                    text = { Text(stringResource(R.string.comum_criar_com_ia)) },
                     icon = { Text("✨") },
                 )
                 FloatingActionButton(onClick = { showCreateDialog = true }) { Text("+") }
@@ -77,7 +81,7 @@ fun ProgramListScreen(
         },
     ) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().padding(16.dp)) {
-            Text("Meus programas", style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.programa_lista_titulo), style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(12.dp))
 
             Box(Modifier.weight(1f)) {
@@ -92,16 +96,34 @@ fun ProgramListScreen(
                         onAcao = { viewModel.onEvent(ProgramListEvent.Retry) },
                     )
                     state.programs.isEmpty() ->
-                        Text("Nenhum programa ainda.", Modifier.align(Alignment.Center))
+                        Text(stringResource(R.string.programa_lista_vazio), Modifier.align(Alignment.Center))
                     else ->
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             items(state.programs) { p ->
                                 val pendencia = state.pendenciaDe(p.id)
                                 ListItem(
-                                    headlineContent = { Text(p.name) },
+                                    // G.5: programa gerado chega com `name` vazio e o rótulo é
+                                    // derivado aqui, no idioma da tela. Ver `NomeDePrograma.kt`.
+                                    headlineContent = {
+                                        Text(nomeDoPrograma(p.name, p.daysPerWeek, p.split))
+                                    },
                                     supportingContent = {
-                                        val base = "${p.workouts.size} treinos"
-                                        Text(if (p.daysPerWeek > 0) "$base · Semana ${p.currentWeek}/${p.durationWeeks}" else base)
+                                        val base = pluralStringResource(
+                                            R.plurals.programa_treinos,
+                                            p.workouts.size,
+                                            p.workouts.size,
+                                        )
+                                        Text(
+                                            if (p.daysPerWeek > 0) {
+                                                base + " · " + stringResource(
+                                                    R.string.programa_lista_semana,
+                                                    p.currentWeek,
+                                                    p.durationWeeks,
+                                                )
+                                            } else {
+                                                base
+                                            },
+                                        )
                                     },
                                     // ARCH #30/B.4: escrita otimista sem selo é desonesta — o
                                     // usuário não teria como saber que o dado só existe aqui.
@@ -126,12 +148,12 @@ private fun CreateProgramDialog(
     val erroNome = erro.erroDoCampo(ErrorFields.NAME)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Novo programa") },
+        title = { Text(stringResource(R.string.programa_lista_novo)) },
         text = {
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text("Nome") },
+                label = { Text(stringResource(R.string.comum_nome)) },
                 singleLine = true,
                 isError = erroNome != null,
                 supportingText = erroNome?.let { { Text(it) } },
@@ -141,9 +163,11 @@ private fun CreateProgramDialog(
             TextButton(
                 onClick = { if (name.isNotBlank()) onConfirm(name.trim()) },
                 enabled = name.isNotBlank(),
-            ) { Text("Criar") }
+            ) { Text(stringResource(R.string.programa_lista_criar)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.comum_cancelar)) }
+        },
     )
 }
 
@@ -165,13 +189,20 @@ private fun SeloDeSync(pendencia: PendenciaDeSync) {
         AssistChip(
             onClick = {},
             enabled = false,
-            label = { Text("Pendente", style = MaterialTheme.typography.labelSmall) },
+            label = {
+                Text(stringResource(R.string.programa_lista_pendente), style = MaterialTheme.typography.labelSmall)
+            },
         )
     } else {
         AssistChip(
             onClick = {},
             enabled = false,
-            label = { Text("Não sincronizou", style = MaterialTheme.typography.labelSmall) },
+            label = {
+                Text(
+                    stringResource(R.string.programa_lista_nao_sincronizou),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            },
             colors = AssistChipDefaults.assistChipColors(
                 disabledLabelColor = MaterialTheme.colorScheme.error,
             ),

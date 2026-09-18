@@ -46,10 +46,10 @@ class ProgramService(
             generator.generate(profile, prompt = null)   // motor determinístico ignora prompt
         } catch (e: IllegalArgumentException) {
             // política A: environment obrigatório
-            return AppError.Validation(e.message ?: "Perfil incompleto para gerar programa.").asFailure()
+            return AppError.Validation(e.message ?: "Perfil incompleto para gerar programa.", code = ErrorCodes.PERFIL_INCOMPLETO_PARA_GERAR).asFailure()
         }
 
-        val model = dto.toModel(userId, origin = WorkoutOrigin.AI, name = autoName(dto), unavailable = profile.unavailableDays.toSet())
+        val model = dto.toModel(userId, origin = WorkoutOrigin.AI, name = SEM_NOME, unavailable = profile.unavailableDays.toSet())
         return repository.createForUser(userId, model).flatMap { saved ->
             saved.toDto().asSuccess()
         }
@@ -58,7 +58,7 @@ class ProgramService(
     /** Cria um programa vazio (sem motor) só pra abrigar treino avulso. Não conta no teto. */
     /** @param id opcional — vem do outbox do cliente (ARCH #30) e torna a criação idempotente. */
     suspend fun createManual(userId: Uuid, name: String, id: String? = null): AppResult<ProgramDto> {
-        if (name.isBlank()) return AppError.Validation("Nome do programa é obrigatório", mapOf(ErrorFields.NAME to "Nome do programa é obrigatório")).asFailure()
+        if (name.isBlank()) return AppError.Validation("Nome do programa é obrigatório", mapOf(ErrorFields.NAME to "Nome do programa é obrigatório"), code = ErrorCodes.NOME_DE_PROGRAMA_VAZIO).asFailure()
         val ts = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
         val idDoCliente = id?.let { runCatching { Uuid.parse(it) }.getOrNull() } ?: Uuid.NIL
         val shell = Program(
@@ -74,9 +74,9 @@ class ProgramService(
         repository.findAllByUser(userId).flatMap { it.map { p -> p.toDto() }.asSuccess() }
 
     suspend fun rename(userId: Uuid, programId: Uuid, name: String): AppResult<ProgramDto> {
-        if (name.isBlank()) return AppError.Validation("Nome do programa é obrigatório", mapOf(ErrorFields.NAME to "Nome do programa é obrigatório")).asFailure()
+        if (name.isBlank()) return AppError.Validation("Nome do programa é obrigatório", mapOf(ErrorFields.NAME to "Nome do programa é obrigatório"), code = ErrorCodes.NOME_DE_PROGRAMA_VAZIO).asFailure()
         return repository.rename(userId, programId, name).flatMap { updated ->
-            if (updated == null) AppError.NotFound("Programa não encontrado").asFailure()
+            if (updated == null) AppError.NotFound("Programa não encontrado", code = ErrorCodes.PROGRAMA_NAO_EXISTE).asFailure()
             else updated.toDto().asSuccess()
         }
     }
@@ -92,26 +92,26 @@ class ProgramService(
      * programa não é do usuário → NotFound. O gate premium fica na ROTA (requireEditable, #18/#25).
      */
     suspend fun setSchedule(userId: Uuid, programId: Uuid, entries: List<ScheduleEntry>): AppResult<ProgramDto> {
-        if (entries.isEmpty()) return AppError.Validation("A agenda não pode ser vazia").asFailure()
+        if (entries.isEmpty()) return AppError.Validation("A agenda não pode ser vazia", code = ErrorCodes.AGENDA_VAZIA).asFailure()
         if (entries.any { it.dayOfWeek !in 1..7 }) {
-            return AppError.Validation("Dia da semana deve estar entre 1 (Seg) e 7 (Dom)").asFailure()
+            return AppError.Validation("Dia da semana deve estar entre 1 (Seg) e 7 (Dom)", code = ErrorCodes.DIA_DA_SEMANA_INVALIDO).asFailure()
         }
         if (entries.map { it.dayOfWeek }.toSet().size != entries.size) {
-            return AppError.Validation("Dois treinos não podem cair no mesmo dia").asFailure()
+            return AppError.Validation("Dois treinos não podem cair no mesmo dia", code = ErrorCodes.DIA_JA_OCUPADO).asFailure()
         }
         val parsed = entries.map { runCatching { Uuid.parse(it.workoutId) }.getOrNull() to it.dayOfWeek }
-        if (parsed.any { it.first == null }) return AppError.Validation("workoutId inválido").asFailure()
+        if (parsed.any { it.first == null }) return AppError.Validation("Não consegui salvar o cronograma. Tente de novo.", code = ErrorCodes.ID_DE_TREINO_INVALIDO).asFailure()
         val byWorkout = parsed.mapNotNull { (id, day) -> id?.let { it to day } }.toMap()
         if (byWorkout.size != entries.size) {
-            return AppError.Validation("A agenda não pode ter treino repetido").asFailure()
+            return AppError.Validation("A agenda não pode ter treino repetido", code = ErrorCodes.AGENDA_COM_TREINO_REPETIDO).asFailure()
         }
         return repository.findByIdForUser(userId, programId).flatMap { program ->
             when {
-                program == null -> AppError.NotFound("Programa não encontrado").asFailure()
+                program == null -> AppError.NotFound("Programa não encontrado", code = ErrorCodes.PROGRAMA_NAO_EXISTE).asFailure()
                 byWorkout.keys != program.workouts.map { it.id }.toSet() ->
-                    AppError.Validation("A agenda precisa cobrir exatamente os treinos do programa").asFailure()
+                    AppError.Validation("A agenda precisa cobrir exatamente os treinos do programa", code = ErrorCodes.AGENDA_INCOMPLETA).asFailure()
                 else -> repository.setSchedule(userId, programId, byWorkout).flatMap { updated ->
-                    if (updated == null) AppError.NotFound("Programa não encontrado").asFailure()
+                    if (updated == null) AppError.NotFound("Programa não encontrado", code = ErrorCodes.PROGRAMA_NAO_EXISTE).asFailure()
                     else updated.toDto().asSuccess()
                 }
             }
@@ -140,13 +140,13 @@ class ProgramService(
     suspend fun resolveNewWorkoutDay(userId: Uuid, programId: Uuid, chosen: Int?): AppResult<Int> =
         repository.findByIdForUser(userId, programId).flatMap { p ->
             if (p == null) {
-                AppError.NotFound("Programa não encontrado").asFailure()
+                AppError.NotFound("Programa não encontrado", code = ErrorCodes.PROGRAMA_NAO_EXISTE).asFailure()
             } else {
                 val used = p.workouts.mapNotNull { it.dayOfWeek }.toSet()
                 when {
                     chosen == null -> ((1..7).firstOrNull { it !in used } ?: 1).asSuccess()
-                    chosen !in 1..7 -> AppError.Validation("Dia da semana deve estar entre 1 (Seg) e 7 (Dom)").asFailure()
-                    chosen in used -> AppError.Validation("Esse dia já tem um treino").asFailure()
+                    chosen !in 1..7 -> AppError.Validation("Dia da semana deve estar entre 1 (Seg) e 7 (Dom)", code = ErrorCodes.DIA_DA_SEMANA_INVALIDO).asFailure()
+                    chosen in used -> AppError.Validation("Você já tem um treino neste dia. Escolha outro.", code = ErrorCodes.DIA_JA_OCUPADO).asFailure()
                     else -> chosen.asSuccess()
                 }
             }
@@ -164,10 +164,10 @@ class ProgramService(
     suspend fun requireEditable(userId: Uuid, programId: Uuid, isPremium: Boolean): AppResult<Unit> =
         originOf(userId, programId).flatMap { origin ->
             when {
-                origin == null -> AppError.NotFound("Programa não encontrado").asFailure()
+                origin == null -> AppError.NotFound("Programa não encontrado", code = ErrorCodes.PROGRAMA_NAO_EXISTE).asFailure()
                 origin == WorkoutOrigin.AI && !isPremium -> AppError.Forbidden(
                     "Editar um programa gerado por IA é um recurso premium.",
-                    ErrorCodes.ENTITLEMENT_REQUIRED,
+                    ErrorCodes.EDICAO_DE_IA_E_PREMIUM,
                 ).asFailure()
                 else -> Unit.asSuccess()
             }
@@ -194,27 +194,42 @@ class ProgramService(
     ): AppResult<Unit> =
         repository.findByIdForUser(userId, programId).flatMap { programa ->
             when {
-                programa == null -> AppError.NotFound("Programa não encontrado").asFailure()
+                programa == null -> AppError.NotFound("Programa não encontrado", code = ErrorCodes.PROGRAMA_NAO_EXISTE).asFailure()
                 else -> {
                     val indice = programa.workouts.indexOfFirst { it.id == workoutId }
                     when {
-                        indice < 0 -> AppError.NotFound("Treino não encontrado").asFailure()
+                        indice < 0 -> AppError.NotFound("Treino não encontrado", code = ErrorCodes.TREINO_NAO_EXISTE).asFailure()
                         ProgramAccess.liberado(programa.origin, isPremium, indice) -> Unit.asSuccess()
                         else -> AppError.Forbidden(
                             "Este treino faz parte do plano Premium.",
-                            ErrorCodes.ENTITLEMENT_REQUIRED,
+                            ErrorCodes.TREINO_BLOQUEADO_PREMIUM,
                         ).asFailure()
                     }
                 }
             }
         }
 
-    private fun autoName(dto: ProgramDto): String = "Programa ${dto.daysPerWeek}x — ${dto.split}"
 }
 
 // ---- conversões ProgramDto (motor) <-> Program (model) ----
 
 private const val PROGRAM_WEEKS = 8   // [INV] janela mínima/default do cronograma: 8 semanas (2 meses)
+
+/**
+ * **Programa gerado nasce SEM nome, e isso é a fatia G.5** (ARCH #37, V48).
+ *
+ * Até 2026-09-15 existia um `autoName` que devolvia `"Programa 4x — Push/Pull/Legs"` e o GRAVAVA.
+ * Português, com travessão, e persistido: nascia errado para quem usa o app em inglês e ficava
+ * errado para sempre, porque trocar o idioma não alcança dado já gravado.
+ *
+ * `""` significa **"sem nome escolhido, derive"**. O cliente monta o rótulo de `daysPerWeek` e
+ * `split`, que já viajam no DTO, no idioma da tela. A coluna continua existindo e continua
+ * obrigatória porque o usuário renomeia o programa (ARCH #27) — o que ela guarda, a partir daqui,
+ * é escolha dele.
+ *
+ * > **Estado que é função de outra coisa é DERIVADO, não persistido.**
+ */
+private const val SEM_NOME = ""
 
 /** Semana atual (1..durationWeeks) derivada do início — autoridade do servidor, não do cliente. */
 private fun currentWeekOf(startedAt: LocalDateTime, durationWeeks: Int): Int {
