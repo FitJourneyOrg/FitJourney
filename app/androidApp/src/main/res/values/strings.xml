@@ -84,6 +84,7 @@
 
     <!-- Cabeçalhos das seções da tela, um por bloco de informação. -->
     <string name="exercicio_secao_sobre">Sobre o exercício</string>
+    <string name="exercicio_aviso_seguranca">Antes de iniciar qualquer programa de treino, procure a orientação de um profissional de educação física para garantir a execução correta e evitar lesões.</string>
     <string name="exercicio_secao_musculos">Músculos trabalhados</string>
     <string name="exercicio_secao_equipamento">Equipamento</string>
     <string name="exercicio_secao_como_treinar">Como treinar</string>

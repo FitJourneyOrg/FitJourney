@@ -28,10 +28,13 @@ import dev.rafael.app.ui.rotulo
 import dev.rafael.app.ui.rotuloDeEquipamento
 import dev.rafael.app.ui.rotuloDePrescricao
 import dev.rafael.app.ui.shimmer
+import dev.rafael.contract.i18n.Idioma
 import dev.rafael.core.network.MediaUrls
 import dev.rafael.features.exercise.domain.model.Exercise
+import dev.rafael.features.exercise.presentation.descricao.paragrafosDaDescricao
 import dev.rafael.features.exercise.presentation.viewmodel.ExerciseDetailViewModel
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -206,34 +209,30 @@ private fun InfoRow(label: String, value: String) {
     }
 }
 
-private val warnRegex = Regex("^\\s*(aviso|aten[cç][aã]o|importante)\\b", RegexOption.IGNORE_CASE)
-
-// Boilerplate de "procure um profissional" que muitas descrições repetem — removido do texto
-// pra não duplicar a nota padrão (SAFETY_NOTE) que mostramos em TODOS os exercícios.
-private val safetyRegex = Regex(
-    "profissional (de educa[çc][aã]o f[íi]sica|qualificado|de sa[úu]de)|" +
-        "orienta[çc][aã]o de um profissional|antes de iniciar qualquer|acompanhamento profissional",
-    RegexOption.IGNORE_CASE,
-)
-private const val SAFETY_NOTE =
-    "Antes de iniciar qualquer programa de treino, procure a orientação de um profissional de " +
-        "educação física para garantir a execução correta e evitar lesões."
-
 /**
- * Renderiza a descrição em parágrafos (split \n\n). Tira o disclaimer de "profissional" que já
- * vem no texto (pra não duplicar) e SEMPRE anexa a nota de segurança padrão ao final.
+ * Renderiza a descrição em parágrafos (split \n\n). O parsing (o que é boilerplate a esconder,
+ * o que é aviso a destacar) é lógica pura por idioma — mora em `paragrafosDaDescricao`
+ * (shared/features/exercise/presentation), testada em commonTest. Este Composable só decide COMO
+ * desenhar, nunca decide o QUE é aviso.
+ *
+ * O idioma vem do mesmo provedor que o `ExerciseRepositoryImpl` já usa pra pedir o catálogo
+ * (`single<() -> Idioma>` no `AppModule`) — é o idioma em que o `desc` chegou do servidor, então
+ * não corre o risco de aplicar o regex errado sobre o texto certo.
+ *
+ * A nota de segurança fixa (SEMPRE anexada, em TODOS os exercícios) é texto de app, não dado do
+ * catálogo — por isso vive no `strings.xml` (values/values-en), como todo o resto da tela.
  */
 @Composable
 private fun ColumnScope.DescriptionBody(desc: String) {
-    val paras = desc.split("\n\n").map { it.trim() }
-        .filter { it.isNotBlank() && !safetyRegex.containsMatchIn(it) }
-    paras.forEachIndexed { i, para ->
-        if (warnRegex.containsMatchIn(para)) NoteBox(para) else Text(para, style = MaterialTheme.typography.bodyMedium)
-        if (i < paras.lastIndex) Spacer(Modifier.height(10.dp))
+    val idiomaAtual: () -> Idioma = koinInject()
+    val paragrafos = paragrafosDaDescricao(desc, idiomaAtual())
+    paragrafos.forEachIndexed { i, p ->
+        if (p.destaque) NoteBox(p.texto) else Text(p.texto, style = MaterialTheme.typography.bodyMedium)
+        if (i < paragrafos.lastIndex) Spacer(Modifier.height(10.dp))
     }
     // nota de segurança padrão — em TODOS os exercícios
     Spacer(Modifier.height(12.dp))
-    NoteBox(SAFETY_NOTE)
+    NoteBox(stringResource(R.string.exercicio_aviso_seguranca))
 }
 
 @Composable
