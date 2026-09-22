@@ -52,6 +52,7 @@
     <!-- ====================== Exercise detail ====================== -->
 
     <string name="exercicio_secao_sobre">About this exercise</string>
+    <string name="exercicio_aviso_seguranca">Before starting any workout program, seek guidance from a fitness professional to ensure correct technique and prevent injuries.</string>
     <string name="exercicio_secao_musculos">Muscles worked</string>
     <string name="exercicio_secao_equipamento">Equipment</string>
     <string name="exercicio_secao_como_treinar">How to train it</string>
