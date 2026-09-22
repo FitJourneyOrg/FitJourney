@@ -58,67 +58,69 @@ class CaminhosDeMidiaIntegrationTest {
     }
 
     /**
-     * ⭐ **Exatamente 900 caminhos estão no formato da `chave`.**
+     * ⭐ **Exatamente 923 caminhos estão no formato da `chave`.**
      *
      * Este é o teste que teria acusado o defeito no mesmo dia: ele falha se alguém renomear as
      * mídias sem a migration correspondente, e renomear mídia é o tipo de arrumação que parece
      * inofensiva.
      *
-     * ⚠️ **A primeira versão dizia "TODO caminho preenchido", e estava errada** — a mesma falha
-     * que a guarda da V50 cometeu e que abortou a suíte inteira. A V50 atualiza 900 das 965
-     * linhas; as outras 65 continuam legitimamente fora do formato:
-     *
-     * - 39 são os duplicados que a V52 ainda vai remover, com o caminho antigo por extenso;
-     * - 26 nunca tiveram mídia (ver o teste abaixo).
+     * O número era 900 desde a V50 (965 - 39 duplicados - 26 sem mídia). A fatia H sessão B
+     * (V53-V55) mexeu nas duas pontas: a V54 consolidou 4 duplicados por capitalização/sufixo no
+     * exercício moderno que já estava no formato novo, e removeu os outros 22 sem mídia; a V55
+     * inseriu os 23 exercícios que só existiam no catalogo.json, todos com `video_ref`/`thumb_ref`
+     * em `chave` snake_case porque vieram direto de `arquivo_video`/`arquivo_thumb` do catálogo.
+     * 900 + 23 = 923, e agora ninguém fica de fora (ver o teste seguinte).
      *
      * > **Guarda que afirma sobre a tabela inteira quando a migration tocou uma parte dela acusa o
      * > que não mudou.**
      *
-     * Contagem exata, e não "pelo menos": menos que 900 significa mapeamento que não alcançou
+     * Contagem exata, e não "pelo menos": menos que 923 significa mapeamento que não alcançou
      * alguém, mais significa que o mapa está desatualizado. Os dois são defeito.
      */
     @Test
-    fun `exatamente 900 caminhos usam a chave em snake_case`() {
+    fun `exatamente 923 caminhos usam a chave em snake_case`() {
         val noFormatoNovo = refs().filter { (_, video, thumb) ->
             padraoVideo.matches(video) && padraoThumb.matches(thumb)
         }
 
         assertEquals(
-            900,
+            923,
             noFormatoNovo.size,
-            "as mídias foram renomeadas sem a migration, ou o mapa da V50 está desatualizado",
+            "as mídias foram renomeadas sem a migration, ou o mapa da V50/V55 está desatualizado",
         )
     }
 
     /**
      * A outra metade: **quem está fora do formato novo só pode ser exercício sem mídia.**
      *
-     * Sem isto, o teste acima passaria com 900 certos e um 901º apontando para qualquer coisa.
+     * Sem isto, o teste acima passaria com 923 certos e um 924º apontando para qualquer coisa.
      *
-     * ⚠️ Este número era `39 + 26` entre a V50 e a V51 — os 39 duplicados ainda carregavam o
-     * caminho antigo por extenso. A V51 os removeu, e a queda para 26 é a confirmação de que a
-     * remoção levou exatamente quem devia: se tivesse levado alguém do grupo bom junto, o teste
-     * acima teria caído de 900 antes deste chegar aqui.
+     * ⚠️ Este número foi `39 + 26` entre a V50 e a V51, depois `26` até a fatia H sessão B. A V54
+     * pagou essa dívida (consolidou 4, removeu 22) e a V55 não trouxe nenhum exercício sem mídia
+     * junto — os 23 novos só entraram porque tinham vídeo e thumb confirmados em disco. Zero é o
+     * estado são: se subir, alguém inseriu exercício sem mídia e nenhuma outra guarda pega isso.
      *
      * > **Dois testes que se movem juntos provam mais que um que se move sozinho.**
      */
     @Test
-    fun `fora do formato novo existem apenas os 26 sem midia`() {
+    fun `fora do formato novo nao sobra ninguem`() {
         val fora = refs().filterNot { (_, video, thumb) ->
             padraoVideo.matches(video) && padraoThumb.matches(thumb)
         }
 
-        assertEquals(
-            26,
-            fora.size,
+        assertTrue(
+            fora.isEmpty(),
             "caminho inesperado fora do padrão: ${fora.take(5).map { it.first }}",
         )
     }
 
-    /** 965 - 39 duplicados = 926. Fixa o tamanho do catálogo depois da limpeza da V51. */
+    /**
+     * 965 - 39 duplicados = 926 (V51). 926 - 26 legado sem mídia (V54) + 23 novos do catálogo
+     * (V55) = 923. Fixa o tamanho do catálogo depois da fatia H sessão B.
+     */
     @Test
-    fun `o catalogo tem 926 exercicios`() {
-        assertEquals(926, refs().size)
+    fun `o catalogo tem 923 exercicios`() {
+        assertEquals(923, refs().size)
     }
 
     /**
@@ -165,26 +167,27 @@ class CaminhosDeMidiaIntegrationTest {
     private fun nomes(): List<String> = refs().map { it.first }
 
     /**
-     * ⚠️ **Os 26 sem mídia são conhecidos, contados e NÃO são defeito deste teste.**
+     * ✅ **A dívida dos 26 sem mídia foi paga na fatia H sessão B (V54).**
      *
      * Eles nasceram em migrations de curadoria (V29 a V33) com `video_ref` vazio e nunca tiveram
      * arquivo: `Prancha`, `Pallof Press`, `Dead Bug`, `Russian Twist`, as seis variações de
-     * `Abdominal`. Já apareciam sem imagem antes da V50.
+     * `Abdominal`, entre outros. A investigação da V54 achou 3 grupos: 4 eram duplicata do mesmo
+     * exercício sob outra capitalização/sufixo (consolidados no moderno, que já tinha mídia); 3
+     * estavam em uso em treinos sem equivalente moderno (removidos com o histórico — ambiente de
+     * desenvolvimento); os 19 restantes nunca tiveram uso nem equivalente (removidos direto).
      *
      * O número fixado aqui é o que transforma "existem alguns sem mídia" em dívida enumerável. Se
-     * ele SOBE, alguém acrescentou exercício sem mídia e este teste cobra. Se ele DESCE, a dívida
-     * está sendo paga e a linha se atualiza junto.
+     * ele SOBE, alguém acrescentou exercício sem mídia e este teste cobra. Zero é o estado são.
      *
      * > **Débito que ninguém consegue contar volta a crescer sem que ninguém perceba.**
      */
     @Test
-    fun `os exercicios sem midia continuam sendo os mesmos 26`() {
+    fun `nao existem mais exercicios sem midia`() {
         val semMidia = refs().filter { (_, video, _) -> video.isEmpty() }
 
-        assertEquals(
-            26,
-            semMidia.size,
-            "exercícios sem mídia mudaram de quantidade: ${semMidia.map { it.first }}",
+        assertTrue(
+            semMidia.isEmpty(),
+            "exercícios sem mídia reapareceram: ${semMidia.map { it.first }}",
         )
     }
 
