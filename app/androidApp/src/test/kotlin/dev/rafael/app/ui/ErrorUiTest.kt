@@ -209,4 +209,21 @@ class ErrorUiTest {
             )
         }
     }
+
+    // ---- rodapé DEBUG (P1.2, 2026-09-22) ----
+
+    /**
+     * Só a parte PURA de [rodapeDebug] é testável em Tier 1 — o `if (BuildConfig.DEBUG)` que
+     * decide MOSTRAR o rodapé é Compose puro, sem lógica de decisão além da constante gerada
+     * pela AGP; nenhum outro Composable deste arquivo tem teste de renderização (não há
+     * infraestrutura de teste de UI/Compose neste projeto), e criá-la só para uma linha de texto
+     * fugiria do padrão estabelecido.
+     */
+    @Test
+    fun `rodapeDebug mostra o endereco com o prefixo DEBUG`() {
+        assertEquals(
+            "DEBUG: http://10.0.2.2:8080",
+            rodapeDebug("http://10.0.2.2:8080"),
+        )
+    }
 }

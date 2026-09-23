@@ -33,6 +33,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import dev.rafael.app.BuildConfig
 import dev.rafael.app.R
 import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.core.result.AppError
@@ -326,6 +327,21 @@ private fun Context.temRede(): Boolean {
  *
  * Use SÓ quando não há dado local. Com dado local, falha de sync é nível 1 (silêncio):
  * exibir isto por cima de uma lista que funciona é assustar o usuário à toa.
+ *
+ * ## Rodapé DEBUG (P1.2, 2026-09-22)
+ *
+ * Fecha dois débitos ao mesmo tempo: "a tela de erro não diz qual endereço tentou" e "o app não
+ * diz para onde está falando". O `apiBaseUrl` já era impresso por um `logger.lifecycle` no BUILD
+ * (`app/androidApp/build.gradle.kts`) — mas rola pra fora do terminal antes de alguém precisar
+ * dele. `BuildConfig.API_BASE_URL` é o MESMO valor, só que disponível no APARELHO, na hora do
+ * erro — três episódios de diagnóstico (IP errado vs. servidor parado vs. firewall) que teriam
+ * acabado num olhar.
+ *
+ * `BuildConfig.DEBUG`, não uma flag própria: é o sinal que a AGP já gera por variante de build, e
+ * é exatamente a granularidade que importa aqui — em RELEASE isto seria vazamento de
+ * infraestrutura (IP da LAN, endereço interno) sem nenhuma serventia para quem não é o Rafael.
+ * String crua, não [Frase]/`stringResource`: é diagnóstico do desenvolvedor, não conteúdo do
+ * app — não faz sentido traduzir "DEBUG: http://...".
  */
 @Composable
 fun ErroDeTela(
@@ -363,8 +379,20 @@ fun ErroDeTela(
             Spacer(Modifier.height(16.dp))
             OutlinedButton(onClick = { onAcao(visual.acao) }) { Text(stringResource(rotulo)) }
         }
+        if (BuildConfig.DEBUG) {
+            Spacer(Modifier.height(24.dp))
+            Text(
+                rodapeDebug(BuildConfig.API_BASE_URL),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.outline,
+                textAlign = TextAlign.Center,
+            )
+        }
     }
 }
+
+/** Extraído só pra ter uma linha PURA testável em Tier 1 — o resto do rodapé é `BuildConfig`/Compose, sem lógica. */
+internal fun rodapeDebug(apiBaseUrl: String): String = "DEBUG: $apiBaseUrl"
 
 /**
  * NÍVEL 3, forma compacta — para formulários e telas onde o erro precisa ficar ANCORADO
