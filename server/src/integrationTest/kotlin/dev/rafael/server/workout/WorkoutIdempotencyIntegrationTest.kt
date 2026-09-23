@@ -72,8 +72,8 @@ class WorkoutIdempotencyIntegrationTest {
                 it[name] = "Programa de teste"
                 it[origin] = "MANUAL"
                 it[daysPerWeek] = 3
-                it[split] = "Manual"
-                it[rationale] = ""
+                it[split] = null
+                it[focusMuscles] = null
                 it[createdAt] = ts
                 it[updatedAt] = ts
                 it[durationWeeks] = 8

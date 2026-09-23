@@ -1,5 +1,6 @@
 package dev.rafael.server.features.program.db
 
+import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -8,6 +9,8 @@ import dev.rafael.core.result.asSuccess
 import dev.rafael.server.features.program.models.Program
 import dev.rafael.server.features.program.models.ProgramCounts
 import dev.rafael.server.features.program.models.ProgramsTable
+import dev.rafael.server.features.profile.db.toJson
+import dev.rafael.server.features.profile.db.toMuscleGroups
 import dev.rafael.server.features.workout.db.WorkoutExercisesTable
 import dev.rafael.server.features.workout.db.WorkoutSetsTable
 import dev.rafael.server.features.workout.db.WorkoutsTable
@@ -139,8 +142,8 @@ class ProgramRepositoryImpl : ProgramRepository {
             it[name] = program.name
             it[origin] = program.origin.name
             it[daysPerWeek] = program.daysPerWeek
-            it[split] = program.split
-            it[rationale] = program.rationale
+            it[split] = program.split?.name
+            it[focusMuscles] = program.focusMuscles.toJson()
             it[locked] = program.locked
             it[createdAt] = ts
             it[updatedAt] = ts
@@ -241,8 +244,8 @@ class ProgramRepositoryImpl : ProgramRepository {
         name = this[ProgramsTable.name],
         origin = WorkoutOrigin.valueOf(this[ProgramsTable.origin]),
         daysPerWeek = this[ProgramsTable.daysPerWeek],
-        split = this[ProgramsTable.split],
-        rationale = this[ProgramsTable.rationale],
+        split = this[ProgramsTable.split]?.let { SplitType.valueOf(it) },
+        focusMuscles = this[ProgramsTable.focusMuscles]?.toMuscleGroups() ?: emptyList(),
         locked = this[ProgramsTable.locked],
         workouts = workouts,
         createdAt = this[ProgramsTable.createdAt],

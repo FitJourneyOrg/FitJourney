@@ -2,6 +2,8 @@ package dev.rafael.features.program.data
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
+import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.program.ProgramDto
 import dev.rafael.contract.program.ScheduleEntry
 import dev.rafael.contract.workout.WorkoutDto
@@ -41,6 +43,7 @@ class ProgramLocalDataSource(
     private val qTreino = db.workoutQueries
     private val json = Json { ignoreUnknownKeys = true }
     private val exerciciosSerializer = ListSerializer(WorkoutExerciseDto.serializer())
+    private val focoSerializer = ListSerializer(MuscleGroup.serializer())
 
     private suspend fun uid(): String = tokenProvider.currentUid() ?: ""
 
@@ -84,8 +87,8 @@ class ProgramLocalDataSource(
                     name = p.name,
                     origin = p.origin.name,
                     daysPerWeek = p.daysPerWeek.toLong(),
-                    split = p.split,
-                    rationale = p.rationale,
+                    split = p.split?.name,
+                    focusMuscles = json.encodeToString(focoSerializer, p.focusMuscles),
                     locked = if (p.locked) 1L else 0L,
                     durationWeeks = p.durationWeeks.toLong(),
                     startedAt = p.startedAt,
@@ -153,8 +156,8 @@ class ProgramLocalDataSource(
             name = dto.name,
             origin = dto.origin.name,
             daysPerWeek = dto.daysPerWeek.toLong(),
-            split = dto.split,
-            rationale = dto.rationale,
+            split = dto.split?.name,
+            focusMuscles = json.encodeToString(focoSerializer, dto.focusMuscles),
             locked = if (dto.locked) 1L else 0L,
             durationWeeks = dto.durationWeeks.toLong(),
             startedAt = dto.startedAt,
@@ -224,8 +227,13 @@ class ProgramLocalDataSource(
             origin = runCatching { WorkoutOrigin.valueOf(p.origin) }.getOrDefault(WorkoutOrigin.AI),
             workouts = treinos,
             daysPerWeek = p.daysPerWeek.toInt(),
-            split = p.split,
-            rationale = p.rationale,
+            // Defensivo igual ao origin acima: o cache pode ter sobrado de ANTES da migration
+            // 4.sqm (valor fora do enum) -- vira null (sem chip de split) em vez de derrubar
+            // a leitura.
+            split = p.split?.let { runCatching { SplitType.valueOf(it) }.getOrNull() },
+            focusMuscles = p.focusMuscles?.let {
+                runCatching { json.decodeFromString(focoSerializer, it) }.getOrDefault(emptyList())
+            } ?: emptyList(),
             locked = p.locked == 1L,
             schedule = agenda,
             durationWeeks = p.durationWeeks.toInt(),

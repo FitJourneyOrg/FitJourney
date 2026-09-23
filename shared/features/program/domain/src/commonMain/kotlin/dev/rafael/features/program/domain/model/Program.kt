@@ -9,8 +9,18 @@ data class Program(
     val name: String,
     val workouts: List<ProgramWorkout>,
     val daysPerWeek: Int,
-    val split: String,
-    val rationale: String,
+    // Chave do SplitType do contrato (ex. "FULL_BODY"), NAO o enum tipado -- este modulo
+    // (:domain) nao depende de shared-contract, e nenhum :domain do projeto depende hoje
+    // ([REGRA] domain e Kotlin puro e nao conhece nem outra feature). null = programa MANUAL
+    // (shell sem motor). Quem resolve pro enum e traduz e a camada de app -- ver
+    // `rotuloDoSplit()`/`rationaleDoPrograma()` em ui/, mesmo padrao defensivo
+    // (`runCatching { X.valueOf(...) }`) que ja existia pro WorkoutOrigin no
+    // ProgramLocalDataSource.
+    val split: String?,
+    // Chaves de MuscleGroup (contrato) priorizadas NO MOMENTO da geracao (fatia "rationale
+    // derivado", 2026-09-22) -- mesma razao do split acima pra ficar String em vez do enum.
+    // Vazio = sem foco, ou programa anterior a esta fatia (legado, sem snapshot).
+    val focusMuscles: List<String> = emptyList(),
     val locked: Boolean,
     val schedule: List<ProgramScheduleEntry>,
     val durationWeeks: Int = 8,   // janela do cronograma (ARCH #22)

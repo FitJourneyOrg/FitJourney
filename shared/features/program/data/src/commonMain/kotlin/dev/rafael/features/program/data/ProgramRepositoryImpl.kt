@@ -178,8 +178,7 @@ class ProgramRepositoryImpl(
             name = name,
             origin = WorkoutOrigin.MANUAL,
             daysPerWeek = 0,
-            split = "",
-            rationale = "",
+            split = null,   // manual: sem motor, sem split (fatia "rationale derivado")
             createdAt = agora,
             updatedAt = agora,
         )
