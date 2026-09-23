@@ -245,8 +245,18 @@
 
     <!-- O aparelho está offline. Título de tela de erro, ~40 caracteres. -->
     <string name="erro_titulo_sem_conexao">Sem conexão</string>
-    <!-- Corpo do caso acima. Frase inteira, sem limite de espaço. -->
+    <!--
+      Corpo do caso acima, quando a TELA TEM dado local pra mostrar (feed, lista de grupos): a
+      promessa "o que já foi baixado continua funcionando" é verdadeira aqui.
+    -->
     <string name="erro_texto_sem_conexao">Você está offline. Conecte-se para sincronizar. O que já foi baixado continua funcionando.</string>
+    <!--
+      ✅ Fechado em 2026-09-23 (P2, #31): "a frase de offline promete cache a telas que não têm".
+      Mesmo título (`erro_titulo_sem_conexao`), texto DIFERENTE — pra telas online-only (fila de
+      denúncias, comentários, denunciar), onde não existe nada baixado. Ver `ContextoDeCache` no
+      `ErrorUi.kt`.
+    -->
+    <string name="erro_texto_sem_conexao_sem_cache">Você está offline. Esta tela depende de conexão para funcionar.</string>
 
     <!--
       401 na tela de LOGIN: a senha está errada, a sessão não morreu. Nunca use este par numa tela
@@ -316,10 +326,10 @@
     <string name="erro_meu_perfil_incompleto">Você ainda não completou o questionário.</string>
     <!-- Perfil de OUTRA pessoa, privado ou removido. Não revela qual dos dois. -->
     <string name="erro_perfil_de_terceiro_indisponivel">Este perfil não está disponível.</string>
-    <!-- Os números 2 e 6 são a regra do produto, não um limite de aparelho. -->
-    <string name="erro_dias_por_semana_invalido">Escolha entre 2 e 6 dias por semana.</string>
-    <string name="erro_foco_alem_do_limite">Escolha no máximo 2 grupos de foco.</string>
-    <string name="erro_idade_invalida">Digite uma idade entre 5 e 120 anos.</string>
+    <!-- Os números vêm de Limites.Profile (shared-contract), não são mais cravados aqui. -->
+    <string name="erro_dias_por_semana_invalido">Escolha entre %1$d e %2$d dias por semana.</string>
+    <string name="erro_foco_alem_do_limite">Escolha no máximo %1$d grupos de foco.</string>
+    <string name="erro_idade_invalida">Digite uma idade entre %1$d e %2$d anos.</string>
     <!-- Falha ao salvar os dias indisponíveis da semana. -->
     <string name="erro_dias_indisponiveis_invalidos">Não consegui salvar sua agenda. Tente de novo.</string>
 
@@ -384,6 +394,25 @@
     <string name="erro_desafio_ja_comecou">O desafio já começou e a entrada está fechada.</string>
     <string name="erro_so_o_admin_do_grupo">Só o admin do desafio pode fazer isso.</string>
     <string name="erro_campos_do_grupo_invalidos">Revise os campos do desafio.</string>
+
+    <!--
+      ✅ Débito FECHADO em 2026-09-23 (P2): "erroDoCampo devolve frase do servidor". As dez frases
+      abaixo são o QUE cada campo do formulário recusou — `erro_campos_do_grupo_invalidos` acima
+      continua sendo só o título genérico. `startDate`/`endDate` têm duas frases cada (parse falhou
+      × regra de negócio violada), porque são leituras diferentes pra quem preenche o formulário.
+    -->
+    <string name="erro_grupo_titulo_vazio">Dê um nome ao desafio.</string>
+    <!-- `Limites.Group.TITULO_MAX`. -->
+    <string name="erro_grupo_titulo_longo">Use no máximo %1$d caracteres no título.</string>
+    <!-- `Limites.Group.DESCRICAO_MAX`. -->
+    <string name="erro_grupo_descricao_longa">Use no máximo %1$d caracteres na descrição.</string>
+    <string name="erro_grupo_fuso_invalido">Fuso horário inválido.</string>
+    <string name="erro_grupo_data_inicio_invalida">Data de início inválida.</string>
+    <string name="erro_grupo_data_fim_invalida">Data de fim inválida.</string>
+    <string name="erro_grupo_fim_antes_do_inicio">O fim tem de ser depois do início.</string>
+    <string name="erro_grupo_inicio_muito_cedo">O desafio precisa começar a partir de amanhã, para dar tempo de as pessoas entrarem.</string>
+    <string name="erro_grupo_regra_emoji_sem_foto">A regra do emoji do dia exige que a foto também seja obrigatória.</string>
+    <string name="erro_grupo_regra_gympass_indisponivel">A regra do Gympass ainda não está disponível.</string>
 
     <!-- ~~~~~~~~~~~~~~~~~~~~ Check-in ~~~~~~~~~~~~~~~~~~~~ -->
 
@@ -529,8 +558,8 @@
     -->
     <string name="enum_bloqueio_ja_comecou">Este desafio já começou. A entrada fecha quando ele começa.</string>
     <string name="enum_bloqueio_encerrado">Este desafio já terminou.</string>
-    <!-- O 50 é o teto do produto, não um limite de aparelho. -->
-    <string name="enum_bloqueio_lotado">Este desafio já tem 50 participantes.</string>
+    <!-- O número vem de Limites.Group.MAX_MEMBROS (shared-contract), não é mais cravado aqui. -->
+    <string name="enum_bloqueio_lotado">Este desafio já tem %1$d participantes.</string>
     <string name="enum_bloqueio_ja_e_membro">Você já participa deste desafio.</string>
     <string name="enum_bloqueio_convite_invalido">Este link expirou ou foi revogado. Peça o código do desafio.</string>
 
@@ -1094,6 +1123,9 @@
     <!-- Título da barra quando o treino não tem nome. -->
     <string name="treino_detalhe_titulo_padrao">Treino</string>
     <string name="treino_detalhe_vazio">Nenhum exercício neste treino.</string>
+    <!-- RIR alvo do exercício (ARCH #26), no supportingContent do card, junto de séries/reps.
+         So aparece quando o exercicio tem RIR prescrito (programa gerado, nao manual). -->
+    <string name="treino_detalhe_rir">RIR %1$d</string>
     <!-- Diálogo de exclusão do treino. -->
     <string name="treino_detalhe_excluir_pergunta">Excluir treino?</string>
     <string name="treino_detalhe_excluir_texto">Esta ação não pode ser desfeita.</string>
@@ -1722,10 +1754,10 @@
     <!-- ====== Erros que carregavam número do servidor (fatia G.4, 2026-09-11) ====== -->
 
     <!--
-      ⚠️ OS NÚMEROS AQUI SÃO REGRA DE PRODUTO, E VIVEM NO SERVIDOR.
-      Cada comentário diz de qual constante o número veio. Se a constante mudar lá, ESTA frase
-      mente — o servidor recusa num limite e o app anuncia outro. Não há guarda automática:
-      é débito registrado, não descuido.
+      ✅ Débito FECHADO em 2026-09-23 (P2): "12 frases cravam constante do servidor".
+      Os números abaixo eram texto solto que por coincidência dizia o mesmo número da constante —
+      viraram `%1$d`/`%2$d`, alimentados por `Limites` (`shared-contract/contract/limites/`), a
+      MESMA fonte que o servidor usa pra validar. Mudar o limite agora muda os dois lados juntos.
 
       Mesma convenção já usada em `erro_dias_por_semana_invalido`, `erro_idade_invalida`,
       `erro_foco_alem_do_limite` e `enum_bloqueio_lotado`, todos anteriores a esta fatia.
@@ -1734,22 +1766,22 @@
       servidor carregava o número e o `ErrorResponse` não tinha como mandá-lo separado.
     -->
 
-    <!-- Nome de exibição curto demais. `DisplayNamePolicy.MIN` = 2. -->
-    <string name="erro_nome_curto">Use pelo menos 2 caracteres.</string>
-    <!-- Nome de exibição longo demais. `DisplayNamePolicy.MAX` = 30. -->
-    <string name="erro_nome_longo">Use no máximo 30 caracteres.</string>
-    <!-- Comentário vazio ou longo demais. `SocialPolicy.MAX_COMENTARIO` = 500. -->
-    <string name="erro_comentario_invalido">Escreva algo, com até 500 caracteres.</string>
-    <!-- Nome do lugar do check-in. `CheckInPolicy.MAX_NOME_DO_LOCAL` = 60. -->
-    <string name="erro_nome_do_local_longo">Use até 60 caracteres.</string>
-    <!-- Denúncia fora do prazo. `ModeracaoPolicy.PRAZO_EM_DIAS` = 7. -->
-    <string name="erro_prazo_da_denuncia">Denúncias só valem até 7 dias depois do check-in.</string>
-    <!-- Teto de geração por IA no grátis. `ProgramLimits.FREE_AI_LIMIT` = 1. -->
-    <string name="erro_limite_de_ia_gratis">O plano grátis gera 1 programa com IA. Assine o premium para gerar mais.</string>
-    <!-- Teto de programas manuais no grátis. `ProgramLimits.FREE_MANUAL_LIMIT` = 2. -->
-    <string name="erro_limite_de_manuais_gratis">O plano grátis cria até 2 programas. Assine o premium para criar mais.</string>
-    <!-- Teto total, já no premium. `ProgramLimits.PREMIUM_TOTAL_LIMIT` = 10. -->
-    <string name="erro_limite_de_programas_premium">Você atingiu o limite de 10 programas.</string>
+    <!-- Nome de exibição curto demais. `Limites.DisplayName.MIN`. -->
+    <string name="erro_nome_curto">Use pelo menos %1$d caracteres.</string>
+    <!-- Nome de exibição longo demais. `Limites.DisplayName.MAX`. -->
+    <string name="erro_nome_longo">Use no máximo %1$d caracteres.</string>
+    <!-- Comentário vazio ou longo demais. `Limites.Social.MAX_COMENTARIO`. -->
+    <string name="erro_comentario_invalido">Escreva algo, com até %1$d caracteres.</string>
+    <!-- Nome do lugar do check-in. `Limites.CheckIn.MAX_NOME_DO_LOCAL`. -->
+    <string name="erro_nome_do_local_longo">Use até %1$d caracteres.</string>
+    <!-- Denúncia fora do prazo. `Limites.Moderacao.PRAZO_EM_DIAS`. -->
+    <string name="erro_prazo_da_denuncia">Denúncias só valem até %1$d dias depois do check-in.</string>
+    <!-- Teto de geração por IA no grátis. `Limites.Program.FREE_AI_LIMIT`. -->
+    <string name="erro_limite_de_ia_gratis">O plano grátis gera %1$d programa com IA. Assine o premium para gerar mais.</string>
+    <!-- Teto de programas manuais no grátis. `Limites.Program.FREE_MANUAL_LIMIT`. -->
+    <string name="erro_limite_de_manuais_gratis">O plano grátis cria até %1$d programas. Assine o premium para criar mais.</string>
+    <!-- Teto total, já no premium. `Limites.Program.PREMIUM_TOTAL_LIMIT`. -->
+    <string name="erro_limite_de_programas_premium">Você atingiu o limite de %1$d programas.</string>
 
     <!--
       ⚠️ ESTE É O ÚNICO DOS NOVE SEM NÚMERO, e é de propósito.
