@@ -24,4 +24,9 @@ data class ResolvedExercise(
     val thumbRef: String?,               // null se não resolveu (ou sem mídia ainda)
     val setsSummary: String,             // ex.: "3 séries · 12/10/8 reps"
     val orderIndex: Int,
+    // RIR alvo (ARCH #26); null = manual não prescreve. Já persistia (WorkoutExercise.rir)
+    // e sobrevivia ao round-trip de edição, mas não tinha onde aparecer na tela — a UI
+    // decide o rótulo/formatação (fica em dev.rafael.app.ui, com stringResource), não este
+    // pacote KMP puro. Débito "Exibir RIR na tela de detalhe do treino" (debitos.md).
+    val rir: Int? = null,
 )

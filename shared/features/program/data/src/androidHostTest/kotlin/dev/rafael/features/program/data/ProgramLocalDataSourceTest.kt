@@ -119,4 +119,39 @@ class ProgramLocalDataSourceTest {
             "pendente não pode ser sobrescrito pela versão desatualizada do servidor",
         )
     }
+
+    /**
+     * ⭐ Débito "Round-trip de `durationWeeks`/`startedAt` sem asserção dedicada" (debitos.md,
+     * destino TEST) — lacuna de C2 num campo que já é lido/escrito em produção (ARCH #22).
+     *
+     * Por que isto merece teste PRÓPRIO e não só confiar no `ProgramMapperTest`: o mapper prova
+     * DTO↔domínio, mas os dois lados aqui atravessam o SQLDelight de verdade, que converte
+     * `durationWeeks` (`Int` no DTO) para `INTEGER` via `Long` na query gerada (`.toLong()` na
+     * escrita, `.toInt()` na leitura — ver `criarPrograma`/`lerPrograma`). Um `Int` que estoura
+     * `Int.MAX_VALUE` nesse caminho quebraria só em runtime contra o banco real, não no mapper.
+     */
+    @Test
+    fun `durationWeeks e startedAt sobrevivem ao round-trip local (criarPrograma - lerPrograma)`() = runTest {
+        val dto = programaOffline(id = "p3", nome = "Com janela").copy(
+            durationWeeks = 12,
+            startedAt = "2026-09-01T00:00:00",
+        )
+
+        ds.criarPrograma(dto)
+        val lido = ds.lerPrograma("p3")
+
+        assertEquals(12, lido?.durationWeeks, "durationWeeks não pode se perder no Int->Long->Int do SQLDelight")
+        assertEquals("2026-09-01T00:00:00", lido?.startedAt)
+    }
+
+    /** Caminho de falha do débito acima: `startedAt` nulo (programa cuja janela ainda não começou)
+     *  não pode virar string vazia nem `"null"` no SQLite — tem que continuar nulo de verdade. */
+    @Test
+    fun `startedAt nulo (janela ainda nao iniciada) sobrevive ao round-trip como null`() = runTest {
+        val dto = programaOffline(id = "p4", nome = "Sem janela").copy(startedAt = null)
+
+        ds.criarPrograma(dto)
+
+        assertNull(ds.lerPrograma("p4")?.startedAt)
+    }
 }
