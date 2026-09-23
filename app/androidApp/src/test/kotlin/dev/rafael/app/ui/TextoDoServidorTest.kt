@@ -39,12 +39,14 @@ import kotlin.test.assertTrue
  * procurar. Um ponto novo quebra o build e obriga a decisão a ficar escrita; um ponto resolvido
  * quebra também, e a lista encolhe junto.
  *
- * ## O que este teste NÃO cobre
+ * ## O que este teste NÃO cobre, e por que deixou de precisar
  *
- * O `erroDoCampo`, que devolve a frase do servidor para um `fieldErrors` — mapa aberto, sem
- * código. É a mesma classe de débito e está anotada no KDoc dele; não entra aqui porque o número
- * de telas que mostram erro de campo cresce com o app, e prendê-lo num teste geraria churn sem
- * informação nova. A saída para os dois é a mesma: o servidor mandar chave em vez de frase.
+ * O `erroDoCampo` chegou a ser a mesma classe de débito — `fieldErrors` era um mapa aberto, sem
+ * código, e a tela mostrava a frase crua do servidor. Fechado em 2026-09-23 (P2): o valor de
+ * `fieldErrors` virou CÓDIGO, igual ao `code` de nível superior, e `erroDoCampo` resolve via
+ * `TextosDeErro`, como todo o resto do catálogo — ver o KDoc dele em `ErrorUi.kt`. Continua fora
+ * desta lista porque já não constrói `Frase.DoServidor` nenhuma: o fallback dele (código
+ * desconhecido) devolve o código cru, não uma frase do servidor.
  */
 class TextoDoServidorTest {
 

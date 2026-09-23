@@ -10,6 +10,7 @@ import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.group.GroupRule
 import dev.rafael.contract.group.GroupState
 import dev.rafael.contract.group.JoinBlock
+import dev.rafael.contract.limites.Limites
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
@@ -242,6 +243,16 @@ fun JoinBlock.frase(): Int = when (this) {
     JoinBlock.LOTADO -> R.string.enum_bloqueio_lotado
     JoinBlock.JA_E_MEMBRO -> R.string.enum_bloqueio_ja_e_membro
     JoinBlock.CONVITE_INVALIDO -> R.string.enum_bloqueio_convite_invalido
+}
+
+/**
+ * Os parâmetros de [frase], quando o motivo pede algum — só [JoinBlock.LOTADO] pede (débito "12
+ * frases cravam constante do servidor", debitos.md): `enum_bloqueio_lotado` ganhou `%1$d`
+ * alimentado por [Limites.Group.MAX_MEMBROS], em vez de "50" cravado na frase.
+ */
+fun JoinBlock.args(): List<Any> = when (this) {
+    JoinBlock.LOTADO -> listOf(Limites.Group.MAX_MEMBROS)
+    else -> emptyList()
 }
 
 /**

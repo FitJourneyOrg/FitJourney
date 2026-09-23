@@ -17,6 +17,8 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 import dev.rafael.contract.error.ErrorCodes
+import dev.rafael.contract.error.ErrorFields
+import dev.rafael.contract.limites.Limites
 
 /**
  * Regras do GRUPO (ARCH #33, fatia A.1). Kotlin PURO, sem I/O — como `XpPolicy`,
@@ -28,9 +30,11 @@ import dev.rafael.contract.error.ErrorCodes
  */
 object GroupPolicy {
 
-    const val TITULO_MAX = 60
-    const val DESCRICAO_MAX = 300
-    const val MAX_MEMBROS = 50
+    // Fonte real: shared-contract (debitos.md "12 frases cravam constante do servidor").
+    const val TITULO_MAX = Limites.Group.TITULO_MAX
+    const val DESCRICAO_MAX = Limites.Group.DESCRICAO_MAX
+    // MAX_MEMBROS alimenta `enum_bloqueio_lotado` no cliente.
+    const val MAX_MEMBROS = Limites.Group.MAX_MEMBROS
     const val TAMANHO_DO_CODIGO = 6
 
     /**
@@ -114,36 +118,39 @@ object GroupPolicy {
      * aparelho para criar um grupo que nasce ativo e pular a janela de entrada).
      */
     fun validarCriacao(req: CreateGroupRequest, agora: Instant): AppResult<GrupoValidado> {
+        // Valor = CÓDIGO, não frase (débito "erroDoCampo devolve frase do servidor", debitos.md,
+        // fechado 2026-09-23) — o cliente traduz via TextosDeErro.de(), igual ao `code` de nível
+        // superior. `fieldErrors` diz QUAL campo E QUAL dos dez motivos; o `code` de fora
+        // (CAMPOS_DO_GRUPO_INVALIDOS) só diz "revise o formulário".
         val erros = mutableMapOf<String, String>()
 
         val titulo = req.title.trim().replace(ESPACOS, " ")
-        if (titulo.isBlank()) erros["title"] = "Dê um nome ao grupo."
-        else if (titulo.length > TITULO_MAX) erros["title"] = "Use no máximo $TITULO_MAX caracteres."
+        if (titulo.isBlank()) erros[ErrorFields.TITLE] = ErrorCodes.GRUPO_TITULO_VAZIO
+        else if (titulo.length > TITULO_MAX) erros[ErrorFields.TITLE] = ErrorCodes.GRUPO_TITULO_LONGO
 
         val descricao = req.description?.trim()?.replace(ESPACOS, " ")?.takeIf { it.isNotBlank() }
         if (descricao != null && descricao.length > DESCRICAO_MAX) {
-            erros["description"] = "Use no máximo $DESCRICAO_MAX caracteres."
+            erros[ErrorFields.DESCRIPTION] = ErrorCodes.GRUPO_DESCRICAO_LONGA
         }
 
         val fuso = fusoValido(req.timezone)
-        if (fuso == null) erros["timezone"] = "Fuso horário inválido."
+        if (fuso == null) erros[ErrorFields.TIMEZONE] = ErrorCodes.GRUPO_FUSO_INVALIDO
 
         val inicio = req.startDate.paraData()
         val fim = req.endDate.paraData()
-        if (inicio == null) erros["startDate"] = "Data de início inválida."
-        if (fim == null) erros["endDate"] = "Data de fim inválida."
+        if (inicio == null) erros[ErrorFields.START_DATE] = ErrorCodes.GRUPO_DATA_INICIO_INVALIDA
+        if (fim == null) erros[ErrorFields.END_DATE] = ErrorCodes.GRUPO_DATA_FIM_INVALIDA
 
         if (inicio != null && fim != null && fuso != null) {
             if (fim <= inicio) {
-                erros["endDate"] = "O fim tem de ser depois do início."
+                erros[ErrorFields.END_DATE] = ErrorCodes.GRUPO_FIM_ANTES_DO_INICIO
             }
             // O grupo precisa nascer AGENDADO. Se pudesse começar hoje, nasceria ATIVO — e como
             // AGENDADO é a ÚNICA janela de entrada (2-B), a janela de convite teria duração
             // zero. Ninguém entraria, e o convite é o gargalo do produto (2-B.0).
             val hoje = agora.toLocalDateTime(fuso).date
             if (inicio <= hoje) {
-                erros["startDate"] =
-                    "O desafio precisa começar a partir de amanhã, para dar tempo de as pessoas entrarem."
+                erros[ErrorFields.START_DATE] = ErrorCodes.GRUPO_INICIO_MUITO_CEDO
             }
         }
 
@@ -151,10 +158,10 @@ object GroupPolicy {
         // a amarração dá para configurar um grupo impossível de cumprir.
         val regras = req.rules.toSet()
         if (GroupRule.EMOJI_DO_DIA in regras && GroupRule.FOTO !in regras) {
-            erros["rules"] = "A regra do emoji do dia exige que a foto também seja obrigatória."
+            erros[ErrorFields.RULES] = ErrorCodes.GRUPO_REGRA_EMOJI_SEM_FOTO
         }
         if (GroupRule.GYM_PASS in regras) {
-            erros["rules"] = "A regra do Gympass ainda não está disponível."
+            erros[ErrorFields.RULES] = ErrorCodes.GRUPO_REGRA_GYMPASS_INDISPONIVEL
         }
 
         if (erros.isNotEmpty()) {

@@ -1,6 +1,7 @@
 package dev.rafael.app.ui
 
 import dev.rafael.contract.error.ErrorCodes
+import dev.rafael.contract.limites.Limites
 import dev.rafael.core.result.AppError
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -225,6 +226,77 @@ class TextosDeErroTest {
             assertNotNull(a, "$um perdeu o texto")
             assertNotNull(b, "$outro perdeu o texto")
             assertTrue(a != b, "`$um` e `$outro` foram desmembrados e voltaram a dizer a mesma coisa")
+        }
+    }
+
+    /**
+     * ⭐ Débito "12 frases cravam constante do servidor" (debitos.md, P2) — fechado em 2026-09-23.
+     *
+     * `argsDe` é a metade nova de `de()`: o `%1$d`/`%2$d` da frase precisa vir de algum lugar, e
+     * este teste confere que vem de [Limites] — a mesma fonte que o servidor usa pra validar — e
+     * não de um número reescrito aqui por acidente.
+     */
+    @Test
+    fun `argsDe devolve os Limites certos pros codigos que a frase parametriza`() {
+        val esperado = mapOf(
+            ErrorCodes.NOME_CURTO to listOf(Limites.DisplayName.MIN),
+            ErrorCodes.NOME_LONGO to listOf(Limites.DisplayName.MAX),
+            ErrorCodes.COMENTARIO_INVALIDO to listOf(Limites.Social.MAX_COMENTARIO),
+            ErrorCodes.NOME_DO_LOCAL_LONGO to listOf(Limites.CheckIn.MAX_NOME_DO_LOCAL),
+            ErrorCodes.PRAZO_DA_DENUNCIA to listOf(Limites.Moderacao.PRAZO_EM_DIAS),
+            ErrorCodes.LIMITE_DE_IA_GRATIS to listOf(Limites.Program.FREE_AI_LIMIT),
+            ErrorCodes.LIMITE_DE_MANUAIS_GRATIS to listOf(Limites.Program.FREE_MANUAL_LIMIT),
+            ErrorCodes.LIMITE_DE_PROGRAMAS_PREMIUM to listOf(Limites.Program.PREMIUM_TOTAL_LIMIT),
+            ErrorCodes.DIAS_POR_SEMANA_INVALIDO to
+                listOf(Limites.Profile.DAYS_PER_WEEK_MIN, Limites.Profile.DAYS_PER_WEEK_MAX),
+            ErrorCodes.FOCO_ALEM_DO_LIMITE to listOf(Limites.Profile.FOCUS_AREAS_MAX),
+            ErrorCodes.IDADE_INVALIDA to listOf(Limites.Profile.AGE_MIN, Limites.Profile.AGE_MAX),
+            // "erroDoCampo devolve frase do servidor" (debitos.md, P2, 2026-09-23): os dois únicos,
+            // dos dez GRUPO_*, que nasceram com número na frase.
+            ErrorCodes.GRUPO_TITULO_LONGO to listOf(Limites.Group.TITULO_MAX),
+            ErrorCodes.GRUPO_DESCRICAO_LONGA to listOf(Limites.Group.DESCRICAO_MAX),
+        )
+
+        esperado.forEach { (codigo, args) ->
+            assertEquals(args, TextosDeErro.argsDe(codigo), "`$codigo` devolveu args diferente do esperado")
+        }
+    }
+
+    /** Caminho de falha do teste acima: código sem parâmetro não pode ganhar um por engano. */
+    @Test
+    fun `argsDe devolve lista vazia para codigo sem parametro`() {
+        assertEquals(emptyList(), TextosDeErro.argsDe(ErrorCodes.PESSOA_NAO_EXISTE))
+        assertEquals(emptyList(), TextosDeErro.argsDe(null))
+        assertEquals(emptyList(), TextosDeErro.argsDe("CODIGO_QUE_NAO_EXISTE"))
+    }
+
+    /**
+     * ⭐ **A frase formata com os args de verdade, sem estourar.**
+     *
+     * É o caminho de falha real do par `de()`/`argsDe()`: `%1$d`/`%2$d` no catálogo com um
+     * argumento a mais ou a menos é `IllegalFormatException` em RUNTIME, e só apareceria no
+     * aparelho — nenhum dos dois lados isolados (o catálogo, ou a lista de args) pega isso sozinho.
+     * Formatar de verdade aqui é o que os fecha juntos.
+     */
+    @Test
+    fun `formatar a frase com argsDe nao estoura pros codigos parametrizados`() {
+        val comArgs = todosOsCodigos().filter { TextosDeErro.argsDe(it).isNotEmpty() }
+        assertTrue(comArgs.isNotEmpty(), "nenhum código com args — o teste ficaria vazio de propósito")
+
+        comArgs.forEach { codigo ->
+            val chave = chaveDe(codigo)
+            val texto = CatalogoDeStrings.porChave.getValue(chave)
+            val args = TextosDeErro.argsDe(codigo)
+
+            val formatado = runCatching { String.format(texto, *args.toTypedArray()) }
+            assertTrue(
+                formatado.isSuccess,
+                "`$chave` não formatou com argsDe($codigo)=$args: ${formatado.exceptionOrNull()}",
+            )
+            assertTrue(
+                formatado.getOrThrow().none { it == '%' },
+                "`$chave` ainda tem `%` sobrando depois de formatar — args de menos: $args",
+            )
         }
     }
 }

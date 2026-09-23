@@ -24,4 +24,19 @@ object ErrorFields {
     const val EXERCISES = "exercises"
     const val SETS = "sets"
     const val REPS = "reps"
+
+    // conta (DisplayNamePolicy)
+    const val DISPLAY_NAME = "displayName"
+
+    // check-in (PedidoDeCheckIn)
+    const val NOME_DO_LOCAL = "nomeDoLocal"
+
+    // CreateGroupRequest — débito "erroDoCampo devolve frase do servidor" (debitos.md, P2):
+    // GroupPolicy.validarCriacao usava a string crua, violando o [REGRA] acima em silêncio.
+    const val TITLE = "title"
+    const val DESCRIPTION = "description"
+    const val TIMEZONE = "timezone"
+    const val START_DATE = "startDate"
+    const val END_DATE = "endDate"
+    const val RULES = "rules"
 }

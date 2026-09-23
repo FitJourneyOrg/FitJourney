@@ -1,6 +1,7 @@
 package dev.rafael.server.features.checkin.services
 
 import dev.rafael.contract.group.MemberRole
+import dev.rafael.contract.limites.Limites
 
 /**
  * As regras de comentário e reação, em Kotlin puro (fatia E.1).
@@ -9,8 +10,11 @@ import dev.rafael.contract.group.MemberRole
  */
 object SocialPolicy {
 
-    /** 8.1. O CHECK do banco usa o mesmo número — os dois têm de concordar. */
-    const val MAX_COMENTARIO = 500
+    /**
+     * 8.1. O CHECK do banco usa o mesmo número — os dois têm de concordar.
+     * Fonte real: shared-contract (debitos.md "12 frases cravam constante do servidor").
+     */
+    const val MAX_COMENTARIO = Limites.Social.MAX_COMENTARIO
 
     /**
      * As seis reações (emenda à 8.2, decidida em 2026-09-06).

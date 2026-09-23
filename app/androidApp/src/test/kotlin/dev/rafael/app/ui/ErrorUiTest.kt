@@ -226,4 +226,47 @@ class ErrorUiTest {
             rodapeDebug("http://10.0.2.2:8080"),
         )
     }
+
+    // ---- #31: frase de offline não promete cache onde não há (P2, 2026-09-23) ----
+
+    /**
+     * ⭐ O default preserva o comportamento de sempre — nenhuma tela existente muda sem pedir.
+     *
+     * `cache` tem default `TEM_CACHE`, então toda chamada de antes de 2026-09-23 (`.visual(rede)`,
+     * sem o parâmetro novo) continua mostrando a frase que promete "o que já foi baixado continua
+     * funcionando" — que é verdade pro feed e pra lista de grupos, os dois casos que já existiam.
+     */
+    @Test
+    fun `Connection offline sem dizer cache continua prometendo o download`() {
+        val visual = AppError.Connection().visual(temRede = false)
+
+        assertEquals(Frase.Recurso(R.string.erro_texto_sem_conexao), visual.texto)
+    }
+
+    /**
+     * O caso novo: tela ONLINE-ONLY (fila de denúncias, comentários, denunciar) não tem nada
+     * baixado, e `cache = SEM_CACHE` troca pra frase que não promete isso.
+     */
+    @Test
+    fun `Connection offline com SEM_CACHE nao promete download que nao existe`() {
+        val visual = AppError.Connection().visual(
+            temRede = false,
+            cache = ContextoDeCache.SEM_CACHE,
+        )
+
+        assertEquals(Frase.Recurso(R.string.erro_texto_sem_conexao_sem_cache), visual.texto)
+    }
+
+    /**
+     * Caminho de falha do par acima: `SEM_CACHE` só importa quando o erro é OFFLINE de verdade.
+     * Com rede (servidor mudo) a frase não fala de cache nenhum — não há o que trocar.
+     */
+    @Test
+    fun `SEM_CACHE nao muda nada quando o aparelho TEM rede`() {
+        val comCache = AppError.Connection().visual(temRede = true, cache = ContextoDeCache.SEM_CACHE)
+        val semParametro = AppError.Connection().visual(temRede = true)
+
+        assertEquals(semParametro.texto, comCache.texto)
+        assertEquals(Frase.Recurso(R.string.erro_texto_servidor_mudo), comCache.texto)
+    }
 }
