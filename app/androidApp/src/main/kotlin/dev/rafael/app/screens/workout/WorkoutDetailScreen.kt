@@ -207,7 +207,14 @@ fun WorkoutDetailScreen(
                         items(state.exercises) { ex ->
                             ListItem(
                                 headlineContent = { Text(ex.name) },
-                                supportingContent = { Text(ex.setsSummary) },
+                                supportingContent = {
+                                    // RIR só aparece quando prescrito (programa gerado); manual
+                                    // continua mostrando só séries/reps, igual antes.
+                                    val texto = ex.rir?.let { rir ->
+                                        "${ex.setsSummary} · " + stringResource(R.string.treino_detalhe_rir, rir)
+                                    } ?: ex.setsSummary
+                                    Text(texto)
+                                },
                                 modifier = Modifier.combinedClickable(
                                     onClick = {},
                                     onLongClick = { actionFor = ex },

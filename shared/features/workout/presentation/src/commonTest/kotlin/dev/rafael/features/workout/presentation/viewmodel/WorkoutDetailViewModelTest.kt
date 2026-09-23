@@ -86,6 +86,36 @@ class WorkoutDetailViewModelTest {
         assertEquals(2, s.exercises.size)
     }
 
+    // ---- RIR na tela de detalhe (debitos.md: "dado já persiste, só falta mostrar") ----
+
+    @Test
+    fun `RIR prescrito atravessa ate ResolvedExercise`() = runTest(dispatcher) {
+        val vm = WorkoutDetailViewModel("w1", FakeRepo(AppResult.Success(workout(1))), FakeLookup())
+        vm.onEvent(WorkoutDetailEvent.Retry)
+        advanceUntilIdle()
+
+        assertEquals(2, vm.state.value.exercises.single().rir, "workout(n) prescreve rir=2 pra cada exercicio")
+    }
+
+    @Test
+    fun `treino manual sem RIR prescrito mantem null, nao um valor inventado`() = runTest(dispatcher) {
+        val manual = Workout(
+            id = "w2", name = "Manual", programId = "prog-1",
+            exercises = listOf(
+                WorkoutExercise(
+                    exerciseId = "ex-0", orderIndex = 0, restSeconds = 90, rir = null,
+                    sets = listOf(WorkoutSet(reps = 10, orderIndex = 0)),
+                ),
+            ),
+            createdAt = null, updatedAt = null,
+        )
+        val vm = WorkoutDetailViewModel("w2", FakeRepo(AppResult.Success(manual)), FakeLookup())
+        vm.onEvent(WorkoutDetailEvent.Retry)
+        advanceUntilIdle()
+
+        assertEquals(null, vm.state.value.exercises.single().rir)
+    }
+
     @Test
     fun `load com falha seta erro`() = runTest(dispatcher) {
         val vm = WorkoutDetailViewModel("w1", FakeRepo(AppResult.Failure(AppError.NotFound())), FakeLookup())

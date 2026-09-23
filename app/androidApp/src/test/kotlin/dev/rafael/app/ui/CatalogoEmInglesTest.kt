@@ -179,8 +179,8 @@ class CatalogoEmInglesTest {
     }
 
     /**
-     * As 36 chaves que NÃO mudam de um idioma para o outro: marca, jargão de academia que não se
-     * traduz (`Push/Pull/Legs`), unidade (`kg`), sigla (`XP`) e frase que é só formato
+     * As 37 chaves que NÃO mudam de um idioma para o outro: marca, jargão de academia que não se
+     * traduz (`Push/Pull/Legs`, `RIR`), unidade (`kg`), sigla (`XP`) e frase que é só formato
      * (`%1$d/%2$d`).
      *
      * A lista é fixada porque a pergunta interessante é a inversa: **uma chave nova que aparecer
@@ -205,6 +205,10 @@ class CatalogoEmInglesTest {
             "grupo_detalhe_admin", "grupo_form_data_botao", "home_treino_minutos", "home_xp_de_hoje",
             "login_titulo", "moderacao_motivo_item", "paywall_coluna_free", "perfil_publico_xp",
             "programa_detalhe_dia_atual", "quiz_progresso", "sessao_mais_30s", "sessao_tempo",
+            // RIR (reps in reserve) é jargão de treino, igual "kg" ou "XP" — não é palavra
+            // portuguesa nem inglesa, e as duas telas mostram a mesma sigla (débito P2
+            // "Exibir RIR na tela de detalhe do treino", 2026-09-22).
+            "treino_detalhe_rir",
         )
 
         val porChaveEn = en.entradas.associate { it.chave to it.valor }
