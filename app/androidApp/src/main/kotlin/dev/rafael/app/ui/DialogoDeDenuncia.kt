@@ -113,7 +113,8 @@ fun DialogoDeDenuncia(
                     // recusa mais provável aqui, e sem ela o botão parece quebrado.
                     erro?.let {
                         Spacer(Modifier.height(8.dp))
-                        ErroInline(it)
+                        // #31: denunciar é online-only (10.1) — nada fica salvo localmente.
+                        ErroInline(it, cache = ContextoDeCache.SEM_CACHE)
                     }
                 }
             },

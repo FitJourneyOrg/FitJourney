@@ -1,5 +1,7 @@
 package dev.rafael.server.features.profile.services
 
+import dev.rafael.contract.error.ErrorCodes
+import dev.rafael.contract.error.ErrorFields
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.ProfileDto
@@ -13,6 +15,7 @@ import dev.rafael.server.features.user.db.UserRepository
 import dev.rafael.server.features.user.services.UserService
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
 
@@ -74,5 +77,48 @@ class ProfileServiceTest {
     fun `dia off repetido vira Validation`() = runBlocking {
         val r = service().saveProfile("uid", null, dto(off = listOf(2, 2)))
         assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
+    }
+
+    // ---- débito "erroDoCampo devolve frase do servidor" (debitos.md, P2, 2026-09-23) ----
+    // fieldErrors carrega o CÓDIGO, não a frase — o cliente é quem traduz agora.
+
+    @Test
+    fun `daysPerWeek fora de 2 a 6 recusa com o codigo em fieldErrors`() = runBlocking {
+        val r = service().saveProfile("uid", null, dto(days = 7))
+
+        val erro = (r as AppResult.Failure).error as AppError.Validation
+        assertEquals(ErrorCodes.DIAS_POR_SEMANA_INVALIDO, erro.fieldErrors[ErrorFields.DAYS_PER_WEEK])
+    }
+
+    @Test
+    fun `mais de 2 grupos de foco recusa com o codigo em fieldErrors`() = runBlocking {
+        val comFocoDemais = dto().copy(
+            focusAreas = listOf(
+                dev.rafael.contract.profile.MuscleGroup.CHEST,
+                dev.rafael.contract.profile.MuscleGroup.BACK,
+                dev.rafael.contract.profile.MuscleGroup.LEGS,
+            ),
+        )
+        val r = service().saveProfile("uid", null, comFocoDemais)
+
+        val erro = (r as AppResult.Failure).error as AppError.Validation
+        assertEquals(ErrorCodes.FOCO_ALEM_DO_LIMITE, erro.fieldErrors[ErrorFields.FOCUS_AREAS])
+    }
+
+    /** Caminho de falha do trio: idade fora de 5..120 — e idade `null` (não respondeu) segue válida. */
+    @Test
+    fun `idade fora de 5 a 120 recusa com o codigo em fieldErrors, idade null continua valida`() = runBlocking {
+        val r = service().saveProfile("uid", null, dto().copy(age = 121))
+
+        val erro = (r as AppResult.Failure).error as AppError.Validation
+        assertEquals(ErrorCodes.IDADE_INVALIDA, erro.fieldErrors[ErrorFields.AGE])
+    }
+
+    @Test
+    fun `dia off fora de 1 a 7 recusa com o codigo em fieldErrors`() = runBlocking {
+        val r = service().saveProfile("uid", null, dto(off = listOf(8)))
+
+        val erro = (r as AppResult.Failure).error as AppError.Validation
+        assertEquals(ErrorCodes.DIAS_INDISPONIVEIS_INVALIDOS, erro.fieldErrors[ErrorFields.UNAVAILABLE_DAYS])
     }
 }

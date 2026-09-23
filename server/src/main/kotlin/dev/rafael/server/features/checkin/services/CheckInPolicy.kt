@@ -6,6 +6,7 @@ import dev.rafael.contract.group.GroupState
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
+import dev.rafael.contract.limites.Limites
 import kotlin.time.Instant
 
 /**
@@ -97,8 +98,11 @@ object CheckInPolicy {
         else -> null
     }
 
-    /** Teto da 5.2 — o nome do lugar é rótulo, não endereço. */
-    const val MAX_NOME_DO_LOCAL = 60
+    /**
+     * Teto da 5.2 — o nome do lugar é rótulo, não endereço.
+     * Fonte real: shared-contract (debitos.md "12 frases cravam constante do servidor").
+     */
+    const val MAX_NOME_DO_LOCAL = Limites.CheckIn.MAX_NOME_DO_LOCAL
 
     /**
      * Arredonda a coordenada para 2 casas (~1 km) **antes** de chegar ao banco.

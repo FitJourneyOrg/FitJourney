@@ -73,6 +73,26 @@ enum class ErroAcao { TENTAR_DE_NOVO, IR_PRO_LOGIN, VER_PLANOS, VOLTAR, NENHUMA 
  */
 enum class ErroContexto { LOGADO, AUTENTICANDO }
 
+/**
+ * A tela por trás do [AppError.Connection] TEM dado local pra mostrar quando a rede falta?
+ *
+ * Débito #31 fechado em 2026-09-23 (P2): a frase genérica de offline promete "o que já foi
+ * baixado continua funcionando" — verdade no feed e na lista de grupos, mentira na fila de
+ * denúncias, nos comentários e no diálogo de denunciar (fatia E, 10.1: online-only, sem
+ * cache local nenhum). Sem este eixo, as três telas mostravam uma promessa que não cumpriam.
+ *
+ * Eixo ORTOGONAL a [ErroContexto] — aquele decide a MENSAGEM por FAMÍLIA de erro (401 logado ×
+ * 401 autenticando); este decide, só dentro de [AppError.Connection], se o "e o que já foi
+ * baixado continua funcionando" é verdade. Por isso o nome não repete "Contexto" sozinho.
+ */
+enum class ContextoDeCache {
+    /** Comportamento de sempre: a tela tem dado local, e a frase genérica está correta. */
+    TEM_CACHE,
+
+    /** Tela online-only (fila de moderação, comentários, denúncia): nada fica salvo localmente. */
+    SEM_CACHE,
+}
+
 /** Erro já traduzido para o que a tela precisa desenhar. */
 data class ErroVisual(
     val icone: ImageVector,
@@ -110,6 +130,7 @@ private val MENSAGEM_PADRAO_DE_NOT_FOUND: String = AppError.NotFound().message
 fun AppError.visual(
     temRede: Boolean,
     contexto: ErroContexto = ErroContexto.LOGADO,
+    cache: ContextoDeCache = ContextoDeCache.TEM_CACHE,
 ): ErroVisual = comTextoDoCodigo(when (this) {
     is AppError.Connection ->
         if (temRede) ErroVisual(
@@ -120,7 +141,11 @@ fun AppError.visual(
         ) else ErroVisual(
             icone = Icons.Outlined.WifiOff,
             titulo = R.string.erro_titulo_sem_conexao,
-            texto = Frase.Recurso(R.string.erro_texto_sem_conexao),
+            // #31: só promete "o que já foi baixado continua funcionando" quando é verdade.
+            texto = Frase.Recurso(
+                if (cache == ContextoDeCache.SEM_CACHE) R.string.erro_texto_sem_conexao_sem_cache
+                else R.string.erro_texto_sem_conexao,
+            ),
             acao = ErroAcao.TENTAR_DE_NOVO,
         )
 
@@ -267,24 +292,40 @@ val AppError.codigo: String?
  */
 private fun AppError.comTextoDoCodigo(visual: ErroVisual): ErroVisual {
     val doCodigo = TextosDeErro.de(codigo) ?: return visual
-    return visual.copy(texto = Frase.Recurso(doCodigo))
+    return visual.copy(texto = Frase.Recurso(doCodigo, TextosDeErro.argsDe(codigo)))
 }
 
 /**
- * Mensagem específica de UM campo, quando o servidor disse qual recusou (`fieldErrors`).
+ * Mensagem específica de UM campo, já TRADUZIDA — quando o servidor disse qual campo recusou E
+ * com que CÓDIGO (`fieldErrors`).
  *
  * Devolve null quando o erro não é de validação ou não menciona este campo — então dá pra
  * usar direto em `isError`/`supportingText` de um TextField sem `if` na tela.
  *
- * ⚠️ Continua sendo `String` do SERVIDOR, e portanto não traduzida. É a mesma classe de débito de
- * `TextosDeErro.SEM_TEXTO_PROPRIO`: o `fieldErrors` é um mapa aberto, sem código, e traduzi-lo
- * exigiria o servidor mandar chave em vez de frase. Decisão para a G.4, registrada aqui.
+ * ✅ Débito "erroDoCampo devolve frase do servidor" fechado em 2026-09-23 (P2). Até aqui o VALOR
+ * de `fieldErrors` era a frase pronta do servidor, sem tradução — mesma classe do antigo
+ * `TextosDeErro.SEM_TEXTO_PROPRIO`, só que sem nem o `code` de nível superior ajudando nos
+ * formulários com vários campos (o grupo). Agora o valor é um CÓDIGO — a mesma convenção de
+ * [AppError.codigo] — e quem escreve a frase é [TextosDeErro], igual ao resto do app.
+ *
+ * `@Composable` desde esta correção, porque resolver o código em texto precisa de
+ * `stringResource`. Os seis call sites já rodavam dentro de composição (`isError`/`supportingText`
+ * de `TextField`), então a mudança de assinatura não pediu `remember` nem efeito novo em nenhum.
  *
  * A diferença prática: em vez de "Dados inválidos" no rodapé, o campo errado fica vermelho
- * com o motivo embaixo dele. O usuário não precisa adivinhar qual dos cinco campos falhou.
+ * com o motivo embaixo dele, no idioma da tela. O usuário não precisa adivinhar qual dos campos
+ * falhou, e quem não escolheu português não lê mais uma frase fora do idioma do app.
  */
-fun AppError?.erroDoCampo(campo: String): String? =
-    (this as? AppError.Validation)?.fieldErrors?.get(campo)
+@Composable
+fun AppError?.erroDoCampo(campo: String): String? {
+    val codigo = (this as? AppError.Validation)?.fieldErrors?.get(campo) ?: return null
+    // Fallback teórico: código de campo que este app ainda não conhece. Pior que a frase antiga,
+    // mas os dois lados nascem juntos nesta correção — hoje isso só aconteceria com um app velho
+    // falando com um servidor novo, e um código sem texto aqui já quebraria o TextosDeErroTest
+    // antes de chegar a produção.
+    val res = TextosDeErro.de(codigo) ?: return codigo
+    return stringResource(res, *TextosDeErro.argsDe(codigo).toTypedArray())
+}
 
 /**
  * O erro AINDA PRECISA SER MOSTRADO depois que os campos visíveis já se marcaram?
@@ -348,9 +389,10 @@ fun ErroDeTela(
     erro: AppError,
     modifier: Modifier = Modifier,
     contexto: ErroContexto = ErroContexto.LOGADO,
+    cache: ContextoDeCache = ContextoDeCache.TEM_CACHE,
     onAcao: ((ErroAcao) -> Unit)? = null,
 ) {
-    val visual = erro.visual(rememberTemRede(erro), contexto)
+    val visual = erro.visual(rememberTemRede(erro), contexto, cache)
     Column(
         modifier.padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -407,8 +449,9 @@ fun ErroInline(
     erro: AppError,
     modifier: Modifier = Modifier,
     contexto: ErroContexto = ErroContexto.LOGADO,
+    cache: ContextoDeCache = ContextoDeCache.TEM_CACHE,
 ) {
-    val visual = erro.visual(rememberTemRede(erro), contexto)
+    val visual = erro.visual(rememberTemRede(erro), contexto, cache)
     Text(
         // `texto` e NÃO `titulo`.
         //
@@ -440,6 +483,7 @@ fun ErroEmSnackbar(
     host: SnackbarHostState,
     onConsumir: () -> Unit,
     contexto: ErroContexto = ErroContexto.LOGADO,
+    cache: ContextoDeCache = ContextoDeCache.TEM_CACHE,
     onAcao: ((ErroAcao) -> Unit)? = null,
 ) {
     val temRede = rememberTemRede(erro)
@@ -451,7 +495,7 @@ fun ErroEmSnackbar(
         // Validação NÃO vira snackbar: ela pertence ao campo (ver erroDoCampo). Mandar as duas
         // coisas seria dizer o mesmo erro duas vezes, uma delas longe de onde ele aconteceu.
         if (e is AppError.Validation) return@LaunchedEffect
-        val visual = e.visual(temRede, contexto)
+        val visual = e.visual(temRede, contexto, cache)
         val resultado = host.showSnackbar(
             message = context.getString(visual.titulo),
             actionLabel = visual.rotuloDaAcao?.takeIf { onAcao != null }?.let { context.getString(it) },
