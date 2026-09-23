@@ -7,7 +7,7 @@ import dev.rafael.features.program.domain.repository.ProgramRepository
 /** Programa de domínio mínimo pros testes (workouts/schedule vazios não importam aqui). */
 fun program(id: String, name: String = "Programa") = Program(
     id = id, name = name, workouts = emptyList(), daysPerWeek = 3,
-    split = "Full Body", rationale = "r", locked = false,
+    split = "FULL_BODY", locked = false,
     schedule = emptyList(), createdAt = null, updatedAt = null,
 )
 

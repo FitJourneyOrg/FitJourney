@@ -144,7 +144,7 @@ fun programa(
     schedule: List<ProgramScheduleEntry> = emptyList(),
 ) = Program(
     id = id, name = "Programa", workouts = workouts, daysPerWeek = 3,
-    split = "Full Body", rationale = "r", locked = false, schedule = schedule,
+    split = "FULL_BODY", locked = false, schedule = schedule,
     createdAt = null, updatedAt = null,
 )
 

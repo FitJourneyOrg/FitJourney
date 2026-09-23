@@ -63,7 +63,7 @@ class ProgramService(
         val idDoCliente = id?.let { runCatching { Uuid.parse(it) }.getOrNull() } ?: Uuid.NIL
         val shell = Program(
             id = idDoCliente, userId = userId, name = name, origin = WorkoutOrigin.MANUAL,
-            daysPerWeek = 0, split = "Manual", rationale = "", locked = false,
+            daysPerWeek = 0, split = null, focusMuscles = emptyList(), locked = false,
             workouts = emptyList(), createdAt = ts, updatedAt = ts,
             durationWeeks = PROGRAM_WEEKS, startedAt = ts,
         )
@@ -249,7 +249,7 @@ private fun ProgramDto.toModel(userId: Uuid, origin: WorkoutOrigin, name: String
         origin = origin,
         daysPerWeek = daysPerWeek,
         split = split,
-        rationale = rationale,
+        focusMuscles = focusMuscles,
         locked = locked,
         workouts = workouts.mapIndexed { index, w ->
             Workout(
@@ -304,7 +304,7 @@ private fun Program.toDto(): ProgramDto {
         workouts = workoutDtos,
         daysPerWeek = daysPerWeek,
         split = split,
-        rationale = rationale,
+        focusMuscles = focusMuscles,
         locked = locked,
         // schedule: dia REAL da semana de cada treino (G.2 agenda por dia). Legado sem
         // dia cai na posição (i+1). A leitura já ordena por day_of_week.

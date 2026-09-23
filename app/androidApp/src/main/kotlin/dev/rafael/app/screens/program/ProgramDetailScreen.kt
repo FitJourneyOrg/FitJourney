@@ -19,9 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.ui.ErroDeTela
-import dev.rafael.app.ui.Frase
 import dev.rafael.app.ui.nomeDoPrograma
-import dev.rafael.app.ui.resolver
+import dev.rafael.app.ui.rationaleDoPrograma
 import dev.rafael.app.ui.rotuloDoDiaDaSemana
 import dev.rafael.app.R
 import dev.rafael.features.program.presentation.state.ProgramDetailEvent
@@ -98,7 +97,7 @@ fun ProgramDetailScreen(
                         nomeDoPrograma(
                             name = state.program?.name,
                             daysPerWeek = state.program?.daysPerWeek ?: 0,
-                            split = state.program?.split.orEmpty(),
+                            split = state.program?.split,
                         ),
                     )
                 },
@@ -170,14 +169,16 @@ fun ProgramDetailScreen(
                                 )
                             }
                         }
-                        state.program?.rationale?.takeIf { it.isNotBlank() }?.let { rationale ->
+                        state.program?.takeIf { it.split != null }?.let { p ->
                             item {
-                                // ⚠️ TEXTO DO SERVIDOR, não traduzido. Ver `TextoDoServidorTest`.
-                                Text(
-                                    Frase.DoServidor(rationale).resolver(),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                )
-                                Spacer(Modifier.height(4.dp))
+                                // Fatia "rationale derivado" (2026-09-22): a frase é montada
+                                // AQUI, no idioma da tela, a partir de split + focusMuscles --
+                                // não vem mais pronta do servidor. Ver `rationaleDoPrograma()`.
+                                val frase = rationaleDoPrograma(p.split, p.daysPerWeek, p.focusMuscles)
+                                if (frase.isNotBlank()) {
+                                    Text(frase, style = MaterialTheme.typography.bodyMedium)
+                                    Spacer(Modifier.height(4.dp))
+                                }
                             }
                         }
                         val workouts = state.program?.workouts.orEmpty()

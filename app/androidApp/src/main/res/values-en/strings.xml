@@ -649,6 +649,8 @@
     <string name="programa_detalhe_excluir_texto">This deletes the program and every workout inside it. It can\'t be undone.</string>
     <string name="programa_detalhe_renomear_titulo">Rename program</string>
 
+    <string name="programa_rationale_base">%2$s split over %1$d days: %3$s</string>
+    <string name="programa_rationale_foco">Since you prioritized %1$s, the program adds extra volume for those muscles.</string>
 
     <!-- ============================ First program offer ============================ -->
 

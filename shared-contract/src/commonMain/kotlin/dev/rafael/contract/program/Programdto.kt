@@ -1,5 +1,7 @@
 package dev.rafael.contract.program
 
+import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.workout.WorkoutDto
 import dev.rafael.contract.workout.WorkoutOrigin
 import kotlinx.serialization.Serializable
@@ -23,8 +25,10 @@ data class ProgramDto(
     val origin: WorkoutOrigin = WorkoutOrigin.AI,
     val workouts: List<WorkoutDto> = emptyList(),
     val daysPerWeek: Int,
-    val split: String,                    // ex.: "Upper/Lower + PPL"
-    val rationale: String,                // explicação do híbrido, mostrada na revelação
+    val split: SplitType? = null,         // null = programa MANUAL (shell sem motor). Chave do motor,
+                                           // não rótulo de UI — ver KDoc de SplitType. Cliente traduz via Rotulos.kt.
+    val focusMuscles: List<MuscleGroup> = emptyList(),   // snapshot do foco NO MOMENTO da geração (fatia "rationale
+                                           // derivado") — não é profile.focusAreas ao vivo, que pode ter mudado depois.
     val locked: Boolean = false,
     val schedule: List<ScheduleEntry> = emptyList(),
     val durationWeeks: Int = 8,           // janela do cronograma (ARCH #22); mín/default 8 (2 meses)

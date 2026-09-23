@@ -1,5 +1,7 @@
 package dev.rafael.features.program.data
 
+import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.program.ProgramDto
 import dev.rafael.contract.program.ScheduleEntry
 import dev.rafael.contract.workout.WorkoutDto
@@ -27,8 +29,8 @@ class ProgramMapperTest {
         id = "prog-1",
         name = "Meu programa",
         daysPerWeek = 4,
-        split = "Upper/Lower",
-        rationale = "porque sim",
+        split = SplitType.UPPER_LOWER,
+        focusMuscles = listOf(MuscleGroup.CHEST, MuscleGroup.BACK),
         locked = true,
         workouts = listOf(
             WorkoutDto(id = "w1", name = "Upper", exercises = listOf(exDto(0), exDto(1), exDto(2))),
@@ -43,7 +45,7 @@ class ProgramMapperTest {
     @Test
     fun `dia trancado mapeia locked e usa lockedExerciseCount (ARCH 23)`() {
         val dto = ProgramDto(
-            id = "p", name = "P", daysPerWeek = 3, split = "PPL", rationale = "r",
+            id = "p", name = "P", daysPerWeek = 3, split = SplitType.PUSH_PULL_LEGS,
             workouts = listOf(
                 WorkoutDto(id = "w1", name = "Dia 1", exercises = listOf(exDto(0), exDto(1))),
                 WorkoutDto(id = "w2", name = "Dia 2", exercises = emptyList(), locked = true, lockedExerciseCount = 6),
@@ -62,9 +64,23 @@ class ProgramMapperTest {
         assertEquals("prog-1", d.id)
         assertEquals("Meu programa", d.name)
         assertEquals(4, d.daysPerWeek)
-        assertEquals("Upper/Lower", d.split)
-        assertEquals("porque sim", d.rationale)
+        // Domain guarda a CHAVE do enum (String), não o `SplitType` tipado -- ver KDoc de
+        // `Program.split` (:domain não depende de shared-contract).
+        assertEquals("UPPER_LOWER", d.split)
         assertEquals(true, d.locked)
+    }
+
+    @Test
+    fun `focusMuscles mapeia pras chaves do enum`() {
+        val d = sampleDto().toDomain()
+        assertEquals(listOf("CHEST", "BACK"), d.focusMuscles)
+    }
+
+    @Test
+    fun `split nulo (programa manual) mapeia pra null`() {
+        val d = ProgramDto(name = "Manual", daysPerWeek = 0, split = null).toDomain()
+        assertEquals(null, d.split)
+        assertEquals(emptyList(), d.focusMuscles)
     }
 
     @Test
@@ -89,7 +105,7 @@ class ProgramMapperTest {
     @Test
     fun `programa sem workouts vira dominio vazio`() {
         val d = ProgramDto(
-            name = "Vazio", daysPerWeek = 0, split = "Manual", rationale = "",
+            name = "Vazio", daysPerWeek = 0,
         ).toDomain()
         assertEquals(0, d.workouts.size)
         assertEquals(0, d.schedule.size)

@@ -1033,6 +1033,16 @@
     <string name="programa_detalhe_excluir_texto">Isso apaga o programa e todos os treinos dentro dele. Não pode ser desfeito.</string>
     <string name="programa_detalhe_renomear_titulo">Renomear programa</string>
 
+    <!--
+      A frase que explica o programa gerado: split + dias, e o foco quando presente. Usada
+      no Detalhe e na Revelação (fatia "rationale derivado", 2026-09-22; antes vinha pronta
+      do servidor). %1$d é a frequência, %2$s o nome do split (jargão, não traduz, ver
+      `SplitType.rotulo()`) e %3$s a descrição curta do split.
+    -->
+    <string name="programa_rationale_base">Split %2$s em %1$d dias: %3$s</string>
+    <!-- Complemento, só quando há foco priorizado. %1$s é a lista de músculos, já traduzida e unida por vírgula. -->
+    <string name="programa_rationale_foco">Como você priorizou %1$s, o programa inclui volume extra nesses grupos.</string>
+
     <!-- ============================ Oferta do primeiro programa ============================ -->
 
     <!-- Título da oferta do primeiro programa, mostrada logo depois do quiz. -->

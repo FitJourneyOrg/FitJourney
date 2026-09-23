@@ -3,6 +3,7 @@ package dev.rafael.server.features.exercise.engine
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.profile.SplitType
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -17,11 +18,11 @@ class StructureEngineTest {
 
     @Test
     fun `split deriva dos dias`() {
-        assertEquals("Full Body", skeleton(days = 2).split)
-        assertEquals("Full Body", skeleton(days = 3).split)
-        assertEquals("Upper/Lower", skeleton(days = 4).split)
-        assertEquals("Upper/Lower + PPL", skeleton(days = 5).split)
-        assertEquals("Push/Pull/Legs", skeleton(days = 6).split)
+        assertEquals(SplitType.FULL_BODY, skeleton(days = 2).split)
+        assertEquals(SplitType.FULL_BODY, skeleton(days = 3).split)
+        assertEquals(SplitType.UPPER_LOWER, skeleton(days = 4).split)
+        assertEquals(SplitType.UL_PPL, skeleton(days = 5).split)
+        assertEquals(SplitType.PUSH_PULL_LEGS, skeleton(days = 6).split)
     }
 
     @Test
@@ -121,12 +122,11 @@ class StructureEngineTest {
         )
     }
 
-    @Test
-    fun `rationale menciona o foco quando presente`() {
-        val comFoco = engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.ADVANCED, 5, setOf(MuscleGroup.BICEPS))
-        assertTrue(comFoco.rationale.contains("BICEPS"), "rationale deve explicar o foco")
-    }
-
+    // O teste `rationale menciona o foco quando presente` saiu daqui: o ProgramSkeleton parou de
+    // carregar `rationale` (fatia "rationale derivado", 2026-09-22) — quem monta a frase agora é
+    // o cliente, a partir de `split` + `focusMuscles`, não o motor. O comportamento "foco aparece
+    // no programa" continua coberto pelo teste seguinte, que prova o efeito real (o músculo entra
+    // no esqueleto), não mais uma string que o descrevia.
     @Test
     fun `musculo de foco aparece em todo dia do full body`() {
         // ARMS é "pequeno" e seria rotacionado pra fora do Full Body. Com foco protegido

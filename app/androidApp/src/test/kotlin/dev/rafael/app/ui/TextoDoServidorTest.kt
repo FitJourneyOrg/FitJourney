@@ -17,12 +17,15 @@ import kotlin.test.assertTrue
  * | Onde | O quê | Por quê |
  * |---|---|---|
  * | `ErrorUi` | `AppError.message` | código desconhecido, ou um dos nove de `SEM_TEXTO_PROPRIO` |
- * | `ProgramDetail`, `ProgramReveal` | `rationale` | frase montada pelo `StructureEngine` |
  * | `ProgramGenerate` | `GenerateError.Other.message` | falha sem código próprio |
  * | `WorkoutDetail` | erro ao buscar alternativas | idem |
  *
  * Quando o inglês entrar, **estes pontos aparecerão em português**. Isso é sabido e é o que este
  * teste mantém contável.
+ *
+ * `ProgramDetail` e `ProgramReveal` saíram desta lista na fatia "rationale derivado"
+ * (2026-09-22): o `rationale` parou de vir pronto do servidor -- quem monta a frase agora é o
+ * cliente, via `rationaleDoPrograma()`.
  *
  * > **Débito que ninguém consegue enumerar não é débito, é surpresa.**
  *
@@ -55,9 +58,6 @@ class TextoDoServidorTest {
         // A política de apresentação de erro: os quatro ramos que usam `message` do servidor,
         // mais o fallback do 404 sem mensagem útil.
         "ui/ErrorUi.kt" to 5,
-        // `rationale`: a frase que o StructureEngine monta para explicar o programa gerado.
-        "screens/program/ProgramDetailScreen.kt" to 1,
-        "screens/reveal/ProgramRevealScreen.kt" to 1,
         // Falhas que chegam sem código próprio.
         "screens/program/ProgramGenerateScreen.kt" to 1,
         "screens/workout/WorkoutDetailScreen.kt" to 1,

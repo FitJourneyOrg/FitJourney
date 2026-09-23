@@ -36,7 +36,8 @@ data class TodayWorkout(
      */
     val programName: String?,
     val programDaysPerWeek: Int,
-    val programSplit: String,
+    // Chave do SplitType (String?, não o enum) -- ver KDoc de `Program.split`. null = manual.
+    val programSplit: String?,
     val exerciseCount: Int,
     val minutes: Int,          // estimativa (ver estimarMinutos)
     val locked: Boolean,       // dia trancado p/ não-premium (ARCH #23)
