@@ -2,7 +2,7 @@ package dev.rafael.server.features.exercise.db
 
 import org.jetbrains.exposed.v1.core.Table
 
-/** Espelha V3__create_exercises.sql. Catálogo read-only de 963 exercícios. */
+/** Espelha V3__create_exercises.sql. Catálogo read-only de 923 exercícios (fatia H, V54/V55). */
 object ExercisesTable : Table("exercises") {
     val id = uuid("id")
     val name = varchar("name", 200)
