@@ -76,8 +76,15 @@ sealed interface AppRoute {
     // Aba ainda sem implementação (placeholder) — Progresso é Fase 5 (#16).
     @Serializable data object Progresso : AppRoute
 
-    /** Conquistas (ARCH #16). Tela própria, alcançada pelo Progresso — não é aba. */
-    @Serializable data object Conquistas : AppRoute
+    /**
+     * Conquistas (ARCH #16). Tela própria, alcançada pelo Progresso — não é aba.
+     *
+     * [destaque] é o id da conquista a celebrar num diálogo ao entrar — vem do
+     * `achievementId` do push de "conquista desbloqueada" (débito fechado em 2026-09-24).
+     * Default `null` mantém retrocompatível toda navegação que já existia (Progresso, menu):
+     * elas continuam chamando `Conquistas()` sem saber que o parâmetro existe.
+     */
+    @Serializable data class Conquistas(val destaque: String? = null) : AppRoute
 
     /**
      * Perfil PÚBLICO (ARCH #34). `userId = null` significa "o meu".
