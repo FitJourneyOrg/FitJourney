@@ -117,7 +117,14 @@ fun WorkoutSessionScreen(
     }
 }
 
-/** Vibração curta ao fim do descanso. No-op se o aparelho não tiver vibrador. */
+/**
+ * Vibração curta ao fim do descanso. No-op se o aparelho não tiver vibrador.
+ *
+ * `minSdk` é 24 — `VibrationEffect` só existe a partir do 26 (O). Guarda em RUNTIME
+ * (`SDK_INT`), não `@RequiresApi`: essa anotação é só sinal pro lint, não gera nenhum
+ * `if` no bytecode. Num aparelho real em API 24/25 ela não impede a chamada, só cala o
+ * aviso — o crash (`NoClassDefFoundError`) continua.
+ */
 private fun vibrar(context: Context) {
     val vibrator: Vibrator? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
         (context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
@@ -126,7 +133,12 @@ private fun vibrar(context: Context) {
         context.getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
     }
     runCatching {
-        vibrator?.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            vibrator?.vibrate(VibrationEffect.createOneShot(400, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            @Suppress("DEPRECATION")
+            vibrator?.vibrate(400)
+        }
     }
 }
 
