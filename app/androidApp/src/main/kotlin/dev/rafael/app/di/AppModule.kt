@@ -1,8 +1,6 @@
 package dev.rafael.app.di
 
 import dev.rafael.app.data.session.SessionApi
-import dev.rafael.app.data.stats.StatsApi
-import dev.rafael.app.data.stats.Stats
 import dev.rafael.app.data.me.Me
 import dev.rafael.app.data.me.MeApi
 import dev.rafael.app.data.me.MeRepository
@@ -18,6 +16,7 @@ import dev.rafael.features.exercise.data.di.exerciseDataModule
 import dev.rafael.features.exercise.presentation.di.exercisePresentationModule
 import dev.rafael.features.achievements.data.di.achievementsDataModule
 import dev.rafael.features.achievements.presentation.di.achievementsPresentationModule
+import dev.rafael.features.stats.data.di.statsDataModule
 import dev.rafael.features.profile.data.di.profileDataModule
 import dev.rafael.features.profile.presentation.di.profilePresentationModule
 import dev.rafael.features.program.data.di.programDataModule
@@ -39,7 +38,6 @@ import dev.rafael.app.screens.amigos.BloqueadosViewModel
 import dev.rafael.app.screens.notificacoes.NotificacoesViewModel
 import dev.rafael.app.screens.perfil.PerfilPublicoViewModel
 import dev.rafael.app.screens.perfil.PerfilViewModel
-import dev.rafael.app.data.stats.StatsRepository
 import dev.rafael.app.data.sync.SyncScheduler
 import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.database.outbox.AgendadorDeSync
@@ -145,8 +143,6 @@ val appModule = module {
 
     // Sessão de treino (Fase 5): remote + sync offline-first (outbox local).
     single { SessionApi(get()) }
-    single { StatsApi(get()) }              // XP/nível/streak (ARCH #16)
-    single<Stats> { StatsRepository(get(), get(), get(), get()) }   // api + db + TokenProvider + SyncStamps
 
     // Usuário: nome e plano (V35, ARCH #33/#34). Reusa o MeDataSource de auth:data em vez de
     // repetir as rotas de /me — quem é dono delas continua sendo ele.
@@ -258,6 +254,7 @@ val todosOsModulosDoApp: List<Module> = listOf(
     exercisePresentationModule,
     achievementsDataModule,
     achievementsPresentationModule,
+    statsDataModule,
     workoutDataModule,
     workoutPresentationModule,
     programDataModule,

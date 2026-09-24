@@ -1,4 +1,4 @@
-package dev.rafael.app.data.stats
+package dev.rafael.features.stats.data
 
 import dev.rafael.contract.stats.UserStatsDto
 import dev.rafael.core.network.HttpClientFactory
@@ -10,8 +10,7 @@ import io.ktor.client.request.get
 
 /**
  * XP/nível/streak do usuário (ARCH #16). Só leitura: o cliente NUNCA envia XP — o servidor
- * deriva tudo das sessões. Mesmo atalho do SessionApi: vive no módulo app por ora
- * (débito conhecido: extrair para uma feature própria junto com session:data).
+ * deriva tudo das sessões.
  */
 class StatsApi(private val client: HttpClient) {
     suspend fun get(): AppResult<UserStatsDto> =

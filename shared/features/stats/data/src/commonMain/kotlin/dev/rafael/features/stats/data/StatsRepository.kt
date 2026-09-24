@@ -1,4 +1,4 @@
-package dev.rafael.app.data.stats
+package dev.rafael.features.stats.data
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToOneOrNull
@@ -7,6 +7,7 @@ import dev.rafael.core.database.FitJourneyDatabase
 import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.TokenProvider
 import dev.rafael.core.result.AppResult
+import dev.rafael.features.stats.domain.Stats
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
