@@ -33,15 +33,37 @@ import kotlinx.coroutines.launch
  */
 class AchievementsViewModel(
     private val achievements: Achievements,
+    /**
+     * Id da conquista a celebrar num diálogo, se a tela foi aberta pelo push de desbloqueio
+     * (G.6, débito fechado em 2026-09-24). `null` na navegação normal (Progresso, menu).
+     */
+    destaqueInicial: String? = null,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AchievementsState())
     val state: StateFlow<AchievementsState> = _state.asStateFlow()
 
+    /**
+     * Consumido na primeira emissão que resolve — depois fica `null` para sempre, mesmo que o
+     * catálogo sincronize de novo. Sem isto, um `ON_RESUME` reabriria o diálogo que a pessoa
+     * acabou de fechar: `AchievementsScreen` resincroniza a cada volta à tela.
+     */
+    private var destaquePendente: String? = destaqueInicial
+
     init {
         achievements.observar()
             .onEach { lista ->
-                _state.update { it.copy(conquistas = lista, carregandoInicial = false) }
+                val resolvido = destaquePendente?.let { id -> lista.find { it.id == id } }
+                if (resolvido != null) destaquePendente = null
+                _state.update {
+                    it.copy(
+                        conquistas = lista,
+                        carregandoInicial = false,
+                        // `?: it.destaque`: preserva o que já estava em tela (não fecha sozinho
+                        // por causa de um resync) e preserva `null` depois de dispensado.
+                        destaque = resolvido ?: it.destaque,
+                    )
+                }
             }
             .launchIn(viewModelScope)
         sincronizar()
@@ -57,5 +79,10 @@ class AchievementsViewModel(
             val sincronizou = achievements.jaSincronizou()
             _state.update { it.copy(jaSincronizou = sincronizou, erroSync = erro) }
         }
+    }
+
+    /** Fecha o diálogo de destaque. Chamado pelo botão do diálogo (G.6). */
+    fun dispensarDestaque() {
+        _state.update { it.copy(destaque = null) }
     }
 }

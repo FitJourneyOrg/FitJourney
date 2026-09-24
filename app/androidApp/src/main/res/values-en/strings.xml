@@ -862,6 +862,7 @@
     <string name="conquista_streak_90_descricao_progresso">%1$d days on plan</string>
     <string name="conquista_nivel_5_descricao_progresso">Reach level %1$d</string>
     <string name="conquista_nivel_10_descricao_progresso">Reach level %1$d</string>
+    <string name="conquistas_dialogo_titulo">Achievement unlocked!</string>
 
     <!-- ============================ Someone else's profile ============================ -->
 
