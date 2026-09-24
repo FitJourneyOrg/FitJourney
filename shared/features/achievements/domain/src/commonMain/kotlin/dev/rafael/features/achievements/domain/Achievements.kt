@@ -1,16 +1,20 @@
-package dev.rafael.app.data.achievements
+package dev.rafael.features.achievements.domain
 
 import dev.rafael.contract.stats.AchievementDto
 import dev.rafael.core.result.AppError
 import kotlinx.coroutines.flow.Flow
 
 /**
- * Conquistas como as TELAS as enxergam (ARCH #16). Mesmo desenho do [dev.rafael.app.data.stats.Stats]:
- * interface porque a implementação recebe `FitJourneyDatabase`, e sem ela todo teste de
- * ViewModel dependeria de um SQLite real.
+ * Conquistas como as TELAS as enxergam (ARCH #16). Mesmo desenho do Stats (`app/data/stats`,
+ * ainda não extraído): interface porque a implementação recebe `FitJourneyDatabase`, e sem ela
+ * todo teste de ViewModel dependeria de um SQLite real.
  *
  * [REGRA] Não existe operação de escrita. Quem concede é o servidor; o cliente lê e pede
  * atualização. A ausência de setter é o contrato, não um esquecimento.
+ *
+ * Extraído do módulo `app` para `features:achievements` (débito P3 "stats+session+achievements
+ * extrair do módulo app") — primeiro dos três, os outros dois (`stats`, `session`) seguem o
+ * mesmo padrão quando chegar a vez deles.
  */
 interface Achievements {
 
