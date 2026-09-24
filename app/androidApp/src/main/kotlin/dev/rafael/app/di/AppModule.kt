@@ -1,6 +1,5 @@
 package dev.rafael.app.di
 
-import dev.rafael.app.data.session.SessionApi
 import dev.rafael.app.data.me.Me
 import dev.rafael.app.data.me.MeApi
 import dev.rafael.app.data.me.MeRepository
@@ -17,6 +16,8 @@ import dev.rafael.features.exercise.presentation.di.exercisePresentationModule
 import dev.rafael.features.achievements.data.di.achievementsDataModule
 import dev.rafael.features.achievements.presentation.di.achievementsPresentationModule
 import dev.rafael.features.stats.data.di.statsDataModule
+import dev.rafael.features.session.data.di.sessionDataModule
+import dev.rafael.features.session.presentation.di.sessionPresentationModule
 import dev.rafael.features.profile.data.di.profileDataModule
 import dev.rafael.features.profile.presentation.di.profilePresentationModule
 import dev.rafael.features.program.data.di.programDataModule
@@ -52,13 +53,10 @@ import dev.rafael.contract.i18n.Idioma
 import dev.rafael.app.idioma.IdiomaDoAparelho
 import dev.rafael.core.network.TokenProvider
 import org.koin.android.ext.koin.androidContext
-import dev.rafael.app.data.session.HistoricoDeSessoes
-import dev.rafael.app.data.session.SessionSync
 import dev.rafael.app.screens.home.HomeViewModel
 import dev.rafael.app.screens.progress.ProgressViewModel
 import dev.rafael.app.screens.paywall.PaywallViewModel
 import dev.rafael.app.screens.reveal.ProgramRevealViewModel
-import dev.rafael.app.screens.session.WorkoutSessionViewModel
 import dev.rafael.app.screens.splash.SplashViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -141,9 +139,6 @@ val appModule = module {
         )
     }
 
-    // Sessão de treino (Fase 5): remote + sync offline-first (outbox local).
-    single { SessionApi(get()) }
-
     // Usuário: nome e plano (V35, ARCH #33/#34). Reusa o MeDataSource de auth:data em vez de
     // repetir as rotas de /me — quem é dono delas continua sendo ele.
     single { MeApi(get()) }
@@ -204,8 +199,6 @@ val appModule = module {
     single { dev.rafael.app.data.checkin.Localizador(androidContext()) }
     viewModel { dev.rafael.app.screens.checkin.CheckInViewModel(get(), get(), get()) }
     single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
-    single<HistoricoDeSessoes> { SessionSync(get(), get(), get(), get(), get()) }   // + SyncStamps
-
     viewModelOf(::SplashViewModel)   // injeta AuthRepository + ProfileRepository + ExerciseRepository + CoroutineScope
     viewModelOf(::HomeViewModel)     // treino de hoje (não conhece mais sessão — ARCH #34)
     viewModelOf(::MenuViewModel)     // cabeçalho do menu lateral: nome + nível, do cache
@@ -231,7 +224,6 @@ val appModule = module {
     viewModelOf(::ProgressViewModel) // histórico offline-first + stats
     viewModelOf(::ProgramRevealViewModel)   // injeta ProgramRepository (revelação)
     viewModelOf(::PaywallViewModel)          // injeta Billing (página de assinatura)
-    viewModel { (workoutId: String) -> WorkoutSessionViewModel(workoutId, get(), get(), get()) }   // execução
 }
 
 /**
@@ -255,6 +247,8 @@ val todosOsModulosDoApp: List<Module> = listOf(
     achievementsDataModule,
     achievementsPresentationModule,
     statsDataModule,
+    sessionDataModule,
+    sessionPresentationModule,
     workoutDataModule,
     workoutPresentationModule,
     programDataModule,

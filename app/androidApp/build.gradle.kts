@@ -116,6 +116,10 @@ dependencies {
     implementation(projects.shared.features.stats.data)
     implementation(projects.shared.features.stats.domain)
 
+    implementation(projects.shared.features.session.presentation)
+    implementation(projects.shared.features.session.data)
+    implementation(projects.shared.features.session.domain)
+
     implementation(projects.shared.features.workout.data)
     implementation(projects.shared.features.workout.domain)
     implementation(projects.shared.features.workout.presentation)

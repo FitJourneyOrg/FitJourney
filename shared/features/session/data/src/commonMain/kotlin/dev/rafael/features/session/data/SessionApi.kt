@@ -1,4 +1,4 @@
-package dev.rafael.app.data.session
+package dev.rafael.features.session.data
 
 import dev.rafael.contract.session.WorkoutSessionDto
 import dev.rafael.core.network.HttpClientFactory
