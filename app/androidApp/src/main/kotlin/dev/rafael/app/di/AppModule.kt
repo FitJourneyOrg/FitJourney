@@ -13,6 +13,19 @@ import dev.rafael.app.data.groups.Groups
 import dev.rafael.app.data.groups.GroupsApi
 import dev.rafael.app.data.groups.GroupsRepository
 import dev.rafael.app.data.sessao.SairDaConta
+import dev.rafael.core.database.di.databaseModule
+import dev.rafael.core.network.di.networkModule
+import dev.rafael.features.auth.data.di.authDataModule
+import dev.rafael.features.auth.presentation.di.authPresentationModule
+import dev.rafael.features.exercise.data.di.exerciseDataModule
+import dev.rafael.features.exercise.presentation.di.exercisePresentationModule
+import dev.rafael.features.profile.data.di.profileDataModule
+import dev.rafael.features.profile.presentation.di.profilePresentationModule
+import dev.rafael.features.program.data.di.programDataModule
+import dev.rafael.features.program.presentation.di.programPresentationModule
+import dev.rafael.features.workout.data.di.workoutDataModule
+import dev.rafael.features.workout.presentation.di.workoutPresentationModule
+import org.koin.core.module.Module
 import dev.rafael.app.screens.conta.ContaViewModel
 import dev.rafael.app.screens.grupos.EntrarViewModel
 import dev.rafael.app.screens.grupos.GrupoDetalheViewModel
@@ -231,3 +244,28 @@ val appModule = module {
     viewModelOf(::PaywallViewModel)          // injeta Billing (página de assinatura)
     viewModel { (workoutId: String) -> WorkoutSessionViewModel(workoutId, get(), get(), get()) }   // execução
 }
+
+/**
+ * ⭐ **A lista inteira, num só lugar** (débito "grafo do Koin sem verificação automática").
+ *
+ * Antes só existia dentro do `modules(...)` do `FitJourneyApp.kt`, como vararg — o `KoinModulesVerifyTest`
+ * não tinha como saber se cobria o grafo real ou uma cópia desatualizada dele. Com uma lista só,
+ * usada nos dois lugares, um módulo novo que entra aqui entra automaticamente na verificação — e
+ * um módulo que só é acrescentado ao `startKoin` e não a esta lista não compila (`FitJourneyApp`
+ * passa a usar esta lista, não mais um vararg escrito à mão).
+ */
+val todosOsModulosDoApp: List<Module> = listOf(
+    networkModule,
+    authDataModule,
+    databaseModule,
+    authPresentationModule,
+    profileDataModule,
+    profilePresentationModule,
+    exerciseDataModule,
+    exercisePresentationModule,
+    workoutDataModule,
+    workoutPresentationModule,
+    programDataModule,
+    programPresentationModule,
+    appModule,
+)
