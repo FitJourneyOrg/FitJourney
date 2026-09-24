@@ -31,6 +31,8 @@ import dev.rafael.app.data.stats.StatsRepository
 import dev.rafael.app.data.sync.SyncScheduler
 import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.database.outbox.AgendadorDeSync
+import dev.rafael.core.database.outbox.ExecutorDeOperacao
+import dev.rafael.core.database.outbox.FilaDeSaida
 import dev.rafael.core.database.outbox.ProcessadorDeOutbox
 import dev.rafael.features.program.data.ExecutorDePrograma
 import dev.rafael.features.workout.data.ExecutorDeTreino
@@ -54,6 +56,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 val appModule = module {
@@ -93,7 +96,14 @@ val appModule = module {
 
     // FILA DE ESCRITAS pendentes (ARCH #30, fatia B.2). Mesmo motivo do SyncStamps para
     // morar aqui: é o único ponto que vê o banco e o TokenProvider ao mesmo tempo.
-    single { Outbox(db = get(), uidAtual = { get<TokenProvider>().currentUid() }) }
+    //
+    // `bind FilaDeSaida::class`: `ProcessadorDeOutbox` depende da INTERFACE (inversão de
+    // dependência de propósito), mas só `Outbox` concreto estava registrado -- funcionava por
+    // acidente porque o único ponto que monta `ProcessadorDeOutbox` (abaixo) pede `get<Outbox>()`,
+    // não `get<FilaDeSaida>()`. Achado pelo KoinModulesVerifyTest: sem este bind, quem um dia
+    // pedir `get<FilaDeSaida>()` quebra em runtime. O `bind` soma o tipo, não troca -- `get<Outbox>()`
+    // continua resolvendo igual (usado também em ProgramRepositoryImpl e WorkoutRepositoryImpl).
+    single { Outbox(db = get(), uidAtual = { get<TokenProvider>().currentUid() }) } bind FilaDeSaida::class
 
     // Gatilho de envio (B.3/B.4): o repositório enfileira e chama agendar(); quem acorda o
     // processo quando a rede volta é o WorkManager, que só existe no Android — por isso os
@@ -106,8 +116,15 @@ val appModule = module {
     // A lista é montada AQUI, e não registrada como `single<List<ExecutorDeOperacao>>`: Koin
     // resolvendo tipo genérico de coleção é o tipo de wiring que falha em runtime, dentro de um
     // worker, sem stack visível. Explícito custa uma linha e falha na cara.
-    single { ExecutorDeTreino(get(), get()) }
-    single { ExecutorDePrograma(get()) }
+    //
+    // `bind ExecutorDeOperacao::class` nos dois: `ProcessadorDeOutbox` declara
+    // `List<ExecutorDeOperacao>` — depende da ABSTRAÇÃO, que é o certo. Só que ambos estavam
+    // registrados apenas sob o tipo concreto, então `ExecutorDeOperacao` não existia no grafo.
+    // Funcionava por acidente porque a lista abaixo é montada com `get<ExecutorDeTreino>()`
+    // concreto. Achado pelo KoinModulesVerifyTest (o verify() desembrulha `List<T>` e cobra
+    // binding do `T`). Mesmo caso do `FilaDeSaida` acima: o `bind` soma o tipo, não troca.
+    single { ExecutorDeTreino(get(), get()) } bind ExecutorDeOperacao::class
+    single { ExecutorDePrograma(get()) } bind ExecutorDeOperacao::class
     single {
         ProcessadorDeOutbox(
             outbox = get<Outbox>(),
