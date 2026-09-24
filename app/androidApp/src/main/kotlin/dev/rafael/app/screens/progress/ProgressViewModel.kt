@@ -2,8 +2,8 @@ package dev.rafael.app.screens.progress
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.rafael.app.data.session.SessaoLocal
-import dev.rafael.app.data.session.HistoricoDeSessoes
+import dev.rafael.features.session.domain.SessaoLocal
+import dev.rafael.features.session.domain.HistoricoDeSessoes
 import dev.rafael.features.stats.domain.Stats
 import dev.rafael.contract.stats.UserStatsDto
 import kotlinx.coroutines.flow.MutableStateFlow
