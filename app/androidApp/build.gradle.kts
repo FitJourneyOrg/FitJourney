@@ -93,6 +93,9 @@ dependencies {
     testImplementation(libs.kotlin.testJunit)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)   // runTest + Dispatchers.setMain
+    // Grafo do Koin verificado por reflexao, sem instanciar nada e sem emulador (debito P2).
+    testImplementation(libs.koin.test)
+    testImplementation(libs.kotlin.reflect)
     // Features (o app agrega os módulos Koin e usa o ViewModel)
     implementation(projects.shared.features.auth.domain)
     implementation(projects.shared.features.auth.presentation)
