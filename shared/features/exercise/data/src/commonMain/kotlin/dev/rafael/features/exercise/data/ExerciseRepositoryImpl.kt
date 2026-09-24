@@ -2,6 +2,7 @@ package dev.rafael.features.exercise.data
 
 import dev.rafael.contract.exercise.ExerciseCategory
 import dev.rafael.contract.i18n.Idioma
+import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.httpResult
 import dev.rafael.core.result.AppError
@@ -29,10 +30,10 @@ class ExerciseRepositoryImpl(
     private val idiomaAtual: () -> Idioma,
 ) : ExerciseRepository {
 
-    override fun observeExercises(category: ExerciseCategory?): Flow<List<Exercise>> {
+    override fun observeExercises(category: ExerciseCategory?, muscleGroup: MuscleGroup?): Flow<List<Exercise>> {
         val rows = if (category == null) local.observeAll()
         else local.observeByCategory(category.name)
-        return rows.map { list -> list.mapNotNull { it.toDomainOrNull() } }
+        return rows.map { list -> list.mapNotNull { it.toDomainOrNull() }.filtradosPorMusculo(muscleGroup) }
     }
 
     /**
@@ -159,3 +160,18 @@ internal fun precisaRebaixar(
     catalogoVazio: Boolean,
 ): Boolean =
     forcar || !carimboFresco || catalogoVazio || idiomaGuardado != idiomaAtual
+
+/**
+ * ⭐ **O segundo filtro, isolado do banco pela mesma razão que `precisaRebaixar`** — SQLite sem
+ * json1 não filtra dentro da coluna JSON (5.sqm), então o filtro roda em memória sobre o que o
+ * SQL de categoria já devolveu. Isolar como função pura é o que torna isto testável sem
+ * SQLDelight: `ExerciseLocalDataSource` é uma classe concreta (abre `FitJourneyDatabase`
+ * diretamente), não uma interface — não dá pra fake nela sem refactor.
+ *
+ * `null` = sem filtro. Um exercício entra se o músculo aparece como primário OU secundário —
+ * "pernas" deve trazer tanto o agachamento (primário) quanto a panturrilha em pé (se ela listar
+ * pernas como secundário), não só o que tem a perna como foco principal.
+ */
+internal fun List<Exercise>.filtradosPorMusculo(muscleGroup: MuscleGroup?): List<Exercise> =
+    if (muscleGroup == null) this
+    else filter { muscleGroup in it.primaryMuscles || muscleGroup in it.secondaryMuscles }

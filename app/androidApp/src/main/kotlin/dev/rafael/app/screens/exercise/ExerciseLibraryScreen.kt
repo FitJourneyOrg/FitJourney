@@ -20,6 +20,7 @@ import dev.rafael.app.ui.NetworkImage
 import dev.rafael.app.ui.ShimmerLine
 import dev.rafael.app.ui.shimmer
 import dev.rafael.contract.exercise.ExerciseCategory
+import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.core.network.MediaUrls
 import dev.rafael.features.exercise.presentation.state.ExerciseListEvent
 import dev.rafael.features.exercise.presentation.state.ExerciseListState
@@ -116,6 +117,7 @@ fun ExerciseLibraryScreen(
                 ExerciseListContent(
                     state = state,
                     onCategorySelected = { viewModel.onEvent(ExerciseListEvent.CategorySelected(it)) },
+                    onMuscleGroupSelected = { viewModel.onEvent(ExerciseListEvent.MuscleGroupSelected(it)) },
                     onOpenDetail = onOpenExercise,
                 )
             }
@@ -128,6 +130,7 @@ fun ExerciseLibraryScreen(
 fun ExerciseListContent(
     state: ExerciseListState,
     onCategorySelected: (ExerciseCategory?) -> Unit,
+    onMuscleGroupSelected: ((MuscleGroup?) -> Unit)? = null,
     selectedIds: Set<String>? = null,
     onToggle: ((String) -> Unit)? = null,
     onOpenDetail: ((String) -> Unit)? = null,
@@ -147,6 +150,28 @@ fun ExerciseListContent(
                     onClick = { onCategorySelected(cat) },
                     label = { Text(stringResource(cat.rotulo())) },
                 )
+            }
+        }
+        // Segundo filtro, dimensão diferente (anatomia, não estilo) — coexiste com o de cima
+        // (decisão do Rafael). onMuscleGroupSelected é opcional pra este conteúdo continuar
+        // reusável em qualquer tela futura que só precise do filtro por categoria.
+        onMuscleGroupSelected?.let { onMuscle ->
+            Spacer(Modifier.height(8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    FilterChip(
+                        selected = state.selectedMuscleGroup == null,
+                        onClick = { onMuscle(null) },
+                        label = { Text(stringResource(R.string.exercicios_todos_musculos)) },
+                    )
+                }
+                items(MuscleGroup.entries) { musculo ->
+                    FilterChip(
+                        selected = state.selectedMuscleGroup == musculo,
+                        onClick = { onMuscle(musculo) },
+                        label = { Text(stringResource(musculo.rotulo())) },
+                    )
+                }
             }
         }
         Spacer(Modifier.height(12.dp))
