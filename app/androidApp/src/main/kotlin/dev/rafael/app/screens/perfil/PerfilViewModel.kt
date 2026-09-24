@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.features.achievements.domain.Achievements
 import dev.rafael.app.data.me.Me
-import dev.rafael.app.data.stats.Stats
+import dev.rafael.features.stats.domain.Stats
 import dev.rafael.contract.stats.AchievementDto
 import dev.rafael.contract.stats.UserStatsDto
 import kotlinx.coroutines.flow.SharingStarted
