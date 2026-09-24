@@ -1,13 +1,15 @@
-package dev.rafael.app.data.session
+package dev.rafael.features.session.data
 
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
-import dev.rafael.app.data.sync.SyncScheduler
 import dev.rafael.contract.session.WorkoutSessionDto
 import dev.rafael.core.database.FitJourneyDatabase
 import dev.rafael.core.database.SyncStamps
+import dev.rafael.core.database.outbox.AgendadorDeSync
 import dev.rafael.core.network.TokenProvider
 import dev.rafael.core.result.AppResult
+import dev.rafael.features.session.domain.HistoricoDeSessoes
+import dev.rafael.features.session.domain.SessaoLocal
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -16,13 +18,6 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
-import kotlin.time.Clock
-
-/** Sessão como a UI a enxerga: o dado + se ainda está esperando o servidor. */
-data class SessaoLocal(
-    val dto: WorkoutSessionDto,
-    val pendente: Boolean,
-)
 
 /**
  * Sessões de treino — OFFLINE-FIRST de verdade.
@@ -32,12 +27,18 @@ data class SessaoLocal(
  * o servidor confirma, o marcador `pendente` cai e o Flow re-emite sozinho.
  *
  * O POST é idempotente por id (gerado no cliente), então reenviar nunca duplica.
+ *
+ * [agendador] é a porta estreita pro flush em background (mesmo [AgendadorDeSync] que
+ * `program:data`/`workout:data` já usam) — não o `SyncScheduler` concreto (WorkManager é
+ * Android; código comum não pode depender dele). Isso mudou nesta extração: antes de sair do
+ * módulo `app`, esta classe pulava a porta e ia direto no `SyncScheduler`, porque as duas
+ * classes viviam no mesmo módulo e o atalho compilava sem ninguém perceber a inversão.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class SessionSync(
     private val api: SessionApi,
     private val db: FitJourneyDatabase,
-    private val scheduler: SyncScheduler,
+    private val agendador: AgendadorDeSync,
     private val tokenProvider: TokenProvider,
     private val stamps: SyncStamps,
 ) : HistoricoDeSessoes {
@@ -98,7 +99,7 @@ class SessionSync(
         }
         // sobrou algo? o WorkManager reenvia quando a rede voltar, mesmo com o app fechado.
         val aindaPendentes = withContext(Dispatchers.Default) { q.contarPendentes(dono).executeAsOne() }
-        if (aindaPendentes > 0) scheduler.agendarAgora()
+        if (aindaPendentes > 0) agendador.agendar()
     }
 
     /**

@@ -23,6 +23,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import dev.rafael.app.ui.ErroDeTela
+import dev.rafael.features.session.presentation.state.SessionEvent
+import dev.rafael.features.session.presentation.state.SetEntry
+import dev.rafael.features.session.presentation.viewmodel.WorkoutSessionViewModel
 import dev.rafael.app.R
 import dev.rafael.app.ui.ShimmerContent
 import org.koin.androidx.compose.koinViewModel

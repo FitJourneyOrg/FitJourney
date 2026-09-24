@@ -27,7 +27,7 @@ import kotlin.time.Instant
  * e o 403 do dia trancado.
  *
  * Dois destravamentos tornaram isto possível: as interfaces [dev.rafael.features.stats.domain.Stats] e
- * [dev.rafael.app.data.session.HistoricoDeSessoes] (antes eram classes com `FitJourneyDatabase`
+ * [dev.rafael.features.session.domain.HistoricoDeSessoes] (antes eram classes com `FitJourneyDatabase`
  * no construtor) e o `Clock` injetado — sem ele, "achou o treino de hoje" passaria na segunda e
  * falharia no domingo.
  */

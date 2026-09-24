@@ -1,7 +1,7 @@
 package dev.rafael.app.screens.home
 
-import dev.rafael.app.data.session.HistoricoDeSessoes
-import dev.rafael.app.data.session.SessaoLocal
+import dev.rafael.features.session.domain.HistoricoDeSessoes
+import dev.rafael.features.session.domain.SessaoLocal
 import dev.rafael.features.stats.domain.Stats
 import dev.rafael.contract.session.WorkoutSessionDto
 import dev.rafael.contract.stats.UserStatsDto

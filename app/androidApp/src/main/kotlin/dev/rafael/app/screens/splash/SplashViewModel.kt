@@ -2,7 +2,7 @@ package dev.rafael.app.screens.splash
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.rafael.app.data.session.HistoricoDeSessoes
+import dev.rafael.features.session.domain.HistoricoDeSessoes
 import dev.rafael.app.navigation.AppRoute
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult

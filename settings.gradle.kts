@@ -63,6 +63,11 @@ include(":shared:features:stats:data")
 include(":shared:features:stats:domain")
 
 
+include(":shared:features:session:data")
+include(":shared:features:session:domain")
+include(":shared:features:session:presentation")
+
+
 
 include(":shared:features:workout:data")
 include(":shared:features:workout:domain")

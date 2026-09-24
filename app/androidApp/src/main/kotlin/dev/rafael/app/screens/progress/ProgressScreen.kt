@@ -17,7 +17,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
-import dev.rafael.app.data.session.SessaoLocal
+import dev.rafael.features.session.domain.SessaoLocal
 import dev.rafael.app.ui.ShimmerList
 import org.koin.androidx.compose.koinViewModel
 import dev.rafael.app.R
