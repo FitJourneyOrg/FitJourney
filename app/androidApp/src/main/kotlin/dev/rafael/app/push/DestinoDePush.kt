@@ -25,6 +25,8 @@ data class DestinoDePush(
     val tipo: String,
     val groupId: String? = null,
     val checkInId: String? = null,
+    /** G.6: id da conquista, só em `CONQUISTA_DESBLOQUEADA` (débito fechado em 2026-09-24). */
+    val achievementId: String? = null,
 ) {
     companion object {
         /**
@@ -41,6 +43,7 @@ data class DestinoDePush(
                 tipo = tipo,
                 groupId = intent.getStringExtra("groupId"),
                 checkInId = intent.getStringExtra("checkInId"),
+                achievementId = intent.getStringExtra("achievementId"),
             )
         }
     }

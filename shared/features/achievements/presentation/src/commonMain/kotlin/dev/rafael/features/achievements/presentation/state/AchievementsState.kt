@@ -10,6 +10,14 @@ data class AchievementsState(
     val jaSincronizou: Boolean = false,
     /** Só importa quando a grade está vazia: com catálogo em cache, falha de sync é silêncio. */
     val erroSync: AppError? = null,
+    /**
+     * A conquista a celebrar num diálogo (G.6, débito fechado em 2026-09-24) — veio do
+     * `achievementId` do push, já RESOLVIDA contra o catálogo (não o id cru). `null` é o estado
+     * normal: sem diálogo. Fica `null` também quando o id não bate com nada no catálogo (id de
+     * uma versão mais nova do servidor, ou sync ainda não trouxe a conquista) — melhor sem
+     * diálogo que um diálogo quebrado.
+     */
+    val destaque: AchievementDto? = null,
 ) {
     val desbloqueadas: List<AchievementDto> get() = conquistas.filter { it.unlocked }
     val bloqueadas: List<AchievementDto> get() = conquistas.filterNot { it.unlocked }
