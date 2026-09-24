@@ -164,6 +164,42 @@ class CaminhosDeMidiaIntegrationTest {
     }
 
     /**
+     * ⭐ **Convenção de nome pra máquina de placas** (débito P3, fechado sem migration).
+     *
+     * O catálogo original (V4) tinha três formatos pro mesmo tipo de equipamento: `com Alavanca`
+     * (24), `Máquina de X` (9) — `Máquina de Abdução de Quadril`, `Máquina de remo`,
+     * `Máquina de rosca direta`, entre outros — e `X na Máquina` (38). Sem convenção
+     * declarada, duplicata por nome (mesma máquina, dois formatos) voltaria no próximo import.
+     *
+     * **A V52 (798 nomes revisados) já convergência tudo pra `X na Máquina`** — confirmado
+     * rastreando os 9 `Máquina de X` originais pelo `_de-para.csv` da revisão: `Máquina de
+     * remo` → `Remo Ergômetro`, `Máquina de rosca direta` → `Rosca Bíceps na Máquina`, etc.
+     * Zero `Máquina de X` sobrou. Confirmado TAMBÉM por revisão visual: as 52 folhas de
+     * `X na Máquina` (miniatura + nome, incluindo os 20 com sufixo `(Alavanca)`, usado só quando
+     * existe outro exercício quase homônimo por equipamento diferente) foram conferidas pelo
+     * Rafael uma a uma — todas usam máquina de verdade, nenhum peso livre/cabo disfarçado.
+     *
+     * Ou seja: **o dado já estava certo, só o débito nunca tinha sido fechado.** O que faltava
+     * não era migration — era exatamente o que a nota do débito temia: nada travava o PRÓXIMO
+     * import de reintroduzir `Máquina de X`. Este teste é essa trava.
+     *
+     * > **Convenção que ninguém verificou não é convenção fechada, é convenção por sorte.**
+     */
+    @Test
+    fun `nenhum nome de exercicio comeca com Maquina de`() {
+        val foraDaConvencao = nomes().filter {
+            it.startsWith("Máquina de ", ignoreCase = true) ||
+                it.startsWith("Maquina de ", ignoreCase = true)
+        }
+
+        assertTrue(
+            foraDaConvencao.isEmpty(),
+            "nome fora da convenção 'X na Máquina' -- reintroduziu 'Máquina de X': " +
+                "$foraDaConvencao",
+        )
+    }
+
+    /**
      * **Dois exercícios com o mesmo nome são indistinguíveis para quem escolhe.**
      *
      * Hoje são zero, e a checagem custa uma varredura. Ela importa porque a V52 reescreveu 788
