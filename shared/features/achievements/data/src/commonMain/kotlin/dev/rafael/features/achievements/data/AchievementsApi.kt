@@ -1,4 +1,4 @@
-package dev.rafael.app.data.achievements
+package dev.rafael.features.achievements.data
 
 import dev.rafael.contract.stats.AchievementDto
 import dev.rafael.core.network.HttpClientFactory
@@ -14,9 +14,6 @@ import io.ktor.client.request.get
  * Este GET tem um efeito colateral no servidor: ele avalia o progresso e concede o que faltar.
  * É de propósito (dá retroativo de graça) e idempotente, mas explica por que a resposta pode
  * trazer medalha nova sem nenhuma escrita partindo daqui.
- *
- * Mesmo atalho do StatsApi: vive no módulo app por ora (débito conhecido — extrair junto com
- * stats e session para features próprias).
  */
 class AchievementsApi(private val client: HttpClient) {
     suspend fun get(): AppResult<List<AchievementDto>> =

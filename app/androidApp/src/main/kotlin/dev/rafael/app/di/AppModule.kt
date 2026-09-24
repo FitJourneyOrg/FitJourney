@@ -3,9 +3,6 @@ package dev.rafael.app.di
 import dev.rafael.app.data.session.SessionApi
 import dev.rafael.app.data.stats.StatsApi
 import dev.rafael.app.data.stats.Stats
-import dev.rafael.app.data.achievements.Achievements
-import dev.rafael.app.data.achievements.AchievementsApi
-import dev.rafael.app.data.achievements.AchievementsRepository
 import dev.rafael.app.data.me.Me
 import dev.rafael.app.data.me.MeApi
 import dev.rafael.app.data.me.MeRepository
@@ -19,6 +16,8 @@ import dev.rafael.features.auth.data.di.authDataModule
 import dev.rafael.features.auth.presentation.di.authPresentationModule
 import dev.rafael.features.exercise.data.di.exerciseDataModule
 import dev.rafael.features.exercise.presentation.di.exercisePresentationModule
+import dev.rafael.features.achievements.data.di.achievementsDataModule
+import dev.rafael.features.achievements.presentation.di.achievementsPresentationModule
 import dev.rafael.features.profile.data.di.profileDataModule
 import dev.rafael.features.profile.presentation.di.profilePresentationModule
 import dev.rafael.features.program.data.di.programDataModule
@@ -58,7 +57,6 @@ import org.koin.android.ext.koin.androidContext
 import dev.rafael.app.data.session.HistoricoDeSessoes
 import dev.rafael.app.data.session.SessionSync
 import dev.rafael.app.screens.home.HomeViewModel
-import dev.rafael.app.screens.achievements.AchievementsViewModel
 import dev.rafael.app.screens.progress.ProgressViewModel
 import dev.rafael.app.screens.paywall.PaywallViewModel
 import dev.rafael.app.screens.reveal.ProgramRevealViewModel
@@ -150,10 +148,6 @@ val appModule = module {
     single { StatsApi(get()) }              // XP/nível/streak (ARCH #16)
     single<Stats> { StatsRepository(get(), get(), get(), get()) }   // api + db + TokenProvider + SyncStamps
 
-    // Conquistas (ARCH #16) — mesmo desenho do Stats: cache local + sync de fundo.
-    single { AchievementsApi(get()) }
-    single<Achievements> { AchievementsRepository(get(), get(), get(), get()) }
-
     // Usuário: nome e plano (V35, ARCH #33/#34). Reusa o MeDataSource de auth:data em vez de
     // repetir as rotas de /me — quem é dono delas continua sendo ele.
     single { MeApi(get()) }
@@ -239,7 +233,6 @@ val appModule = module {
     // 49 membros que não podem abri-la, e escondê-la faria a barra mudar conforme o papel.
     viewModelOf(::ModeracaoViewModel)
     viewModelOf(::ProgressViewModel) // histórico offline-first + stats
-    viewModelOf(::AchievementsViewModel)   // conquistas offline-first
     viewModelOf(::ProgramRevealViewModel)   // injeta ProgramRepository (revelação)
     viewModelOf(::PaywallViewModel)          // injeta Billing (página de assinatura)
     viewModel { (workoutId: String) -> WorkoutSessionViewModel(workoutId, get(), get(), get()) }   // execução
@@ -263,6 +256,8 @@ val todosOsModulosDoApp: List<Module> = listOf(
     profilePresentationModule,
     exerciseDataModule,
     exercisePresentationModule,
+    achievementsDataModule,
+    achievementsPresentationModule,
     workoutDataModule,
     workoutPresentationModule,
     programDataModule,

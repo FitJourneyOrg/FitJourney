@@ -23,6 +23,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.ui.ShimmerList
 import dev.rafael.contract.stats.AchievementDto
+import dev.rafael.features.achievements.presentation.viewmodel.AchievementsViewModel
 import org.koin.androidx.compose.koinViewModel
 import dev.rafael.app.R
 import dev.rafael.app.ui.ErroAcao

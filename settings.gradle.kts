@@ -54,6 +54,11 @@ include(":shared:features:exercise:domain")
 include(":shared:features:exercise:presentation")
 
 
+include(":shared:features:achievements:data")
+include(":shared:features:achievements:domain")
+include(":shared:features:achievements:presentation")
+
+
 
 include(":shared:features:workout:data")
 include(":shared:features:workout:domain")
