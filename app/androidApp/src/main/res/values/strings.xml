@@ -1399,6 +1399,7 @@
     <string name="conquista_streak_90_descricao_progresso">%1$d dias seguindo o plano</string>
     <string name="conquista_nivel_5_descricao_progresso">Alcance o nível %1$d</string>
     <string name="conquista_nivel_10_descricao_progresso">Alcance o nível %1$d</string>
+    <string name="conquistas_dialogo_titulo">Conquista desbloqueada!</string>
 
     <!-- ============================ Perfil de outra pessoa ============================ -->
 
