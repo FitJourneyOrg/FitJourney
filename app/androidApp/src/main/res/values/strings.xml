@@ -1682,6 +1682,7 @@
 
     <!-- Chip que remove o filtro de categoria. Concorda com "categorias". ~14 caracteres. -->
     <string name="exercicios_todas">Todas</string>
+    <string name="exercicios_todos_musculos">Todos</string>
     <string name="exercicios_vazio">Nenhum exercício.</string>
     <string name="exercicio_nao_encontrado">Exercício não encontrado</string>
     <!-- Folha de seleção de exercícios, ao montar um treino. -->

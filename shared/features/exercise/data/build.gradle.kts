@@ -15,6 +15,7 @@ kotlin {
             implementation(projects.sharedContract)
             implementation(libs.koin.core)
             implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.kotlinx.serialization.json)   // serializa primaryMuscles/secondaryMuscles no cache (5.sqm)
             implementation(libs.ktor.client.core)
             implementation(libs.ktor.client.contentNegotiation)
             implementation(libs.sqldelight.coroutinesExtensions)   // <- asFlow().mapToList()
