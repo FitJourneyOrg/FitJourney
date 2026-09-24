@@ -109,6 +109,10 @@ dependencies {
     implementation(projects.shared.features.exercise.data)
     implementation(projects.shared.features.exercise.domain)
 
+    implementation(projects.shared.features.achievements.presentation)
+    implementation(projects.shared.features.achievements.data)
+    implementation(projects.shared.features.achievements.domain)
+
     implementation(projects.shared.features.workout.data)
     implementation(projects.shared.features.workout.domain)
     implementation(projects.shared.features.workout.presentation)
