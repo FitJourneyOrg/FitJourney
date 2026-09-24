@@ -153,13 +153,32 @@ val appModule = module {
 
     // Sessão de treino (Fase 5 — execução).
     single<SessionRepository> { SessionRepositoryImpl() }
-    single { SessionService(get(), get()) }   // userService + repo
+    single {
+        SessionService(
+            userService = get(),
+            repository = get(),
+            // Porta estreita para conquistas (débito fechado em 2026-09-24): `session` não
+            // importa `stats`/`achievements` diretamente.
+            avaliarConquistas = { uid, email -> get<AchievementService>().avaliarAposSessao(uid, email) },
+        )
+    }
     single { StatsService(get(), get(), get()) }   // userService + sessionRepo + programService (ARCH #16)
 
-    // Conquistas (ARCH #16). Reusa o StatsService em vez de recalcular sessoes/streak/nivel:
-    // duas contas do mesmo numero acabariam divergindo.
+    // Conquistas (ARCH #16). Reusa o StatsService (via ProgressoDeStats) em vez de recalcular
+    // sessoes/streak/nivel: duas contas do mesmo numero acabariam divergindo.
     single<AchievementRepository> { AchievementRepositoryImpl() }
-    single { AchievementService(get(), get(), get()) }   // userService + statsService + repo
+    single {
+        AchievementService(
+            userService = get(),
+            stats = get<StatsService>(),
+            repository = get(),
+            // Porta estreita para o push (débito fechado em 2026-09-24): `stats` não importa
+            // `notificacao` diretamente — mesmo padrão do Friendship/Social/Moderacao.
+            avisarDesbloqueio = { destinatario, achievementId ->
+                get<NotificacaoService>().avisar(destinatario, Aviso.conquistaDesbloqueada(achievementId))
+            },
+        )
+    }
 
     // Grupos (Fase 6, ARCH #33). Sem coluna `status`: o estado sai do GroupPolicy a cada leitura.
     single<dev.rafael.server.features.group.db.GroupRepository> {

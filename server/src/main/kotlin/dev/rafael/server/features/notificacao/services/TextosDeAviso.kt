@@ -85,6 +85,12 @@ object TextosDeAviso {
                 "Tem ${c.casos} casos parados há ${c.dias} dias."
             },
         )
+
+        // Sem nome da conquista, de propósito (ver KDoc da chave). Quem toca abre a tela e vê qual foi.
+        is ChaveDeAviso.ConquistaDesbloqueada -> TextoDeAviso(
+            titulo = "Nova conquista desbloqueada!",
+            corpo = "Toque para ver qual foi.",
+        )
     }
 
     /**
@@ -143,6 +149,11 @@ object TextosDeAviso {
             } else {
                 "${c.casos} cases have been waiting for ${c.dias} days."
             },
+        )
+
+        is ChaveDeAviso.ConquistaDesbloqueada -> TextoDeAviso(
+            titulo = "New achievement unlocked!",
+            corpo = "Tap to see which one.",
         )
     }
 }
