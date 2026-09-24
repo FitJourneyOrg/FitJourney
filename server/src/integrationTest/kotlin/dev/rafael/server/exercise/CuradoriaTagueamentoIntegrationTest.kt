@@ -35,9 +35,12 @@ import org.junit.jupiter.api.TestInstance
  *
  * ## O que este teste NÃO faz
  *
- * Não valida a coerência grupo↔padrão do catálogo inteiro — essa é a proposta que ficou para o
- * SlotFiller v2 (débito P3 "motor confia 100% na taxonomia sem sanity-check"), por decisão de
- * escopo. Aqui só se trava o que a V57 decidiu, exercício a exercício.
+ * Não valida a coerência grupo↔padrão do catálogo inteiro — só a checagem específica de QUADS
+ * (o único alvo do SlotFiller que confiava cegamente em `movement_pattern`, sem olhar
+ * `primary_muscles`) foi fechada, em `CoerenciaMotorIntegrationTest`. A validação completa dos
+ * 14 `movement_pattern` / 11 `category` segue fora de escopo (débito P3 "motor confia 100% na
+ * taxonomia sem sanity-check", redesenho maior — SlotFiller v2, decisão do Rafael). Aqui só se
+ * trava o que a V57 decidiu, exercício a exercício.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CuradoriaTagueamentoIntegrationTest {
