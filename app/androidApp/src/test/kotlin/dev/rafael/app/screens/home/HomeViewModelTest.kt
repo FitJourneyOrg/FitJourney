@@ -26,7 +26,7 @@ import kotlin.time.Instant
  * três defeitos que um teste teria pego: o `locked` rebaixado no banco, o `/me/stats` sem TTL
  * e o 403 do dia trancado.
  *
- * Dois destravamentos tornaram isto possível: as interfaces [dev.rafael.app.data.stats.Stats] e
+ * Dois destravamentos tornaram isto possível: as interfaces [dev.rafael.features.stats.domain.Stats] e
  * [dev.rafael.app.data.session.HistoricoDeSessoes] (antes eram classes com `FitJourneyDatabase`
  * no construtor) e o `Clock` injetado — sem ele, "achou o treino de hoje" passaria na segunda e
  * falharia no domingo.

@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.Flow
 /**
  * O USUÁRIO como as telas o enxergam — nome, plano, e-mail (V35, ARCH #33/#34).
  *
- * Mesma forma de [dev.rafael.app.data.stats.Stats]: interface porque a implementação recebe
+ * Mesma forma de [dev.rafael.features.stats.domain.Stats]: interface porque a implementação recebe
  * `FitJourneyDatabase` no construtor, e sem ela todo teste de ViewModel exigiria um SQLite real.
  *
  * A diferença para `Stats` é que aqui EXISTE escrita — o nome é a primeira coisa do usuário que
