@@ -1379,6 +1379,27 @@
     <string name="conquista_nivel_10_titulo">Nível 10</string>
     <string name="conquista_nivel_10_descricao">Alcance o nível 10</string>
 
+    <!--
+      Mesma frase de cima, mas parametrizada pelo AchievementDto.target de verdade (débito
+      "números de conquista cravam constante do servidor", debitos.md) — usada só onde a barra de
+      progresso aparece ao lado (AchievementsScreen, perfil próprio), pra que a frase e a barra
+      nunca divirjam se o alvo mudar no AchievementPolicy. O perfil público não usa: não mostra
+      barra e PublicAchievementDto não carrega target (9.3-A, privacidade). PRIMEIRO_TREINO fica
+      fora — alvo é sempre 1, sem número pra divergir — e reusa a frase de cima.
+
+      Os três grupos abaixo repetem o MESMO texto entre si de propósito (molde compartilhado por
+      TREINOS_10/50/100, por STREAK_7/30/90 e por NIVEL_5/10) — ver a exceção declarada em
+      `CatalogoDeStringsTest`.
+    -->
+    <string name="conquista_treinos_10_descricao_progresso">Registre %1$d treinos</string>
+    <string name="conquista_treinos_50_descricao_progresso">Registre %1$d treinos</string>
+    <string name="conquista_treinos_100_descricao_progresso">Registre %1$d treinos</string>
+    <string name="conquista_streak_7_descricao_progresso">%1$d dias seguindo o plano</string>
+    <string name="conquista_streak_30_descricao_progresso">%1$d dias seguindo o plano</string>
+    <string name="conquista_streak_90_descricao_progresso">%1$d dias seguindo o plano</string>
+    <string name="conquista_nivel_5_descricao_progresso">Alcance o nível %1$d</string>
+    <string name="conquista_nivel_10_descricao_progresso">Alcance o nível %1$d</string>
+
     <!-- ============================ Perfil de outra pessoa ============================ -->
 
     <!-- Aviso quando a pessoa abre o próprio perfil pelo caminho público. -->

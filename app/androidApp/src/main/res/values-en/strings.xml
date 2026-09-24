@@ -854,6 +854,14 @@
     <string name="conquista_nivel_10_titulo">Level 10</string>
     <string name="conquista_nivel_10_descricao">Reach level 10</string>
 
+    <string name="conquista_treinos_10_descricao_progresso">Log %1$d workouts</string>
+    <string name="conquista_treinos_50_descricao_progresso">Log %1$d workouts</string>
+    <string name="conquista_treinos_100_descricao_progresso">Log %1$d workouts</string>
+    <string name="conquista_streak_7_descricao_progresso">%1$d days on plan</string>
+    <string name="conquista_streak_30_descricao_progresso">%1$d days on plan</string>
+    <string name="conquista_streak_90_descricao_progresso">%1$d days on plan</string>
+    <string name="conquista_nivel_5_descricao_progresso">Reach level %1$d</string>
+    <string name="conquista_nivel_10_descricao_progresso">Reach level %1$d</string>
 
     <!-- ============================ Someone else's profile ============================ -->
 
