@@ -76,6 +76,11 @@ class CaminhosDeMidiaIntegrationTest {
      *
      * Contagem exata, e não "pelo menos": menos que 923 significa mapeamento que não alcançou
      * alguém, mais significa que o mapa está desatualizado. Os dois são defeito.
+     *
+     * ⚠️ **A V58 NÃO muda este número.** `Prancha` (sem mídia, decisão deliberada do Rafael,
+     * ver `fora do formato novo nao sobra ninguem` abaixo) não entra neste balde — ela cai no
+     * outro, o de quem está fora do formato. 923 continua sendo exatamente quem tem `chave`
+     * válida; o catálogo inteiro subiu pra 924 (ver `o catalogo tem 924 exercicios`).
      */
     @Test
     fun `exatamente 923 caminhos usam a chave em snake_case`() {
@@ -97,20 +102,30 @@ class CaminhosDeMidiaIntegrationTest {
      *
      * ⚠️ Este número foi `39 + 26` entre a V50 e a V51, depois `26` até a fatia H sessão B. A V54
      * pagou essa dívida (consolidou 4, removeu 22) e a V55 não trouxe nenhum exercício sem mídia
-     * junto — os 23 novos só entraram porque tinham vídeo e thumb confirmados em disco. Zero é o
+     * junto — os 23 novos só entraram porque tinham vídeo e thumb confirmados em disco. Zero era o
      * estado são: se subir, alguém inseriu exercício sem mídia e nenhuma outra guarda pega isso.
      *
-     * > **Dois testes que se movem juntos provam mais que um que se move sozinho.**
+     * **A V58 rompe o zero de propósito, uma vez, nomeada.** `Prancha` voltou ao catálogo sem
+     * mídia (decisão do Rafael, 2026-09-24 — débito P3 "falta prancha isométrica", nenhuma mídia
+     * disponível na fonte externa). Em vez de apagar a guarda ou zerar o teste, a exceção é
+     * ENUMERADA: só `Prancha` pode estar fora do padrão. Qualquer OUTRO nome aqui continua
+     * reprovando — é o mesmo teste, só que "zero" virou "zero, mais o que eu já sei que existe".
+     *
+     * > **Débito que ninguém consegue enumerar não é débito, é surpresa** (G.2) — e o inverso
+     * > também vale: débito enumerado por nome não é mais um "zero" quebrado, é um item contado.
      */
     @Test
-    fun `fora do formato novo nao sobra ninguem`() {
+    fun `fora do formato novo nao sobra ninguem alem da Prancha`() {
+        val excecoesConhecidas = setOf("Prancha")
         val fora = refs().filterNot { (_, video, thumb) ->
             padraoVideo.matches(video) && padraoThumb.matches(thumb)
         }
 
-        assertTrue(
-            fora.isEmpty(),
-            "caminho inesperado fora do padrão: ${fora.take(5).map { it.first }}",
+        assertEquals(
+            excecoesConhecidas,
+            fora.map { it.first }.toSet(),
+            "caminho inesperado fora do padrão (esperava só a exceção conhecida): " +
+                "${fora.map { it.first }}",
         )
     }
 
@@ -118,9 +133,10 @@ class CaminhosDeMidiaIntegrationTest {
      * 965 - 39 duplicados = 926 (V51). 926 - 26 legado sem mídia (V54) + 23 novos do catálogo
      * (V55) = 923. Fixa o tamanho do catálogo depois da fatia H sessão B.
      */
+    /** 923 + 1 (`Prancha`, V58, sem mídia por decisão deliberada -- ver teste acima). */
     @Test
-    fun `o catalogo tem 923 exercicios`() {
-        assertEquals(923, refs().size)
+    fun `o catalogo tem 924 exercicios`() {
+        assertEquals(924, refs().size)
     }
 
     /**
@@ -177,17 +193,24 @@ class CaminhosDeMidiaIntegrationTest {
      * desenvolvimento); os 19 restantes nunca tiveram uso nem equivalente (removidos direto).
      *
      * O número fixado aqui é o que transforma "existem alguns sem mídia" em dívida enumerável. Se
-     * ele SOBE, alguém acrescentou exercício sem mídia e este teste cobra. Zero é o estado são.
+     * ele SOBE além da exceção nomeada abaixo, alguém acrescentou exercício sem mídia e este teste
+     * cobra. Zero era o estado são; agora é "só quem eu já sei que não tem".
+     *
+     * **`Prancha` é a exceção (V58, decisão deliberada do Rafael — ver débito P3 "falta prancha
+     * isométrica" em `debitos.md`).** Mesma técnica do teste `fora do formato novo`: nomear em vez
+     * de zerar, pra continuar pegando qualquer OUTRO exercício sem mídia que apareça depois.
      *
      * > **Débito que ninguém consegue contar volta a crescer sem que ninguém perceba.**
      */
     @Test
-    fun `nao existem mais exercicios sem midia`() {
+    fun `nao existem mais exercicios sem midia alem da Prancha`() {
+        val excecoesConhecidas = setOf("Prancha")
         val semMidia = refs().filter { (_, video, _) -> video.isEmpty() }
 
-        assertTrue(
-            semMidia.isEmpty(),
-            "exercícios sem mídia reapareceram: ${semMidia.map { it.first }}",
+        assertEquals(
+            excecoesConhecidas,
+            semMidia.map { it.first }.toSet(),
+            "exercícios sem mídia (esperava só a exceção conhecida): ${semMidia.map { it.first }}",
         )
     }
 
