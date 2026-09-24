@@ -3,6 +3,7 @@ package dev.rafael.features.exercise.presentation.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.contract.exercise.ExerciseCategory
+import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
@@ -27,7 +28,7 @@ class ExerciseListViewModel(
     private var observeJob: Job? = null
 
     init {
-        observe(category = null)   // observa o banco (a lista pinta daqui, ARCH #30)
+        observe(category = null, muscleGroup = null)   // observa o banco (a lista pinta daqui, ARCH #30)
         // Sincronização de fundo, com TTL de 24h no repositório. Antes isto era "network-first"
         // e baixava os 965 exercícios em TODA entrada na aba.
         refresh(forcar = false)
@@ -37,16 +38,20 @@ class ExerciseListViewModel(
         when (event) {
             is ExerciseListEvent.CategorySelected -> {
                 _state.update { it.copy(selectedCategory = event.category) }
-                observe(event.category)   // re-observa com o novo filtro
+                observe(event.category, _state.value.selectedMuscleGroup)   // re-observa com os dois filtros
+            }
+            is ExerciseListEvent.MuscleGroupSelected -> {
+                _state.update { it.copy(selectedMuscleGroup = event.muscleGroup) }
+                observe(_state.value.selectedCategory, event.muscleGroup)   // re-observa com os dois filtros
             }
             ExerciseListEvent.Refresh -> refresh(forcar = true)   // o usuário pediu: fura o TTL
         }
     }
 
-    /** Cancela a coleta anterior e observa o banco com o filtro atual. */
-    private fun observe(category: ExerciseCategory?) {
+    /** Cancela a coleta anterior e observa o banco com os dois filtros atuais (coexistem). */
+    private fun observe(category: ExerciseCategory?, muscleGroup: MuscleGroup?) {
         observeJob?.cancel()
-        observeJob = repository.observeExercises(category)
+        observeJob = repository.observeExercises(category, muscleGroup)
             .onEach { list -> _state.update { it.copy(exercises = list) } }
             .launchIn(viewModelScope)
     }

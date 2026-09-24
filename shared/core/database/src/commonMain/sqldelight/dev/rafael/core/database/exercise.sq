@@ -1,5 +1,5 @@
 -- Catálogo de exercícios (tabela `exercise`).
--- Schema: 1.sqm (nesta pasta). Aqui só ficam as QUERIES.
+-- Schema: 1.sqm + 5.sqm (nesta pasta). Aqui só ficam as QUERIES.
 
 selectByIds:
 SELECT id, name, thumbRef FROM exercise WHERE id IN ?;
@@ -16,8 +16,8 @@ selectByCategory:
 SELECT * FROM exercise WHERE category = ?;
 
 insertOrReplace:
-INSERT OR REPLACE INTO exercise(id, name, category, description, videoRef, thumbRef)
-VALUES (?, ?, ?, ?, ?, ?);
+INSERT OR REPLACE INTO exercise(id, name, category, description, videoRef, thumbRef, primaryMuscles, secondaryMuscles)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
 
 deleteAll:
 DELETE FROM exercise;

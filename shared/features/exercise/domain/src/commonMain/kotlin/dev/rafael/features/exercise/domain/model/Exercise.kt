@@ -11,8 +11,9 @@ data class Exercise(
     val description: String?,
     val videoRef: String,
     val thumbRef: String,
-    // Taxonomia (seções do detalhe). Só o caminho de rede (getDetail) preenche;
-    // o cache local devolve vazio/null (não guarda esses campos).
+    // Taxonomia. primaryMuscles/secondaryMuscles vêm do cache local desde a 5.sqm (filtro por
+    // músculo na Biblioteca) — os demais só o caminho de rede (getDetail) preenche; o cache
+    // devolve null pra eles.
     val primaryMuscles: List<MuscleGroup>,
     val secondaryMuscles: List<MuscleGroup>,
     val equipment: String?,

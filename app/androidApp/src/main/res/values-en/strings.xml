@@ -1056,6 +1056,7 @@
     <!-- ============================ Exercise library ============================ -->
 
     <string name="exercicios_todas">All</string>
+    <string name="exercicios_todos_musculos">All</string>
     <string name="exercicios_vazio">No exercises.</string>
     <string name="exercicio_nao_encontrado">Exercise not found</string>
     <string name="exercicios_adicionar_titulo">Add exercises</string>
