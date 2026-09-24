@@ -124,7 +124,11 @@ private fun CartaoDeConquista(conquista: AchievementDto) {
     // Sem título não há cartão: `null` só acontece com servidor novo e app antigo, e um cartão
     // com o identificador cru (`STREAK_90`) no meio da grade é pior que uma medalha a menos.
     val titulo = TextosDeConquista.titulo(conquista.id) ?: return
-    val descricao = TextosDeConquista.descricao(conquista.id)
+    // Débito "números de conquista cravam constante do servidor" (debitos.md): a versão COM alvo,
+    // alimentada pelo AchievementDto.target de verdade — é aqui, ao lado da barra de progresso,
+    // que a frase e o número da barra podem divergir se o alvo mudar no AchievementPolicy.
+    val descricao = TextosDeConquista.descricaoComProgresso(conquista.id)
+    val argsDaDescricao = TextosDeConquista.argsDaDescricaoComProgresso(conquista.id, conquista.target)
 
     // O estado vem de `unlockedAt`, NUNCA de comparar current >= target: streak quebra e a
     // medalha continua ganha. Quem decide desbloqueio é o servidor ([REGRA] ARCH #16).
@@ -169,7 +173,7 @@ private fun CartaoDeConquista(conquista: AchievementDto) {
             descricao?.let {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    stringResource(it),
+                    stringResource(it, *argsDaDescricao.toTypedArray()),
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
                     color = apagado,
