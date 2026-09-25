@@ -159,4 +159,21 @@ class WorkoutServiceTest {
         assertEquals(true, porId[ativoId.toString()]?.isActive)
         assertEquals(false, porId[outroId.toString()]?.isActive)
     }
+
+    @Test
+    fun `get marca isActive quando o treino lido e o ativo do usuario`() = runBlocking {
+        val ativoId = Uuid.random()
+        val dono = user(activeWorkoutId = ativoId)
+        val treino = Workout(
+            id = ativoId, userId = dono.id, name = "Push", programId = null, dayOfWeek = null,
+            exercises = emptyList(), createdAt = agora, updatedAt = agora,
+        )
+        val userRepo = FakeUserRepo(dono)
+        val service = servico(userRepo, FakeWorkoutRepository(mutableMapOf(ativoId to treino)))
+
+        val resultado = service.get("fb", null, ativoId)
+
+        assertIs<AppResult.Success<dev.rafael.contract.workout.WorkoutDto?>>(resultado)
+        assertEquals(true, resultado.value?.isActive)
+    }
 }

@@ -116,6 +116,9 @@ class ProgramLocalDataSource(
                         lockedExerciseCount = w.lockedExerciseCount.toLong(),
                         exerciseCount = w.exercises.size.toLong(),
                         exercisesJson = json.encodeToString(exerciciosSerializer, w.exercises),
+                        // V59: cache do ponteiro que o GET /programs respondeu -- so leitura,
+                        // nao passa pelo outbox (ver ProgramRepositoryImpl.activateWorkout).
+                        isActive = if (w.isActive) 1L else 0L,
                     )
                 }
             }
@@ -253,5 +256,6 @@ class ProgramLocalDataSource(
         }.getOrDefault(emptyList()),
         locked = w.locked == 1L,
         lockedExerciseCount = w.lockedExerciseCount.toInt(),
+        isActive = w.isActive == 1L,
     )
 }
