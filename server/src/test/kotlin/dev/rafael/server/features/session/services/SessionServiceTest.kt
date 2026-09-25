@@ -37,6 +37,7 @@ class SessionServiceTest {
         override suspend fun create(id: Uuid, firebaseUid: String, email: String?, displayName: String, code: String) =
             AppResult.Success(user)
         override suspend fun setPremium(userId: Uuid, premium: Boolean) = AppResult.Success<User?>(user)
+        override suspend fun setActiveWorkout(userId: Uuid, workoutId: Uuid?) = AppResult.Success<User?>(user)
         override suspend fun updateDisplayName(userId: Uuid, displayName: String) =
             AppResult.Success<User?>(user)
         override suspend fun updateIdioma(userId: Uuid, idioma: Idioma) =
