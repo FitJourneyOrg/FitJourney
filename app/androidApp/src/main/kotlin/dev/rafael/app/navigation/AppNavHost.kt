@@ -494,6 +494,10 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
         composable<AppRoute.Programs> {
             ProgramListScreen(
                 onOpenProgram = { id -> nav.navigate(AppRoute.ProgramDetail(id)) },
+                // V59: deck achatado por treino -- navegação direta, sem passar pelo programa.
+                onOpenWorkout = { id, editLocked -> nav.navigate(AppRoute.WorkoutDetail(id, editLocked)) },
+                onStartWorkout = { id -> nav.navigate(AppRoute.WorkoutSession(id)) },
+                onOpenLibrary = { nav.navigate(AppRoute.Library) },
                 onGenerateWithAI = { nav.navigate(AppRoute.ProgramGenerate) },
             )
         }

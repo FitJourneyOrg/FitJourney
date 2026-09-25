@@ -86,7 +86,11 @@ class WorkoutService(
 
     suspend fun get(firebaseUid: String, email: String?, workoutId: Uuid): AppResult<WorkoutDto?> =
         userService.findOrCreate(firebaseUid, email).flatMap { user ->
-            repository.findById(user.id, workoutId).map { it?.toDto() }
+            // V59: marca isActive aqui tambem (nao so no list()) -- quem le um treino avulso
+            // por id (WorkoutDetailScreen) merece a mesma verdade que a lista mostra.
+            repository.findById(user.id, workoutId).map { treino ->
+                treino?.toDto()?.copy(isActive = treino.id == user.activeWorkoutId)
+            }
         }
 
     suspend fun update(firebaseUid: String, email: String?, workoutId: Uuid, dto: WorkoutDto): AppResult<WorkoutDto?> {

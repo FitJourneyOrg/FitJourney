@@ -53,4 +53,12 @@ interface ProgramRepository {
     suspend fun rename(id: String, name: String): AppResult<Program>  // PUT /programs/{id}
     suspend fun delete(id: String): AppResult<Unit>                    // DELETE /programs/{id}
     suspend fun setSchedule(id: String, schedule: List<ProgramScheduleEntry>): AppResult<Program>  // PUT /programs/{id}/schedule
+
+    /**
+     * V59 — marca este treino como o ativo do usuário (ponteiro simples, exclusivo,
+     * autoridade do servidor). ONLINE-ONLY, como [generate]: não é conteúdo que o usuário
+     * criou, é só um ponteiro que o próprio servidor guarda — não há otimismo sensato aqui,
+     * e o outbox existe para proteger CRIAÇÃO offline, não isto.
+     */
+    suspend fun activateWorkout(workoutId: String): AppResult<Unit>   // POST /workouts/{id}/activate
 }
