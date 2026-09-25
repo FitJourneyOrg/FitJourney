@@ -52,6 +52,7 @@ class FriendshipServiceTest {
             id: Uuid, firebaseUid: String, email: String?, displayName: String, code: String,
         ) = error("não usado")
         override suspend fun setPremium(userId: Uuid, premium: Boolean) = error("não usado")
+        override suspend fun setActiveWorkout(userId: Uuid, workoutId: Uuid?) = error("não usado")
         override suspend fun updateDisplayName(userId: Uuid, displayName: String) = error("não usado")
         override suspend fun updateIdioma(userId: Uuid, idioma: Idioma) = error("não usado")
     }
