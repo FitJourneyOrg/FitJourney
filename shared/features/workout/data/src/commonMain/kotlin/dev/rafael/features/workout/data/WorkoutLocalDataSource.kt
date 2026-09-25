@@ -57,6 +57,9 @@ class WorkoutLocalDataSource(
             lockedExerciseCount = dto.lockedExerciseCount.toLong(),
             exerciseCount = dto.exercises.size.toLong(),
             exercisesJson = json.encodeToString(exerciciosSerializer, dto.exercises),
+            // V59: o servidor calcula isActive em GET /workouts/{id} contra o mesmo ponteiro
+            // que GET /programs usa -- sem partial view como o locked, entao sem trava de "so sobe".
+            isActive = if (dto.isActive) 1L else 0L,
         )
     }
 
@@ -100,6 +103,7 @@ class WorkoutLocalDataSource(
             }.getOrDefault(emptyList()),
             locked = linha.locked == 1L,
             lockedExerciseCount = linha.lockedExerciseCount.toInt(),
+            isActive = linha.isActive == 1L,
         )
     }
 }

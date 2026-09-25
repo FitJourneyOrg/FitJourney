@@ -110,4 +110,18 @@ class ProgramMapperTest {
         assertEquals(0, d.workouts.size)
         assertEquals(0, d.schedule.size)
     }
+
+    @Test
+    fun `isActive do workout passa direto (V59)`() {
+        val dto = ProgramDto(
+            id = "p", name = "P", daysPerWeek = 2,
+            workouts = listOf(
+                WorkoutDto(id = "w1", name = "Ativo", isActive = true),
+                WorkoutDto(id = "w2", name = "Outro", isActive = false),
+            ),
+        )
+        val d = dto.toDomain()
+        assertTrue(d.workouts[0].isActive)
+        assertFalse(d.workouts[1].isActive)
+    }
 }

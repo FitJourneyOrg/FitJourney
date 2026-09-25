@@ -1,0 +1,6 @@
+-- Migration 6: treino ativo (V59, servidor) -- cache local do ponteiro, so leitura.
+--
+-- ADD COLUMN direto: coluna nova, boolean (INTEGER 0/1), sem dado previo pra migrar --
+-- mesmo raciocinio da 5. Nao e escrita otimista (sem outbox): quem manda no ponteiro e
+-- o servidor, aqui e so o que o ultimo GET /programs respondeu.
+ALTER TABLE workout ADD COLUMN isActive INTEGER NOT NULL DEFAULT 0;

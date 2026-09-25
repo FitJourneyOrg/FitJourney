@@ -608,8 +608,19 @@
 
     <!-- ============================ Program list ============================ -->
 
-    <string name="programa_lista_titulo">My programs</string>
-    <string name="programa_lista_vazio">No programs yet.</string>
+    <string name="programa_lista_titulo">My workouts</string>
+    <string name="programa_lista_vazio">You don\'t have any workouts yet.</string>
+    <string name="treino_ativo_badge">Active</string>
+    <string name="treino_ativo_nenhum_titulo">No active workout</string>
+    <string name="treino_ativo_nenhum_corpo">Activate one of your workouts for it to show up here.</string>
+    <string name="treino_ativo_secao_outros">Other workouts</string>
+    <string name="treino_ativo_secao_seus">Your workouts</string>
+    <string name="treino_ativo_ativar">Activate</string>
+    <string name="treino_ativo_iniciar">Start workout</string>
+    <string name="treino_ativo_confirmar_titulo">Activate this workout?</string>
+    <string name="treino_ativo_confirmar_corpo">%1$s becomes your featured workout.</string>
+    <string name="treino_ativo_ver_biblioteca">View library</string>
+    <string name="treino_card_exercicios">%d exerc</string>
     <string name="programa_lista_semana">Week %1$d/%2$d</string>
     <string name="programa_lista_novo">New program</string>
     <string name="programa_lista_criar">Create</string>
