@@ -13,6 +13,7 @@ import dev.rafael.core.result.getOrNull
 import dev.rafael.core.result.map
 import dev.rafael.server.features.exercise.db.ExerciseRepository
 import dev.rafael.server.features.exercise.engine.WorkoutGenerator
+import dev.rafael.server.features.user.db.UserRepository
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.workout.db.WorkoutRepository
 import dev.rafael.server.features.workout.models.toDomain
@@ -25,6 +26,7 @@ class WorkoutService(
     private val repository: WorkoutRepository,
     private val exerciseRepository: ExerciseRepository,
     private val generator: WorkoutGenerator,          // <- única dep nova
+    private val userRepository: UserRepository,       // <- V59: dono do ponteiro "ativo"
 ) {
 
     /**
@@ -57,7 +59,29 @@ class WorkoutService(
 
     suspend fun list(firebaseUid: String, email: String?): AppResult<List<WorkoutSummaryDto>> =
         userService.findOrCreate(firebaseUid, email).flatMap { user ->
-            repository.findAllByUser(user.id).map { list -> list.map { it.toDto() } }
+            // V59: isActive é comparação simples contra o ponteiro do usuário, não estado
+            // guardado por treino — não precisa join nem coluna nova em workouts.
+            repository.findAllByUser(user.id)
+                .map { list -> list.map { it.toDto(isActive = it.id == user.activeWorkoutId) } }
+        }
+
+    /**
+     * V59. Marca este treino como o ativo do usuário (ponteiro simples, exclusivo — substitui
+     * o anterior). Não mexe em sessão/histórico: "sessões desta semana" continua sendo derivado
+     * de `workout_sessions`, então trocar de ativo nunca zera nem precisa pausar nada.
+     *
+     * Reaproveita o `findById` (já filtra por `user.id`) pra checar posse — treino que não
+     * existe OU que não é deste usuário caem no mesmo NotFound, sem vazar diferença.
+     */
+    suspend fun activate(firebaseUid: String, email: String?, workoutId: Uuid): AppResult<Unit> =
+        userService.findOrCreate(firebaseUid, email).flatMap { user ->
+            repository.findById(user.id, workoutId).flatMap { treino ->
+                if (treino == null) {
+                    AppError.NotFound("Treino não encontrado", code = ErrorCodes.TREINO_NAO_EXISTE).asFailure()
+                } else {
+                    userRepository.setActiveWorkout(user.id, workoutId).map { }
+                }
+            }
         }
 
     suspend fun get(firebaseUid: String, email: String?, workoutId: Uuid): AppResult<WorkoutDto?> =

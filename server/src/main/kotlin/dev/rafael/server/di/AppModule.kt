@@ -139,7 +139,7 @@ val appModule = module {
 
 
     single<WorkoutRepository> { WorkoutRepositoryImpl() }        // <- ESTA linha sumiu
-    single { WorkoutService(get(), get(), get(), get()) }
+    single { WorkoutService(get(), get(), get(), get(), get()) }
 
 
     // Motor (Fatia F) — as três peças + a interface.
