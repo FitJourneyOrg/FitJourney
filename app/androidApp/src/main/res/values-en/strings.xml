@@ -620,7 +620,6 @@
     <string name="treino_ativo_confirmar_titulo">Activate this workout?</string>
     <string name="treino_ativo_confirmar_corpo">%1$s becomes your featured workout.</string>
     <string name="treino_ativo_ver_biblioteca">View library</string>
-    <string name="treino_card_exercicios">%d exerc</string>
     <string name="programa_lista_semana">Week %1$d/%2$d</string>
     <string name="programa_lista_novo">New program</string>
     <string name="programa_lista_criar">Create</string>
