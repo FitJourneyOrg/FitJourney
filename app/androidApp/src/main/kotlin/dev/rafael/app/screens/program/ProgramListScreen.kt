@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -194,7 +195,7 @@ private fun TreinoAtivoCard(treino: ProgramWorkout, onIniciar: () -> Unit) {
             Spacer(Modifier.height(8.dp))
             Text(treino.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text(
-                stringResource(R.string.treino_card_exercicios, treino.exerciseCount),
+                pluralStringResource(R.plurals.treino_exercicios, treino.exerciseCount, treino.exerciseCount),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -231,7 +232,7 @@ private fun TreinoRow(
 ) {
     ListItem(
         headlineContent = { Text(treino.name) },
-        supportingContent = { Text(stringResource(R.string.treino_card_exercicios, treino.exerciseCount)) },
+        supportingContent = { Text(pluralStringResource(R.plurals.treino_exercicios, treino.exerciseCount, treino.exerciseCount)) },
         trailingContent = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 pendencia?.let { SeloDeSync(it) }
