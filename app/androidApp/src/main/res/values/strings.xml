@@ -994,8 +994,9 @@
     <string name="programa_lista_titulo">Meus treinos</string>
     <!-- Estado vazio da lista de programas. -->
     <string name="programa_lista_vazio">Você ainda não tem nenhum treino.</string>
-    <!-- V59: treino ativo (deck de "Meus treinos"). Prefixo treino_ativo_/treino_card_, nao
-         conquista_/conquistas_ (reservados pelo catalogo de conquistas). -->
+    <!-- V59: treino ativo (deck de "Meus treinos"). Prefixo treino_ativo_, nao conquista_/conquistas_
+         (reservados pelo catalogo de conquistas). Contagem de exercicios reusa o plural
+         treino_exercicios existente, nao duplica. -->
     <string name="treino_ativo_badge">Ativo</string>
     <string name="treino_ativo_nenhum_titulo">Nenhum treino ativo</string>
     <string name="treino_ativo_nenhum_corpo">Ative um dos seus treinos para ele aparecer aqui.</string>
@@ -1006,7 +1007,6 @@
     <string name="treino_ativo_confirmar_titulo">Ativar este treino?</string>
     <string name="treino_ativo_confirmar_corpo">%1$s passa a ser o seu treino em destaque.</string>
     <string name="treino_ativo_ver_biblioteca">Ver biblioteca</string>
-    <string name="treino_card_exercicios">%d exerc</string>
     <!-- Progresso no cartão. %1$d é a semana atual e %2$d o total. -->
     <string name="programa_lista_semana">Semana %1$d/%2$d</string>
     <!-- Diálogo de criação manual. -->
