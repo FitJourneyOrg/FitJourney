@@ -40,6 +40,8 @@ data class ProgramWorkout(
     val name: String,
     val exerciseCount: Int,
     val locked: Boolean = false,   // ARCH #23: dia trancado (não-premium). exerciseCount = quantos há por trás.
+    // V59: true pro treino marcado como ativo (ponteiro exclusivo, autoridade do servidor).
+    val isActive: Boolean = false,
 )
 
 data class ProgramScheduleEntry(

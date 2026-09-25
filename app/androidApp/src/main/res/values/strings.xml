@@ -991,9 +991,22 @@
     <!-- ============================ Lista de programas ============================ -->
 
     <!-- Barra do topo da lista de programas do usuário. -->
-    <string name="programa_lista_titulo">Meus programas</string>
+    <string name="programa_lista_titulo">Meus treinos</string>
     <!-- Estado vazio da lista de programas. -->
-    <string name="programa_lista_vazio">Nenhum programa ainda.</string>
+    <string name="programa_lista_vazio">Você ainda não tem nenhum treino.</string>
+    <!-- V59: treino ativo (deck de "Meus treinos"). Prefixo treino_ativo_/treino_card_, nao
+         conquista_/conquistas_ (reservados pelo catalogo de conquistas). -->
+    <string name="treino_ativo_badge">Ativo</string>
+    <string name="treino_ativo_nenhum_titulo">Nenhum treino ativo</string>
+    <string name="treino_ativo_nenhum_corpo">Ative um dos seus treinos para ele aparecer aqui.</string>
+    <string name="treino_ativo_secao_outros">Outros treinos</string>
+    <string name="treino_ativo_secao_seus">Seus treinos</string>
+    <string name="treino_ativo_ativar">Ativar</string>
+    <string name="treino_ativo_iniciar">Iniciar treino</string>
+    <string name="treino_ativo_confirmar_titulo">Ativar este treino?</string>
+    <string name="treino_ativo_confirmar_corpo">%1$s passa a ser o seu treino em destaque.</string>
+    <string name="treino_ativo_ver_biblioteca">Ver biblioteca</string>
+    <string name="treino_card_exercicios">%d exerc</string>
     <!-- Progresso no cartão. %1$d é a semana atual e %2$d o total. -->
     <string name="programa_lista_semana">Semana %1$d/%2$d</string>
     <!-- Diálogo de criação manual. -->
