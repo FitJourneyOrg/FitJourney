@@ -77,6 +77,9 @@ class UserServiceTest {
             idiomaGravado = idioma
             return AppResult.Success(user.copy(idioma = idioma))
         }
+
+        override suspend fun setActiveWorkout(userId: Uuid, workoutId: Uuid?): AppResult<User?> =
+            AppResult.Success(user.copy(activeWorkoutId = workoutId))
     }
 
     @Test

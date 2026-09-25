@@ -29,11 +29,12 @@ fun WorkoutExerciseDto.toDomain(): WorkoutExercise = WorkoutExercise(
 
 
 
-fun WorkoutSummary.toDto(): WorkoutSummaryDto = WorkoutSummaryDto(
+fun WorkoutSummary.toDto(isActive: Boolean = false): WorkoutSummaryDto = WorkoutSummaryDto(
     id = id.toString(),
     name = name,
     exerciseCount = exerciseCount,
     updatedAt = updatedAt.toString(),
+    isActive = isActive,
 )
 
 
