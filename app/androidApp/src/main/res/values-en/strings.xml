@@ -149,6 +149,7 @@
 
     <string name="erro_titulo_sem_conexao">No connection</string>
     <string name="erro_texto_sem_conexao">You\'re offline. Connect to sync. Anything already downloaded still works.</string>
+    <string name="erro_texto_sem_conexao_sem_cache">You\'re offline. This screen needs a connection to work.</string>
 
     <string name="erro_titulo_credenciais">Wrong email or password</string>
     <string name="erro_texto_credenciais">Check your details and try again.</string>
@@ -185,9 +186,9 @@
 
     <string name="erro_meu_perfil_incompleto">You haven\'t finished the questionnaire yet.</string>
     <string name="erro_perfil_de_terceiro_indisponivel">This profile isn\'t available.</string>
-    <string name="erro_dias_por_semana_invalido">Pick between 2 and 6 days a week.</string>
-    <string name="erro_foco_alem_do_limite">Pick at most 2 focus groups.</string>
-    <string name="erro_idade_invalida">Enter an age between 5 and 120.</string>
+    <string name="erro_dias_por_semana_invalido">Pick between %1$d and %2$d days a week.</string>
+    <string name="erro_foco_alem_do_limite">Pick at most %1$d focus groups.</string>
+    <string name="erro_idade_invalida">Enter an age between %1$d and %2$d.</string>
     <string name="erro_dias_indisponiveis_invalidos">We couldn\'t save your schedule. Try again.</string>
 
     <string name="erro_perfil_ausente_para_gerar">Finish the questionnaire before generating workouts.</string>
@@ -231,6 +232,17 @@
     <string name="erro_desafio_ja_comecou">The challenge has started and joining is closed.</string>
     <string name="erro_so_o_admin_do_grupo">Only the challenge admin can do that.</string>
     <string name="erro_campos_do_grupo_invalidos">Check the challenge fields.</string>
+
+    <string name="erro_grupo_titulo_vazio">Give the challenge a name.</string>
+    <string name="erro_grupo_titulo_longo">Use at most %1$d characters in the title.</string>
+    <string name="erro_grupo_descricao_longa">Use at most %1$d characters in the description.</string>
+    <string name="erro_grupo_fuso_invalido">Invalid time zone.</string>
+    <string name="erro_grupo_data_inicio_invalida">Invalid start date.</string>
+    <string name="erro_grupo_data_fim_invalida">Invalid end date.</string>
+    <string name="erro_grupo_fim_antes_do_inicio">The end has to be after the start.</string>
+    <string name="erro_grupo_inicio_muito_cedo">The challenge needs to start tomorrow at the earliest, to give people time to join.</string>
+    <string name="erro_grupo_regra_emoji_sem_foto">The emoji-of-the-day rule requires the photo to be mandatory too.</string>
+    <string name="erro_grupo_regra_gympass_indisponivel">The Gympass rule isn\'t available yet.</string>
 
     <string name="erro_checkin_sem_as_regras">This challenge requires more than you sent.</string>
     <string name="erro_prazo_de_exclusao">A check-in can only be deleted on the same day it was made.</string>
@@ -310,7 +322,7 @@
 
     <string name="enum_bloqueio_ja_comecou">This challenge has already started. Joining closes when it begins.</string>
     <string name="enum_bloqueio_encerrado">This challenge has already ended.</string>
-    <string name="enum_bloqueio_lotado">This challenge already has 50 participants.</string>
+    <string name="enum_bloqueio_lotado">This challenge already has %1$d participants.</string>
     <string name="enum_bloqueio_ja_e_membro">You\'re already in this challenge.</string>
     <string name="enum_bloqueio_convite_invalido">This link expired or was revoked. Ask for the challenge code.</string>
 
@@ -596,8 +608,17 @@
 
     <!-- ============================ Program list ============================ -->
 
-    <string name="programa_lista_titulo">My programs</string>
-    <string name="programa_lista_vazio">No programs yet.</string>
+    <string name="programa_lista_titulo">My workouts</string>
+    <string name="programa_lista_vazio">You don\'t have any workouts yet.</string>
+    <string name="treino_ativo_badge">Active</string>
+    <string name="treino_ativo_nenhum_titulo">No active workout</string>
+    <string name="treino_ativo_nenhum_corpo">Activate one of your workouts for it to show up here.</string>
+    <string name="treino_ativo_secao_outros">Other workouts</string>
+    <string name="treino_ativo_secao_seus">Your workouts</string>
+    <string name="treino_ativo_ativar">Activate</string>
+    <string name="treino_ativo_confirmar_titulo">Activate this workout?</string>
+    <string name="treino_ativo_confirmar_corpo">%1$s becomes your featured workout.</string>
+    <string name="treino_ativo_ver_biblioteca">View library</string>
     <string name="programa_lista_semana">Week %1$d/%2$d</string>
     <string name="programa_lista_novo">New program</string>
     <string name="programa_lista_criar">Create</string>
@@ -649,6 +670,8 @@
     <string name="programa_detalhe_excluir_texto">This deletes the program and every workout inside it. It can\'t be undone.</string>
     <string name="programa_detalhe_renomear_titulo">Rename program</string>
 
+    <string name="programa_rationale_base">%2$s split over %1$d days: %3$s</string>
+    <string name="programa_rationale_foco">Since you prioritized %1$s, the program adds extra volume for those muscles.</string>
 
     <!-- ============================ First program offer ============================ -->
 
@@ -683,6 +706,7 @@
 
     <string name="treino_detalhe_titulo_padrao">Workout</string>
     <string name="treino_detalhe_vazio">No exercises in this workout.</string>
+    <string name="treino_detalhe_rir">RIR %1$d</string>
     <string name="treino_detalhe_excluir_pergunta">Delete workout?</string>
     <string name="treino_detalhe_excluir_texto">This can\'t be undone.</string>
     <string name="treino_detalhe_trocar_exercicio">🔁  Swap exercise</string>
@@ -839,6 +863,15 @@
     <string name="conquista_nivel_10_titulo">Level 10</string>
     <string name="conquista_nivel_10_descricao">Reach level 10</string>
 
+    <string name="conquista_treinos_10_descricao_progresso">Log %1$d workouts</string>
+    <string name="conquista_treinos_50_descricao_progresso">Log %1$d workouts</string>
+    <string name="conquista_treinos_100_descricao_progresso">Log %1$d workouts</string>
+    <string name="conquista_streak_7_descricao_progresso">%1$d days on plan</string>
+    <string name="conquista_streak_30_descricao_progresso">%1$d days on plan</string>
+    <string name="conquista_streak_90_descricao_progresso">%1$d days on plan</string>
+    <string name="conquista_nivel_5_descricao_progresso">Reach level %1$d</string>
+    <string name="conquista_nivel_10_descricao_progresso">Reach level %1$d</string>
+    <string name="conquistas_dialogo_titulo">Achievement unlocked!</string>
 
     <!-- ============================ Someone else's profile ============================ -->
 
@@ -1033,6 +1066,7 @@
     <!-- ============================ Exercise library ============================ -->
 
     <string name="exercicios_todas">All</string>
+    <string name="exercicios_todos_musculos">All</string>
     <string name="exercicios_vazio">No exercises.</string>
     <string name="exercicio_nao_encontrado">Exercise not found</string>
     <string name="exercicios_adicionar_titulo">Add exercises</string>
@@ -1081,15 +1115,15 @@
 
     <!-- ====== Errors that used to carry a server-side number ====== -->
 
-    <!-- ⚠️ The numbers are product rules living in the server. See the pt-BR file for which constant each one mirrors. -->
-    <string name="erro_nome_curto">Use at least 2 characters.</string>
-    <string name="erro_nome_longo">Use at most 30 characters.</string>
-    <string name="erro_comentario_invalido">Write something, up to 500 characters.</string>
-    <string name="erro_nome_do_local_longo">Use up to 60 characters.</string>
-    <string name="erro_prazo_da_denuncia">Reports are only valid up to 7 days after the check-in.</string>
-    <string name="erro_limite_de_ia_gratis">The free plan generates 1 program with AI. Subscribe to premium to generate more.</string>
-    <string name="erro_limite_de_manuais_gratis">The free plan creates up to 2 programs. Subscribe to premium to create more.</string>
-    <string name="erro_limite_de_programas_premium">You have reached the limit of 10 programs.</string>
+    <!-- ✅ Closed 2026-09-23 (P2): numbers now come from `Limites` (shared-contract), same source the server validates against. See the pt-BR file. -->
+    <string name="erro_nome_curto">Use at least %1$d characters.</string>
+    <string name="erro_nome_longo">Use at most %1$d characters.</string>
+    <string name="erro_comentario_invalido">Write something, up to %1$d characters.</string>
+    <string name="erro_nome_do_local_longo">Use up to %1$d characters.</string>
+    <string name="erro_prazo_da_denuncia">Reports are only valid up to %1$d days after the check-in.</string>
+    <string name="erro_limite_de_ia_gratis">The free plan generates %1$d program with AI. Subscribe to premium to generate more.</string>
+    <string name="erro_limite_de_manuais_gratis">The free plan creates up to %1$d programs. Subscribe to premium to create more.</string>
+    <string name="erro_limite_de_programas_premium">You have reached the limit of %1$d programs.</string>
     <string name="erro_dias_livres_insuficientes">You marked too many rest days to train that often.</string>
 
 </resources>

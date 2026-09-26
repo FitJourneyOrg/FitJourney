@@ -7,20 +7,8 @@ import coil3.SingletonImageLoader
 import dev.rafael.app.push.CanalDeNotificacao
 import coil3.network.ktor3.KtorNetworkFetcherFactory
 import dev.rafael.app.data.sync.SyncScheduler
-import dev.rafael.app.di.appModule
-import dev.rafael.core.database.di.databaseModule
+import dev.rafael.app.di.todosOsModulosDoApp
 import dev.rafael.core.network.HttpClientFactory
-import dev.rafael.core.network.di.networkModule
-import dev.rafael.features.auth.data.di.authDataModule
-import dev.rafael.features.auth.presentation.di.authPresentationModule
-import dev.rafael.features.profile.data.di.profileDataModule
-import dev.rafael.features.exercise.data.di.exerciseDataModule
-import dev.rafael.features.exercise.presentation.di.exercisePresentationModule
-import dev.rafael.features.profile.presentation.di.profilePresentationModule
-import dev.rafael.features.workout.data.di.workoutDataModule
-import dev.rafael.features.workout.presentation.di.workoutPresentationModule
-import dev.rafael.features.program.data.di.programDataModule
-import dev.rafael.features.program.presentation.di.programPresentationModule
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
 import org.koin.core.context.GlobalContext
@@ -63,21 +51,8 @@ class FitJourneyApp : Application(), SingletonImageLoader.Factory {
         val koin = startKoin {
             androidLogger()
             androidContext(this@FitJourneyApp)
-            modules(
-                networkModule,
-                authDataModule,
-                databaseModule,
-                authPresentationModule,
-                profileDataModule,
-                profilePresentationModule,
-                exerciseDataModule,
-                exercisePresentationModule,
-                workoutDataModule,
-                workoutPresentationModule,
-                programDataModule,
-                programPresentationModule,
-                appModule
-            )
+            // Lista única — ver KDoc de `todosOsModulosDoApp` (débito "grafo do Koin").
+            modules(todosOsModulosDoApp)
         }.koin
         // rede de segurança: mesmo que o app fique fechado, o WorkManager tenta esvaziar
         // a outbox a cada 6h quando houver conexão.

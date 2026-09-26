@@ -4,7 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dev.rafael.app.data.me.Me
 import dev.rafael.app.data.sessao.SairDaConta
-import dev.rafael.app.data.stats.Stats
+import dev.rafael.features.stats.domain.Stats
 import dev.rafael.core.network.TokenProvider
 import dev.rafael.features.auth.domain.repository.AuthRepository
 import kotlinx.coroutines.flow.Flow

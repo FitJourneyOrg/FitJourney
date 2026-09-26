@@ -2,8 +2,8 @@ package dev.rafael.app.screens.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.rafael.app.data.session.HistoricoDeSessoes
-import dev.rafael.app.data.stats.Stats
+import dev.rafael.features.session.domain.HistoricoDeSessoes
+import dev.rafael.features.stats.domain.Stats
 import dev.rafael.contract.stats.UserStatsDto
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
@@ -36,12 +36,18 @@ data class TodayWorkout(
      */
     val programName: String?,
     val programDaysPerWeek: Int,
-    val programSplit: String,
+    // Chave do SplitType (String?, não o enum) -- ver KDoc de `Program.split`. null = manual.
+    val programSplit: String?,
     val exerciseCount: Int,
     val minutes: Int,          // estimativa (ver estimarMinutos)
     val locked: Boolean,       // dia trancado p/ não-premium (ARCH #23)
     val week: Int,
     val totalWeeks: Int,
+    /**
+     * true = não havia agenda pra hoje e este é o treino ATIVO (V59) usado como sugestão —
+     * a tela acrescenta um selo "Ativo" pra não parecer que foi agendado pra hoje de verdade.
+     */
+    val viaTreinoAtivo: Boolean = false,
 )
 
 data class HomeState(
@@ -65,6 +71,12 @@ data class HomeState(
     val sessoesPendentes: Int = 0,
     /** Já baixou programas neste aparelho (carimbo persistido). Ver ProgramListState. */
     val jaSincronizou: Boolean = false,
+    /**
+     * true = nenhum programa tem agenda configurada (schedule vazio em todos) E nenhum treino
+     * está ativo (V59). Não é descanso — é onboarding incompleto (ninguém marcou nada ainda).
+     * Descanso de verdade só existe quando ALGUMA agenda existe e hoje não está nela (ARCH #22).
+     */
+    val precisaAtivarTreino: Boolean = false,
 )
 
 /**
@@ -77,7 +89,11 @@ data class HomeState(
  * Como o "hoje" é resolvido: o programa guarda `schedule` (workoutId → dayOfWeek, 1=Seg..7=Dom).
  * Comparamos com o dia da semana local do aparelho — aqui o relógio do cliente é aceitável
  * porque é só apresentação; nada de XP/validação depende disso (autoridade do servidor).
- * Sem treino agendado para hoje = dia de descanso (descanso é implícito, ARCH #22).
+ * Sem treino agendado para hoje: se existe um treino ATIVO (V59, `ProgramWorkout.isActive`),
+ * ele vira a sugestão do dia (`TodayWorkout.viaTreinoAtivo`). Sem agenda em NENHUM programa
+ * E sem treino ativo, não é descanso — é ninguém ter configurado nada ainda
+ * (`precisaAtivarTreino`). Descanso implícito (ARCH #22) continua valendo só quando alguma
+ * agenda existe e hoje não está nela.
  */
 class HomeViewModel(
     private val programs: ProgramRepository,
@@ -137,14 +153,34 @@ class HomeViewModel(
             .launchIn(viewModelScope)
     }
 
-    /** Acha o treino agendado para hoje entre os programas locais. */
+    /**
+     * Acha o treino de hoje entre os programas locais: 1º a agenda (ARCH #22); sem match ali,
+     * cai pro treino ATIVO (V59) como sugestão — reaproveitar o que já foi marcado é melhor
+     * que declarar descanso quando na verdade ninguém configurou agenda nenhuma.
+     */
     private suspend fun resolverTreinoDeHoje(programas: List<Program>) {
         val hoje = diaDaSemanaHoje()
-        val achado = programas.firstNotNullOfOrNull { p ->
+        val porAgenda = programas.firstNotNullOfOrNull { p ->
             p.schedule.firstOrNull { it.dayOfWeek == hoje }?.let { e -> p to e.workoutId }
         }
+        val porAtivo = if (porAgenda == null) {
+            programas.firstNotNullOfOrNull { p ->
+                p.workouts.firstOrNull { it.isActive && it.id != null }?.let { w -> p to w.id!! }
+            }
+        } else null
+        val achado = porAgenda ?: porAtivo
         if (achado == null) {
-            _state.update { it.copy(isLoading = false, today = null, semPrograma = programas.isEmpty()) }
+            // Só é descanso de verdade se ALGUMA agenda existe (e hoje não está nela). Schedule
+            // vazio em todos os programas = ninguém configurou nada, não é uma folga escolhida.
+            val agendaConfigurada = programas.any { it.schedule.isNotEmpty() }
+            _state.update {
+                it.copy(
+                    isLoading = false,
+                    today = null,
+                    semPrograma = programas.isEmpty(),
+                    precisaAtivarTreino = programas.isNotEmpty() && !agendaConfigurada,
+                )
+            }
             return
         }
         val (programa, workoutId) = achado
@@ -160,6 +196,7 @@ class HomeViewModel(
             it.copy(
                 isLoading = false,
                 semPrograma = false,
+                precisaAtivarTreino = false,
                 today = TodayWorkout(
                     workoutId = workoutId,
                     // Sem fallback aqui: o ViewModel não tem `Context`, e mesmo que tivesse a
@@ -173,6 +210,7 @@ class HomeViewModel(
                     locked = resumo?.locked == true,
                     week = programa.currentWeek,
                     totalWeeks = programa.durationWeeks,
+                    viaTreinoAtivo = porAgenda == null,
                 ),
             )
         }

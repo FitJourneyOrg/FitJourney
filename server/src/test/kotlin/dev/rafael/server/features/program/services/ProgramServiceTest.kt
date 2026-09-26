@@ -4,6 +4,7 @@ import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.ProfileDto
+import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.profile.TrainingEnvironment
 import dev.rafael.contract.program.ProgramDto
 import dev.rafael.contract.program.ScheduleEntry
@@ -83,8 +84,8 @@ class ProgramServiceTest {
             if (throwInvalid) throw IllegalArgumentException("environment obrigatório")
             return ProgramDto(
                 id = "", name = "", origin = WorkoutOrigin.AI,
-                workouts = emptyList(), daysPerWeek = 3, split = "Full Body",
-                rationale = "r", locked = false, schedule = emptyList(),
+                workouts = emptyList(), daysPerWeek = 3, split = SplitType.FULL_BODY,
+                focusMuscles = emptyList(), locked = false, schedule = emptyList(),
             )
         }
     }
@@ -265,7 +266,7 @@ class ProgramServiceTest {
         }
         repo.store[pid] = Program(
             id = pid, userId = user, name = "P", origin = WorkoutOrigin.AI, daysPerWeek = workoutIds.size,
-            split = "x", rationale = "", locked = false, workouts = workouts, createdAt = ts, updatedAt = ts,
+            split = SplitType.FULL_BODY, focusMuscles = emptyList(), locked = false, workouts = workouts, createdAt = ts, updatedAt = ts,
             durationWeeks = 8, startedAt = ts,
         )
         return pid

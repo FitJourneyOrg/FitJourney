@@ -1,0 +1,66 @@
+-- Migration 4: fatia "rationale derivado", lado cliente (2026-09-22).
+--
+-- split deixa de ser a LABEL renderizada ("Full Body") e vira a CHAVE do enum SplitType do
+-- contrato ("FULL_BODY") -- mesma troca que a V56 fez no servidor. Também fica NULLABLE:
+-- null agora é o programa MANUAL (shell sem motor), que antes gravava uma string vazia --
+-- mesmo truque stringly-typed que este pacote de mudanças está removendo (ver WeekSpread e
+-- NomeDePrograma.kt, que comparavam `split == SplitType.FULL_BODY.label`).
+--
+-- rationale sai: a frase deixa de vir pronta do servidor (ele não sabe o idioma da tela) e
+-- passa a ser montada no cliente, em runtime, via Rotulos.kt (`rationaleDoPrograma()`).
+-- focusMuscles entra: snapshot JSON de List<MuscleGroup> priorizados NO MOMENTO da geração,
+-- que é o dado que falta pra montar essa frase.
+--
+-- SQLite não faz ALTER COLUMN -- nem pra tipo, nem pra soltar NOT NULL -- em nenhuma versão.
+-- O único jeito portátil de mudar a forma de uma tabela é recriá-la; por isso o INSERT...
+-- SELECT abaixo, em vez de um DROP+CREATE vazio: isto aqui é cache, mas não é descartável --
+-- um programa manual criado OFFLINE mora nesta tabela até o outbox conseguir sincronizá-lo
+-- (ARCH #30/B.2), e um DROP ingênuo apagaria um dado que o servidor ainda nem viu.
+
+CREATE TABLE program_new (
+    id            TEXT    NOT NULL PRIMARY KEY,
+    uid           TEXT    NOT NULL DEFAULT '',
+    name          TEXT    NOT NULL,
+    origin        TEXT    NOT NULL,
+    daysPerWeek   INTEGER NOT NULL,
+    split         TEXT,
+    focusMuscles  TEXT,
+    locked        INTEGER NOT NULL DEFAULT 0,
+    durationWeeks INTEGER NOT NULL DEFAULT 8,
+    startedAt     TEXT,
+    currentWeek   INTEGER NOT NULL DEFAULT 1,
+    updatedAt     TEXT
+);
+
+-- Reescreve split de LABEL (o que este banco gravava até aqui) pra CHAVE do enum. Qualquer
+-- valor fora do mapeamento conhecido -- incluindo a string vazia que `createManual()` grava
+-- pro programa manual -- cai no ELSE e também vira NULL: pior caso é "reconstrução sem chip
+-- de split" (ver o `SplitType.valueOf` defensivo em ProgramLocalDataSource), nunca um crash
+-- na leitura.
+INSERT INTO program_new (
+    id, uid, name, origin, daysPerWeek, split, focusMuscles,
+    locked, durationWeeks, startedAt, currentWeek, updatedAt
+)
+SELECT
+    id, uid, name, origin, daysPerWeek,
+    CASE split
+        WHEN 'Full Body' THEN 'FULL_BODY'
+        WHEN 'Upper/Lower' THEN 'UPPER_LOWER'
+        WHEN 'Upper/Lower/Full' THEN 'UPPER_LOWER_FULL'
+        WHEN 'Push/Pull/Legs' THEN 'PUSH_PULL_LEGS'
+        WHEN 'Upper/Lower + PPL' THEN 'UL_PPL'
+        WHEN 'Arnold' THEN 'ARNOLD'
+        ELSE NULL
+    END,
+    NULL,
+    locked, durationWeeks, startedAt, currentWeek, updatedAt
+FROM program;
+
+-- SQLite apaga o indice sozinho quando a tabela cai, mas o verificador de schema do
+-- SQLDelight rastreia nomes de indice de forma estatica (nao simula o DROP TABLE cascateando
+-- pro indice) -- sem este DROP explicito ele acusa "Duplicate index name program_uid" contra
+-- o CREATE INDEX da 2.sqm, mesmo a tabela original ja tendo sido substituida.
+DROP INDEX program_uid;
+DROP TABLE program;
+ALTER TABLE program_new RENAME TO program;
+CREATE INDEX program_uid ON program(uid);

@@ -1,5 +1,6 @@
 package dev.rafael.server.features.group.services
 
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.group.CreateGroupRequest
 import dev.rafael.contract.group.GroupRule
 import dev.rafael.contract.group.GroupState
@@ -133,7 +134,7 @@ class GroupPolicyTest {
         // convite é o gargalo do produto (2-B.0). Grupo que nasce vazio, nasce morto.
         val r = GroupPolicy.validarCriacao(pedido(inicioIso = "2026-09-01"), hoje)
 
-        assertTrue("startDate" in erros(r))
+        assertEquals(ErrorCodes.GRUPO_INICIO_MUITO_CEDO, erros(r)["startDate"])
     }
 
     @Test
@@ -160,18 +161,34 @@ class GroupPolicyTest {
     fun `fim tem de ser depois do inicio`() {
         val r = GroupPolicy.validarCriacao(pedido(inicioIso = "2026-09-10", fimIso = "2026-09-10"), hoje)
 
-        assertTrue("endDate" in erros(r), "desafio de duração zero não é desafio")
+        assertEquals(
+            ErrorCodes.GRUPO_FIM_ANTES_DO_INICIO,
+            erros(r)["endDate"],
+            "desafio de duração zero não é desafio",
+        )
     }
 
     @Test
     fun `titulo vazio e recusado`() {
-        assertTrue("title" in erros(GroupPolicy.validarCriacao(pedido(titulo = "   "), hoje)))
+        assertEquals(
+            ErrorCodes.GRUPO_TITULO_VAZIO,
+            erros(GroupPolicy.validarCriacao(pedido(titulo = "   "), hoje))["title"],
+        )
     }
 
     @Test
     fun `titulo longo demais e recusado`() {
         val r = GroupPolicy.validarCriacao(pedido(titulo = "a".repeat(GroupPolicy.TITULO_MAX + 1)), hoje)
-        assertTrue("title" in erros(r))
+        assertEquals(ErrorCodes.GRUPO_TITULO_LONGO, erros(r)["title"])
+    }
+
+    @Test
+    fun `descricao longa demais e recusada com o codigo certo`() {
+        val r = GroupPolicy.validarCriacao(
+            pedido(descricao = "a".repeat(GroupPolicy.DESCRICAO_MAX + 1)),
+            hoje,
+        )
+        assertEquals(ErrorCodes.GRUPO_DESCRICAO_LONGA, erros(r)["description"])
     }
 
     @Test
@@ -185,7 +202,7 @@ class GroupPolicyTest {
     @Test
     fun `fuso invalido e recusado`() {
         val r = GroupPolicy.validarCriacao(pedido(fuso = "Marte/Olympus"), hoje)
-        assertTrue("timezone" in erros(r))
+        assertEquals(ErrorCodes.GRUPO_FUSO_INVALIDO, erros(r)["timezone"])
     }
 
     @Test
@@ -197,7 +214,7 @@ class GroupPolicyTest {
         // código.
         listOf("-03:00", "+05:30", "UTC-3", "GMT+2").forEach { offset ->
             val r = GroupPolicy.validarCriacao(pedido(fuso = offset), hoje)
-            assertTrue("timezone" in erros(r), "'$offset' não é fuso nomeado")
+            assertEquals(ErrorCodes.GRUPO_FUSO_INVALIDO, erros(r)["timezone"], "'$offset' não é fuso nomeado")
         }
     }
 
@@ -219,7 +236,7 @@ class GroupPolicyTest {
         // [INVARIANTE] reproduzir um emoji exige onde mostrá-lo. Sem a amarração dá para
         // configurar um grupo impossível de cumprir.
         val r = GroupPolicy.validarCriacao(pedido(regras = listOf(GroupRule.EMOJI_DO_DIA)), hoje)
-        assertTrue("rules" in erros(r))
+        assertEquals(ErrorCodes.GRUPO_REGRA_EMOJI_SEM_FOTO, erros(r)["rules"])
     }
 
     @Test
@@ -296,6 +313,21 @@ class GroupPolicyTest {
         // O tipo existe no motor de propósito (a fatia D não pode assumir que só há regras que
         // o app controla), mas escolher a regra hoje criaria um grupo impossível de cumprir.
         val r = GroupPolicy.validarCriacao(pedido(regras = listOf(GroupRule.GYM_PASS)), hoje)
-        assertTrue("rules" in erros(r))
+        assertEquals(ErrorCodes.GRUPO_REGRA_GYMPASS_INDISPONIVEL, erros(r)["rules"])
+    }
+
+    // ---- débito "erroDoCampo devolve frase do servidor" (debitos.md, P2, 2026-09-23) ----
+
+    /** Caminho de falha que faltava: nenhum teste cobria data que não parseia (só data que parseia e viola regra). */
+    @Test
+    fun `data de inicio que nao parseia e recusada com codigo proprio, diferente de muito cedo`() {
+        val r = GroupPolicy.validarCriacao(pedido(inicioIso = "trinta-e-um-de-fevereiro"), hoje)
+        assertEquals(ErrorCodes.GRUPO_DATA_INICIO_INVALIDA, erros(r)["startDate"])
+    }
+
+    @Test
+    fun `data de fim que nao parseia e recusada com codigo proprio, diferente de fim antes do inicio`() {
+        val r = GroupPolicy.validarCriacao(pedido(fimIso = "nao-e-uma-data"), hoje)
+        assertEquals(ErrorCodes.GRUPO_DATA_FIM_INVALIDA, erros(r)["endDate"])
     }
 }

@@ -1,10 +1,12 @@
 package dev.rafael.server.features.user.services
 
 import dev.rafael.contract.error.ErrorCodes
+import dev.rafael.contract.error.ErrorFields
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
+import dev.rafael.contract.limites.Limites
 import kotlin.uuid.Uuid
 
 /**
@@ -26,8 +28,11 @@ import kotlin.uuid.Uuid
  * a outra muda junto — senão quem foi migrado ganha nome diferente de quem entrou depois.
  */
 object DisplayNamePolicy {
-    const val MIN = 2
-    const val MAX = 30
+    // Fonte real: shared-contract, pra ser a mesma constante que o cliente le no strings.xml
+    // (debitos.md "12 frases cravam constante do servidor"). O nome fica aqui pra nao
+    // reescrever cada `DisplayNamePolicy.MIN` espalhado pela base.
+    const val MIN = Limites.DisplayName.MIN
+    const val MAX = Limites.DisplayName.MAX
 
     /**
      * Nome inicial, derivado do que já se sabe sobre a pessoa.
@@ -61,10 +66,16 @@ object DisplayNamePolicy {
 
     private val ESPACOS = Regex("\\s+")
 
-    /** O `code` vem de fora desde a G.2: curto e longo precisam de textos distintos no cliente. */
+    /**
+     * O `code` vem de fora desde a G.2: curto e longo precisam de textos distintos no cliente.
+     *
+     * `fieldErrors` carrega o mesmo `code`, não a `msg` — débito "erroDoCampo devolve frase do
+     * servidor" (debitos.md, fechado 2026-09-23). `msg` sobrevive só no `message` de nível
+     * superior, pro cliente que ainda não conhece o código.
+     */
     private fun erro(msg: String, code: String): AppResult<String> = AppError.Validation(
         message = msg,
-        fieldErrors = mapOf("displayName" to msg),
+        fieldErrors = mapOf(ErrorFields.DISPLAY_NAME to code),
         code = code,
     ).asFailure()
 }

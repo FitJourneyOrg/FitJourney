@@ -19,6 +19,12 @@ import io.ktor.http.contentType
 class ProgramDataSource(private val client: HttpClient) {
     private val base = "${HttpClientFactory.BASE_URL}/programs"
 
+    // V59: URL de /workouts, não de /programs -- fica aqui (não no módulo `workout`) porque
+    // quem CONSOME isActive é a lista de programas (WorkoutDto aninhado em ProgramDto), e
+    // [REGRA] feature não depende de feature. É só uma URL a mais no mesmo HttpClient, não
+    // uma dependência no módulo workout.
+    private val workoutsBase = "${HttpClientFactory.BASE_URL}/workouts"
+
     suspend fun list(): List<ProgramDto> =
         client.get(base).body()
 
@@ -45,6 +51,11 @@ class ProgramDataSource(private val client: HttpClient) {
 
     suspend fun delete(id: String) {
         client.delete("$base/$id")   // 204/Unit; expectSuccess lança em 4xx
+    }
+
+    /** POST /workouts/{id}/activate (V59). */
+    suspend fun activateWorkout(workoutId: String) {
+        client.post("$workoutsBase/$workoutId/activate")   // 200/Unit; expectSuccess lança em 4xx
     }
 
     /** PUT /programs/{id}/schedule — define o dia (1..7) de cada treino. */

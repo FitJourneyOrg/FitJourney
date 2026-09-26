@@ -63,4 +63,11 @@ interface UserRepository {
      * com um erro de banco em vez de uma recusa de validação.
      */
     suspend fun updateIdioma(userId: Uuid, idioma: Idioma): AppResult<User?>
+
+    /**
+     * V59. Marca `workoutId` como o treino ativo do usuário (ponteiro simples, substitui o
+     * anterior — sempre exclusivo). `null` desativa (nenhum treino ativo). `null` de retorno
+     * do método = usuário não existe.
+     */
+    suspend fun setActiveWorkout(userId: Uuid, workoutId: Uuid?): AppResult<User?>
 }

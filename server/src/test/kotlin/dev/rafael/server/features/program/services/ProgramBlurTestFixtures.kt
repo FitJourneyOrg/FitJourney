@@ -1,5 +1,6 @@
 package dev.rafael.server.features.program.services
 
+import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.program.ProgramDto
 import dev.rafael.contract.workout.WorkoutDto
 import dev.rafael.contract.workout.WorkoutExerciseDto
@@ -19,8 +20,8 @@ object ProgramBlurTestFixtures {
         name = "P",
         origin = WorkoutOrigin.AI,
         daysPerWeek = dias,
-        split = "PPL",
-        rationale = "r",
+        split = SplitType.PUSH_PULL_LEGS,
+        focusMuscles = emptyList(),
         workouts = (1..dias).map {
             WorkoutDto(name = "Dia $it", origin = WorkoutOrigin.AI, exercises = List(5) { exercicio() })
         },

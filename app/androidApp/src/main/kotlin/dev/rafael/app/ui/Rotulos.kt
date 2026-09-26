@@ -1,6 +1,8 @@
 package dev.rafael.app.ui
 
 import androidx.annotation.StringRes
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.res.stringResource
 import dev.rafael.app.R
 import dev.rafael.contract.checkin.CheckInStatus
 import dev.rafael.contract.exercise.ExerciseCategory
@@ -8,6 +10,7 @@ import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.group.GroupRule
 import dev.rafael.contract.group.GroupState
 import dev.rafael.contract.group.JoinBlock
+import dev.rafael.contract.limites.Limites
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
@@ -243,6 +246,16 @@ fun JoinBlock.frase(): Int = when (this) {
 }
 
 /**
+ * Os parâmetros de [frase], quando o motivo pede algum — só [JoinBlock.LOTADO] pede (débito "12
+ * frases cravam constante do servidor", debitos.md): `enum_bloqueio_lotado` ganhou `%1$d`
+ * alimentado por [Limites.Group.MAX_MEMBROS], em vez de "50" cravado na frase.
+ */
+fun JoinBlock.args(): List<Any> = when (this) {
+    JoinBlock.LOTADO -> listOf(Limites.Group.MAX_MEMBROS)
+    else -> emptyList()
+}
+
+/**
  * A faixa de moderação sobre o check-in no feed.
  *
  * `VALIDO` devolve `null` porque **a ausência da faixa é o estado normal** — dar-lhe um rótulo
@@ -264,24 +277,20 @@ fun CheckInStatus.rotulo(): Int? = when (this) {
  *
  * ## ⚠️ Por que isto NÃO reaproveita `SplitType.label`
  *
- * O enum do contrato tem `label` e `description`, e o KDoc dele ainda diz "texto de UI". Não são
- * mais: o **servidor** os usa como dado — `StructureEngine` grava `split.label` no
- * `ProgramSkeleton` e o costura dentro do `rationale`, e `WeekSpread` compara
- * `split == SplitType.FULL_BODY.label`, ou seja, **usa o rótulo como identificador**.
- *
- * Mexer neles para traduzir a tela quebraria a geração de programa. Então o cliente passa a ler o
- * catálogo, e o contrato guarda o que é do servidor. As duas frases coincidem hoje em pt-BR e vão
- * divergir quando o inglês entrar — o que é correto: uma é texto para o usuário, a outra é chave
- * interna do motor.
+ * O enum do contrato tem `label` e `description`, mas são dado do MOTOR, não texto de UI: o
+ * `StructureEngine` (servidor) grava `split.name` no `ProgramSkeleton`/`ProgramDto`, e
+ * `WeekSpread` compara `split == SplitType.FULL_BODY` (enum) — **usa a chave como
+ * identificador**, nunca o rótulo.
  *
  * > **Campo que o servidor compara não é rótulo, mesmo que esteja escrito em português.**
  *
- * A saída de verdade é o `rationale` deixar de ser frase pronta do servidor e virar código +
- * parâmetros, como a G.2 fez com os erros. Está registrado como débito no handoff; é decisão do
- * Rafael, e ela é maior do que esta fatia.
+ * A saída de verdade — o `rationale` deixar de ser frase pronta do servidor e virar código +
+ * parâmetros — é a fatia "rationale derivado" (2026-09-22): o servidor passou a persistir só
+ * `split`/`focusMuscles` estruturados, e o cliente monta a frase em runtime com
+ * [rotulo]/[descricao] daqui. Ver `rationaleDoPrograma()` em `RationaleDePrograma.kt`.
  *
  * Os NOMES não se traduzem — "Push/Pull/Legs" e "Arnold" são o jargão de academia em qualquer
- * idioma. A [descricao] traduz.
+ * idioma. A [descricao] traduz a frase curta que explica o modelo.
  */
 @StringRes
 fun SplitType.rotulo(): Int = when (this) {
@@ -303,6 +312,19 @@ fun SplitType.descricao(): Int = when (this) {
     SplitType.UL_PPL -> R.string.enum_split_ul_ppl_descricao
     SplitType.ARNOLD -> R.string.enum_split_arnold_descricao
 }
+
+/**
+ * Resolve a CHAVE crua do split (o que `Program.split`/`ProgramDto.split?.name` carregam --
+ * `String?`, porque o :domain não conhece `SplitType`, ver KDoc de `Program.split`) pro rótulo
+ * traduzido, fatia "rationale derivado" (2026-09-22).
+ *
+ * `null` sai como `null`: quem chama decide o fallback (nome padrão da tela, ou a própria
+ * chave crua). Defensivo por fora -- a chave pode ter sobrado de ANTES desta fatia num cache
+ * local não migrado, ou não bater com nenhum valor do enum atual.
+ */
+@Composable
+fun rotuloDoSplit(chave: String?): String? =
+    chave?.let { runCatching { SplitType.valueOf(it) }.getOrNull() }?.let { stringResource(it.rotulo()) }
 
 /**
  * A região que o gerador deve poupar.

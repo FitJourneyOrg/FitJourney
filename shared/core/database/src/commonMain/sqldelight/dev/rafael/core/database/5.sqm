@@ -1,0 +1,15 @@
+-- Migration 5: exercicio ganha taxonomia local (primaryMuscles/secondaryMuscles) — fatia
+-- "Biblioteca com filtro por musculo".
+--
+-- POR QUE ADD COLUMN direto, sem recriar a tabela (diferente da 4): a recriação da 4 era
+-- obrigatória porque ela mudava tipo/nulidade de coluna JÁ EXISTENTE e transformava dado
+-- existente (rótulo → chave) — coisas que SQLite não faz com ALTER. Aqui são duas colunas
+-- NOVAS e NULLÁVEIS, sem dado prévio pra migrar: SQLite suporta ADD COLUMN nesse caso sem
+-- recriação.
+--
+-- FORMATO: JSON de List<MuscleGroup>, mesmo padrão de `program.focusMuscles` (ver 4.sqm e
+-- ProgramLocalDataSource). NULL = linha ainda não passou por um replaceAll desta fatia em
+-- diante — o próximo refresh() do catálogo preenche (replaceAll é wholesale: baixa e
+-- substitui a tabela inteira, não há UPDATE parcial).
+ALTER TABLE exercise ADD COLUMN primaryMuscles TEXT;
+ALTER TABLE exercise ADD COLUMN secondaryMuscles TEXT;

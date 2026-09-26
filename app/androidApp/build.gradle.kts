@@ -93,6 +93,9 @@ dependencies {
     testImplementation(libs.kotlin.testJunit)
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)   // runTest + Dispatchers.setMain
+    // Grafo do Koin verificado por reflexao, sem instanciar nada e sem emulador (debito P2).
+    testImplementation(libs.koin.test)
+    testImplementation(libs.kotlin.reflect)
     // Features (o app agrega os módulos Koin e usa o ViewModel)
     implementation(projects.shared.features.auth.domain)
     implementation(projects.shared.features.auth.presentation)
@@ -105,6 +108,17 @@ dependencies {
     implementation(projects.shared.features.exercise.presentation)
     implementation(projects.shared.features.exercise.data)
     implementation(projects.shared.features.exercise.domain)
+
+    implementation(projects.shared.features.achievements.presentation)
+    implementation(projects.shared.features.achievements.data)
+    implementation(projects.shared.features.achievements.domain)
+
+    implementation(projects.shared.features.stats.data)
+    implementation(projects.shared.features.stats.domain)
+
+    implementation(projects.shared.features.session.presentation)
+    implementation(projects.shared.features.session.data)
+    implementation(projects.shared.features.session.domain)
 
     implementation(projects.shared.features.workout.data)
     implementation(projects.shared.features.workout.domain)

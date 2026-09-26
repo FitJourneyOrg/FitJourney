@@ -89,8 +89,45 @@ testing {
     }
 }
 
+/*
+ * ⭐ MESMO DEFEITO DO `:konsist:test` (corrigido em 2026-09-11, ver konsist/build.gradle.kts),
+ * AGORA AQUI (P0.2, 2026-09-22).
+ *
+ * `BUILD SUCCESSFUL in 948ms` com Testcontainers é impossível — o container sozinho leva
+ * segundos pra subir. A task ficou `UP-TO-DATE` depois de duas guardas novas em
+ * `CaminhosDeMidiaIntegrationTest.kt`: elas nunca rodaram, e ninguém percebeu porque o build
+ * "passou verde". `JvmTestSuite` já rastreia os `.kt` da própria suíte automaticamente — o que
+ * faltava é o que a suíte lê em TEMPO DE EXECUÇÃO e o Gradle não vê como entrada: as migrations
+ * (`server/src/main/resources/db/migration/*.sql`), aplicadas via Flyway/`Migrations.run(ds)`
+ * dentro do teste, não na compilação. Mudar uma migration sem tocar em nenhum `.kt` da suíte é
+ * exatamente o cenário que ficava cego.
+ *
+ * > **Número de teste que ninguém mediu é pior que número nenhum: parece verificado.**
+ */
+val migrationsDoServidor = fileTree("$projectDir/src/main/resources/db/migration") {
+    include("*.sql")
+}
+
 // integração roda depois dos unitários quando ambos rodam juntos (ex.: no check)
 tasks.named<Test>("integrationTest") {
     shouldRunAfter(tasks.named("test"))
     testLogging { showStandardStreams = true }   // mostra o println do treino gerado no console
+
+    inputs.files(migrationsDoServidor)
+        .withPropertyName("migrationsDoServidor")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+
+    // `val` local pelo mesmo motivo do konsist: a ação roda na EXECUÇÃO, quando o objeto do
+    // script `.kts` já não existe — capturar a propriedade direto quebra o cache de configuração
+    // (`cannot serialize Gradle script object references`).
+    val migrations = migrationsDoServidor
+
+    doFirst {
+        val quantas = migrations.files.size
+        check(quantas >= 40) {
+            "o fileTree de migrations casou com $quantas arquivo(s): o caminho está errado e o " +
+                ":server:integrationTest voltaria a ficar cego pra mudança de migration"
+        }
+        logger.lifecycle("integrationTest: $quantas migrations declaradas como entrada")
+    }
 }
