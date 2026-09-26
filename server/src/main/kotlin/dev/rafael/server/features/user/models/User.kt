@@ -47,4 +47,11 @@ data class User(
      * coluna também tem.
      */
     val idioma: Idioma = Idioma.PADRAO,
+
+    /**
+     * V59. Ponteiro pro treino ativo (id de um `WorkoutDto`), ou `null` se nenhum está ativo.
+     * Exclusivo — só 1 por vez. Não mexe em sessão/histórico, é só destaque de UI resolvido
+     * no servidor. Ver `WorkoutService.activate`.
+     */
+    val activeWorkoutId: Uuid? = null,
 )

@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import dev.rafael.app.data.session.HistoricoDeSessoes
+import dev.rafael.features.session.domain.HistoricoDeSessoes
 import dev.rafael.core.database.outbox.ProcessadorDeOutbox
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject

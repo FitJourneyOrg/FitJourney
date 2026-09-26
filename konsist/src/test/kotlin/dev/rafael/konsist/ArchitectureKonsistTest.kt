@@ -45,6 +45,30 @@ class ArchitectureKonsistTest {
             }
     }
 
+    /**
+     * Débito "Import do driver Postgres sem cerca" (debitos.md): o driver saiu de
+     * `runtimeOnly` para `implementation` quando a F.1 precisou de `PGobject` (`JsonbText.kt`,
+     * ver KDoc lá — o Postgres não faz cast implícito varchar→jsonb em parâmetro preparado).
+     * Até agora o encapsulamento em `server.db` era só disciplina, sem regra que barrasse um
+     * `import org.postgresql.*` direto noutro pacote — mesmo raciocínio de "feature nunca
+     * depende de feature": import direto reabriria o acoplamento que o `JsonbText` existe pra
+     * fechar, e sem esta regra isso só apareceria revisando import por import.
+     */
+    @Test
+    fun `driver Postgres so e importado em server-db`() {
+        production
+            .files
+            .withPackage("dev.rafael.server..")
+            .filterNot { it.packagee?.name == "dev.rafael.server.db" }
+            .imports
+            .assertFalse(
+                additionalMessage = "org.postgresql é detalhe de driver, encapsulado em " +
+                    "server.db.JsonbText por design. Se precisa de outro tipo específico do " +
+                    "driver Postgres, estenda o JsonbText ou crie o equivalente dentro de " +
+                    "server.db — não importe org.postgresql direto de outro pacote.",
+            ) { it.name.startsWith("org.postgresql") }
+    }
+
     // ===== Regras de feature =====
 
     @Test

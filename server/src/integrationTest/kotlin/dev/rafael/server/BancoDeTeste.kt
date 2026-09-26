@@ -90,15 +90,18 @@ object BancoDeTeste {
      * dado de referência, não dado de teste — o `WorkoutGenerationIntegrationTest` depende dele
      * para gerar um programa. Truncá-lo faria a suíte inteira depender de recriá-lo.
      *
-     * ⚠️ **Mas `exercise_translations` É limpa** (fatia H), e a distinção importa: a V49 cria a
-     * tabela VAZIA, e a carga dos nomes traduzidos é migration de dado separada (H.3). Enquanto ela
-     * não existir, tudo que estiver ali foi um teste que inseriu — logo, é dado de teste.
+     * **`exercise_translations` também não é mais limpa** (P0.1, 2026-09-22). Era enquanto a V49
+     * criava a tabela vazia e só teste inseria nela; a H.3 (V53) carregou ~923 traduções reais —
+     * virou referência, mesma razão do catálogo acima. Truncar faria todo teste de idioma ler o
+     * piso e passar verde por engano, e destruiria a carga real para qualquer classe que rodasse
+     * DEPOIS no mesmo container compartilhado.
      *
      * > **A tabela de referência é a que as migrations preenchem; a que nasce vazia pertence a
-     * > quem escreveu nela.**
+     * > quem escreveu nela — até uma migration de dado vir preenchê-la também.**
      *
-     * Quando a H.3 entrar, esta linha precisa sair da lista: aí as traduções passam a ser
-     * referência, e truncá-las faria todo teste de idioma ler o piso e passar verde por engano.
+     * Teste que precisa inserir tradução cria o PRÓPRIO exercício sintético (ver
+     * `CatalogoTraduzidoIntegrationTest.exercicioSintetico`) em vez de usar um real — real já pode
+     * ter linha da V53, e colidiria com a PK composta.
      */
     fun limpar() {
         // ⚠️ REIVINDICA O DEFAULT ANTES DE LIMPAR.
@@ -126,7 +129,6 @@ object BancoDeTeste {
                 st.execute(
                     """
                     TRUNCATE TABLE
-                        exercise_translations,
                         group_daily_notices,
                         moderation_actions,
                         group_reports,

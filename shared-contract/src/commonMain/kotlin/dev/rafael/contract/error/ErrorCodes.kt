@@ -248,7 +248,37 @@ object ErrorCodes {
     const val JA_SOU_O_ADMIN = "JA_SOU_O_ADMIN"
     const val DESAFIO_JA_COMECOU = "DESAFIO_JA_COMECOU"
     const val SO_O_ADMIN_DO_GRUPO = "SO_O_ADMIN_DO_GRUPO"
+    /**
+     * ⚠️ Não é um código que a TELA ramifica (não entra no `TextosDeErro.de()` como texto do
+     * corpo) — é o `code` GENÉRICO de `AppError.Validation` pro formulário do grupo, que valida
+     * vários campos de uma vez. Quem carrega a frase de CADA campo são os dez códigos abaixo,
+     * dentro de `fieldErrors` (débito "`erroDoCampo` devolve frase do servidor", debitos.md).
+     */
     const val CAMPOS_DO_GRUPO_INVALIDOS = "CAMPOS_DO_GRUPO_INVALIDOS"
+
+    /**
+     * Os dez motivos por trás de [CAMPOS_DO_GRUPO_INVALIDOS], um por combinação campo×caso —
+     * fechando o débito "`erroDoCampo` devolve frase do servidor" (debitos.md, P2, 2026-09-23).
+     *
+     * Até aqui `GroupPolicy.validarCriacao` escrevia a FRASE em português direto no valor de
+     * `fieldErrors`, e o cliente exibia esse valor cru (`erroDoCampo`) — a mesma classe de débito
+     * do `SEM_TEXTO_PROPRIO`, só que sem nem o `code` de nível superior ajudando, porque um único
+     * `CAMPOS_DO_GRUPO_INVALIDOS` cobre os seis campos do formulário ao mesmo tempo.
+     *
+     * `startDate` e `endDate` têm DOIS códigos cada — o parse pode falhar (`_INVALIDA`) OU passar e
+     * violar uma regra de negócio (`_MUITO_CEDO`/`FIM_ANTES_DO_INICIO`) — e são casos que o usuário
+     * lê diferente: "data que eu digitei não existe" não é "data que eu digitei é cedo demais".
+     */
+    const val GRUPO_TITULO_VAZIO = "GRUPO_TITULO_VAZIO"
+    const val GRUPO_TITULO_LONGO = "GRUPO_TITULO_LONGO"
+    const val GRUPO_DESCRICAO_LONGA = "GRUPO_DESCRICAO_LONGA"
+    const val GRUPO_FUSO_INVALIDO = "GRUPO_FUSO_INVALIDO"
+    const val GRUPO_DATA_INICIO_INVALIDA = "GRUPO_DATA_INICIO_INVALIDA"
+    const val GRUPO_DATA_FIM_INVALIDA = "GRUPO_DATA_FIM_INVALIDA"
+    const val GRUPO_FIM_ANTES_DO_INICIO = "GRUPO_FIM_ANTES_DO_INICIO"
+    const val GRUPO_INICIO_MUITO_CEDO = "GRUPO_INICIO_MUITO_CEDO"
+    const val GRUPO_REGRA_EMOJI_SEM_FOTO = "GRUPO_REGRA_EMOJI_SEM_FOTO"
+    const val GRUPO_REGRA_GYMPASS_INDISPONIVEL = "GRUPO_REGRA_GYMPASS_INDISPONIVEL"
 
     // ---------------------------------------------------------------------
     // Check-in (#33, fatia B)

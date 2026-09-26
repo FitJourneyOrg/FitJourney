@@ -15,6 +15,10 @@ import dev.rafael.contract.error.ErrorCodes
 class SessionService(
     private val userService: UserService,
     private val repository: SessionRepository,
+    // Porta estreita para conquistas (débito fechado em 2026-09-24): `session` não importa
+    // `stats`/`achievements`. Default não faz nada — o grafo funciona sem avaliação, mesmo
+    // padrão do `avisar` do FriendshipService/SocialService.
+    private val avaliarConquistas: suspend (firebaseUid: String, email: String?) -> Unit = { _, _ -> },
 ) {
     /**
      * Registra uma sessão executada (idempotente por id — ver repo). O userId vem do token,
@@ -30,7 +34,13 @@ class SessionService(
             if (session.finishedAt < session.startedAt) {
                 return@flatMap AppError.Validation("O fim do treino não pode ser antes do início", code = ErrorCodes.SESSAO_COM_FIM_ANTES_DO_INICIO).asFailure()
             }
-            repository.save(session).map { dto }
+            repository.save(session).map { dto }.also { resultado ->
+                // Só avalia conquista quando a sessão FOI salva — sessão que falhou não mudou
+                // progresso nenhum. `also` não altera o resultado devolvido ao chamador.
+                if (resultado is AppResult.Success) {
+                    avaliarConquistas(firebaseUid, email)
+                }
+            }
         }
     }
 

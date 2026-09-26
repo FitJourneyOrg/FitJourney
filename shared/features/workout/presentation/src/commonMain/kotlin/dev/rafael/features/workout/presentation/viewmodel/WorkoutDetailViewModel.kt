@@ -136,5 +136,6 @@ private fun Workout.toResolved(refs: Map<String, dev.rafael.core.catalog.Exercis
                 thumbRef = ref?.thumbRef,
                 setsSummary = "${ex.sets.size} séries · $reps reps",
                 orderIndex = ex.orderIndex,
+                rir = ex.rir,
             )
         }

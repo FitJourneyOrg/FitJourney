@@ -5,6 +5,7 @@ import dev.rafael.contract.group.MemberRole
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toInstant
+import dev.rafael.contract.limites.Limites
 import kotlin.time.Duration.Companion.days
 import kotlin.time.Instant
 
@@ -48,7 +49,8 @@ object ModeracaoPolicy {
      * meses atrás sem nenhum contexto — e 6.12 diz que ele **não tem prazo para julgar**, então a
      * fila já pode carregar casos antigos por conta própria.
      */
-    const val PRAZO_EM_DIAS = 7
+    // Fonte real: shared-contract (debitos.md "12 frases cravam constante do servidor").
+    const val PRAZO_EM_DIAS = Limites.Moderacao.PRAZO_EM_DIAS
 
     /**
      * Teto do texto do motivo. Frase, não redação: o admin do grupo conhece as pessoas.

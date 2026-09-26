@@ -55,9 +55,9 @@ fun SplitStep(daysPerWeek: Int, selected: SplitType?, onSelect: (SplitType) -> U
                 Spacer(Modifier.width(8.dp))
                 Column {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        // NÃO `opt.type.label`: aquele campo do contrato é dado do servidor
-                        // (o `StructureEngine` o compara e o costura no rationale). Ver
-                        // `SplitType.rotulo()` em ui/Rotulos.kt.
+                        // NÃO `opt.type.name`: aquela é a CHAVE que o `StructureEngine`
+                        // compara e persiste, não rótulo de UI. Ver `SplitType.rotulo()` em
+                        // ui/Rotulos.kt.
                         Text(stringResource(opt.type.rotulo()), style = MaterialTheme.typography.titleMedium)
                         if (opt.recommended) {
                             Spacer(Modifier.width(8.dp))

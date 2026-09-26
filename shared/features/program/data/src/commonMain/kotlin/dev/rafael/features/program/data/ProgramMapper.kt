@@ -12,8 +12,8 @@ fun ProgramDto.toDomain() = Program(
     name = name,
     workouts = workouts.map { it.toProgramWorkout() },
     daysPerWeek = daysPerWeek,
-    split = split,
-    rationale = rationale,
+    split = split?.name,
+    focusMuscles = focusMuscles.map { it.name },
     locked = locked,
     schedule = schedule.map { it.toDomain() },
     durationWeeks = durationWeeks,
@@ -30,6 +30,7 @@ private fun WorkoutDto.toProgramWorkout() = ProgramWorkout(
     // ARCH #23: dia trancado vem com exercises=[]; o contador real está em lockedExerciseCount.
     exerciseCount = if (locked) lockedExerciseCount else exercises.size,
     locked = locked,
+    isActive = isActive,
 )
 
 private fun ScheduleEntry.toDomain() = ProgramScheduleEntry(workoutId = workoutId, dayOfWeek = dayOfWeek)

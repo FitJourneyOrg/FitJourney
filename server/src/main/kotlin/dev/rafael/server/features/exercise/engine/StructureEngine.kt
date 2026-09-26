@@ -95,7 +95,7 @@ class StructureEngine {
             DaySkeleton(label, slots)
         }
 
-        return ProgramSkeleton(daySkeletons, split.label, rationale(days, focusMuscles, split))
+        return ProgramSkeleton(daySkeletons, split)
     }
 
     /**
@@ -191,14 +191,6 @@ class StructureEngine {
             val suffix = if (rounds > 1) " ${'A' + i / n}" else ""
             "$label$suffix" to muscles
         }
-    }
-
-    private fun rationale(days: Int, focus: Set<MuscleGroup>, split: SplitType): String {
-        val base = "Split ${split.label} em $days dias: ${split.description} " +
-            "O volume (séries/semana por músculo) é calibrado pelo seu nível — a base do modelo de hipertrofia."
-        val f = if (focus.isEmpty()) "" else
-            " Como você priorizou ${focus.joinToString(", ") { it.name }}, esses grupos recebem volume extra."
-        return base + f
     }
 
     // ---- grupos de músculos por tipo de dia ----

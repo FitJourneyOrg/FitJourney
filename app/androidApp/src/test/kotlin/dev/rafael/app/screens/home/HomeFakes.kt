@@ -1,8 +1,8 @@
 package dev.rafael.app.screens.home
 
-import dev.rafael.app.data.session.HistoricoDeSessoes
-import dev.rafael.app.data.session.SessaoLocal
-import dev.rafael.app.data.stats.Stats
+import dev.rafael.features.session.domain.HistoricoDeSessoes
+import dev.rafael.features.session.domain.SessaoLocal
+import dev.rafael.features.stats.domain.Stats
 import dev.rafael.contract.session.WorkoutSessionDto
 import dev.rafael.contract.stats.UserStatsDto
 import dev.rafael.core.result.AppResult
@@ -85,6 +85,9 @@ class FakeProgramas(
     override suspend fun delete(id: String): AppResult<Unit> = AppResult.Success(Unit)
     override suspend fun setSchedule(id: String, schedule: List<ProgramScheduleEntry>): AppResult<Program> =
         AppResult.Success(programa())
+
+    /** V59 — não usado pelos testes da Home hoje (eles simulam o ativo direto no fake de dados). */
+    override suspend fun activateWorkout(workoutId: String): AppResult<Unit> = AppResult.Success(Unit)
 }
 
 class FakeTreinos : WorkoutRepository {
@@ -144,7 +147,7 @@ fun programa(
     schedule: List<ProgramScheduleEntry> = emptyList(),
 ) = Program(
     id = id, name = "Programa", workouts = workouts, daysPerWeek = 3,
-    split = "Full Body", rationale = "r", locked = false, schedule = schedule,
+    split = "FULL_BODY", locked = false, schedule = schedule,
     createdAt = null, updatedAt = null,
 )
 

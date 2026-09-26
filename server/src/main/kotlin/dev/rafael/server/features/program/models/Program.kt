@@ -1,5 +1,7 @@
 package dev.rafael.server.features.program.models
 
+import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.server.features.workout.models.Workout
 import kotlin.uuid.Uuid
@@ -18,8 +20,8 @@ data class Program(
     val name: String,
     val origin: WorkoutOrigin,
     val daysPerWeek: Int,
-    val split: String,
-    val rationale: String,
+    val split: SplitType?,              // null = MANUAL (shell sem motor)
+    val focusMuscles: List<MuscleGroup>,   // snapshot da geração; NULL no banco em linhas de antes desta fatia
     val locked: Boolean,
     val workouts: List<Workout>,
     val createdAt: LocalDateTime,

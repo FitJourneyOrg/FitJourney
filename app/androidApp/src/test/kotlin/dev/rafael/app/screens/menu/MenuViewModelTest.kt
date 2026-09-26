@@ -2,7 +2,7 @@ package dev.rafael.app.screens.menu
 
 import dev.rafael.app.data.me.Me
 import dev.rafael.app.data.sessao.SairDaConta
-import dev.rafael.app.data.stats.Stats
+import dev.rafael.features.stats.domain.Stats
 import dev.rafael.core.network.TokenProvider
 import dev.rafael.app.screens.home.FakeAuth
 import dev.rafael.features.auth.domain.model.AuthUser

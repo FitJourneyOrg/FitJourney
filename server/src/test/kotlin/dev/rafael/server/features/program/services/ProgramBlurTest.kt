@@ -1,5 +1,6 @@
 package dev.rafael.server.features.program.services
 
+import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.program.ProgramDto
 import dev.rafael.contract.workout.WorkoutDto
 import dev.rafael.contract.workout.WorkoutExerciseDto
@@ -20,7 +21,7 @@ class ProgramBlurTest {
         WorkoutExerciseDto(exerciseId = "e", orderIndex = 0, sets = listOf(WorkoutSetDto(reps = 10, orderIndex = 0)))
 
     private fun program(origin: WorkoutOrigin, days: Int) = ProgramDto(
-        name = "P", origin = origin, daysPerWeek = days, split = "PPL", rationale = "r",
+        name = "P", origin = origin, daysPerWeek = days, split = SplitType.PUSH_PULL_LEGS, focusMuscles = emptyList(),
         workouts = (1..days).map { WorkoutDto(name = "Dia $it", origin = origin, exercises = List(5) { ex() }) },
     )
 

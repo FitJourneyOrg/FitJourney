@@ -1,5 +1,7 @@
 package dev.rafael.server.features.user.services
 
+import dev.rafael.contract.error.ErrorCodes
+import dev.rafael.contract.error.ErrorFields
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import kotlin.test.Test
@@ -90,6 +92,9 @@ class DisplayNamePolicyTest {
     fun `recusa curto demais`() {
         val e = erro(DisplayNamePolicy.normalizar("R"))
         assertTrue("displayName" in e.fieldErrors, "o erro tem de apontar o campo, p/ a UI marcar")
+        // Débito "erroDoCampo devolve frase do servidor" (debitos.md, P2, 2026-09-23):
+        // fieldErrors carrega o CÓDIGO agora, não a frase — é o cliente quem escreve a frase.
+        assertEquals(ErrorCodes.NOME_CURTO, e.fieldErrors[ErrorFields.DISPLAY_NAME])
     }
 
     @Test
@@ -99,7 +104,8 @@ class DisplayNamePolicyTest {
 
     @Test
     fun `recusa longo demais`() {
-        assertTrue(DisplayNamePolicy.normalizar("a".repeat(DisplayNamePolicy.MAX + 1)) is AppResult.Failure)
+        val e = erro(DisplayNamePolicy.normalizar("a".repeat(DisplayNamePolicy.MAX + 1)))
+        assertEquals(ErrorCodes.NOME_LONGO, e.fieldErrors[ErrorFields.DISPLAY_NAME])
     }
 
     @Test

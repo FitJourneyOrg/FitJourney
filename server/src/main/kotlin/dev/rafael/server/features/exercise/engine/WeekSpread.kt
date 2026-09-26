@@ -17,7 +17,7 @@ object WeekSpread {
      * - unavailable vazio → calendário-âncora curado (ver [curatedDefault]).
      * - unavailable preenchido → espaçamento uniforme nos dias livres.
      */
-    fun daysFor(count: Int, split: String = "", unavailable: Set<Int> = emptySet()): List<Int> {
+    fun daysFor(count: Int, split: SplitType? = null, unavailable: Set<Int> = emptySet()): List<Int> {
         if (count <= 0) return emptyList()
         if (unavailable.isEmpty()) curatedDefault(count, split)?.let { return it }
         val available = (1..7).filter { it !in unavailable }
@@ -34,10 +34,10 @@ object WeekSpread {
      * seguidos; splits que alternam grupos (U/L, PPL, Arnold) podem empilhar. null → fora de
      * 2..6, usa espaçamento.
      */
-    private fun curatedDefault(count: Int, split: String): List<Int>? = when (count) {
+    private fun curatedDefault(count: Int, split: SplitType?): List<Int>? = when (count) {
         2 -> listOf(1, 4)                          // Seg, Qui
         3 -> listOf(1, 3, 5)                        // Seg, Qua, Sex (DSDN clássico)
-        4 -> if (split == SplitType.FULL_BODY.label)
+        4 -> if (split == SplitType.FULL_BODY)
             listOf(1, 3, 5, 7)                      // Full Body: espaçado, sem consecutivos
         else
             listOf(1, 2, 4, 5)                      // U/L: bloco 2x2 (Qua off, sistêmico)

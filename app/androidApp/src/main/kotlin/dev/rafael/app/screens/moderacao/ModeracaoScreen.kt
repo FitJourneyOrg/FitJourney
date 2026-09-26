@@ -47,6 +47,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rafael.app.ui.AvatarInicial
+import dev.rafael.app.ui.ContextoDeCache
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.app.ui.NetworkImage
 import dev.rafael.contract.checkin.ReportItemDto
@@ -108,7 +109,8 @@ fun ModeracaoScreen(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             state.erro?.let {
-                ErroInline(it, modifier = Modifier.padding(16.dp))
+                // #31: fila de denúncias é online-only (10.1) — nada fica salvo localmente.
+                ErroInline(it, modifier = Modifier.padding(16.dp), cache = ContextoDeCache.SEM_CACHE)
             }
 
             when {
