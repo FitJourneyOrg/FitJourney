@@ -72,8 +72,9 @@ class WorkoutGenerationIntegrationTest {
         println("\n================ PROGRAMA GERADO ================")
         println("Perfil: ${profile.level} · ${profile.goal} · ${profile.daysPerWeek} dias · " +
             "foco=${profile.focusAreas} · ${profile.environment}")
-        println("Split: ${program.split}")
-        println("Rationale: ${program.rationale}\n")
+        // `rationale` saiu do DTO (fatia "rationale derivado", 2026-09-22) — a frase agora é
+        // montada pelo cliente a partir de split + focusMuscles, não vem mais pronta do servidor.
+        println("Split: ${program.split} · foco=${program.focusMuscles}\n")
         program.workouts.forEach { w ->
             val totalSets = w.exercises.sumOf { it.sets.size }
             println("--- ${w.name}  (${w.exercises.size} exercícios · $totalSets séries) ---")

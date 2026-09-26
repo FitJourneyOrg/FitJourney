@@ -14,6 +14,7 @@ import dev.rafael.core.result.map
 import dev.rafael.server.auth.FirebaseUser
 import dev.rafael.server.error.respondResult
 import dev.rafael.server.features.profile.services.ProfileService
+import dev.rafael.server.features.program.services.ProgramActiveWorkout
 import dev.rafael.server.features.program.services.ProgramBlur
 import dev.rafael.server.features.program.services.ProgramLimits
 import dev.rafael.server.features.program.services.ProgramService
@@ -87,8 +88,13 @@ fun Route.programRoutes(
             val result = userService.findOrCreate(principal.uid, principal.email)
                 .flatMap { user ->
                     // ARCH #23: aplica o blur em cada programa da lista (o detalhe filtra daqui).
+                    // V59: isActive marcado DEPOIS do blur — mesmo id sobrevive ao blur, a
+                    // comparação não quebra pra quem não é premium.
                     programService.listForUser(user.id)
-                        .map { list -> list.map { ProgramBlur.apply(it, user.isPremium) } }
+                        .map { list ->
+                            list.map { ProgramBlur.apply(it, user.isPremium) }
+                                .map { ProgramActiveWorkout.apply(it, user.activeWorkoutId?.toString()) }
+                        }
                 }
             call.respondResult(result)
         }

@@ -52,6 +52,7 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rafael.app.R
 import dev.rafael.app.ui.AvatarInicial
+import dev.rafael.app.ui.ContextoDeCache
 import dev.rafael.app.ui.DialogoDeDenuncia
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.contract.checkin.CommentDto
@@ -160,7 +161,8 @@ fun ComentariosScreen(
             // vezes — uma no diálogo e outra atrás dele.
             if (state.denunciando == null) {
                 state.erro?.let {
-                    ErroInline(it, modifier = Modifier.padding(horizontal = 16.dp))
+                    // #31: comentários são online-only (10.1) — nada fica salvo localmente.
+                    ErroInline(it, modifier = Modifier.padding(horizontal = 16.dp), cache = ContextoDeCache.SEM_CACHE)
                     Spacer(Modifier.height(8.dp))
                 }
             }

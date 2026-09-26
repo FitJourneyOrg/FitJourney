@@ -3,6 +3,7 @@ package dev.rafael.app.ui
 import androidx.annotation.StringRes
 import dev.rafael.app.R
 import dev.rafael.contract.error.ErrorCodes
+import dev.rafael.contract.limites.Limites
 
 /**
  * A frase que o usuário lê para cada código de erro (fatia G.2, extraída na G.3, ARCH #37).
@@ -126,6 +127,21 @@ object TextosDeErro {
         ErrorCodes.SO_O_ADMIN_DO_GRUPO -> R.string.erro_so_o_admin_do_grupo
         ErrorCodes.CAMPOS_DO_GRUPO_INVALIDOS -> R.string.erro_campos_do_grupo_invalidos
 
+        // Os dez motivos de CAMPOS_DO_GRUPO_INVALIDOS (débito "erroDoCampo devolve frase do
+        // servidor", debitos.md, fechado 2026-09-23) — não aparecem sozinhos na tela inteira,
+        // só dentro de `erroDoCampo`, mas moram aqui porque a derivação chave<->código é a
+        // mesma regra pros dois casos.
+        ErrorCodes.GRUPO_TITULO_VAZIO -> R.string.erro_grupo_titulo_vazio
+        ErrorCodes.GRUPO_TITULO_LONGO -> R.string.erro_grupo_titulo_longo
+        ErrorCodes.GRUPO_DESCRICAO_LONGA -> R.string.erro_grupo_descricao_longa
+        ErrorCodes.GRUPO_FUSO_INVALIDO -> R.string.erro_grupo_fuso_invalido
+        ErrorCodes.GRUPO_DATA_INICIO_INVALIDA -> R.string.erro_grupo_data_inicio_invalida
+        ErrorCodes.GRUPO_DATA_FIM_INVALIDA -> R.string.erro_grupo_data_fim_invalida
+        ErrorCodes.GRUPO_FIM_ANTES_DO_INICIO -> R.string.erro_grupo_fim_antes_do_inicio
+        ErrorCodes.GRUPO_INICIO_MUITO_CEDO -> R.string.erro_grupo_inicio_muito_cedo
+        ErrorCodes.GRUPO_REGRA_EMOJI_SEM_FOTO -> R.string.erro_grupo_regra_emoji_sem_foto
+        ErrorCodes.GRUPO_REGRA_GYMPASS_INDISPONIVEL -> R.string.erro_grupo_regra_gympass_indisponivel
+
         // ---- check-in ----
         ErrorCodes.CHECKIN_SEM_AS_REGRAS -> R.string.erro_checkin_sem_as_regras
         ErrorCodes.PRAZO_DE_EXCLUSAO -> R.string.erro_prazo_de_exclusao
@@ -165,6 +181,33 @@ object TextosDeErro {
         ErrorCodes.DIAS_LIVRES_INSUFICIENTES -> R.string.erro_dias_livres_insuficientes
 
         else -> null
+    }
+
+    /**
+     * Os parâmetros de [de], quando o código pede algum. Vazio pra maioria — só os que carregam
+     * um número que é constante do servidor (débito "12 frases cravam constante do servidor",
+     * debitos.md) usam isto.
+     *
+     * A ORDEM importa e é a do `%1$d`/`%2$d` no `strings.xml`, não a ordem em que o código valida.
+     * `[REGRA]` estes números vêm de [Limites], nunca cravados aqui — cravar aqui seria voltar a
+     * ter dois lugares dizendo o mesmo número.
+     */
+    fun argsDe(code: String?): List<Any> = when (code) {
+        ErrorCodes.NOME_CURTO -> listOf(Limites.DisplayName.MIN)
+        ErrorCodes.NOME_LONGO -> listOf(Limites.DisplayName.MAX)
+        ErrorCodes.COMENTARIO_INVALIDO -> listOf(Limites.Social.MAX_COMENTARIO)
+        ErrorCodes.NOME_DO_LOCAL_LONGO -> listOf(Limites.CheckIn.MAX_NOME_DO_LOCAL)
+        ErrorCodes.PRAZO_DA_DENUNCIA -> listOf(Limites.Moderacao.PRAZO_EM_DIAS)
+        ErrorCodes.LIMITE_DE_IA_GRATIS -> listOf(Limites.Program.FREE_AI_LIMIT)
+        ErrorCodes.LIMITE_DE_MANUAIS_GRATIS -> listOf(Limites.Program.FREE_MANUAL_LIMIT)
+        ErrorCodes.LIMITE_DE_PROGRAMAS_PREMIUM -> listOf(Limites.Program.PREMIUM_TOTAL_LIMIT)
+        ErrorCodes.DIAS_POR_SEMANA_INVALIDO ->
+            listOf(Limites.Profile.DAYS_PER_WEEK_MIN, Limites.Profile.DAYS_PER_WEEK_MAX)
+        ErrorCodes.FOCO_ALEM_DO_LIMITE -> listOf(Limites.Profile.FOCUS_AREAS_MAX)
+        ErrorCodes.IDADE_INVALIDA -> listOf(Limites.Profile.AGE_MIN, Limites.Profile.AGE_MAX)
+        ErrorCodes.GRUPO_TITULO_LONGO -> listOf(Limites.Group.TITULO_MAX)
+        ErrorCodes.GRUPO_DESCRICAO_LONGA -> listOf(Limites.Group.DESCRICAO_MAX)
+        else -> emptyList()
     }
 
     /**

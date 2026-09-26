@@ -23,7 +23,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.ui.ShimmerList
 import dev.rafael.contract.stats.AchievementDto
+import dev.rafael.features.achievements.presentation.viewmodel.AchievementsViewModel
 import org.koin.androidx.compose.koinViewModel
+import org.koin.core.parameter.parametersOf
 import dev.rafael.app.R
 import dev.rafael.app.ui.ErroAcao
 import dev.rafael.app.ui.ErroDeTela
@@ -43,13 +45,19 @@ import androidx.compose.ui.res.stringResource
 @Composable
 fun AchievementsScreen(
     onBack: () -> Unit,
-    viewModel: AchievementsViewModel = koinViewModel(),
+    /** Id da conquista a celebrar num diálogo ao entrar — vem do push (G.6). */
+    destaque: String? = null,
+    viewModel: AchievementsViewModel = koinViewModel { parametersOf(destaque) },
 ) {
     val state by viewModel.state.collectAsState()
 
     // Voltar de um treino muda o progresso; sem `forcar` o TTL de 2 min seguraria justamente
     // a medalha que o usuário acabou de merecer.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.sincronizar(forcar = true) }
+
+    state.destaque?.let { conquista ->
+        DialogoDeConquistaDesbloqueada(conquista = conquista, onFechar = viewModel::dispensarDestaque)
+    }
 
     Scaffold(
         topBar = {
@@ -124,7 +132,11 @@ private fun CartaoDeConquista(conquista: AchievementDto) {
     // Sem título não há cartão: `null` só acontece com servidor novo e app antigo, e um cartão
     // com o identificador cru (`STREAK_90`) no meio da grade é pior que uma medalha a menos.
     val titulo = TextosDeConquista.titulo(conquista.id) ?: return
-    val descricao = TextosDeConquista.descricao(conquista.id)
+    // Débito "números de conquista cravam constante do servidor" (debitos.md): a versão COM alvo,
+    // alimentada pelo AchievementDto.target de verdade — é aqui, ao lado da barra de progresso,
+    // que a frase e o número da barra podem divergir se o alvo mudar no AchievementPolicy.
+    val descricao = TextosDeConquista.descricaoComProgresso(conquista.id)
+    val argsDaDescricao = TextosDeConquista.argsDaDescricaoComProgresso(conquista.id, conquista.target)
 
     // O estado vem de `unlockedAt`, NUNCA de comparar current >= target: streak quebra e a
     // medalha continua ganha. Quem decide desbloqueio é o servidor ([REGRA] ARCH #16).
@@ -169,7 +181,7 @@ private fun CartaoDeConquista(conquista: AchievementDto) {
             descricao?.let {
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    stringResource(it),
+                    stringResource(it, *argsDaDescricao.toTypedArray()),
                     style = MaterialTheme.typography.bodySmall,
                     textAlign = TextAlign.Center,
                     color = apagado,
@@ -199,4 +211,57 @@ private fun CartaoDeConquista(conquista: AchievementDto) {
             }
         }
     }
+}
+
+
+/**
+ * Celebra a conquista que acabou de ser desbloqueada (G.6, débito fechado em 2026-09-24).
+ *
+ * Só aparece quando a tela foi aberta pelo push — `state.destaque` já vem resolvido pelo
+ * ViewModel. Reusa [TextosDeConquista.titulo]/[TextosDeConquista.descricao] (a versão SEM
+ * progresso: aqui é celebração de algo já feito, não status de algo em andamento — a barra
+ * de progresso do cartão não faz sentido numa medalha recém-ganha).
+ *
+ * Sem título nem descrição não há diálogo: mesmo caso do cartão (`CartaoDeConquista`) — id
+ * desconhecido só acontece com servidor novo e app antigo.
+ */
+@Composable
+private fun DialogoDeConquistaDesbloqueada(conquista: AchievementDto, onFechar: () -> Unit) {
+    val titulo = TextosDeConquista.titulo(conquista.id) ?: return
+    val descricao = TextosDeConquista.descricao(conquista.id)
+
+    AlertDialog(
+        onDismissRequest = onFechar,
+        icon = {
+            Icon(
+                Icons.Default.Star,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.tertiary,   // lime: recompensa do perfil individual
+            )
+        },
+        title = {
+            Text(
+                stringResource(R.string.conquistas_dialogo_titulo),
+                textAlign = TextAlign.Center,
+            )
+        },
+        text = {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    stringResource(titulo),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+                descricao?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(stringResource(it), textAlign = TextAlign.Center)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onFechar) { Text(stringResource(R.string.comum_entendi)) }
+        },
+    )
 }

@@ -17,9 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.ui.ErroInline
-import dev.rafael.app.ui.Frase
 import dev.rafael.app.ui.nomeDoPrograma
-import dev.rafael.app.ui.resolver
+import dev.rafael.app.ui.rationaleDoPrograma
+import dev.rafael.app.ui.rotuloDoSplit
 import dev.rafael.app.R
 import dev.rafael.core.result.AppError
 import dev.rafael.features.program.domain.model.ProgramWorkout
@@ -44,7 +44,7 @@ fun ProgramRevealScreen(
                 name = state.program!!.name,
                 daysPerWeek = state.program!!.daysPerWeek,
                 split = state.program!!.split,
-                rationale = state.program!!.rationale,
+                focusMuscles = state.program!!.focusMuscles,
                 workouts = state.program!!.workouts,
                 locked = state.locked,
                 onOpenPaywall = onOpenPaywall,
@@ -94,8 +94,8 @@ private fun ErrorView(error: AppError?, onRetry: () -> Unit) {
 private fun RevealContent(
     name: String,
     daysPerWeek: Int,
-    split: String,
-    rationale: String,
+    split: String?,
+    focusMuscles: List<String>,
     workouts: List<ProgramWorkout>,
     locked: Boolean,
     onOpenPaywall: () -> Unit,
@@ -117,18 +117,19 @@ private fun RevealContent(
             // G.5: o servidor deixa o nome em branco para o programa gerado; quem monta o rótulo
             // é o cliente, no idioma da tela. Ver `NomeDePrograma.kt`.
             Text(nomeDoPrograma(name, daysPerWeek, split), style = MaterialTheme.typography.titleMedium)
-            // `split` é o nome do modelo vindo do servidor ("Push/Pull/Legs"): jargão de
-            // academia, igual em qualquer idioma. Ver `SplitType.rotulo()`.
+            // `split` é a CHAVE do modelo vindo do servidor ("PUSH_PULL_LEGS"); `rotuloDoSplit`
+            // resolve pro nome de jargão ("Push/Pull/Legs"), igual em qualquer idioma. Ver
+            // `SplitType.rotulo()`.
             Text(
-                stringResource(R.string.programa_reveal_resumo, daysPerWeek, split),
+                stringResource(R.string.programa_reveal_resumo, daysPerWeek, rotuloDoSplit(split).orEmpty()),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            // ⚠️ TEXTO DO SERVIDOR, não traduzido. O `rationale` é uma frase em português
-            // montada pelo `StructureEngine`. Enumerado no `TextoDoServidorTest`; a saída é o
-            // servidor mandar código + parâmetros, como a G.2 fez com os erros.
-            if (rationale.isNotBlank()) {
-                Text(Frase.DoServidor(rationale).resolver(), style = MaterialTheme.typography.bodyMedium)
+            // Fatia "rationale derivado" (2026-09-22): a frase é montada AQUI, no idioma da
+            // tela, a partir de split + focusMuscles -- não vem mais pronta do servidor
+            // (o `StructureEngine` não sabe em que idioma a tela está). Ver `rationaleDoPrograma()`.
+            rationaleDoPrograma(split, daysPerWeek, focusMuscles).takeIf { it.isNotBlank() }?.let { frase ->
+                Text(frase, style = MaterialTheme.typography.bodyMedium)
             }
 
             Spacer(Modifier.height(4.dp))

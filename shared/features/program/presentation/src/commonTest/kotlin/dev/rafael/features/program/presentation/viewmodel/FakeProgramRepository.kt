@@ -7,7 +7,7 @@ import dev.rafael.features.program.domain.repository.ProgramRepository
 /** Programa de domínio mínimo pros testes (workouts/schedule vazios não importam aqui). */
 fun program(id: String, name: String = "Programa") = Program(
     id = id, name = name, workouts = emptyList(), daysPerWeek = 3,
-    split = "Full Body", rationale = "r", locked = false,
+    split = "FULL_BODY", locked = false,
     schedule = emptyList(), createdAt = null, updatedAt = null,
 )
 
@@ -19,8 +19,10 @@ class FakeProgramRepository(
     var renameResult: AppResult<Program> = AppResult.Success(program("p1")),
     var deleteResult: AppResult<Unit> = AppResult.Success(Unit),
     var scheduleResult: AppResult<Program> = AppResult.Success(program("p1")),
+    var activateWorkoutResult: AppResult<Unit> = AppResult.Success(Unit),
 ) : ProgramRepository {
     var invalidateCalls = 0
+    var activateWorkoutCalledWith: String? = null
 
     /**
      * BANCO LOCAL simulado (ARCH #30). Deliberadamente separado de `listResult` (a rede):
@@ -49,4 +51,9 @@ class FakeProgramRepository(
     override suspend fun rename(id: String, name: String) = renameResult
     override suspend fun delete(id: String) = deleteResult
     override suspend fun setSchedule(id: String, schedule: List<dev.rafael.features.program.domain.model.ProgramScheduleEntry>) = scheduleResult
+
+    override suspend fun activateWorkout(workoutId: String): AppResult<Unit> {
+        activateWorkoutCalledWith = workoutId
+        return activateWorkoutResult
+    }
 }

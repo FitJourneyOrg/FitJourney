@@ -9,8 +9,8 @@ object ProgramsTable : Table("programs") {
     val name = varchar("name", 100)          // ARCH #27 — auto-gerado, editável via PUT /programs/{id}
     val origin = varchar("origin", 16)       // WorkoutOrigin.name — AI (motor) ou MANUAL (shell pra treino avulso)
     val daysPerWeek = integer("days_per_week")
-    val split = varchar("split", 64)
-    val rationale = text("rationale")
+    val split = varchar("split", 64).nullable()   // SplitType.name; null = MANUAL (shell). V56: era .label
+    val focusMuscles = text("focus_muscles").nullable()   // JSON List<MuscleGroup>; null = legado (pré-V56)
     val locked = bool("locked").default(false)
     val createdAt = datetime("created_at")
     val updatedAt = datetime("updated_at")

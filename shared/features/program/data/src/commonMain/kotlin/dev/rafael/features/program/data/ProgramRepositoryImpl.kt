@@ -167,6 +167,14 @@ class ProgramRepositoryImpl(
         httpResult { remote.generate().toDomain() }.also { invalidate() }
 
     /**
+     * ONLINE-ONLY (V59) -- mesma razão do [generate]: sem otimismo, `invalidate()` faz o
+     * próximo `list()`/resume ir à rede e trazer o `isActive` verdadeiro. Sem devolver o
+     * `Program` inteiro porque quem chama já tem a tela reagindo ao Flow do cache.
+     */
+    override suspend fun activateWorkout(workoutId: String): AppResult<Unit> =
+        httpResult { remote.activateWorkout(workoutId) }.also { invalidate() }
+
+    /**
      * Criação otimista com id do CLIENTE (B.1 fez o servidor aceitá-lo), o que torna o POST
      * idempotente: resposta perdida na rede → reenvio com o mesmo id → nenhum programa duplicado.
      */
@@ -178,8 +186,7 @@ class ProgramRepositoryImpl(
             name = name,
             origin = WorkoutOrigin.MANUAL,
             daysPerWeek = 0,
-            split = "",
-            rationale = "",
+            split = null,   // manual: sem motor, sem split (fatia "rationale derivado")
             createdAt = agora,
             updatedAt = agora,
         )

@@ -3,8 +3,8 @@
 
 salvarTreino:
 INSERT OR REPLACE INTO workout(
-    id, uid, programId, name, origin, locked, lockedExerciseCount, exerciseCount, exercisesJson
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+    id, uid, programId, name, origin, locked, lockedExerciseCount, exerciseCount, exercisesJson, isActive
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 limparTreinos:
 DELETE FROM workout WHERE uid = ?;

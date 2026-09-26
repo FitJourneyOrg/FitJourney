@@ -8,14 +8,15 @@ import dev.rafael.server.features.exercise.db.ExerciseTranslationsTable
 import dev.rafael.server.features.exercise.db.ExercisesTable
 import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.deleteAll
+import org.jetbrains.exposed.v1.core.inList
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeAll
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import kotlin.uuid.Uuid
@@ -56,23 +57,54 @@ class CatalogoTraduzidoIntegrationTest {
     }
 
     /**
-     * Limpeza POR TESTE, e não só por classe.
+     * Isolamento por CHAVE (P0.1, 2026-09-22), não mais por limpeza da tabela inteira.
      *
-     * O `limpar()` da classe roda uma vez; aqui cada teste insere tradução para o MESMO exercício
-     * (o primeiro da tabela), então sem isto o segundo teste esbarraria na PK composta do primeiro.
+     * Até aqui, cada teste apagava `exercise_translations` INTEIRA no `@BeforeEach` e pegava
+     * `ExercisesTable.selectAll().limit(1).single()` -- o primeiro exercício REAL do catálogo.
+     * Funcionava porque a tabela era dado de teste, sempre vazia no início. Virou referência (H.3,
+     * V53 carregou ~923 traduções reais) -- apagar tudo a cada teste destruiria essa carga para
+     * qualquer classe que rodasse DEPOIS no mesmo container compartilhado (ver `BancoDeTeste`), e
+     * o exercício real "aleatório" já pode ter linha da V53, colidindo com a PK composta ao inserir.
      *
-     * A alternativa seria cada teste usar um exercício diferente, que é a lição de isolamento por
-     * CHAVE do `AchievementGrantIntegrationTest`. Não serve aqui: metade destes testes conta linhas
-     * do catálogo INTEIRO, então o que precisa ficar previsível é o conjunto, não uma linha.
+     * Cada teste que precisa inserir tradução cria o PRÓPRIO exercício sintético -- a mesma lição
+     * de isolamento por chave do `AchievementGrantIntegrationTest`, só que com limpeza explícita no
+     * fim (`limparSinteticos`): lá o `users` truncado pela PRÓXIMA classe bastava, aqui `exercises`
+     * nunca é truncado (é catálogo real), então o que este arquivo cria, este arquivo apaga -- e o
+     * `ON DELETE CASCADE` da FK (V49) leva a tradução junto, sem precisar tocar na outra tabela.
+     *
+     * O teste que conta o catálogo INTEIRO (`nenhum idioma fica traduzido pela metade`) não usa
+     * isto -- ele quer justamente o estado REAL, sem sintético nenhum misturado. É por isso que a
+     * limpeza é `@AfterEach`, não `@AfterAll`: `PER_CLASS` não garante a ORDEM dos testes, e um
+     * sintético "vazando" de um teste anterior para dentro da contagem daquele inflaria o `total`
+     * sem inflar nenhum idioma -- viraria falso positivo de "meio traduzido".
      */
-    @BeforeEach
-    fun semTraducoes() {
-        transaction { ExerciseTranslationsTable.deleteAll() }
+    private val sinteticos = mutableListOf<Uuid>()
+
+    private fun exercicioSintetico(): Uuid {
+        val id = Uuid.random()
+        transaction {
+            ExercisesTable.insert {
+                it[ExercisesTable.id] = id
+                it[name] = "Exercício de teste $id"
+                it[category] = "CORE"   // precisa ser um ExerciseCategory REAL — valueOf() não é defensivo aqui (ver ExerciseRepositoryImpl.toExercise)
+                it[videoRef] = "teste"
+                it[thumbRef] = "teste"
+                it[isBase] = true
+            }
+        }
+        sinteticos += id
+        return id
     }
 
-    private fun algumExercicio(): Pair<Uuid, String> = transaction {
-        ExercisesTable.selectAll().limit(1).single()
-            .let { it[ExercisesTable.id] to it[ExercisesTable.name] }
+    @AfterEach
+    fun limparSinteticos() {
+        // Guarda o `if`: nem todo teste cria sintético (ex. os dois que leem o catálogo INTEIRO),
+        // e um `inList` vazio é chão pouco testado em Exposed -- não vale o risco por uma query
+        // que não faria nada mesmo.
+        if (sinteticos.isNotEmpty()) {
+            transaction { ExercisesTable.deleteWhere { ExercisesTable.id inList sinteticos } }
+            sinteticos.clear()
+        }
     }
 
     private fun traduzir(id: Uuid, idioma: Idioma, nome: String) = transaction {
@@ -91,7 +123,7 @@ class CatalogoTraduzidoIntegrationTest {
      * ⭐ **Exercício sem tradução continua na lista, no piso.**
      *
      * É o teste mais importante do arquivo, e o que justifica o `LEFT`. Com `INNER JOIN`, trocar
-     * para inglês faria o catálogo encolher de 963 para o número de traduzidos — **sem erro, sem
+     * para inglês faria o catálogo encolher de 923 para o número de traduzidos — **sem erro, sem
      * log, sem nada**. A pessoa concluiria que o app perdeu exercícios.
      *
      * > **Join que decide quem aparece na lista não é detalhe de consulta: é regra de produto
@@ -99,7 +131,8 @@ class CatalogoTraduzidoIntegrationTest {
      */
     @Test
     fun `sem traducao o exercicio aparece com o nome em portugues`() = runBlocking {
-        val (id, nomePt) = algumExercicio()
+        val id = exercicioSintetico()
+        val nomePt = transaction { ExercisesTable.selectAll().where { ExercisesTable.id eq id }.single()[ExercisesTable.name] }
 
         val emIngles = valor(repo.findAll(Idioma.EN))
         val total = transaction { ExercisesTable.selectAll().count() }
@@ -111,7 +144,8 @@ class CatalogoTraduzidoIntegrationTest {
     /** E com tradução, o nome traduzido vence — o caminho feliz. */
     @Test
     fun `com traducao o nome vem no idioma pedido`() = runBlocking {
-        val (id, nomePt) = algumExercicio()
+        val id = exercicioSintetico()
+        val nomePt = transaction { ExercisesTable.selectAll().where { ExercisesTable.id eq id }.single()[ExercisesTable.name] }
         traduzir(id, Idioma.EN, "Flat Bench Press")
 
         assertEquals("Flat Bench Press", valor(repo.findAll(Idioma.EN)).single { it.id == id }.name)
@@ -124,7 +158,7 @@ class CatalogoTraduzidoIntegrationTest {
     /**
      * O piso NÃO mora na tabela de traduções.
      *
-     * Se um dia alguém "completar" o modelo inserindo as 963 linhas em pt-BR, este teste avisa:
+     * Se um dia alguém "completar" o modelo inserindo as 923 linhas em pt-BR, este teste avisa:
      * a leitura em `PADRAO` não faz join, então essas linhas seriam dado morto que ninguém lê, e
      * duas fontes para o mesmo nome — exatamente o que o #37 existe para impedir.
      */
@@ -141,8 +175,9 @@ class CatalogoTraduzidoIntegrationTest {
     /**
      * ⭐ **A cobertura por idioma, que é o papel do `when` exaustivo que perdemos.**
      *
-     * Hoje ele passa com o inglês vazio, e isso é correto: a V49 cria o schema e a carga dos ~960
-     * nomes é a H.3. O que ele mede é a DISTÂNCIA até o 100%, e falha quando um idioma está
+     * Antes da H.3 ele passava com o inglês vazio; agora (P0.1) roda contra a carga REAL da V53,
+     * não mais uma tabela zerada por `@BeforeEach` -- é o teste voltando a medir o que a V49 disse
+     * que mediria. O que ele mede é a DISTÂNCIA até o 100%, e falha quando um idioma está
      * parcialmente traduzido — que é o estado perigoso, porque a tela mistura os dois sem avisar.
      *
      * Zero traduzido é honesto (tudo no piso). Metade traduzido é o que ninguém percebe.
@@ -176,7 +211,7 @@ class CatalogoTraduzidoIntegrationTest {
      */
     @Test
     fun `o banco aceita todo idioma que o contrato declara`() {
-        val (id, _) = algumExercicio()
+        val id = exercicioSintetico()
 
         Idioma.TODOS.filter { it != Idioma.PADRAO }.forEach { idioma ->
             runCatching { traduzir(id, idioma, "teste-${idioma.tag}") }

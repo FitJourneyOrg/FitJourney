@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Cleartext (HTTP) só no build de DEBUG. `apiBaseUrl` (build.gradle.kts, default
+      http://10.0.2.2:8080 ou uma LAN via local.properties) nunca tem TLS — é o emulador ou
+      o aparelho físico na sua rede, não um servidor real.
+
+      `usesCleartextTraffic` não estava declarado aqui antes: vinha `true` no manifesto
+      PRINCIPAL, valendo pra toda variante, inclusive release. O default da própria plataforma
+      desde a API 28 é `false` (recusa HTTP puro) — bastava não declarar nada fora do debug pra
+      herdar a postura segura. Só este manifesto (mesclado só na variante debug) declara o
+      cleartext; release/beta cai no default da plataforma.
+
+      Ver debitos.md: "usesCleartextTraffic só p/ dev" — item de segurança, fechar antes de
+      qualquer beta externo (não só antes do lançamento). A URL de produção real de fato ainda
+      não existe (débito separado, P3/P4: credencial Firebase via env, backend de produção) —
+      isto aqui garante que o APK não-debug recusaria cleartext mesmo assim, hoje.
+    -->
+    <application android:usesCleartextTraffic="true" />
+
+</manifest>

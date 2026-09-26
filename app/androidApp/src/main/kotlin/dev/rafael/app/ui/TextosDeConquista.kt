@@ -89,4 +89,41 @@ object TextosDeConquista {
         ConquistaIds.NIVEL_10 -> R.string.conquista_nivel_10_descricao
         else -> null
     }
+
+    /**
+     * Igual a [descricao], mas com o alvo VERDADEIRO (`AchievementDto.target`) embutido via
+     * `%1$d` — fecha o débito "números de conquista cravam constante do servidor" (debitos.md).
+     *
+     * Só existe pra onde a barra de progresso aparece ao lado (`AchievementsScreen`, perfil
+     * próprio): é ali que a frase e a barra podem contar números diferentes se `Conquista.alvo`
+     * mudar no `AchievementPolicy` sem esta frase mudar junto. Alimentada pelo `target` que já
+     * chega em CADA resposta do servidor — diferente das 12 frases de erro, não existe nem
+     * constante `Limites` pra duplicar aqui, porque o dado em si já é o parâmetro.
+     *
+     * O perfil público (`PerfilPublicoScreen`) continua usando [descricao], sem parâmetro: não
+     * mostra barra — o risco de divergir de um número que não está na tela não existe — e
+     * `PublicAchievementDto` não carrega `target` por desenho (9.3-A, progresso é histórico de
+     * treino e é privado). Parametrizar exigiria violar essa fronteira; não violei.
+     *
+     * `PRIMEIRO_TREINO` reusa [descricao] direto: o alvo é sempre 1 — é a definição da conquista,
+     * não um limiar que possa mudar — e a frase ("seu primeiro treino") não tem número pra
+     * divergir. Forçar o molde nela só pioraria o texto sem fechar risco nenhum.
+     */
+    @StringRes
+    fun descricaoComProgresso(id: String): Int? = when (id) {
+        ConquistaIds.PRIMEIRO_TREINO -> R.string.conquista_primeiro_treino_descricao
+        ConquistaIds.TREINOS_10 -> R.string.conquista_treinos_10_descricao_progresso
+        ConquistaIds.TREINOS_50 -> R.string.conquista_treinos_50_descricao_progresso
+        ConquistaIds.TREINOS_100 -> R.string.conquista_treinos_100_descricao_progresso
+        ConquistaIds.STREAK_7 -> R.string.conquista_streak_7_descricao_progresso
+        ConquistaIds.STREAK_30 -> R.string.conquista_streak_30_descricao_progresso
+        ConquistaIds.STREAK_90 -> R.string.conquista_streak_90_descricao_progresso
+        ConquistaIds.NIVEL_5 -> R.string.conquista_nivel_5_descricao_progresso
+        ConquistaIds.NIVEL_10 -> R.string.conquista_nivel_10_descricao_progresso
+        else -> null
+    }
+
+    /** Os args pra [descricaoComProgresso] — vazio pro `PRIMEIRO_TREINO`, que não parametriza. */
+    fun argsDaDescricaoComProgresso(id: String, alvo: Int): List<Any> =
+        if (id == ConquistaIds.PRIMEIRO_TREINO) emptyList() else listOf(alvo)
 }

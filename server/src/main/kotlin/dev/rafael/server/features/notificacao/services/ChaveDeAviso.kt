@@ -106,6 +106,23 @@ sealed interface ChaveDeAviso {
         override val tipo = TIPO_FILA_PARADA
     }
 
+    /**
+     * G.6 (débito fechado em 2026-09-24): o `POST /sessions` desbloqueou uma conquista.
+     *
+     * Sem nome nem descrição, e não é opção de estilo: desde 15/09 o servidor NÃO TEM MAIS o
+     * título de cada conquista (saiu do `AchievementPolicy.Conquista` de propósito, era texto de
+     * UI escondido em enum de servidor). Repetir aqui reabriria o mesmo problema que acabou de
+     * ser fechado. O [id] é o suficiente para o cliente, que já tem o nome local, decidir o que
+     * mostrar.
+     *
+     * Uma chave por conquista nova, não agregada: ao contrário de `EntradasDoDia`, o número de
+     * conquistas por sessão é baixíssimo (1, raramente 2) — não existe o risco de rajada que
+     * justificou agregar ali.
+     */
+    data class ConquistaDesbloqueada(val id: String) : ChaveDeAviso {
+        override val tipo = TIPO_CONQUISTA_DESBLOQUEADA
+    }
+
     companion object {
         const val TIPO_PEDIDO_DE_AMIZADE = "PEDIDO_DE_AMIZADE"
         const val TIPO_COMENTARIO = "COMENTARIO_NO_CHECKIN"
@@ -114,5 +131,6 @@ sealed interface ChaveDeAviso {
         const val TIPO_CHECK_IN_INVALIDADO = "CHECK_IN_INVALIDADO"
         const val TIPO_ENTRADAS_DO_DIA = "ENTRADAS_DO_DIA"
         const val TIPO_FILA_PARADA = "FILA_PARADA"
+        const val TIPO_CONQUISTA_DESBLOQUEADA = "CONQUISTA_DESBLOQUEADA"
     }
 }

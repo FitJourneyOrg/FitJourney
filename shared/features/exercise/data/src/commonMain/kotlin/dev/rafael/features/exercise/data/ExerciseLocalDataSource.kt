@@ -3,10 +3,13 @@ package dev.rafael.features.exercise.data
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import dev.rafael.contract.exercise.ExerciseDto
+import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.core.database.Exercise
 import dev.rafael.core.database.FitJourneyDatabase
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.json.Json
 
 class ExerciseLocalDataSource(private val db: FitJourneyDatabase) {
     private val queries = db.exerciseQueries
@@ -51,6 +54,8 @@ class ExerciseLocalDataSource(private val db: FitJourneyDatabase) {
                 queries.insertOrReplace(
                     id = d.id, name = d.name, category = d.category.name,
                     description = d.description, videoRef = d.videoRef, thumbRef = d.thumbRef,
+                    primaryMuscles = json.encodeToString(musculoSerializer, d.primaryMuscles),
+                    secondaryMuscles = json.encodeToString(musculoSerializer, d.secondaryMuscles),
                 )
             }
             cache.put(CHAVE_IDIOMA, idioma)
@@ -58,6 +63,14 @@ class ExerciseLocalDataSource(private val db: FitJourneyDatabase) {
     }
 
     private companion object {
+        /**
+         * Mesmo padrão de `ProgramLocalDataSource.focoSerializer`: JSON de List<MuscleGroup> numa
+         * coluna TEXT (ver 5.sqm). `ignoreUnknownKeys` absorve um enum novo no servidor sem quebrar
+         * decode de linhas já baixadas por uma versão anterior do app.
+         */
+        val json = Json { ignoreUnknownKeys = true }
+        val musculoSerializer = ListSerializer(MuscleGroup.serializer())
+
         /**
          * Sem uid: o catálogo é do APARELHO, não da conta (o carimbo dele usa `Escopo.GLOBAL` pela
          * mesma razão). Duas contas no mesmo aparelho compartilham catálogo e compartilham idioma

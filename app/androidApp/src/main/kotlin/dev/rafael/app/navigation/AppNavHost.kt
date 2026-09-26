@@ -228,6 +228,11 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
                 destino?.groupId?.let { AppRoute.GrupoDetalhe(it, AbasDoGrupo.MEMBROS) }
                     ?: AppRoute.Notificacoes
 
+            // G.6 (débito fechado em 2026-09-24): abre Conquistas com destaque na medalha. Sem
+            // `?:` para central — diferente dos grupos, `achievementId` ausente não é erro, é só
+            // "servidor não mandou" (versão antiga); a tela abre normal, sem diálogo.
+            "CONQUISTA_DESBLOQUEADA" -> AppRoute.Conquistas(destaque = destino?.achievementId)
+
             // Tipo que este app não conhece — vindo de uma versão mais nova do servidor. Abre a
             // central, que sabe mostrar qualquer notificação. Melhor um destino genérico que
             // funciona do que nenhum.
@@ -489,6 +494,10 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
         composable<AppRoute.Programs> {
             ProgramListScreen(
                 onOpenProgram = { id -> nav.navigate(AppRoute.ProgramDetail(id)) },
+                // V59: deck achatado por treino -- navegação direta, sem passar pelo programa.
+                onOpenWorkout = { id, editLocked -> nav.navigate(AppRoute.WorkoutDetail(id, editLocked)) },
+                onStartWorkout = { id -> nav.navigate(AppRoute.WorkoutSession(id)) },
+                onOpenLibrary = { nav.navigate(AppRoute.Library) },
                 onGenerateWithAI = { nav.navigate(AppRoute.ProgramGenerate) },
             )
         }
@@ -630,9 +639,12 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
 
         // ---- Abas ainda não implementadas ----
         composable<AppRoute.Progresso> {
-            ProgressScreen(onOpenConquistas = { nav.navigate(AppRoute.Conquistas) })
+            ProgressScreen(onOpenConquistas = { nav.navigate(AppRoute.Conquistas()) })
         }
-        composable<AppRoute.Conquistas> { AchievementsScreen(onBack = { nav.popBackStack() }) }
+        composable<AppRoute.Conquistas> { entry ->
+            val rota: AppRoute.Conquistas = entry.toRoute()
+            AchievementsScreen(destaque = rota.destaque, onBack = { nav.popBackStack() })
+        }
 
         // ---- Grafo social (#35) ----
 
@@ -682,7 +694,7 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
                 PerfilScreen(
                     onBack = { nav.popBackStack() },
                     onEditar = { nav.navigate(AppRoute.Conta) },
-                    onVerConquistas = { nav.navigate(AppRoute.Conquistas) },
+                    onVerConquistas = { nav.navigate(AppRoute.Conquistas()) },
                     onVerAmigos = { nav.navigate(AppRoute.Amigos) },
                     souEu = true,
                 )

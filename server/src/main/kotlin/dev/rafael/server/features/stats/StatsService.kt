@@ -16,6 +16,18 @@ import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 /**
+ * Porta estreita: só o que [AchievementService] precisa de [StatsService] (ARCH #16, débito
+ * fechado em 2026-09-24).
+ *
+ * Sem isto, testar `AchievementService` arrastaria `StatsService` inteiro — e com ele
+ * `ProgramService` e o `WorkoutGenerator` (o motor), que não têm nada a ver com conquista. Uma
+ * interface de um método só deixa o fake trivial sem tocar no motor.
+ */
+fun interface ProgressoDeStats {
+    suspend fun forUser(firebaseUid: String, email: String?): AppResult<UserStatsDto>
+}
+
+/**
  * Estatísticas do perfil (ARCH #16): XP, nível e sequência — SEMPRE derivados das sessões.
  *
  * Não há tabela de XP: o valor é recalculado a cada consulta a partir de `workout_sessions`.
@@ -28,7 +40,7 @@ class StatsService(
     private val userService: UserService,
     private val sessions: SessionRepository,
     private val programs: ProgramService,
-) {
+) : ProgressoDeStats {
     /**
      * Só XP e NÍVEL, de um usuário qualquer — o que a 9.3-A tornou público.
      *
@@ -53,7 +65,7 @@ class StatsService(
     /** O que é público de gamificação (9.3-A). Nada de streak, sessões ou "treinou hoje". */
     data class Gamificacao(val xp: Int, val nivel: Int)
 
-    suspend fun forUser(firebaseUid: String, email: String?): AppResult<UserStatsDto> =
+    override suspend fun forUser(firebaseUid: String, email: String?): AppResult<UserStatsDto> =
         userService.findOrCreate(firebaseUid, email).flatMap { user ->
             sessions.listByUser(user.id).flatMap { historico ->
                 // dias de treino agendados (união dos programas) — protegem o descanso no streak

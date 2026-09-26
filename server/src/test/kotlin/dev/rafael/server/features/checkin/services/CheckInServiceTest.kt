@@ -2,6 +2,7 @@ package dev.rafael.server.features.checkin.services
 
 import dev.rafael.contract.checkin.CheckInDto
 import dev.rafael.contract.group.GroupRule
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.server.features.group.services.FakeGroupRepository
@@ -212,7 +213,9 @@ class CheckInServiceTest {
         val r = c.criar(grupo, pedido(local = "x".repeat(61), lat = -23.5, lng = -46.6))
 
         val erro = assertIs<AppError.Validation>(assertIs<AppResult.Failure>(r).error)
-        assertNotNull(erro.fieldErrors["nomeDoLocal"])
+        // Débito "erroDoCampo devolve frase do servidor" (debitos.md, P2, 2026-09-23):
+        // fieldErrors carrega o CÓDIGO, não a frase.
+        assertEquals(ErrorCodes.NOME_DO_LOCAL_LONGO, erro.fieldErrors["nomeDoLocal"])
     }
 
     @Test

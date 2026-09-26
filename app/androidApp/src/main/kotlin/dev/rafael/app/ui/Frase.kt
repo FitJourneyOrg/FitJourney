@@ -34,8 +34,13 @@ import androidx.compose.ui.res.stringResource
  */
 sealed interface Frase {
 
-    /** Texto do catálogo do cliente. É o caminho normal, e o único que se traduz. */
-    data class Recurso(@StringRes val id: Int) : Frase
+    /**
+     * Texto do catálogo do cliente. É o caminho normal, e o único que se traduz.
+     *
+     * `args` alimenta os `%1$d`/`%2$d` do `strings.xml` (débito "12 frases cravam constante do
+     * servidor", debitos.md) — vazio pras frases sem parâmetro, que são a maioria.
+     */
+    data class Recurso(@StringRes val id: Int, val args: List<Any> = emptyList()) : Frase
 
     /**
      * Texto que chegou pronto do servidor, em português.
@@ -49,13 +54,13 @@ sealed interface Frase {
 
 /** Resolve fora de composição — dentro de `LaunchedEffect`, num snackbar, num `Worker`. */
 fun Frase.resolver(context: Context): String = when (this) {
-    is Frase.Recurso -> context.getString(id)
+    is Frase.Recurso -> context.getString(id, *args.toTypedArray())
     is Frase.DoServidor -> texto
 }
 
 /** Resolve na tela. `stringResource` acompanha troca de idioma e de configuração sozinho. */
 @Composable
 fun Frase.resolver(): String = when (this) {
-    is Frase.Recurso -> stringResource(id)
+    is Frase.Recurso -> stringResource(id, *args.toTypedArray())
     is Frase.DoServidor -> texto
 }

@@ -40,6 +40,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import dev.rafael.app.R
 import dev.rafael.app.ui.ErroInline
+import dev.rafael.app.ui.args
 import dev.rafael.app.ui.descricao
 import dev.rafael.app.ui.frase
 import dev.rafael.contract.group.GroupPreviewDto
@@ -202,7 +203,7 @@ private fun Preview(preview: GroupPreviewDto, entrando: Boolean, onEntrar: () ->
         preview.blockedReason?.let {
             Spacer(Modifier.height(8.dp))
             Text(
-                stringResource(it.frase()),
+                stringResource(it.frase(), *it.args().toTypedArray()),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

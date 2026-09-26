@@ -6,25 +6,68 @@ import dev.rafael.core.result.flatMap
 import dev.rafael.core.result.map
 import dev.rafael.server.features.stats.db.AchievementRepository
 import dev.rafael.server.features.user.services.UserService
+import org.slf4j.LoggerFactory
+import kotlin.uuid.Uuid
 
 /**
  * Conquistas do perfil (ARCH #16): avalia, concede e devolve o CATÁLOGO INTEIRO.
  *
- * ONDE A AVALIAÇÃO DISPARA: na própria leitura. Poderia ser no `POST /sessions`, que é o
- * momento em que o progresso muda — mas avaliar na leitura dá de graça o retroativo (quem já
- * tinha 60 treinos recebe na primeira abertura da tela, sem migration de backfill) e mantém o
- * registro de sessão com uma responsabilidade só. O custo é uma escrita eventual num GET, e
- * ela é idempotente.
+ * ONDE A AVALIAÇÃO DISPARA: em DOIS lugares (débito fechado em 2026-09-24).
  *
- * Quando existir NOTIFICAÇÃO de desbloqueio, aí sim o `POST /sessions` precisa avaliar também
- * — senão o usuário só descobre a medalha quando abre a tela. Fica registrado como débito.
+ * - Na LEITURA ([forUser]): dá de graça o retroativo (quem já tinha 60 treinos recebe na
+ *   primeira abertura da tela, sem migration de backfill). NUNCA notifica — abrir a tela não é
+ *   "acabei de conquistar agora", e notificar aqui inundaria quem abre a tela pela primeira vez
+ *   após uma migration com um push por medalha antiga.
+ * - No `POST /sessions` ([avaliarAposSessao]): é o momento em que o progresso de fato muda, e é
+ *   o único que sabe que a conquista é NOVA agora, não retroativa — por isso é o único que
+ *   notifica.
+ *
+ * As duas rodam o mesmo núcleo ([avaliarEConceder]), que é idempotente (PK composta + ON
+ * CONFLICT DO NOTHING no repositório), então acontecer nos dois no mesmo dia não duplica nada.
  */
 class AchievementService(
     private val userService: UserService,
-    private val stats: StatsService,
+    private val stats: ProgressoDeStats,
     private val repository: AchievementRepository,
+    // Porta estreita para o push: `stats` não importa `notificacao`. Default não faz nada — o
+    // grafo funciona sem notificação, mesmo padrão do FriendshipService/SocialService/ModeracaoService.
+    private val avisarDesbloqueio: suspend (destinatario: Uuid, achievementId: String) -> Unit = { _, _ -> },
 ) {
+    private val log = LoggerFactory.getLogger(AchievementService::class.java)
+
     suspend fun forUser(firebaseUid: String, email: String?): AppResult<List<AchievementDto>> =
+        avaliarEConceder(firebaseUid, email).map { montarCatalogo(it.progresso, it.concedidas) }
+
+    /**
+     * Mesma avaliação de [forUser], mas dispara [avisarDesbloqueio] para cada conquista NOVA
+     * deste lote. Chamada pelo `SessionService.record()` depois que a sessão é salva.
+     *
+     * **Nunca falha para o chamador.** A sessão já foi salva quando isto roda: um erro aqui é só
+     * o aviso que não saiu, não o treino que deixou de ser salvo — mesma régua do
+     * `NotificacaoService.avisar()`.
+     */
+    suspend fun avaliarAposSessao(firebaseUid: String, email: String?) {
+        runCatching {
+            when (val r = avaliarEConceder(firebaseUid, email)) {
+                is AppResult.Success -> r.value.novas.forEach { conquista ->
+                    avisarDesbloqueio(r.value.userId, conquista.name)
+                }
+                is AppResult.Failure -> log.warn("Não avaliei conquistas após sessão: {}", r.error)
+            }
+        }.onFailure { e ->
+            log.warn("Avaliação de conquistas após sessão lançou: {}", e.toString())
+        }
+    }
+
+    /** O que [avaliarEConceder] devolve — o suficiente pra montar o catálogo OU pra notificar. */
+    private data class Avaliacao(
+        val userId: Uuid,
+        val progresso: AchievementPolicy.Progresso,
+        val novas: Set<AchievementPolicy.Conquista>,
+        val concedidas: Map<String, kotlinx.datetime.LocalDateTime>,
+    )
+
+    private suspend fun avaliarEConceder(firebaseUid: String, email: String?): AppResult<Avaliacao> =
         userService.findOrCreate(firebaseUid, email).flatMap { user ->
             stats.forUser(firebaseUid, email).flatMap { s ->
                 val progresso = AchievementPolicy.Progresso(
@@ -42,7 +85,7 @@ class AchievementService(
                         // real gravada pelo banco, não com uma calculada aqui. Uma requisição a
                         // mais em troca de uma fonte única para o `unlockedAt`.
                         repository.listByUser(user.id).map { atualizadas ->
-                            montarCatalogo(progresso, atualizadas)
+                            Avaliacao(user.id, progresso, novas, atualizadas)
                         }
                     }
                 }
