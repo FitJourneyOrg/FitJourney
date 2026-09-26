@@ -201,7 +201,7 @@ private fun TreinoAtivoCard(treino: ProgramWorkout, onIniciar: () -> Unit) {
             )
             Spacer(Modifier.height(12.dp))
             Button(onClick = onIniciar, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.treino_ativo_iniciar))
+                Text(stringResource(R.string.comum_iniciar_treino))
             }
         }
     }
