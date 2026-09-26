@@ -30,10 +30,17 @@ import dev.rafael.app.R
  *
  * ## `split` NÃO se traduz, e isso é de propósito
  *
- * Ele é chave do motor: o `StructureEngine` grava `split.label` no `ProgramSkeleton` e o `WeekSpread`
- * compara `split == SplitType.FULL_BODY.label`. Além disso "Push/Pull/Legs" é jargão de academia e
- * é o mesmo em qualquer idioma. O `programa_reveal_resumo` já o trata assim, com o motivo escrito
- * no comentário do catálogo.
+ * Ele é chave do motor: o `StructureEngine` (servidor) compara e grava `SplitType.name`, e o
+ * `WeekSpread`/`NomeDePrograma` comparam `split == SplitType.FULL_BODY` (enum, não mais
+ * string). "Push/Pull/Legs" é jargão de academia e é o mesmo em qualquer idioma — os dois
+ * catálogos (`enum_split_*`) já trazem o texto idêntico nas duas línguas.
+ *
+ * ⚠️ **Corrigido pela fatia "rationale derivado" (2026-09-22):** até aqui esta função recebia
+ * `split: String` já como RÓTULO pronto (o servidor mandava a label direto, ex. "Full Body") e
+ * só interpolava. Isso parou de fazer sentido quando o servidor passou a mandar a CHAVE do
+ * enum ("FULL_BODY") — interpolar a chave crua mostraria "FULL_BODY" pro usuário. Agora
+ * `split` é a chave (`Program.split`, `String?`) e quem resolve pro rótulo traduzido é
+ * [rotuloDoSplit], como `ProgramDetailScreen`/`ProgramRevealScreen` já faziam para o resumo.
  *
  * ⚠️ `@Composable` e devolvendo `String`, ao contrário do [Rotulos] e do [TextosDeConquista]: aqui
  * o resultado é uma frase FORMATADA com dois parâmetros, não a escolha de um `@StringRes`. Um id
@@ -41,9 +48,11 @@ import dev.rafael.app.R
  * quem chama, que é o que esta função existe para centralizar.
  */
 @Composable
-fun nomeDoPrograma(name: String?, daysPerWeek: Int, split: String): String = when {
+fun nomeDoPrograma(name: String?, daysPerWeek: Int, split: String?): String = when {
     !name.isNullOrBlank() -> name
-    daysPerWeek > 0 && split.isNotBlank() ->
-        stringResource(R.string.programa_nome_derivado, daysPerWeek, split)
+    daysPerWeek > 0 && split != null ->
+        // Fallback pra chave crua (em vez de esconder o texto) se o valor não bater com
+        // nenhum SplitType conhecido -- mesmo espírito defensivo do `rotuloDoSplit`.
+        stringResource(R.string.programa_nome_derivado, daysPerWeek, rotuloDoSplit(split) ?: split)
     else -> stringResource(R.string.programa_detalhe_titulo_padrao)
 }

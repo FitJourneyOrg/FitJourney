@@ -298,6 +298,13 @@ class CatalogoDeStringsTest {
      *
      * O risco aceito é conhecido: são quatro pares que podem divergir na tradução, e é por isso
      * que continuam nesta lista em vez de sumirem do radar.
+     *
+     * **5. Moldes de conquista compartilhados de propósito.** `descricaoComProgresso` (débito
+     * "números de conquista cravam constante do servidor") reusa o MESMO texto entre
+     * `TREINOS_10`/`50`/`100`, entre `STREAK_7`/`30`/`90` e entre `NIVEL_5`/`10` — cada id tem sua
+     * PRÓPRIA chave (a convenção do `TextosDeConquistaTest` não muda), mas o texto por trás é
+     * idêntico até o `%1$d` ser preenchido pelo `target` de cada uma. Não é duplicação acidental:
+     * é o mesmo molde, aplicado a três alvos diferentes.
      */
     @Test
     fun `os textos repetidos sao exatamente os declarados`() {
@@ -305,7 +312,9 @@ class CatalogoDeStringsTest {
             // 1. enums distintos que coincidem em pt-BR
             "Antebraços", "Bíceps", "Core", "Costas", "Glúteos", "Ombros", "Peito", "Pernas", "Tríceps",
             // 2. falsos duplicados: a mesma palavra para coisas diferentes
-            "Sair", "Descanso", "FitJourney", "Fazer check-in", "Treino de hoje",
+            // "Todos" (filtro "todos os músculos" da Biblioteca) × paywall_valor_todos (plano de
+            // pagamento) — mesma palavra, dois domínios sem nenhuma relação.
+            "Sair", "Descanso", "FitJourney", "Fazer check-in", "Treino de hoje", "Todos",
             // `nav_aba_treino` × `treino_detalhe_titulo_padrao`: a ABA e o nome de um treino sem
             // nome. Viram `Training` e `Workout` em inglês — falso duplicado descoberto em
             // 2026-09-11, quando as abas saíram do enum e entraram no catálogo.
@@ -317,6 +326,8 @@ class CatalogoDeStringsTest {
             // separadas pelo ESPAÇO: a aba divide a largura da tela por quatro, e um idioma pode
             // precisar abreviar ali sem abreviar no título da tela.
             "Grupos", "Progresso",
+            // 5. moldes de conquista compartilhados de propósito (ver acima)
+            "Registre %1\$d treinos", "%1\$d dias seguindo o plano", "Alcance o nível %1\$d",
         )
 
         val repetidos = entradas

@@ -80,18 +80,25 @@ class TextosDeConquistaTest {
         )
     }
 
+    /** A chave `_descricao_progresso`, pra quem tem alvo (todas menos `PRIMEIRO_TREINO`, que reusa [chaveDaDescricao]). */
+    private fun chaveDaDescricaoComProgresso(id: String) = "conquista_${id.lowercase()}_descricao_progresso"
+
     /**
      * O caminho inverso: **chave `conquista_*` sobrando no catálogo**.
      *
      * Sobra quando alguém apaga uma conquista do servidor e esquece a frase aqui. O tradutor
      * recebe duas linhas que ninguém vai ler, e — pior — a lista de strings passa a superestimar o
      * trabalho. É a mesma metade que o `TextosDeErroTest` já cobra para os erros.
+     *
+     * As chaves `_descricao_progresso` (débito "números de conquista cravam constante do
+     * servidor") entram na lista esperada a partir daqui — oito, uma por id, `PRIMEIRO_TREINO`
+     * fora porque ele não ganha chave própria (ver [TextosDeConquista.descricaoComProgresso]).
      */
     @Test
     fun `nenhuma chave de conquista sobra no catalogo`() {
         val esperadas = ConquistaIds.TODOS
             .flatMap { listOf(chaveDoTitulo(it), chaveDaDescricao(it)) }
-            .toSet()
+            .toSet() + (ConquistaIds.TODOS - ConquistaIds.PRIMEIRO_TREINO).map { chaveDaDescricaoComProgresso(it) }
 
         val sobrando = noCatalogo - esperadas
 
@@ -133,5 +140,91 @@ class TextosDeConquistaTest {
     fun `id desconhecido nao tem texto e nao estoura`() {
         assertEquals(null, TextosDeConquista.titulo("CONQUISTA_DO_FUTURO"))
         assertEquals(null, TextosDeConquista.descricao("CONQUISTA_DO_FUTURO"))
+        assertEquals(null, TextosDeConquista.descricaoComProgresso("CONQUISTA_DO_FUTURO"))
+    }
+
+    /**
+     * ⭐ **Toda conquista tem `descricaoComProgresso`, sem exceção** — fecha o débito "números de
+     * conquista cravam constante do servidor" (debitos.md). `PRIMEIRO_TREINO` também conta: ele
+     * reusa a chave de [TextosDeConquista.descricao], não fica sem frase.
+     */
+    @Test
+    fun `toda conquista tem descricao com progresso`() {
+        val semDescricaoComProgresso = ConquistaIds.TODOS.filter { TextosDeConquista.descricaoComProgresso(it) == null }
+        assertTrue(
+            semDescricaoComProgresso.isEmpty(),
+            "conquista sem descricaoComProgresso no cliente: $semDescricaoComProgresso",
+        )
+    }
+
+    /**
+     * `PRIMEIRO_TREINO` é a exceção declarada: reusa a MESMA chave de [TextosDeConquista.descricao]
+     * porque o alvo é sempre 1 e não há número pra parametrizar. Se algum dia ganhar chave própria
+     * sem querer, este teste pega a divergência.
+     */
+    @Test
+    fun `primeiro treino reusa a chave da descricao base, nao ganha uma parametrizada`() {
+        assertEquals(
+            TextosDeConquista.descricao(ConquistaIds.PRIMEIRO_TREINO),
+            TextosDeConquista.descricaoComProgresso(ConquistaIds.PRIMEIRO_TREINO),
+        )
+    }
+
+    /**
+     * As outras oito têm chave PRÓPRIA e DERIVADA (`conquista_${id}_descricao_progresso`) — mesma
+     * convenção de [chaveDaDescricao], sufixada. Confere nos dois sentidos: a chave existe no
+     * catálogo, e a `descricaoComProgresso` de fato aponta pra ela (não pra base).
+     */
+    @Test
+    fun `as oito com alvo tem chave propria derivada, e nao a da descricao base`() {
+        val comAlvo = ConquistaIds.TODOS - ConquistaIds.PRIMEIRO_TREINO
+
+        val semChavePropria = comAlvo.filter { chaveDaDescricaoComProgresso(it) !in noCatalogo }
+        assertTrue(semChavePropria.isEmpty(), "sem chave `_descricao_progresso` derivada: $semChavePropria")
+
+        val reusandoABase = comAlvo.filter {
+            TextosDeConquista.descricaoComProgresso(it) == TextosDeConquista.descricao(it)
+        }
+        assertTrue(reusandoABase.isEmpty(), "deveria ter chave própria mas reusa a base: $reusandoABase")
+    }
+
+    /**
+     * `argsDaDescricaoComProgresso` devolve o alvo pras oito parametrizadas, e vazio só pro
+     * `PRIMEIRO_TREINO` — que não tem `%1$d` na frase pra alimentar.
+     */
+    @Test
+    fun `argsDaDescricaoComProgresso devolve o alvo, exceto pro primeiro treino`() {
+        assertEquals(emptyList(), TextosDeConquista.argsDaDescricaoComProgresso(ConquistaIds.PRIMEIRO_TREINO, 1))
+
+        (ConquistaIds.TODOS - ConquistaIds.PRIMEIRO_TREINO).forEach { id ->
+            assertEquals(listOf(42), TextosDeConquista.argsDaDescricaoComProgresso(id, 42))
+        }
+    }
+
+    /**
+     * O mesmo round-trip do `TextosDeErroTest`: formatar de VERDADE fecha o catálogo e os args
+     * juntos — nem o catálogo sozinho, nem a lista de args sozinha, pegam um `%1$d` a mais ou
+     * a menos, que só estouraria em runtime no aparelho.
+     */
+    @Test
+    fun `formatar a descricaoComProgresso com argsDaDescricaoComProgresso nao estoura`() {
+        val comAlvo = ConquistaIds.TODOS - ConquistaIds.PRIMEIRO_TREINO
+        assertTrue(comAlvo.isNotEmpty(), "nenhuma conquista com alvo — o teste ficaria vazio de propósito")
+
+        comAlvo.forEach { id ->
+            val chave = "conquista_${id.lowercase()}_descricao_progresso"
+            val texto = CatalogoDeStrings.porChave.getValue(chave)
+            val args = TextosDeConquista.argsDaDescricaoComProgresso(id, 42)
+
+            val formatado = runCatching { String.format(texto, *args.toTypedArray()) }
+            assertTrue(
+                formatado.isSuccess,
+                "`$chave` não formatou com argsDaDescricaoComProgresso($id, 42)=$args: ${formatado.exceptionOrNull()}",
+            )
+            assertTrue(
+                formatado.getOrThrow().none { it == '%' },
+                "`$chave` ainda tem `%` sobrando depois de formatar — args de menos: $args",
+            )
+        }
     }
 }

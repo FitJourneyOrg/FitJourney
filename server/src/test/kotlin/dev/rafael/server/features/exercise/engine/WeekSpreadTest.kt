@@ -17,13 +17,13 @@ class WeekSpreadTest {
 
     @Test
     fun `4 dias bifurca full body (espacado) vs split (2x2)`() {
-        assertEquals(listOf(1, 2, 4, 5), WeekSpread.daysFor(4, SplitType.UPPER_LOWER.label))
-        assertEquals(listOf(1, 3, 5, 7), WeekSpread.daysFor(4, SplitType.FULL_BODY.label))
+        assertEquals(listOf(1, 2, 4, 5), WeekSpread.daysFor(4, SplitType.UPPER_LOWER))
+        assertEquals(listOf(1, 3, 5, 7), WeekSpread.daysFor(4, SplitType.FULL_BODY))
     }
 
     @Test
     fun `dias off ignoram o default e caem no espacamento`() {
-        val days = WeekSpread.daysFor(3, SplitType.FULL_BODY.label, unavailable = setOf(1, 2, 3))
+        val days = WeekSpread.daysFor(3, SplitType.FULL_BODY, unavailable = setOf(1, 2, 3))
         assertEquals(3, days.size)
         assertTrue(days.none { it in setOf(1, 2, 3) }, "não pode cair em dia off; deu $days")
     }

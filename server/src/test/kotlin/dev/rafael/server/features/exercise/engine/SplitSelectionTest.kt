@@ -22,17 +22,17 @@ class SplitSelectionTest {
 
     @Test
     fun `null usa o recomendado do numero de dias`() {
-        assertEquals("Full Body", sk(2).split)
-        assertEquals("Full Body", sk(3).split)
-        assertEquals("Upper/Lower", sk(4).split)
-        assertEquals("Upper/Lower + PPL", sk(5).split)
-        assertEquals("Push/Pull/Legs", sk(6).split)
+        assertEquals(SplitType.FULL_BODY, sk(2).split)
+        assertEquals(SplitType.FULL_BODY, sk(3).split)
+        assertEquals(SplitType.UPPER_LOWER, sk(4).split)
+        assertEquals(SplitType.UL_PPL, sk(5).split)
+        assertEquals(SplitType.PUSH_PULL_LEGS, sk(6).split)
     }
 
     @Test
     fun `escolha valida e respeitada (Arnold em 6 dias)`() {
         val s = sk(6, SplitType.ARNOLD)
-        assertEquals("Arnold", s.split)
+        assertEquals(SplitType.ARNOLD, s.split)
         assertEquals(6, s.days.size)
         val labels = s.days.map { it.label }
         assertTrue(labels.any { it.startsWith("Peito+Costas") })
@@ -43,7 +43,7 @@ class SplitSelectionTest {
     @Test
     fun `escolha invalida pro numero de dias cai no recomendado`() {
         // Arnold não existe em 3 dias → volta pro recomendado (Full Body).
-        assertEquals("Full Body", sk(3, SplitType.ARNOLD).split)
+        assertEquals(SplitType.FULL_BODY, sk(3, SplitType.ARNOLD).split)
     }
 
     @Test

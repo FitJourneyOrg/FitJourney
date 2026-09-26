@@ -30,6 +30,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.uuid.Uuid
 import dev.rafael.contract.error.ErrorCodes
+import dev.rafael.contract.error.ErrorFields
 
 /**
  * O que a pessoa manda no check-in. Vem do multipart, já desmontado pela rota.
@@ -321,22 +322,39 @@ class CheckInService(
         }
     }
 
+    /**
+     * `fieldErrors` carrega o CÓDIGO (`ErrorFields.NOME_DO_LOCAL to code`), não a frase — débito
+     * "erroDoCampo devolve frase do servidor" (debitos.md, fechado 2026-09-23). Antes usava a
+     * string crua `"nomeDoLocal"`, fora do `[REGRA]` do `ErrorFields`; corrigido junto.
+     */
     private fun validarLocal(pedido: PedidoDeCheckIn): AppError? {
         val nome = pedido.nomeDoLocal?.trim()
         if (nome.isNullOrEmpty()) {
             return if (pedido.latitude != null || pedido.longitude != null) {
-                AppError.Validation("Escreva onde você treinou.", mapOf("nomeDoLocal" to "Escreva onde você treinou."), code = ErrorCodes.LOCAL_SEM_NOME)
+                AppError.Validation(
+                    "Escreva onde você treinou.",
+                    mapOf(ErrorFields.NOME_DO_LOCAL to ErrorCodes.LOCAL_SEM_NOME),
+                    code = ErrorCodes.LOCAL_SEM_NOME,
+                )
             } else {
                 null   // sem local nenhum: legítimo quando o grupo não exige
             }
         }
         if (nome.length > CheckInPolicy.MAX_NOME_DO_LOCAL) {
             val msg = "Use até ${CheckInPolicy.MAX_NOME_DO_LOCAL} caracteres."
-            return AppError.Validation(msg, mapOf("nomeDoLocal" to msg), ErrorCodes.NOME_DO_LOCAL_LONGO)
+            return AppError.Validation(
+                msg,
+                mapOf(ErrorFields.NOME_DO_LOCAL to ErrorCodes.NOME_DO_LOCAL_LONGO),
+                ErrorCodes.NOME_DO_LOCAL_LONGO,
+            )
         }
         if (pedido.latitude == null || pedido.longitude == null) {
             val msg = "Não consegui localizar você. Tente de novo."
-            return AppError.Validation(msg, mapOf("nomeDoLocal" to msg), ErrorCodes.SEM_COORDENADAS)
+            return AppError.Validation(
+                msg,
+                mapOf(ErrorFields.NOME_DO_LOCAL to ErrorCodes.SEM_COORDENADAS),
+                ErrorCodes.SEM_COORDENADAS,
+            )
         }
         return null
     }

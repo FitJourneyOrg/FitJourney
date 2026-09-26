@@ -24,5 +24,13 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
+        // `sqlite-driver` é JVM puro (JDBC) -- não resolve nos targets iOS, por isso vive só
+        // aqui, não em `commonTest`. Sobe um SQLite EM MEMÓRIA rodando as `.sqm` REAIS
+        // (`deriveSchemaFromMigrations`, ver core:database/build.gradle.kts) -- é o que deixa
+        // `ProgramLocalDataSourceTest` (P0.3) testar contra o schema de produção, não um mock.
+        androidHostTest.dependencies {
+            implementation(libs.sqldelight.sqliteDriver)
+            implementation(libs.kotlinx.coroutines.test)
+        }
     }
 }

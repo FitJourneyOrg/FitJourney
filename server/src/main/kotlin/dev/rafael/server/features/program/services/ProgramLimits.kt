@@ -5,6 +5,7 @@ import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
+import dev.rafael.contract.limites.Limites
 import dev.rafael.server.features.program.models.ProgramCounts
 
 /**
@@ -24,9 +25,10 @@ import dev.rafael.server.features.program.models.ProgramCounts
  */
 object ProgramLimits {
 
-    const val FREE_AI_LIMIT = 1
-    const val FREE_MANUAL_LIMIT = 2
-    const val PREMIUM_TOTAL_LIMIT = 10
+    // Fonte real: shared-contract (debitos.md "12 frases cravam constante do servidor").
+    const val FREE_AI_LIMIT = Limites.Program.FREE_AI_LIMIT
+    const val FREE_MANUAL_LIMIT = Limites.Program.FREE_MANUAL_LIMIT
+    const val PREMIUM_TOTAL_LIMIT = Limites.Program.PREMIUM_TOTAL_LIMIT
 
     enum class Kind { AI, MANUAL }
 

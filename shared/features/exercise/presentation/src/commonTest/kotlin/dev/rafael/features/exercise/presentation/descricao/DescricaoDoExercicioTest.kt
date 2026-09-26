@@ -80,4 +80,38 @@ class DescricaoDoExercicioTest {
         assertEquals(emptyList(), paragrafosDaDescricao("", Idioma.PT_BR))
         assertEquals(emptyList(), paragrafosDaDescricao("   \n\n  ", Idioma.EN))
     }
+
+    // ---- P1.1 (2026-09-22): regex de segurança por FRASE, não por parágrafo inteiro ----
+
+    /**
+     * ⭐ O caso real que motivou o fix (achado auditando os 923 `descricao_texto` do catálogo,
+     * ex. `Agachamento no Landmine`): o disclaimer é a ÚLTIMA frase de um parágrafo que abre com
+     * conteúdo de verdade sobre o exercício. Antes, o parágrafo inteiro sumia — a frase real ia
+     * junto, sem necessidade.
+     */
+    @Test
+    fun `PT-BR remove so a frase de aviso quando ela fecha um paragrafo com conteudo real`() {
+        val desc = "Esse exercício fortalece o peitoral e os tríceps, além de melhorar a " +
+            "estabilidade do ombro. Consulte um profissional de educação física antes de " +
+            "iniciar qualquer programa de exercícios."
+
+        val paragrafos = paragrafosDaDescricao(desc, Idioma.PT_BR)
+
+        assertEquals(1, paragrafos.size)
+        assertEquals(
+            "Esse exercício fortalece o peitoral e os tríceps, além de melhorar a estabilidade do ombro.",
+            paragrafos[0].texto,
+        )
+    }
+
+    /** Caminho de falha do filtro: paragrafo que É o disclaimer em MAIS de uma frase some por inteiro, não sobra pedaço. */
+    @Test
+    fun `PT-BR paragrafo que e so disclaimer em duas frases some inteiro`() {
+        val desc = "Sempre busque a orientação de um profissional de educação física. " +
+            "Consulte um profissional qualificado antes de iniciar qualquer programa de treino."
+
+        val paragrafos = paragrafosDaDescricao(desc, Idioma.PT_BR)
+
+        assertEquals(emptyList(), paragrafos, "as duas frases são disclaimer — não pode sobrar nada")
+    }
 }

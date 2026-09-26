@@ -30,6 +30,7 @@ fun ExercisePickerSheet(
                 ExerciseListContent(
                     state = state,
                     onCategorySelected = { viewModel.onEvent(ExerciseListEvent.CategorySelected(it)) },
+                    onMuscleGroupSelected = { viewModel.onEvent(ExerciseListEvent.MuscleGroupSelected(it)) },
                     selectedIds = selected,
                     onToggle = { id ->
                         selected = if (id in selected) selected - id else selected + id

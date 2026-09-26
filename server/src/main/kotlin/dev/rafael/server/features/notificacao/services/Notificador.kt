@@ -131,6 +131,18 @@ data class Aviso(
             dados = mapOf(GROUP_ID to groupId.toString()),
         )
 
+        /**
+         * G.6: conquista desbloqueada (débito fechado em 2026-09-24).
+         *
+         * O [achievementId] vai no `dados` pelo mesmo motivo do `fromUserId` na F.1: é dado que já
+         * existe no servidor no momento da concessão, é barato de mandar, e um cliente futuro que
+         * queira abrir direto na conquista (em vez de cair na central) não precisa de mais nada.
+         */
+        fun conquistaDesbloqueada(achievementId: String) = Aviso(
+            chave = ChaveDeAviso.ConquistaDesbloqueada(id = achievementId),
+            dados = mapOf(ACHIEVEMENT_ID to achievementId),
+        )
+
         /** Quanto do comentário cabe na bandeja antes de virar reticências. */
         private const val PREVIA = 120
 
@@ -145,6 +157,7 @@ data class Aviso(
         const val GROUP_ID = "groupId"
         const val CHECK_IN_ID = "checkInId"
         const val FROM_USER_ID = "fromUserId"
+        const val ACHIEVEMENT_ID = "achievementId"
     }
 }
 

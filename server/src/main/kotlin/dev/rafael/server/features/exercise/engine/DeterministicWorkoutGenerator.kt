@@ -71,11 +71,11 @@ class DeterministicWorkoutGenerator(
             // Placeholder — `ProgramService.generate()` descarta e persiste `SEM_NOME`. O motor
             // não decide nome (ARCH #27), e desde a G.5 ninguém decide: programa gerado nasce
             // sem nome e quem monta o rótulo é a tela, no idioma dela (ARCH #37, V48).
-            name = skeleton.split,
+            name = skeleton.split.name,
             workouts = workouts,
             daysPerWeek = profile.daysPerWeek,
             split = skeleton.split,
-            rationale = skeleton.rationale,
+            focusMuscles = focus.toList(),   // snapshot do foco USADO nesta geração — não relê profile depois.
             locked = false,   // posse/blur é decidido na rota/service (ARCH #23), não no motor
         )
     }

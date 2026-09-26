@@ -106,6 +106,15 @@ class UserRepositoryImpl : UserRepository {
             else UsersTable.selectAll().where { UsersTable.id eq userId }.single().toUser()
         }
 
+    override suspend fun setActiveWorkout(userId: Uuid, workoutId: Uuid?): AppResult<User?> =
+        dbQuery {
+            val n = UsersTable.update({ UsersTable.id eq userId }) {
+                it[activeWorkoutId] = workoutId
+            }
+            if (n == 0) null
+            else UsersTable.selectAll().where { UsersTable.id eq userId }.single().toUser()
+        }
+
     /** Exposed é bloqueante -> IO. Qualquer exceção do banco vira AppError.Unexpected (não vaza). */
     private suspend fun <T> dbQuery(block: () -> T): AppResult<T> =
         withContext(Dispatchers.IO) {
@@ -130,4 +139,5 @@ private fun ResultRow.toUser(): User = User(
     // na coluna vira português em vez de derrubar a leitura do usuário. O CHECK da V47 deveria
     // impedir que chegue aqui, mas quem escreve por script passa por dentro deste mapeamento.
     idioma = IdiomaPolicy.de(this[UsersTable.locale]),
+    activeWorkoutId = this[UsersTable.activeWorkoutId],
 )

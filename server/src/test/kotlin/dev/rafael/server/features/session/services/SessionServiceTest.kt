@@ -37,6 +37,7 @@ class SessionServiceTest {
         override suspend fun create(id: Uuid, firebaseUid: String, email: String?, displayName: String, code: String) =
             AppResult.Success(user)
         override suspend fun setPremium(userId: Uuid, premium: Boolean) = AppResult.Success<User?>(user)
+        override suspend fun setActiveWorkout(userId: Uuid, workoutId: Uuid?) = AppResult.Success<User?>(user)
         override suspend fun updateDisplayName(userId: Uuid, displayName: String) =
             AppResult.Success<User?>(user)
         override suspend fun updateIdioma(userId: Uuid, idioma: Idioma) =
@@ -53,7 +54,10 @@ class SessionServiceTest {
             store.values.filter { it.userId == userId }.asSuccess()
     }
 
-    private fun service(repo: FakeSessionRepo) = SessionService(UserService(FakeUserRepo()), repo)
+    private fun service(
+        repo: FakeSessionRepo,
+        avaliarConquistas: suspend (String, String?) -> Unit = { _, _ -> },
+    ) = SessionService(UserService(FakeUserRepo()), repo, avaliarConquistas)
 
     private fun oneSet() = listOf(
         SetLogDto(exerciseId = Uuid.random().toString(), orderIndex = 0, setIndex = 0, targetReps = 10, repsDone = 10, weightKg = 60.0, done = true),
@@ -93,5 +97,22 @@ class SessionServiceTest {
     fun `fim antes do inicio vira Validation`() = runBlocking {
         val r = service(FakeSessionRepo()).record("fb", null, dto(start = "2026-01-01T10:40:00", finish = "2026-01-01T10:00:00"))
         assertTrue(r is AppResult.Failure && r.error is AppError.Validation)
+    }
+
+    @Test
+    fun `record bem sucedido avalia conquistas`() = runBlocking {
+        val chamadas = mutableListOf<Pair<String, String?>>()
+        val r = service(FakeSessionRepo()) { uid, email -> chamadas.add(uid to email) }
+            .record("fb", "a@b.com", dto())
+        assertIs<AppResult.Success<WorkoutSessionDto>>(r)
+        assertEquals(listOf<Pair<String, String?>>("fb" to "a@b.com"), chamadas, "avaliação de conquistas roda com o uid/email da sessão salva")
+    }
+
+    @Test
+    fun `sessao invalida nao avalia conquistas`() = runBlocking {
+        val chamadas = mutableListOf<Pair<String, String?>>()
+        service(FakeSessionRepo()) { uid, email -> chamadas.add(uid to email) }
+            .record("fb", null, dto(sets = emptyList()))
+        assertTrue(chamadas.isEmpty(), "sessão que falhou na validação não avalia conquistas — nada mudou de progresso")
     }
 }

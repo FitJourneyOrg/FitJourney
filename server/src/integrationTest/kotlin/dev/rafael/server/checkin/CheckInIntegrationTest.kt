@@ -666,4 +666,72 @@ class CheckInIntegrationTest {
         assertEquals(meu.id, ok(checkIns.doDia(grupo.id, dono, LocalDate.parse("2026-09-10"))))
         assertNull(ok(checkIns.doDia(grupo.id, dono, LocalDate.parse("2026-09-11"))))
     }
+
+    // ---- created_at × local_date: query de sanidade (P0.4, 2026-09-22, débito histórico) ----
+
+    /**
+     * `local_date` é DERIVADO de `(created_at, fuso do grupo)` na escrita (V38) -- nenhum `CHECK`
+     * amarra os dois porque o fuso mora em `groups`, outra tabela. Divergentes, o sistema NÃO
+     * FALHA: prazo de denúncia/purga leem `created_at`, "um por dia" e `canDelete` leem
+     * `local_date` -- metade das leituras passa a mentir, em silêncio. Descoberto por acidente
+     * envelhecendo 42.784 linhas na bateria E.2.
+     *
+     * Sem `CHECK` possível, a defesa é esta query -- exatamente como a dívida propôs: `created_at`
+     * mais de 2 dias ANTES de `local_date` não tem explicação de fuso horário que justifique (o
+     * maior fuso do mundo é ±14h, não dias).
+     *
+     * Filtrada por GRUPO, não `count()` global: esta classe limpa uma vez por CLASSE (ver KDoc do
+     * `BancoDeTeste`), então um `count()` sem filtro veria também o que o teste de corrupção
+     * abaixo grava de propósito, se ele rodar primeiro -- `PER_CLASS` não garante ordem.
+     */
+    private fun linhasDoGrupoComCreatedAtDivergenteDeLocalDate(grupo: Uuid): Long =
+        // SQL cru com o uuid interpolado direto no texto, mesmo padrao do
+        // `GroupCreationIntegrationTest` ("SQL cru, fora do Exposed: o ponto e justamente
+        // escrever SEM passar pelo Kotlin") -- evita a conversao pra `java.util.UUID` que
+        // `setObject` exigiria.
+        BancoDeTeste.dataSource.connection.use { c ->
+            c.createStatement().use { s ->
+                s.executeQuery(
+                    """
+                    SELECT count(*) FROM check_ins
+                    WHERE group_id = '${grupo}' AND created_at < local_date - interval '2 days'
+                    """.trimIndent(),
+                ).use { rs -> rs.next(); rs.getLong(1) }
+            }
+        }
+
+    @Test
+    fun `nenhum check-in criado pelo caminho normal diverge`() = runBlocking {
+        val dono = novoUsuario()
+        val grupo = grupoDe(dono)
+        ok(checkIns.criar(novo(grupo.id, dono, dia = "2026-09-10")))
+        ok(checkIns.criar(novo(grupo.id, novoUsuario(), dia = "2026-09-15")))
+
+        assertEquals(
+            0L,
+            linhasDoGrupoComCreatedAtDivergenteDeLocalDate(grupo.id),
+            "o caminho normal nunca diverge",
+        )
+    }
+
+    @Test
+    fun `a query de sanidade acha created_at reescrito por fora do fluxo normal`() = runBlocking {
+        // Escrita direta, fora do Exposed/service -- o mesmo tipo de acidente que a bateria E.2
+        // cometeu ao envelhecer linhas, e é justamente o que nenhum CHECK consegue barrar.
+        val dono = novoUsuario()
+        val grupo = grupoDe(dono)
+        val alvo = novo(grupo.id, dono, dia = "2026-09-10")
+        ok(checkIns.criar(alvo))
+
+        transaction {
+            CheckInsTable.update({ CheckInsTable.id eq alvo.id }) {
+                it[createdAt] = LocalDateTime.parse("2026-09-01T12:00:00")   // 9 dias antes do local_date
+            }
+        }
+
+        assertTrue(
+            linhasDoGrupoComCreatedAtDivergenteDeLocalDate(grupo.id) >= 1,
+            "a query tinha que achar a linha corrompida de propósito",
+        )
+    }
 }

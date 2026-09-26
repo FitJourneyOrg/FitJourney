@@ -1,11 +1,5 @@
 package dev.rafael.app.di
 
-import dev.rafael.app.data.session.SessionApi
-import dev.rafael.app.data.stats.StatsApi
-import dev.rafael.app.data.stats.Stats
-import dev.rafael.app.data.achievements.Achievements
-import dev.rafael.app.data.achievements.AchievementsApi
-import dev.rafael.app.data.achievements.AchievementsRepository
 import dev.rafael.app.data.me.Me
 import dev.rafael.app.data.me.MeApi
 import dev.rafael.app.data.me.MeRepository
@@ -13,6 +7,24 @@ import dev.rafael.app.data.groups.Groups
 import dev.rafael.app.data.groups.GroupsApi
 import dev.rafael.app.data.groups.GroupsRepository
 import dev.rafael.app.data.sessao.SairDaConta
+import dev.rafael.core.database.di.databaseModule
+import dev.rafael.core.network.di.networkModule
+import dev.rafael.features.auth.data.di.authDataModule
+import dev.rafael.features.auth.presentation.di.authPresentationModule
+import dev.rafael.features.exercise.data.di.exerciseDataModule
+import dev.rafael.features.exercise.presentation.di.exercisePresentationModule
+import dev.rafael.features.achievements.data.di.achievementsDataModule
+import dev.rafael.features.achievements.presentation.di.achievementsPresentationModule
+import dev.rafael.features.stats.data.di.statsDataModule
+import dev.rafael.features.session.data.di.sessionDataModule
+import dev.rafael.features.session.presentation.di.sessionPresentationModule
+import dev.rafael.features.profile.data.di.profileDataModule
+import dev.rafael.features.profile.presentation.di.profilePresentationModule
+import dev.rafael.features.program.data.di.programDataModule
+import dev.rafael.features.program.presentation.di.programPresentationModule
+import dev.rafael.features.workout.data.di.workoutDataModule
+import dev.rafael.features.workout.presentation.di.workoutPresentationModule
+import org.koin.core.module.Module
 import dev.rafael.app.screens.conta.ContaViewModel
 import dev.rafael.app.screens.grupos.EntrarViewModel
 import dev.rafael.app.screens.grupos.GrupoDetalheViewModel
@@ -27,10 +39,11 @@ import dev.rafael.app.screens.amigos.BloqueadosViewModel
 import dev.rafael.app.screens.notificacoes.NotificacoesViewModel
 import dev.rafael.app.screens.perfil.PerfilPublicoViewModel
 import dev.rafael.app.screens.perfil.PerfilViewModel
-import dev.rafael.app.data.stats.StatsRepository
 import dev.rafael.app.data.sync.SyncScheduler
 import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.database.outbox.AgendadorDeSync
+import dev.rafael.core.database.outbox.ExecutorDeOperacao
+import dev.rafael.core.database.outbox.FilaDeSaida
 import dev.rafael.core.database.outbox.ProcessadorDeOutbox
 import dev.rafael.features.program.data.ExecutorDePrograma
 import dev.rafael.features.workout.data.ExecutorDeTreino
@@ -40,20 +53,17 @@ import dev.rafael.contract.i18n.Idioma
 import dev.rafael.app.idioma.IdiomaDoAparelho
 import dev.rafael.core.network.TokenProvider
 import org.koin.android.ext.koin.androidContext
-import dev.rafael.app.data.session.HistoricoDeSessoes
-import dev.rafael.app.data.session.SessionSync
 import dev.rafael.app.screens.home.HomeViewModel
-import dev.rafael.app.screens.achievements.AchievementsViewModel
 import dev.rafael.app.screens.progress.ProgressViewModel
 import dev.rafael.app.screens.paywall.PaywallViewModel
 import dev.rafael.app.screens.reveal.ProgramRevealViewModel
-import dev.rafael.app.screens.session.WorkoutSessionViewModel
 import dev.rafael.app.screens.splash.SplashViewModel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import org.koin.core.module.dsl.viewModel
 import org.koin.core.module.dsl.viewModelOf
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 val appModule = module {
@@ -93,7 +103,14 @@ val appModule = module {
 
     // FILA DE ESCRITAS pendentes (ARCH #30, fatia B.2). Mesmo motivo do SyncStamps para
     // morar aqui: é o único ponto que vê o banco e o TokenProvider ao mesmo tempo.
-    single { Outbox(db = get(), uidAtual = { get<TokenProvider>().currentUid() }) }
+    //
+    // `bind FilaDeSaida::class`: `ProcessadorDeOutbox` depende da INTERFACE (inversão de
+    // dependência de propósito), mas só `Outbox` concreto estava registrado -- funcionava por
+    // acidente porque o único ponto que monta `ProcessadorDeOutbox` (abaixo) pede `get<Outbox>()`,
+    // não `get<FilaDeSaida>()`. Achado pelo KoinModulesVerifyTest: sem este bind, quem um dia
+    // pedir `get<FilaDeSaida>()` quebra em runtime. O `bind` soma o tipo, não troca -- `get<Outbox>()`
+    // continua resolvendo igual (usado também em ProgramRepositoryImpl e WorkoutRepositoryImpl).
+    single { Outbox(db = get(), uidAtual = { get<TokenProvider>().currentUid() }) } bind FilaDeSaida::class
 
     // Gatilho de envio (B.3/B.4): o repositório enfileira e chama agendar(); quem acorda o
     // processo quando a rede volta é o WorkManager, que só existe no Android — por isso os
@@ -106,23 +123,21 @@ val appModule = module {
     // A lista é montada AQUI, e não registrada como `single<List<ExecutorDeOperacao>>`: Koin
     // resolvendo tipo genérico de coleção é o tipo de wiring que falha em runtime, dentro de um
     // worker, sem stack visível. Explícito custa uma linha e falha na cara.
-    single { ExecutorDeTreino(get(), get()) }
-    single { ExecutorDePrograma(get()) }
+    //
+    // `bind ExecutorDeOperacao::class` nos dois: `ProcessadorDeOutbox` declara
+    // `List<ExecutorDeOperacao>` — depende da ABSTRAÇÃO, que é o certo. Só que ambos estavam
+    // registrados apenas sob o tipo concreto, então `ExecutorDeOperacao` não existia no grafo.
+    // Funcionava por acidente porque a lista abaixo é montada com `get<ExecutorDeTreino>()`
+    // concreto. Achado pelo KoinModulesVerifyTest (o verify() desembrulha `List<T>` e cobra
+    // binding do `T`). Mesmo caso do `FilaDeSaida` acima: o `bind` soma o tipo, não troca.
+    single { ExecutorDeTreino(get(), get()) } bind ExecutorDeOperacao::class
+    single { ExecutorDePrograma(get()) } bind ExecutorDeOperacao::class
     single {
         ProcessadorDeOutbox(
             outbox = get<Outbox>(),
             executores = listOf(get<ExecutorDeTreino>(), get<ExecutorDePrograma>()),
         )
     }
-
-    // Sessão de treino (Fase 5): remote + sync offline-first (outbox local).
-    single { SessionApi(get()) }
-    single { StatsApi(get()) }              // XP/nível/streak (ARCH #16)
-    single<Stats> { StatsRepository(get(), get(), get(), get()) }   // api + db + TokenProvider + SyncStamps
-
-    // Conquistas (ARCH #16) — mesmo desenho do Stats: cache local + sync de fundo.
-    single { AchievementsApi(get()) }
-    single<Achievements> { AchievementsRepository(get(), get(), get(), get()) }
 
     // Usuário: nome e plano (V35, ARCH #33/#34). Reusa o MeDataSource de auth:data em vez de
     // repetir as rotas de /me — quem é dono delas continua sendo ele.
@@ -184,8 +199,6 @@ val appModule = module {
     single { dev.rafael.app.data.checkin.Localizador(androidContext()) }
     viewModel { dev.rafael.app.screens.checkin.CheckInViewModel(get(), get(), get()) }
     single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
-    single<HistoricoDeSessoes> { SessionSync(get(), get(), get(), get(), get()) }   // + SyncStamps
-
     viewModelOf(::SplashViewModel)   // injeta AuthRepository + ProfileRepository + ExerciseRepository + CoroutineScope
     viewModelOf(::HomeViewModel)     // treino de hoje (não conhece mais sessão — ARCH #34)
     viewModelOf(::MenuViewModel)     // cabeçalho do menu lateral: nome + nível, do cache
@@ -209,8 +222,36 @@ val appModule = module {
     // 49 membros que não podem abri-la, e escondê-la faria a barra mudar conforme o papel.
     viewModelOf(::ModeracaoViewModel)
     viewModelOf(::ProgressViewModel) // histórico offline-first + stats
-    viewModelOf(::AchievementsViewModel)   // conquistas offline-first
     viewModelOf(::ProgramRevealViewModel)   // injeta ProgramRepository (revelação)
     viewModelOf(::PaywallViewModel)          // injeta Billing (página de assinatura)
-    viewModel { (workoutId: String) -> WorkoutSessionViewModel(workoutId, get(), get(), get()) }   // execução
 }
+
+/**
+ * ⭐ **A lista inteira, num só lugar** (débito "grafo do Koin sem verificação automática").
+ *
+ * Antes só existia dentro do `modules(...)` do `FitJourneyApp.kt`, como vararg — o `KoinModulesVerifyTest`
+ * não tinha como saber se cobria o grafo real ou uma cópia desatualizada dele. Com uma lista só,
+ * usada nos dois lugares, um módulo novo que entra aqui entra automaticamente na verificação — e
+ * um módulo que só é acrescentado ao `startKoin` e não a esta lista não compila (`FitJourneyApp`
+ * passa a usar esta lista, não mais um vararg escrito à mão).
+ */
+val todosOsModulosDoApp: List<Module> = listOf(
+    networkModule,
+    authDataModule,
+    databaseModule,
+    authPresentationModule,
+    profileDataModule,
+    profilePresentationModule,
+    exerciseDataModule,
+    exercisePresentationModule,
+    achievementsDataModule,
+    achievementsPresentationModule,
+    statsDataModule,
+    sessionDataModule,
+    sessionPresentationModule,
+    workoutDataModule,
+    workoutPresentationModule,
+    programDataModule,
+    programPresentationModule,
+    appModule,
+)

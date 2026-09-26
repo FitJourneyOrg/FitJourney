@@ -27,20 +27,52 @@ data class ParagrafoDeDescricao(val texto: String, val destaque: Boolean)
  * Mesmo motivo do `TextosDeAviso`: idioma novo sem os dois padrões quebra o BUILD, não uma tela em
  * produção. Um mapa aceitaria idioma faltando em silêncio.
  *
+ * ## Regex de segurança por FRASE, não por parágrafo (P1.1, 2026-09-22)
+ *
+ * Media original: `containsMatchIn` no parágrafo inteiro — se a frase de segurança batesse EM
+ * QUALQUER PONTO, o parágrafo inteiro sumia. Auditando os 923 `descricao_texto` reais
+ * (`gifs_exercicios/catalogo.json`) contra o regex atual: o disclaimer é quase sempre a ÚLTIMA
+ * frase de um parágrafo que começa com conteúdo de verdade sobre O EXERCÍCIO ("Esse exercício é
+ * ideal para quem busca aumentar a força e a resistência nas pernas... Por isso, recomenda-se
+ * sempre seguir a orientação de um profissional..." — caso real, `Agachamento no Landmine`). Não
+ * era hipótese: em quase metade dos 923 parágrafos que batem no regex, sobra frase de conteúdo
+ * real depois de tirar só a frase do disclaimer. `^`-ancorar não bastaria — o disclaimer raramente
+ * abre o parágrafo, ele fecha.
+ *
+ * A correção divide o parágrafo em frases (limite ingênuo: pontuação de frase + espaço — sem
+ * abreviação neste texto para confundir, checado no catálogo inteiro) e filtra só a(s) frase(s)
+ * que batem no regex, preservando o resto. Parágrafo que era SÓ disclaimer (a maioria ainda,
+ * ~428/923) some por inteiro do mesmo jeito de antes — `restantes` fica vazio.
+ *
  * ## O que NÃO mudou
  *
- * O regex em português é o mesmo de sempre, char por char — só mudou de lugar. A imprecisão que já
- * existia (um parágrafo longo que MENCIONA "profissional de educação física" no meio de conteúdo
- * real também é removido inteiro, não só o parágrafo-disclaimer isolado) é comportamento herdado,
- * não introduzido aqui — separado do escopo deste fix.
+ * O regex em português é o mesmo de sempre, char por char — só passou a operar por FRASE em vez de
+ * por PARÁGRAFO.
  */
 fun paragrafosDaDescricao(descricao: String, idioma: Idioma): List<ParagrafoDeDescricao> {
     val aviso = regexDeAviso(idioma)
     val seguranca = regexDeSeguranca(idioma)
     return descricao.split("\n\n")
         .map { it.trim() }
-        .filter { it.isNotBlank() && !seguranca.containsMatchIn(it) }
+        .filter { it.isNotBlank() }
+        .mapNotNull { semFraseDeSeguranca(it, seguranca) }
         .map { ParagrafoDeDescricao(texto = it, destaque = aviso.containsMatchIn(it)) }
+}
+
+/** Fim de frase: pontuação de frase seguida de espaço. Limite ingênuo de propósito — ver KDoc acima. */
+private val fimDeFrase = Regex("(?<=[.!?])\\s+")
+
+/**
+ * Remove só a(s) FRASE(S) que acionam o regex de segurança, não o parágrafo inteiro.
+ *
+ * `null` = não sobrou nada (o parágrafo era só disclaimer) — quem chama trata como "sem
+ * parágrafo", igual ao `filter` antigo.
+ */
+private fun semFraseDeSeguranca(paragrafo: String, seguranca: Regex): String? {
+    val restantes = paragrafo.split(fimDeFrase)
+        .map { it.trim() }
+        .filter { it.isNotBlank() && !seguranca.containsMatchIn(it) }
+    return restantes.joinToString(" ").ifBlank { null }
 }
 
 /** Prefixo "Aviso:/Atenção:/Importante:" (ou o equivalente no idioma) → vira [ParagrafoDeDescricao.destaque]. */
