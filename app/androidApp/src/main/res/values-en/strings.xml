@@ -616,7 +616,6 @@
     <string name="treino_ativo_secao_outros">Other workouts</string>
     <string name="treino_ativo_secao_seus">Your workouts</string>
     <string name="treino_ativo_ativar">Activate</string>
-    <string name="treino_ativo_iniciar">Start workout</string>
     <string name="treino_ativo_confirmar_titulo">Activate this workout?</string>
     <string name="treino_ativo_confirmar_corpo">%1$s becomes your featured workout.</string>
     <string name="treino_ativo_ver_biblioteca">View library</string>
