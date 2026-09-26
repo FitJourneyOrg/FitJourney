@@ -16,6 +16,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.LocalFireDepartment
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.PlayCircleOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -95,6 +96,9 @@ fun HomeScreen(
                 onIniciar = { onStartWorkout(state.today!!.workoutId) },
                 onVerPrograma = onOpenWorkouts,
             )
+            // Sem agenda em programa nenhum e sem treino ativo (V59): não é descanso, é
+            // ninguém ter configurado nada ainda. Ver KDoc de HomeState.precisaAtivarTreino.
+            state.precisaAtivarTreino -> CardNenhumTreinoAtivo(onAtivar = onOpenWorkouts)
             else -> CardDiaDeDescanso(onTreinoAvulso = onOpenWorkouts, onProgresso = onOpenProgress)
         }
 
@@ -237,11 +241,23 @@ private fun CardTreinoDeHoje(
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
-            Text(
-                stringResource(R.string.home_secao_treino_de_hoje),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stringResource(R.string.home_secao_treino_de_hoje),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                // V59: este treino não estava na agenda de hoje, é o ativo usado como sugestão —
+                // o selo evita que pareça um agendamento que não existe.
+                if (treino.viaTreinoAtivo) {
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "· " + stringResource(R.string.treino_ativo_badge),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
             Spacer(Modifier.height(8.dp))
             Text(
                 treino.name ?: stringResource(R.string.home_treino_de_hoje),
@@ -375,6 +391,43 @@ private fun CardDiaDeDescanso(onTreinoAvulso: () -> Unit, onProgresso: () -> Uni
                 OutlinedButton(onClick = onProgresso, modifier = Modifier.weight(1f)) {
                     Text(stringResource(R.string.comum_progresso))
                 }
+            }
+        }
+    }
+}
+
+/**
+ * Nenhum programa tem agenda configurada e nenhum treino está ativo (V59) — achado real do
+ * Rafael navegando no app: a Home dizia "Dia de descanso" quando na verdade ninguém tinha
+ * ativado treino nenhum. Reaproveita as strings do estado vazio de "Meus treinos".
+ */
+@Composable
+private fun CardNenhumTreinoAtivo(onAtivar: () -> Unit) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.fillMaxWidth().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                Icons.Outlined.PlayCircleOutline, contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp),
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(R.string.treino_ativo_nenhum_titulo),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.treino_ativo_nenhum_corpo),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = onAtivar, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.programa_lista_titulo))
             }
         }
     }
