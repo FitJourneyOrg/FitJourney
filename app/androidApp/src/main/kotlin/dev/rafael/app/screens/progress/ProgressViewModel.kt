@@ -18,6 +18,8 @@ data class ProgressState(
     val historico: List<SessaoLocal> = emptyList(),
     val stats: UserStatsDto? = null,
     val carregandoInicial: Boolean = true,
+    /** Arraste-pra-atualizar (G.6): true enquanto flush+sync roda, pra girar o indicador. */
+    val sincronizando: Boolean = false,
 )
 
 /**
@@ -51,9 +53,14 @@ class ProgressViewModel(
 
     fun sincronizar() {
         viewModelScope.launch {
-            sessions.flush()                  // sobe o que foi feito offline
-            sessions.sincronizarHistorico()   // desce o que falta (o Flow re-emite)
-            stats.sincronizar()               // atualiza o cache de XP (o Flow re-emite)
+            _state.update { it.copy(sincronizando = true) }
+            try {
+                sessions.flush()                  // sobe o que foi feito offline
+                sessions.sincronizarHistorico()   // desce o que falta (o Flow re-emite)
+                stats.sincronizar()               // atualiza o cache de XP (o Flow re-emite)
+            } finally {
+                _state.update { it.copy(sincronizando = false) }
+            }
         }
     }
 }

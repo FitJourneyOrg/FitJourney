@@ -9,6 +9,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.CloudOff
 import androidx.compose.material.icons.outlined.CloudQueue
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -24,6 +25,7 @@ import dev.rafael.app.R
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProgressScreen(
     onOpenConquistas: () -> Unit,
@@ -99,9 +101,16 @@ fun ProgressScreen(
                     textAlign = TextAlign.Center,
                 )
             }
-            else -> LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(state.historico) { sessao -> LinhaSessao(sessao) }
-                item { Spacer(Modifier.height(16.dp)) }
+            // Puxar pertence à LISTA aqui, não à tela: vazio é falta de CONTEÚDO ("nenhum
+            // treino ainda"), não falta de dado por sync -- mesma régua do ExerciseLibraryScreen.
+            else -> PullToRefreshBox(
+                isRefreshing = state.sincronizando,
+                onRefresh = { viewModel.sincronizar() },
+            ) {
+                LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(state.historico) { sessao -> LinhaSessao(sessao) }
+                    item { Spacer(Modifier.height(16.dp)) }
+                }
             }
         }
     }
