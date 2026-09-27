@@ -991,7 +991,7 @@
     <!-- ============================ Lista de programas ============================ -->
 
     <!-- Barra do topo da lista de programas do usuário. -->
-    <string name="programa_lista_titulo">Meus treinos</string>
+    <string name="programa_lista_titulo">Meus programas</string>
     <!-- Estado vazio da lista de programas. -->
     <string name="programa_lista_vazio">Você ainda não tem nenhum treino.</string>
     <!-- V59: treino ativo (deck de "Meus treinos"). Prefixo treino_ativo_, nao conquista_/conquistas_

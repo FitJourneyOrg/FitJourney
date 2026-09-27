@@ -11,6 +11,8 @@ import dev.rafael.features.program.presentation.state.ProgramDetailState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -30,12 +32,21 @@ class ProgramDetailViewModel(
     // Sem init { load() }: a tela dispara Retry no ON_RESUME (1ª entrada + refresh ao voltar
     // do paywall). Ter os dois causava GET /programs duplicado ao abrir o detalhe.
 
+    init {
+        // Selo de pendente (ARCH #30, B.4), migrado do ProgramListViewModel junto com a
+        // ativação: reativo, some sozinho quando o worker sincroniza.
+        repository.observarPendentes()
+            .onEach { p -> _state.update { it.copy(pendencias = p) } }
+            .launchIn(viewModelScope)
+    }
+
     fun onEvent(event: ProgramDetailEvent) {
         when (event) {
             ProgramDetailEvent.Retry -> load()
             is ProgramDetailEvent.Rename -> rename(event.name)
             ProgramDetailEvent.Delete -> delete()
             is ProgramDetailEvent.SetWorkoutDay -> setDay(event.workoutId, event.dayOfWeek)
+            is ProgramDetailEvent.Activate -> activate(event.workoutId)
         }
     }
 
@@ -66,10 +77,10 @@ class ProgramDetailViewModel(
         }
     }
 
-    private fun load() {
+    private fun load(forcar: Boolean = false) {
         _state.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
-            when (val result = repository.list()) {
+            when (val result = if (forcar) repository.refresh() else repository.list()) {
                 is AppResult.Success -> {
                     val found = result.value.firstOrNull { it.id == programId }
                     _state.update {
@@ -82,6 +93,26 @@ class ProgramDetailViewModel(
                 }
                 is AppResult.Failure ->
                     _state.update { it.copy(isLoading = false, error = result.error) }
+            }
+        }
+    }
+
+    /**
+     * V59, migrado do ProgramListViewModel: ONLINE-ONLY (ver
+     * [dev.rafael.features.program.domain.repository.ProgramRepository.activateWorkout]).
+     * Sucesso força um `load(forcar = true)` pra tela já mostrar o `isActive` novo, sem
+     * esperar o próximo ON_RESUME.
+     */
+    private fun activate(workoutId: String) {
+        _state.update { it.copy(activating = workoutId, error = null) }
+        viewModelScope.launch {
+            when (val result = repository.activateWorkout(workoutId)) {
+                is AppResult.Success -> {
+                    _state.update { it.copy(activating = null) }
+                    load(forcar = true)
+                }
+                is AppResult.Failure ->
+                    _state.update { it.copy(activating = null, error = result.error) }
             }
         }
     }

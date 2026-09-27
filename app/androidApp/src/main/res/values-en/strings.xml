@@ -608,7 +608,7 @@
 
     <!-- ============================ Program list ============================ -->
 
-    <string name="programa_lista_titulo">My workouts</string>
+    <string name="programa_lista_titulo">My programs</string>
     <string name="programa_lista_vazio">You don\'t have any workouts yet.</string>
     <string name="treino_ativo_badge">Active</string>
     <string name="treino_ativo_nenhum_titulo">No active workout</string>

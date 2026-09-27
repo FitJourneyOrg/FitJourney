@@ -492,12 +492,10 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
         // ---- Programas (ARCH #27 — substitui a antiga AppRoute.Workout flat) ----
 
         composable<AppRoute.Programs> {
+            // Hierarquia restaurada (2026-09-26): lista de PROGRAMAS de novo (reverte o "deck
+            // achatado por treino" do V59) -- onOpenProgram volta a ser a ação primária.
             ProgramListScreen(
                 onOpenProgram = { id -> nav.navigate(AppRoute.ProgramDetail(id)) },
-                // V59: deck achatado por treino -- navegação direta, sem passar pelo programa.
-                onOpenWorkout = { id, editLocked -> nav.navigate(AppRoute.WorkoutDetail(id, editLocked)) },
-                onStartWorkout = { id -> nav.navigate(AppRoute.WorkoutSession(id)) },
-                onOpenLibrary = { nav.navigate(AppRoute.Library) },
                 onGenerateWithAI = { nav.navigate(AppRoute.ProgramGenerate) },
             )
         }

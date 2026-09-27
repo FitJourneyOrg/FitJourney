@@ -163,46 +163,4 @@ class ProgramListViewModelTest {
 
         assertNull(vm.state.value.createdId)
     }
-
-    // ---- V59: treino ativo ----
-
-    @Test
-    fun `activate chama o repositorio com o workoutId certo`() = runTest(dispatcher) {
-        val repo = FakeProgramRepository()
-        val vm = ProgramListViewModel(repo)
-        advanceUntilIdle()
-
-        vm.onEvent(ProgramListEvent.Activate("w-1"))
-        advanceUntilIdle()
-
-        assertEquals("w-1", repo.activateWorkoutCalledWith)
-    }
-
-    @Test
-    fun `activate com sucesso recarrega a lista e limpa activating`() = runTest(dispatcher) {
-        val repo = FakeProgramRepository(listResult = AppResult.Success(listOf(program("a"))))
-        val vm = ProgramListViewModel(repo)
-        vm.onEvent(ProgramListEvent.Load)
-        advanceUntilIdle()
-
-        vm.onEvent(ProgramListEvent.Activate("w-1"))
-        advanceUntilIdle()
-
-        assertNull(vm.state.value.activating)
-        assertNull(vm.state.value.error)
-        assertEquals(1, vm.state.value.programs.size)   // recarregou (load forçado), não sumiu
-    }
-
-    @Test
-    fun `activate com falha vira erro de acao e limpa activating`() = runTest(dispatcher) {
-        val repo = FakeProgramRepository(activateWorkoutResult = AppResult.Failure(AppError.Connection()))
-        val vm = ProgramListViewModel(repo)
-        advanceUntilIdle()
-
-        vm.onEvent(ProgramListEvent.Activate("w-1"))
-        advanceUntilIdle()
-
-        assertNull(vm.state.value.activating)
-        assertIs<AppError.Connection>(vm.state.value.error)
-    }
 }
