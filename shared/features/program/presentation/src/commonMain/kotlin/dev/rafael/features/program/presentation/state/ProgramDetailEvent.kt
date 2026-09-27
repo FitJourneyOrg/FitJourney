@@ -6,4 +6,6 @@ sealed interface ProgramDetailEvent {
     data object Delete : ProgramDetailEvent
     /** Agenda (G.2): define o dia da semana (1=Seg..7=Dom) de um treino. */
     data class SetWorkoutDay(val workoutId: String, val dayOfWeek: Int) : ProgramDetailEvent
+    /** V59, migrado do ProgramListScreen -- marca este treino como o ativo do usuário. */
+    data class Activate(val workoutId: String) : ProgramDetailEvent
 }

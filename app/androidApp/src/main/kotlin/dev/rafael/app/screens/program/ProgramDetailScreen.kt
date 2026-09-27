@@ -19,10 +19,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.ui.ErroDeTela
+import dev.rafael.app.ui.SeloDeSync
 import dev.rafael.app.ui.nomeDoPrograma
 import dev.rafael.app.ui.rationaleDoPrograma
 import dev.rafael.app.ui.rotuloDoDiaDaSemana
 import dev.rafael.app.R
+import dev.rafael.features.program.domain.model.ProgramWorkout
 import dev.rafael.features.program.presentation.state.ProgramDetailEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramDetailViewModel
 import dev.rafael.app.ui.ShimmerContent
@@ -44,6 +46,7 @@ fun ProgramDetailScreen(
     val state by viewModel.state.collectAsState()
     var showRename by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var confirmarAtivacao by remember { mutableStateOf<ProgramWorkout?>(null) }
     // ARCH #25: programa IA de usuário free vem trancado — edição é premium.
     // 'locked' já é setado pelo ProgramBlur só quando (origin=AI && !premium).
     val readOnly = state.program?.locked == true
@@ -86,6 +89,16 @@ fun ProgramDetailScreen(
         )
     }
 
+    confirmarAtivacao?.let { treino ->
+        ConfirmarAtivacaoDialog(
+            nome = treino.name,
+            onConfirmar = {
+                confirmarAtivacao = null
+                treino.id?.let { viewModel.onEvent(ProgramDetailEvent.Activate(it)) }
+            },
+            onDismiss = { confirmarAtivacao = null },
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -223,7 +236,29 @@ fun ProgramDetailScreen(
                                 )
                                 else -> ListItem(
                                     overlineContent = { Text(stringResource(rotuloDoDiaDaSemana(day))) },
-                                    headlineContent = { Text(w.name) },
+                                    headlineContent = {
+                                        if (w.isActive) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            ) {
+                                                Text(w.name)
+                                                Surface(
+                                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                                    shape = MaterialTheme.shapes.small,
+                                                ) {
+                                                    Text(
+                                                        stringResource(R.string.treino_ativo_badge),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            Text(w.name)
+                                        }
+                                    },
                                     supportingContent = {
                                         Text(
                                             pluralStringResource(
@@ -233,13 +268,27 @@ fun ProgramDetailScreen(
                                             ),
                                         )
                                     },
-                                    trailingContent = if (!canSchedule) null else {
-                                        {
-                                            WeekdayPicker(
-                                                day = day,
-                                                enabled = !state.isReordering,
-                                                onPick = { d -> w.id?.let { viewModel.onEvent(ProgramDetailEvent.SetWorkoutDay(it, d)) } },
-                                            )
+                                    trailingContent = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            state.pendenciaDe(w.id)?.let { SeloDeSync(it) }
+                                            if (canSchedule) {
+                                                WeekdayPicker(
+                                                    day = day,
+                                                    enabled = !state.isReordering,
+                                                    onPick = { d -> w.id?.let { viewModel.onEvent(ProgramDetailEvent.SetWorkoutDay(it, d)) } },
+                                                )
+                                            }
+                                            // Ativar independe de readOnly/canSchedule: são conceitos
+                                            // diferentes (premium do PROGRAMA vs treino ativo do usuário).
+                                            if (!w.isActive) {
+                                                OutlinedButton(
+                                                    onClick = { confirmarAtivacao = w },
+                                                    enabled = state.activating != w.id,
+                                                ) { Text(stringResource(R.string.treino_ativo_ativar)) }
+                                            }
                                         }
                                     },
                                     modifier = Modifier.clickable { w.id?.let { onOpenWorkout(it, readOnly) } },
@@ -322,6 +371,21 @@ private fun WeekdayPicker(day: Int, enabled: Boolean, onPick: (Int) -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun ConfirmarAtivacaoDialog(nome: String, onConfirmar: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.treino_ativo_confirmar_titulo)) },
+        text = { Text(stringResource(R.string.treino_ativo_confirmar_corpo, nome)) },
+        confirmButton = {
+            TextButton(onClick = onConfirmar) { Text(stringResource(R.string.treino_ativo_ativar)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.comum_cancelar)) }
+        },
+    )
 }
 
 @Composable
