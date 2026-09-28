@@ -1,0 +1,11 @@
+-- Migration 7: ativação vira conceito de PROGRAMA, não de treino (reverte parte da 6.sqm,
+-- espelhando a V60 do servidor).
+--
+-- `workout.isActive` (6.sqm) fica como está -- ainda é cache do "treino de hoje", só que
+-- agora derivado pelo servidor via schedule x dia da semana em vez de ponteiro direto.
+-- O que muda é ONDE mora o ponteiro do USUÁRIO: era por treino, passa a ser por programa.
+--
+-- ADD COLUMN direto: coluna nova, boolean (INTEGER 0/1), sem dado prévio pra migrar -- mesmo
+-- raciocínio da 5 e da 6. Só leitura (sem outbox): quem manda é o servidor, aqui é o último
+-- GET /programs.
+ALTER TABLE program ADD COLUMN isActive INTEGER NOT NULL DEFAULT 0;

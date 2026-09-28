@@ -38,12 +38,14 @@ object UsersTable : Table("users") {
     val locale = varchar("locale", 5).default(Idioma.PADRAO.tag)
 
     /**
-     * V59. Ponteiro pro treino "ativo" — 1 por usuário, autoridade do servidor (não é estado
-     * de UI/SharedPreferences, pra não divergir entre aparelhos). `ON DELETE SET NULL` na
-     * migration: excluir o treino ativo não deixa o ponteiro pendurado. Sessão da semana NÃO
-     * depende disto — segue sendo derivada de `workout_sessions` (ver WorkoutService).
+     * V60 (reverte a V59). Ponteiro pro PROGRAMA "ativo" — 1 por usuário, autoridade do
+     * servidor (não é estado de UI/SharedPreferences, pra não divergir entre aparelhos).
+     * `ON DELETE SET NULL` na migration: excluir o programa ativo não deixa o ponteiro
+     * pendurado. O treino "de hoje" dentro do programa ativo é DERIVADO do `dayOfWeek`
+     * contra o dia da semana atual — ver `ProgramActiveWorkout`/`DiaDaSemanaAtual`. Sessão
+     * da semana NÃO depende disto — segue sendo derivada de `workout_sessions`.
      */
-    val activeWorkoutId = uuid("active_workout_id").nullable()
+    val activeProgramId = uuid("active_program_id").nullable()
 
     override val primaryKey = PrimaryKey(id)
 }

@@ -13,20 +13,22 @@ import dev.rafael.core.result.getOrNull
 import dev.rafael.core.result.map
 import dev.rafael.server.features.exercise.db.ExerciseRepository
 import dev.rafael.server.features.exercise.engine.WorkoutGenerator
-import dev.rafael.server.features.user.db.UserRepository
+import dev.rafael.server.features.program.services.DiaDaSemanaAtual
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.workout.db.WorkoutRepository
 import dev.rafael.server.features.workout.models.toDomain
 import dev.rafael.server.features.workout.models.toDto
 import kotlin.uuid.Uuid
 import dev.rafael.contract.error.ErrorCodes
+import kotlin.time.Clock
 
 class WorkoutService(
     private val userService: UserService,
     private val repository: WorkoutRepository,
     private val exerciseRepository: ExerciseRepository,
-    private val generator: WorkoutGenerator,          // <- única dep nova
-    private val userRepository: UserRepository,       // <- V59: dono do ponteiro "ativo"
+    private val generator: WorkoutGenerator,
+    /** V60: "hoje" é o dia da semana do SERVIDOR (autoridade). Ver DiaDaSemanaAtual. */
+    private val clock: Clock = Clock.System,
 ) {
 
     /**
@@ -59,37 +61,24 @@ class WorkoutService(
 
     suspend fun list(firebaseUid: String, email: String?): AppResult<List<WorkoutSummaryDto>> =
         userService.findOrCreate(firebaseUid, email).flatMap { user ->
-            // V59: isActive é comparação simples contra o ponteiro do usuário, não estado
-            // guardado por treino — não precisa join nem coluna nova em workouts.
-            repository.findAllByUser(user.id)
-                .map { list -> list.map { it.toDto(isActive = it.id == user.activeWorkoutId) } }
-        }
-
-    /**
-     * V59. Marca este treino como o ativo do usuário (ponteiro simples, exclusivo — substitui
-     * o anterior). Não mexe em sessão/histórico: "sessões desta semana" continua sendo derivado
-     * de `workout_sessions`, então trocar de ativo nunca zera nem precisa pausar nada.
-     *
-     * Reaproveita o `findById` (já filtra por `user.id`) pra checar posse — treino que não
-     * existe OU que não é deste usuário caem no mesmo NotFound, sem vazar diferença.
-     */
-    suspend fun activate(firebaseUid: String, email: String?, workoutId: Uuid): AppResult<Unit> =
-        userService.findOrCreate(firebaseUid, email).flatMap { user ->
-            repository.findById(user.id, workoutId).flatMap { treino ->
-                if (treino == null) {
-                    AppError.NotFound("Treino não encontrado", code = ErrorCodes.TREINO_NAO_EXISTE).asFailure()
-                } else {
-                    userRepository.setActiveWorkout(user.id, workoutId).map { }
-                }
-            }
+            // V60: isActive saiu daqui -- este resumo (WorkoutSummary) nao carrega programId/
+            // dayOfWeek, entao nao da pra derivar "e o de hoje" sem outro join, e o cliente
+            // nunca leu este campo desta rota (ver WorkoutMapper.toDomain, que ja descartava
+            // isActive). GET /programs e GET /workouts/{id} continuam sendo a fonte real.
+            repository.findAllByUser(user.id).map { list -> list.map { it.toDto() } }
         }
 
     suspend fun get(firebaseUid: String, email: String?, workoutId: Uuid): AppResult<WorkoutDto?> =
         userService.findOrCreate(firebaseUid, email).flatMap { user ->
-            // V59: marca isActive aqui tambem (nao so no list()) -- quem le um treino avulso
-            // por id (WorkoutDetailScreen) merece a mesma verdade que a lista mostra.
+            // V60: marca isActive aqui tambem (nao so no list()) -- quem le um treino avulso
+            // por id (WorkoutDetailScreen) merece a mesma verdade que a lista mostra. Derivado
+            // (programa ativo + dia da semana bate), nao mais ponteiro direto por treino.
             repository.findById(user.id, workoutId).map { treino ->
-                treino?.toDto()?.copy(isActive = treino.id == user.activeWorkoutId)
+                treino?.toDto()?.copy(
+                    isActive = treino.programId != null &&
+                        treino.programId == user.activeProgramId &&
+                        treino.dayOfWeek == DiaDaSemanaAtual.iso(clock),
+                )
             }
         }
 
