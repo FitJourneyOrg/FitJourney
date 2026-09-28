@@ -15,6 +15,7 @@ fun ProgramDto.toDomain() = Program(
     split = split?.name,
     focusMuscles = focusMuscles.map { it.name },
     locked = locked,
+    isActive = isActive,
     schedule = schedule.map { it.toDomain() },
     durationWeeks = durationWeeks,
     currentWeek = currentWeek,

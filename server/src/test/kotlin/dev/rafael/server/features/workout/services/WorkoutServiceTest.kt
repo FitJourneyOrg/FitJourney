@@ -20,34 +20,38 @@ import kotlinx.datetime.LocalDateTime
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
-import kotlin.test.assertNull
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlin.uuid.Uuid
 
 /**
- * V59 — "treino ativo" (ponteiro simples, exclusivo, autoridade do servidor).
+ * V60 (reverte a V59 -- "ativo" agora é PROGRAMA, não treino).
  *
- * Só cobre o que esta fatia mudou (`activate` e o `isActive` em `list`). O resto de
- * [WorkoutService] (create/get/update/delete) não tinha teste antes desta fatia e continua
- * sem — não é escopo daqui reconstruir cobertura de código que eu não toquei.
+ * Só cobre o que esta fatia mudou (o `isActive` em `get`). O resto de [WorkoutService]
+ * (create/update/delete/list) não tinha teste antes desta fatia e continua sem -- não é
+ * escopo daqui reconstruir cobertura de código que eu não toquei. `activate` saiu inteiro
+ * daqui, virou `ProgramService.activate` (ver ProgramServiceTest).
  */
 class WorkoutServiceTest {
 
     private val agora = LocalDateTime(2026, 9, 24, 12, 0)
 
-    private fun user(activeWorkoutId: Uuid? = null) = User(
+    /** 2026-09-28 é SEGUNDA (isoDayNumber 1) -- mesmo dia fixo do ProgramActiveWorkoutTest. */
+    private val segunda: Clock = object : Clock {
+        override fun now() = Instant.parse("2026-09-28T10:00:00Z")
+    }
+
+    private fun user(activeProgramId: Uuid? = null) = User(
         id = Uuid.random(),
         firebaseUid = "fb",
         email = null,
         isPremium = false,
         displayName = "Atleta-teste",
         code = "TESTE234",
-        activeWorkoutId = activeWorkoutId,
+        activeProgramId = activeProgramId,
     )
 
     private inner class FakeUserRepo(private var u: User) : UserRepository {
-        var setActiveWorkoutCalledWith: Uuid? = null
-        var setActiveWorkoutCallCount = 0
-
         override suspend fun findByFirebaseUid(firebaseUid: String) = AppResult.Success<User?>(u)
         override suspend fun findById(userId: Uuid) = AppResult.Success<User?>(u)
         override suspend fun findByCode(code: String) = error("não usado")
@@ -57,13 +61,7 @@ class WorkoutServiceTest {
         override suspend fun setPremium(userId: Uuid, premium: Boolean) = error("não usado")
         override suspend fun updateDisplayName(userId: Uuid, displayName: String) = error("não usado")
         override suspend fun updateIdioma(userId: Uuid, idioma: Idioma) = error("não usado")
-
-        override suspend fun setActiveWorkout(userId: Uuid, workoutId: Uuid?): AppResult<User?> {
-            setActiveWorkoutCallCount++
-            setActiveWorkoutCalledWith = workoutId
-            u = u.copy(activeWorkoutId = workoutId)
-            return AppResult.Success(u)
-        }
+        override suspend fun setActiveProgram(userId: Uuid, programId: Uuid?) = error("não usado")
     }
 
     private class FakeWorkoutRepository(
@@ -96,84 +94,61 @@ class WorkoutServiceTest {
         override suspend fun generate(profile: ProfileDto, prompt: String?): ProgramDto = error("não usado")
     }
 
-    private fun servico(userRepo: FakeUserRepo, workoutRepo: FakeWorkoutRepository) = WorkoutService(
+    private fun servico(userRepo: FakeUserRepo, workoutRepo: FakeWorkoutRepository, clock: Clock = segunda) = WorkoutService(
         userService = UserService(userRepo),
         repository = workoutRepo,
         exerciseRepository = FakeExerciseRepository(),
         generator = FakeWorkoutGenerator(),
-        userRepository = userRepo,
+        clock = clock,
     )
 
     @Test
-    fun `activate marca o treino como ativo quando pertence ao usuario`() = runBlocking {
-        val dono = user()
+    fun `get marca isActive quando o treino e do programa ativo e cai no dia de hoje`() = runBlocking {
+        val programaAtivoId = Uuid.random()
+        val dono = user(activeProgramId = programaAtivoId)
         val treinoId = Uuid.random()
         val treino = Workout(
-            id = treinoId, userId = dono.id, name = "Push", programId = null, dayOfWeek = null,
+            id = treinoId, userId = dono.id, name = "Push", programId = programaAtivoId, dayOfWeek = 1,
             exercises = emptyList(), createdAt = agora, updatedAt = agora,
         )
-        val userRepo = FakeUserRepo(dono)
-        val service = servico(userRepo, FakeWorkoutRepository(mutableMapOf(treinoId to treino)))
+        val service = servico(FakeUserRepo(dono), FakeWorkoutRepository(mutableMapOf(treinoId to treino)))
 
-        val resultado = service.activate("fb", null, treinoId)
-
-        assertIs<AppResult.Success<Unit>>(resultado)
-        assertEquals(1, userRepo.setActiveWorkoutCallCount, "setActiveWorkout deveria ter sido chamado uma vez")
-        assertEquals(treinoId, userRepo.setActiveWorkoutCalledWith)
-    }
-
-    @Test
-    fun `activate falha e nao mexe no ponteiro quando o treino nao e do usuario (ou nao existe)`() = runBlocking {
-        val dono = user()
-        val treinoDeOutroUsuario = Uuid.random()
-        val treino = Workout(
-            id = treinoDeOutroUsuario, userId = Uuid.random(), name = "Push", programId = null,
-            dayOfWeek = null, exercises = emptyList(), createdAt = agora, updatedAt = agora,
-        )
-        val userRepo = FakeUserRepo(dono)
-        val service = servico(userRepo, FakeWorkoutRepository(mutableMapOf(treinoDeOutroUsuario to treino)))
-
-        val resultado = service.activate("fb", null, treinoDeOutroUsuario)
-
-        assertIs<AppResult.Failure>(resultado)
-        assertEquals(0, userRepo.setActiveWorkoutCallCount, "não pode gravar ponteiro pra treino que não é do usuário")
-        assertNull(userRepo.setActiveWorkoutCalledWith)
-    }
-
-    @Test
-    fun `list marca isActive so no treino que bate com o ponteiro do usuario`() = runBlocking {
-        val ativoId = Uuid.random()
-        val dono = user(activeWorkoutId = ativoId)
-        val outroId = Uuid.random()
-        val resumos = listOf(
-            WorkoutSummary(id = ativoId, name = "Push", exerciseCount = 8, updatedAt = agora),
-            WorkoutSummary(id = outroId, name = "Lower", exerciseCount = 6, updatedAt = agora),
-        )
-        val userRepo = FakeUserRepo(dono)
-        val service = servico(userRepo, FakeWorkoutRepository(resumos = resumos))
-
-        val resultado = service.list("fb", null)
-
-        assertIs<AppResult.Success<List<dev.rafael.contract.workout.WorkoutSummaryDto>>>(resultado)
-        val porId = resultado.value.associateBy { it.id }
-        assertEquals(true, porId[ativoId.toString()]?.isActive)
-        assertEquals(false, porId[outroId.toString()]?.isActive)
-    }
-
-    @Test
-    fun `get marca isActive quando o treino lido e o ativo do usuario`() = runBlocking {
-        val ativoId = Uuid.random()
-        val dono = user(activeWorkoutId = ativoId)
-        val treino = Workout(
-            id = ativoId, userId = dono.id, name = "Push", programId = null, dayOfWeek = null,
-            exercises = emptyList(), createdAt = agora, updatedAt = agora,
-        )
-        val userRepo = FakeUserRepo(dono)
-        val service = servico(userRepo, FakeWorkoutRepository(mutableMapOf(ativoId to treino)))
-
-        val resultado = service.get("fb", null, ativoId)
+        val resultado = service.get("fb", null, treinoId)
 
         assertIs<AppResult.Success<dev.rafael.contract.workout.WorkoutDto?>>(resultado)
         assertEquals(true, resultado.value?.isActive)
+    }
+
+    @Test
+    fun `get nao marca isActive quando o treino e de OUTRO dia da semana`() = runBlocking {
+        val programaAtivoId = Uuid.random()
+        val dono = user(activeProgramId = programaAtivoId)
+        val treinoId = Uuid.random()
+        val treino = Workout(
+            id = treinoId, userId = dono.id, name = "Push", programId = programaAtivoId, dayOfWeek = 2,
+            exercises = emptyList(), createdAt = agora, updatedAt = agora,
+        )
+        val service = servico(FakeUserRepo(dono), FakeWorkoutRepository(mutableMapOf(treinoId to treino)))
+
+        val resultado = service.get("fb", null, treinoId)
+
+        assertIs<AppResult.Success<dev.rafael.contract.workout.WorkoutDto?>>(resultado)
+        assertEquals(false, resultado.value?.isActive)
+    }
+
+    @Test
+    fun `get nao marca isActive quando o treino e de OUTRO programa`() = runBlocking {
+        val dono = user(activeProgramId = Uuid.random())
+        val treinoId = Uuid.random()
+        val treino = Workout(
+            id = treinoId, userId = dono.id, name = "Push", programId = Uuid.random(), dayOfWeek = 1,
+            exercises = emptyList(), createdAt = agora, updatedAt = agora,
+        )
+        val service = servico(FakeUserRepo(dono), FakeWorkoutRepository(mutableMapOf(treinoId to treino)))
+
+        val resultado = service.get("fb", null, treinoId)
+
+        assertIs<AppResult.Success<dev.rafael.contract.workout.WorkoutDto?>>(resultado)
+        assertEquals(false, resultado.value?.isActive)
     }
 }

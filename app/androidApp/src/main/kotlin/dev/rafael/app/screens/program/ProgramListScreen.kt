@@ -33,11 +33,15 @@ import org.koin.androidx.compose.koinViewModel
 /**
  * "Meus treinos" — lista de PROGRAMAS (restaurado 2026-09-26; era a versão anterior ao V59, que
  * tinha achatado isto num deck por treino). O programa continua sendo a unidade de navegação:
- * tocar num card abre [ProgramDetailScreen], que mostra a semana (7 dias) e é onde "ativar" um
- * treino específico agora mora — ver aquele arquivo pro selo "· Ativo" e o botão "Ativar".
+ * tocar num card abre [ProgramDetailScreen], que mostra a semana (7 dias).
  *
- * O único fluxo que fura essa regra é a criação de programa manual: nasce sem nenhum treino, daí
- * precisa navegar direto pro detalhe pra o usuário adicionar o primeiro.
+ * V60 (reverte de novo a V59, mas pro lado oposto do que ela tinha feito): "ativar" volta a ser
+ * uma ação de PROGRAMA, e mora AQUI, na lista — não mais um botão por treino dentro do detalhe.
+ * O usuário pensa em termos de programa ("hoje eu sigo o Push/Pull/Legs"), não de um treino
+ * solto; o treino que cai em cada dia é derivado (schedule x dia da semana), não escolhido.
+ *
+ * O único fluxo que fura a regra "tocar abre o detalhe" é a criação de programa manual: nasce
+ * sem nenhum treino, daí precisa navegar direto pro detalhe pra o usuário adicionar o primeiro.
  */
 @Composable
 fun ProgramListScreen(
@@ -105,11 +109,11 @@ fun ProgramListScreen(
                         Modifier.align(Alignment.Center).padding(16.dp),
                     )
                 else -> {
-                    // Programa dono do treino ativo sempre no topo -- é o que o usuário quer
-                    // ver primeiro ao abrir a tela. sortedByDescending é estável: quem não tem
-                    // ativo mantém a ordem que já vinha do servidor.
+                    // Programa ativo sempre no topo -- é o que o usuário quer ver primeiro
+                    // ao abrir a tela. sortedByDescending é estável: quem não tem nenhum ativo
+                    // mantém a ordem que já vinha do servidor.
                     val programasOrdenados = remember(state.programs) {
-                        state.programs.sortedByDescending { p -> p.workouts.any { it.isActive } }
+                        state.programs.sortedByDescending { it.isActive }
                     }
                     LazyColumn(
                         contentPadding = PaddingValues(16.dp),
@@ -122,8 +126,10 @@ fun ProgramListScreen(
                             ProgramCard(
                                 programa = programa,
                                 pendencia = state.pendenciaDe(programa.id),
+                                activating = state.activating,
                                 onClick = { programa.id?.let(onOpenProgram) },
                                 onDescartarPendencia = { programa.id?.let { viewModel.onEvent(ProgramListEvent.Descartar(it)) } },
+                                onActivate = { programa.id?.let { viewModel.onEvent(ProgramListEvent.Activate(it)) } },
                             )
                         }
                     }
@@ -137,17 +143,27 @@ fun ProgramListScreen(
 private fun ProgramCard(
     programa: Program,
     pendencia: PendenciaDeSync?,
+    activating: String?,
     onClick: () -> Unit,
     onDescartarPendencia: () -> Unit,
+    onActivate: () -> Unit,
 ) {
-    val temTreinoAtivo = programa.workouts.any { it.isActive }
     var confirmarDescarte by remember { mutableStateOf(false) }
+    var confirmarAtivacao by remember { mutableStateOf(false) }
 
     if (confirmarDescarte) {
         DescartarPendenciaDialog(
             mensagem = pendencia?.erroPermanente,
             onConfirmar = { confirmarDescarte = false; onDescartarPendencia() },
             onDismiss = { confirmarDescarte = false },
+        )
+    }
+
+    if (confirmarAtivacao) {
+        ConfirmarAtivacaoDialog(
+            nome = nomeDoPrograma(name = programa.name, daysPerWeek = programa.daysPerWeek, split = programa.split),
+            onConfirmar = { confirmarAtivacao = false; onActivate() },
+            onDismiss = { confirmarAtivacao = false },
         )
     }
 
@@ -167,7 +183,7 @@ private fun ProgramCard(
                     SeloDeSync(it, onDescartar = if (!it.aguardando) ({ confirmarDescarte = true }) else null)
                 }
             }
-            if (temTreinoAtivo) {
+            if (programa.isActive) {
                 Spacer(Modifier.height(8.dp))
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
@@ -189,8 +205,31 @@ private fun ProgramCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            if (!programa.isActive) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { confirmarAtivacao = true },
+                    enabled = activating != programa.id,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.programa_ativar_botao)) }
+            }
         }
     }
+}
+
+@Composable
+private fun ConfirmarAtivacaoDialog(nome: String, onConfirmar: () -> Unit, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.programa_ativar_confirmar_titulo)) },
+        text = { Text(stringResource(R.string.programa_ativar_confirmar_corpo, nome)) },
+        confirmButton = {
+            TextButton(onClick = onConfirmar) { Text(stringResource(R.string.programa_ativar_botao)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.comum_cancelar)) }
+        },
+    )
 }
 
 @Composable

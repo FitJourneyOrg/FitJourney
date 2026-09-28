@@ -234,8 +234,8 @@ class FakeUserRepository(usuarios: List<User> = emptyList()) : UserRepository {
     override suspend fun updateIdioma(userId: Uuid, idioma: Idioma): AppResult<User?> =
         atualizar(userId) { it.copy(idioma = idioma) }
 
-    override suspend fun setActiveWorkout(userId: Uuid, workoutId: Uuid?): AppResult<User?> =
-        atualizar(userId) { it.copy(activeWorkoutId = workoutId) }
+    override suspend fun setActiveProgram(userId: Uuid, programId: Uuid?): AppResult<User?> =
+        atualizar(userId) { it.copy(activeProgramId = programId) }
 
     private fun atualizar(userId: Uuid, bloco: (User) -> User): AppResult<User?> {
         val atual = porUid.values.firstOrNull { it.id == userId } ?: return null.asSuccess()

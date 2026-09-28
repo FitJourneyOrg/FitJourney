@@ -55,12 +55,13 @@ interface ProgramRepository {
     suspend fun setSchedule(id: String, schedule: List<ProgramScheduleEntry>): AppResult<Program>  // PUT /programs/{id}/schedule
 
     /**
-     * V59 — marca este treino como o ativo do usuário (ponteiro simples, exclusivo,
-     * autoridade do servidor). ONLINE-ONLY, como [generate]: não é conteúdo que o usuário
-     * criou, é só um ponteiro que o próprio servidor guarda — não há otimismo sensato aqui,
-     * e o outbox existe para proteger CRIAÇÃO offline, não isto.
+     * V60 (reverte a V59 -- ativo agora é PROGRAMA, não treino) -- marca este programa como o
+     * ativo do usuário (ponteiro simples, exclusivo, autoridade do servidor). ONLINE-ONLY,
+     * como [generate]: não é conteúdo que o usuário criou, é só um ponteiro que o próprio
+     * servidor guarda — não há otimismo sensato aqui, e o outbox existe para proteger CRIAÇÃO
+     * offline, não isto.
      */
-    suspend fun activateWorkout(workoutId: String): AppResult<Unit>   // POST /workouts/{id}/activate
+    suspend fun activateProgram(programId: String): AppResult<Unit>   // POST /programs/{id}/activate
 
     /**
      * O usuário reconheceu uma falha PERMANENTE do outbox (ver [PendenciaDeSync.erroPermanente])

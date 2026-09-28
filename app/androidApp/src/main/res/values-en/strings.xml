@@ -611,14 +611,12 @@
     <string name="programa_lista_titulo">My programs</string>
     <string name="programa_lista_vazio">You don\'t have any workouts yet.</string>
     <string name="treino_ativo_badge">Active</string>
-    <string name="treino_ativo_nenhum_titulo">No active workout</string>
-    <string name="treino_ativo_nenhum_corpo">Activate one of your workouts for it to show up here.</string>
     <string name="treino_ativo_secao_outros">Other workouts</string>
     <string name="treino_ativo_secao_seus">Your workouts</string>
-    <string name="treino_ativo_ativar">Activate</string>
-    <string name="treino_ativo_confirmar_titulo">Activate this workout?</string>
-    <string name="treino_ativo_confirmar_corpo">%1$s becomes your featured workout.</string>
     <string name="treino_ativo_ver_biblioteca">View library</string>
+    <string name="programa_ativar_botao">Activate program</string>
+    <string name="programa_ativar_confirmar_titulo">Activate this program?</string>
+    <string name="programa_ativar_confirmar_corpo">%1$s becomes your featured program.</string>
     <string name="programa_lista_semana">Week %1$d/%2$d</string>
     <string name="programa_lista_novo">New program</string>
     <string name="programa_lista_criar">Create</string>
@@ -990,6 +988,9 @@
     <string name="home_descanso_titulo">Rest day</string>
     <string name="home_descanso_texto">Recovering is part of progress: muscle is built while you rest.</string>
     <string name="home_treino_avulso">One-off workout</string>
+
+    <string name="home_completar_agenda_titulo">Complete your schedule</string>
+    <string name="home_completar_agenda_corpo">Set up your program\'s week to get suggestions every day.</string>
 
     <string name="home_sem_programa_titulo">Start your first program</string>
     <string name="home_sem_programa_texto">Build a program and the workout of the day shows up here, ready to start.</string>

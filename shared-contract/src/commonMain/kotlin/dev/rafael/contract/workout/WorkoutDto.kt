@@ -24,8 +24,9 @@ data class WorkoutDto(
     val locked: Boolean = false,
     val lockedExerciseCount: Int = 0,
     val dayOfWeek: Int? = null,   // dia da semana (1=Seg..7=Dom); no create manual, o dia escolhido
-    // V59: true pro treino marcado como ativo pelo usuário (ponteiro exclusivo, autoridade do
-    // servidor). Marcado FORA do mapper (ver ProgramActiveWorkout/WorkoutService) — este DTO
-    // não sabe de ponteiro de usuário, só carrega o resultado.
+    // V60 (reverte a V59 -- ativo agora é PROGRAMA, não treino): true pro treino que cai no dia
+    // de hoje DENTRO do programa ativo (schedule x dia da semana, autoridade do servidor).
+    // Marcado FORA do mapper (ver ProgramActiveWorkout/WorkoutService) -- este DTO não sabe de
+    // ponteiro de usuário, só carrega o resultado.
     val isActive: Boolean = false,
 )
