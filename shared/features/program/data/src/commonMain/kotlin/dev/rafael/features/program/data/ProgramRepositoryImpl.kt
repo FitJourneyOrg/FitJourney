@@ -174,6 +174,11 @@ class ProgramRepositoryImpl(
     override suspend fun activateWorkout(workoutId: String): AppResult<Unit> =
         httpResult { remote.activateWorkout(workoutId) }.also { invalidate() }
 
+    /** Só remove da fila -- LOCAL, nunca falha. O chamador segue com `refresh()`. */
+    override suspend fun descartarPendencia(alvoId: String) {
+        outbox.descartar(alvoId)
+    }
+
     /**
      * Criação otimista com id do CLIENTE (B.1 fez o servidor aceitá-lo), o que torna o POST
      * idempotente: resposta perdida na rede → reenvio com o mesmo id → nenhum programa duplicado.

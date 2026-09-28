@@ -56,4 +56,9 @@ class FakeProgramRepository(
         activateWorkoutCalledWith = workoutId
         return activateWorkoutResult
     }
+
+    var descartarCalledWith: String? = null
+    override suspend fun descartarPendencia(alvoId: String) {
+        descartarCalledWith = alvoId
+    }
 }

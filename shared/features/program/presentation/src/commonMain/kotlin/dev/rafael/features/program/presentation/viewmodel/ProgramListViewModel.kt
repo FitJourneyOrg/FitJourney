@@ -47,6 +47,7 @@ class ProgramListViewModel(
             ProgramListEvent.Load -> load(forcar = false)   // cache-first: trocar de aba não vai à rede
             ProgramListEvent.Retry -> load(forcar = true)   // o usuário pediu de novo: força a rede
             is ProgramListEvent.CreateManual -> createManual(event.name)
+            is ProgramListEvent.Descartar -> descartar(event.alvoId)
         }
     }
 
@@ -94,6 +95,17 @@ class ProgramListViewModel(
                 is AppResult.Failure ->
                     _state.update { it.copy(isCreating = false, error = result.error) }
             }
+        }
+    }
+
+    /**
+     * Só sai da fila LOCALMENTE (nunca falha) -- o `load(forcar = true)` que segue é quem busca
+     * a verdade do servidor e sobrescreve a tentativa recusada (ver KDoc do repositório).
+     */
+    private fun descartar(alvoId: String) {
+        viewModelScope.launch {
+            repository.descartarPendencia(alvoId)
+            load(forcar = true)
         }
     }
 }

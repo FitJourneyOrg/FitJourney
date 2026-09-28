@@ -163,4 +163,33 @@ class ProgramListViewModelTest {
 
         assertNull(vm.state.value.createdId)
     }
+
+    // ---- descartar pendência permanente do outbox ----
+
+    @Test
+    fun `descartar chama o repositorio e recarrega a lista`() = runTest(dispatcher) {
+        val repo = FakeProgramRepository(listResult = AppResult.Success(listOf(program("a"))))
+        val vm = ProgramListViewModel(repo)
+        vm.onEvent(ProgramListEvent.Load)
+        advanceUntilIdle()
+
+        vm.onEvent(ProgramListEvent.Descartar("w-1"))
+        advanceUntilIdle()
+
+        assertEquals("w-1", repo.descartarCalledWith)
+        assertEquals(1, vm.state.value.programs.size)   // recarregou (load forçado), não travou
+    }
+
+    @Test
+    fun `descartar com o refresh seguinte falhando ainda assim mostra sem conexao`() = runTest(dispatcher) {
+        val repo = FakeProgramRepository(listResult = AppResult.Failure(AppError.Connection()))
+        val vm = ProgramListViewModel(repo)
+        advanceUntilIdle()
+
+        vm.onEvent(ProgramListEvent.Descartar("w-1"))
+        advanceUntilIdle()
+
+        assertEquals("w-1", repo.descartarCalledWith)
+        assertIs<AppError.Connection>(vm.state.value.erroSync)
+    }
 }

@@ -61,4 +61,15 @@ interface ProgramRepository {
      * e o outbox existe para proteger CRIAÇÃO offline, não isto.
      */
     suspend fun activateWorkout(workoutId: String): AppResult<Unit>   // POST /workouts/{id}/activate
+
+    /**
+     * O usuário reconheceu uma falha PERMANENTE do outbox (ver [PendenciaDeSync.erroPermanente])
+     * e quer parar de tentar. Só remove da fila -- LOCAL, nunca falha. O dado volta a bater com
+     * o servidor no refresh seguinte (quem chama isto deve seguir com `refresh()`/`list(forcar)`):
+     * uma vez fora da fila, o alvo deixa de estar em `alvosPendentes()` e o próximo
+     * `local.save()` deixa de protegê-lo -- se o servidor nunca teve esse recurso (criação
+     * recusada), ele some localmente; se o servidor tem uma versão diferente (edição recusada),
+     * ela sobrescreve a tentativa local.
+     */
+    suspend fun descartarPendencia(alvoId: String)
 }
