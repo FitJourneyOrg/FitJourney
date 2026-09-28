@@ -164,6 +164,37 @@ class ProgramListViewModelTest {
         assertNull(vm.state.value.createdId)
     }
 
+    // ---- V60 (reverte a V59): ativação de PROGRAMA, migrada de volta pro ProgramListViewModel ----
+
+    @Test
+    fun `activate com sucesso chama o repositorio, recarrega e limpa activating`() = runTest(dispatcher) {
+        val repo = FakeProgramRepository(listResult = AppResult.Success(listOf(program("p1"))))
+        val vm = ProgramListViewModel(repo)
+        vm.onEvent(ProgramListEvent.Load)
+        advanceUntilIdle()
+
+        vm.onEvent(ProgramListEvent.Activate("p1"))
+        advanceUntilIdle()
+
+        assertEquals("p1", repo.activateProgramCalledWith)
+        assertNull(vm.state.value.activating)
+        assertNull(vm.state.value.error)
+        assertEquals(1, vm.state.value.programs.size)   // recarregou (load forçado), não sumiu
+    }
+
+    @Test
+    fun `activate com falha vira erro de acao e limpa activating`() = runTest(dispatcher) {
+        val repo = FakeProgramRepository(activateProgramResult = AppResult.Failure(AppError.Connection()))
+        val vm = ProgramListViewModel(repo)
+        advanceUntilIdle()
+
+        vm.onEvent(ProgramListEvent.Activate("p1"))
+        advanceUntilIdle()
+
+        assertNull(vm.state.value.activating)
+        assertIs<AppError.Connection>(vm.state.value.error)
+    }
+
     // ---- descartar pendência permanente do outbox ----
 
     @Test

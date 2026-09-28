@@ -106,10 +106,10 @@ class UserRepositoryImpl : UserRepository {
             else UsersTable.selectAll().where { UsersTable.id eq userId }.single().toUser()
         }
 
-    override suspend fun setActiveWorkout(userId: Uuid, workoutId: Uuid?): AppResult<User?> =
+    override suspend fun setActiveProgram(userId: Uuid, programId: Uuid?): AppResult<User?> =
         dbQuery {
             val n = UsersTable.update({ UsersTable.id eq userId }) {
-                it[activeWorkoutId] = workoutId
+                it[activeProgramId] = programId
             }
             if (n == 0) null
             else UsersTable.selectAll().where { UsersTable.id eq userId }.single().toUser()
@@ -139,5 +139,5 @@ private fun ResultRow.toUser(): User = User(
     // na coluna vira português em vez de derrubar a leitura do usuário. O CHECK da V47 deveria
     // impedir que chegue aqui, mas quem escreve por script passa por dentro deste mapeamento.
     idioma = IdiomaPolicy.de(this[UsersTable.locale]),
-    activeWorkoutId = this[UsersTable.activeWorkoutId],
+    activeProgramId = this[UsersTable.activeProgramId],
 )

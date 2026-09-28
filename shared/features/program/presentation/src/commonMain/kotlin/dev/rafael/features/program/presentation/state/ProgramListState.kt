@@ -34,6 +34,9 @@ data class ProgramListState(
      * otimismo honesto.
      */
     val pendencias: Set<PendenciaDeSync> = emptySet(),
+    /** V60 (reverte a V59, volta pra cá): id do programa em ativação neste instante
+     * (desabilita o botão, evita duplo toque). */
+    val activating: String? = null,
 ) {
     fun pendenciaDe(programId: String?): PendenciaDeSync? =
         programId?.let { id -> pendencias.firstOrNull { it.alvoId == id } }

@@ -112,7 +112,7 @@ class ProgramMapperTest {
     }
 
     @Test
-    fun `isActive do workout passa direto (V59)`() {
+    fun `isActive do workout passa direto (o treino de hoje, derivado no servidor)`() {
         val dto = ProgramDto(
             id = "p", name = "P", daysPerWeek = 2,
             workouts = listOf(
@@ -123,5 +123,13 @@ class ProgramMapperTest {
         val d = dto.toDomain()
         assertTrue(d.workouts[0].isActive)
         assertFalse(d.workouts[1].isActive)
+    }
+
+    @Test
+    fun `isActive do programa passa direto (V60, reverte a V59 -- ponteiro e do programa)`() {
+        val ativo = ProgramDto(id = "p1", name = "Ativo", daysPerWeek = 2, isActive = true).toDomain()
+        val inativo = ProgramDto(id = "p2", name = "Outro", daysPerWeek = 2, isActive = false).toDomain()
+        assertTrue(ativo.isActive)
+        assertFalse(inativo.isActive)
     }
 }

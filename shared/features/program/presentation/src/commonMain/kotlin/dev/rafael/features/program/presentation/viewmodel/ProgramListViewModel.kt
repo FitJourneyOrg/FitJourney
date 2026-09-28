@@ -47,6 +47,7 @@ class ProgramListViewModel(
             ProgramListEvent.Load -> load(forcar = false)   // cache-first: trocar de aba não vai à rede
             ProgramListEvent.Retry -> load(forcar = true)   // o usuário pediu de novo: força a rede
             is ProgramListEvent.CreateManual -> createManual(event.name)
+            is ProgramListEvent.Activate -> activate(event.programId)
             is ProgramListEvent.Descartar -> descartar(event.alvoId)
         }
     }
@@ -94,6 +95,26 @@ class ProgramListViewModel(
                     _state.update { it.copy(isCreating = false, createdId = result.value.id) }
                 is AppResult.Failure ->
                     _state.update { it.copy(isCreating = false, error = result.error) }
+            }
+        }
+    }
+
+    /**
+     * V60 (reverte a V59): ONLINE-ONLY (ver
+     * [dev.rafael.features.program.domain.repository.ProgramRepository.activateProgram]).
+     * Sucesso força um `load(forcar = true)` pra tela já mostrar o `isActive` novo, sem
+     * esperar o próximo ON_RESUME.
+     */
+    private fun activate(programId: String) {
+        _state.update { it.copy(activating = programId, error = null) }
+        viewModelScope.launch {
+            when (val result = repository.activateProgram(programId)) {
+                is AppResult.Success -> {
+                    _state.update { it.copy(activating = null) }
+                    load(forcar = true)
+                }
+                is AppResult.Failure ->
+                    _state.update { it.copy(activating = null, error = result.error) }
             }
         }
     }

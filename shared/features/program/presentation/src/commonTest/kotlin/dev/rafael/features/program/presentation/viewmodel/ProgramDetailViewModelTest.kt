@@ -78,48 +78,6 @@ class ProgramDetailViewModelTest {
         assertTrue(vm.state.value.isDeleted)
     }
 
-    // ---- V59: treino ativo (migrado do ProgramListViewModel na restauração da hierarquia) ----
-
-    @Test
-    fun `activate chama o repositorio com o workoutId certo`() = runTest(dispatcher) {
-        val repo = FakeProgramRepository()
-        val vm = ProgramDetailViewModel("p1", repo)
-        advanceUntilIdle()
-
-        vm.onEvent(ProgramDetailEvent.Activate("w-1"))
-        advanceUntilIdle()
-
-        assertEquals("w-1", repo.activateWorkoutCalledWith)
-    }
-
-    @Test
-    fun `activate com sucesso recarrega o programa e limpa activating`() = runTest(dispatcher) {
-        val repo = FakeProgramRepository(listResult = AppResult.Success(listOf(program("p1"))))
-        val vm = ProgramDetailViewModel("p1", repo)
-        vm.onEvent(ProgramDetailEvent.Retry)
-        advanceUntilIdle()
-
-        vm.onEvent(ProgramDetailEvent.Activate("w-1"))
-        advanceUntilIdle()
-
-        assertNull(vm.state.value.activating)
-        assertNull(vm.state.value.error)
-        assertEquals("p1", vm.state.value.program?.id)   // recarregou (load forçado), não sumiu
-    }
-
-    @Test
-    fun `activate com falha vira erro de acao e limpa activating`() = runTest(dispatcher) {
-        val repo = FakeProgramRepository(activateWorkoutResult = AppResult.Failure(AppError.Connection()))
-        val vm = ProgramDetailViewModel("p1", repo)
-        advanceUntilIdle()
-
-        vm.onEvent(ProgramDetailEvent.Activate("w-1"))
-        advanceUntilIdle()
-
-        assertNull(vm.state.value.activating)
-        assertIs<AppError.Connection>(vm.state.value.error)
-    }
-
     @Test
     fun `pendencia de sync aparece pelo alvoId e some quando a fila esvazia`() = runTest(dispatcher) {
         val repo = FakeProgramRepository(listResult = AppResult.Success(listOf(program("p1"))))
