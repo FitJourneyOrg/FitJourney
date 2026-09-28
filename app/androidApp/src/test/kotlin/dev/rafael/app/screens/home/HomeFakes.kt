@@ -86,8 +86,8 @@ class FakeProgramas(
     override suspend fun setSchedule(id: String, schedule: List<ProgramScheduleEntry>): AppResult<Program> =
         AppResult.Success(programa())
 
-    /** V59 — não usado pelos testes da Home hoje (eles simulam o ativo direto no fake de dados). */
-    override suspend fun activateWorkout(workoutId: String): AppResult<Unit> = AppResult.Success(Unit)
+    /** V60 — não usado pelos testes da Home hoje (a Home não chama mais isto). */
+    override suspend fun activateProgram(programId: String): AppResult<Unit> = AppResult.Success(Unit)
 
     var descartadoCalledWith: String? = null
     override suspend fun descartarPendencia(alvoId: String) { descartadoCalledWith = alvoId }

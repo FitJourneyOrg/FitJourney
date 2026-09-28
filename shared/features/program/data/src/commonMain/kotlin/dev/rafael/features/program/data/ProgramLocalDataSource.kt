@@ -90,6 +90,9 @@ class ProgramLocalDataSource(
                     split = p.split?.name,
                     focusMuscles = json.encodeToString(focoSerializer, p.focusMuscles),
                     locked = if (p.locked) 1L else 0L,
+                    // V60: cache do ponteiro que o GET /programs respondeu -- so leitura, nao
+                    // passa pelo outbox (ver ProgramRepositoryImpl.activateProgram).
+                    isActive = if (p.isActive) 1L else 0L,
                     durationWeeks = p.durationWeeks.toLong(),
                     startedAt = p.startedAt,
                     currentWeek = p.currentWeek.toLong(),
@@ -116,8 +119,9 @@ class ProgramLocalDataSource(
                         lockedExerciseCount = w.lockedExerciseCount.toLong(),
                         exerciseCount = w.exercises.size.toLong(),
                         exercisesJson = json.encodeToString(exerciciosSerializer, w.exercises),
-                        // V59: cache do ponteiro que o GET /programs respondeu -- so leitura,
-                        // nao passa pelo outbox (ver ProgramRepositoryImpl.activateWorkout).
+                        // V60: cache do "treino de hoje" que o GET /programs respondeu --
+                        // agora derivado no servidor (schedule x dia da semana), so leitura,
+                        // nao passa pelo outbox (ver ProgramRepositoryImpl.activateProgram).
                         isActive = if (w.isActive) 1L else 0L,
                     )
                 }
@@ -162,6 +166,7 @@ class ProgramLocalDataSource(
             split = dto.split?.name,
             focusMuscles = json.encodeToString(focoSerializer, dto.focusMuscles),
             locked = if (dto.locked) 1L else 0L,
+            isActive = if (dto.isActive) 1L else 0L,   // recém-criado: nunca vem ativo do servidor
             durationWeeks = dto.durationWeeks.toLong(),
             startedAt = dto.startedAt,
             currentWeek = dto.currentWeek.toLong(),
@@ -238,6 +243,7 @@ class ProgramLocalDataSource(
                 runCatching { json.decodeFromString(focoSerializer, it) }.getOrDefault(emptyList())
             } ?: emptyList(),
             locked = p.locked == 1L,
+            isActive = p.isActive == 1L,
             schedule = agenda,
             durationWeeks = p.durationWeeks.toInt(),
             startedAt = p.startedAt,

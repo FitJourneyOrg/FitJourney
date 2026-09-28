@@ -14,6 +14,7 @@ import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
 import dev.rafael.core.result.flatMap
+import dev.rafael.core.result.map
 import dev.rafael.server.features.exercise.engine.WeekSpread
 import dev.rafael.server.features.exercise.engine.WorkoutGenerator
 import dev.rafael.server.features.program.db.ProgramRepository
@@ -21,6 +22,7 @@ import dev.rafael.server.features.program.models.Program
 import dev.rafael.server.features.workout.models.Workout
 import dev.rafael.server.features.workout.models.WorkoutExercise
 import dev.rafael.server.features.workout.models.WorkoutSet
+import dev.rafael.server.features.user.db.UserRepository
 import kotlin.time.Clock
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
@@ -35,7 +37,25 @@ import kotlin.uuid.Uuid
 class ProgramService(
     private val generator: WorkoutGenerator,
     private val repository: ProgramRepository,
+    private val userRepository: UserRepository,
+    private val clock: Clock = Clock.System,
 ) {
+    /**
+     * V60 (reverte a V59 -- "ativo" agora é PROGRAMA, não treino). Marca este programa como o
+     * ativo do usuário (ponteiro simples, exclusivo, autoridade do servidor). NotFound se o
+     * programa não existe ou não é do usuário
+     * (reaproveita `findByIdForUser`, que já filtra por posse, pra não vazar a diferença entre
+     * "não existe" e "não é seu").
+     */
+    suspend fun activate(userId: Uuid, programId: Uuid): AppResult<Unit> =
+        repository.findByIdForUser(userId, programId).flatMap { programa ->
+            if (programa == null) {
+                AppError.NotFound("Programa não encontrado", code = ErrorCodes.PROGRAMA_NAO_EXISTE).asFailure()
+            } else {
+                userRepository.setActiveProgram(userId, programId).map { }
+            }
+        }
+
     /** Contagem por origem (AI/MANUAL) — insumo dos gates de teto (ARCH #27) na rota. */
     suspend fun counts(userId: Uuid): AppResult<dev.rafael.server.features.program.models.ProgramCounts> =
         repository.counts(userId)

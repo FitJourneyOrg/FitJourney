@@ -46,7 +46,6 @@ class ProgramDetailViewModel(
             is ProgramDetailEvent.Rename -> rename(event.name)
             ProgramDetailEvent.Delete -> delete()
             is ProgramDetailEvent.SetWorkoutDay -> setDay(event.workoutId, event.dayOfWeek)
-            is ProgramDetailEvent.Activate -> activate(event.workoutId)
             is ProgramDetailEvent.Descartar -> descartar(event.alvoId)
         }
     }
@@ -94,26 +93,6 @@ class ProgramDetailViewModel(
                 }
                 is AppResult.Failure ->
                     _state.update { it.copy(isLoading = false, error = result.error) }
-            }
-        }
-    }
-
-    /**
-     * V59, migrado do ProgramListViewModel: ONLINE-ONLY (ver
-     * [dev.rafael.features.program.domain.repository.ProgramRepository.activateWorkout]).
-     * Sucesso força um `load(forcar = true)` pra tela já mostrar o `isActive` novo, sem
-     * esperar o próximo ON_RESUME.
-     */
-    private fun activate(workoutId: String) {
-        _state.update { it.copy(activating = workoutId, error = null) }
-        viewModelScope.launch {
-            when (val result = repository.activateWorkout(workoutId)) {
-                is AppResult.Success -> {
-                    _state.update { it.copy(activating = null) }
-                    load(forcar = true)
-                }
-                is AppResult.Failure ->
-                    _state.update { it.copy(activating = null, error = result.error) }
             }
         }
     }

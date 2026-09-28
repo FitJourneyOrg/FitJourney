@@ -25,7 +25,6 @@ import dev.rafael.app.ui.nomeDoPrograma
 import dev.rafael.app.ui.rationaleDoPrograma
 import dev.rafael.app.ui.rotuloDoDiaDaSemana
 import dev.rafael.app.R
-import dev.rafael.features.program.domain.model.ProgramWorkout
 import dev.rafael.features.program.presentation.state.ProgramDetailEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramDetailViewModel
 import dev.rafael.app.ui.ShimmerContent
@@ -47,7 +46,6 @@ fun ProgramDetailScreen(
     val state by viewModel.state.collectAsState()
     var showRename by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var confirmarAtivacao by remember { mutableStateOf<ProgramWorkout?>(null) }
     // ARCH #25: programa IA de usuário free vem trancado — edição é premium.
     // 'locked' já é setado pelo ProgramBlur só quando (origin=AI && !premium).
     val readOnly = state.program?.locked == true
@@ -87,17 +85,6 @@ fun ProgramDetailScreen(
                     Text(stringResource(R.string.comum_cancelar))
                 }
             },
-        )
-    }
-
-    confirmarAtivacao?.let { treino ->
-        ConfirmarAtivacaoDialog(
-            nome = treino.name,
-            onConfirmar = {
-                confirmarAtivacao = null
-                treino.id?.let { viewModel.onEvent(ProgramDetailEvent.Activate(it)) }
-            },
-            onDismiss = { confirmarAtivacao = null },
         )
     }
 
@@ -300,14 +287,6 @@ fun ProgramDetailScreen(
                                                     onPick = { d -> w.id?.let { viewModel.onEvent(ProgramDetailEvent.SetWorkoutDay(it, d)) } },
                                                 )
                                             }
-                                            // Ativar independe de readOnly/canSchedule: são conceitos
-                                            // diferentes (premium do PROGRAMA vs treino ativo do usuário).
-                                            if (!w.isActive) {
-                                                OutlinedButton(
-                                                    onClick = { confirmarAtivacao = w },
-                                                    enabled = state.activating != w.id,
-                                                ) { Text(stringResource(R.string.treino_ativo_ativar)) }
-                                            }
                                         }
                                     },
                                     modifier = Modifier.clickable { w.id?.let { onOpenWorkout(it, readOnly) } },
@@ -391,21 +370,6 @@ private fun WeekdayPicker(day: Int, enabled: Boolean, onPick: (Int) -> Unit) {
             }
         }
     }
-}
-
-@Composable
-private fun ConfirmarAtivacaoDialog(nome: String, onConfirmar: () -> Unit, onDismiss: () -> Unit) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.treino_ativo_confirmar_titulo)) },
-        text = { Text(stringResource(R.string.treino_ativo_confirmar_corpo, nome)) },
-        confirmButton = {
-            TextButton(onClick = onConfirmar) { Text(stringResource(R.string.treino_ativo_ativar)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.comum_cancelar)) }
-        },
-    )
 }
 
 @Composable
