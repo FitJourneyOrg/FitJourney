@@ -136,4 +136,33 @@ class ProgramDetailViewModelTest {
         advanceUntilIdle()
         assertNull(vm.state.value.pendenciaDe("w-1"))
     }
+
+    // ---- descartar pendência permanente do outbox ----
+
+    @Test
+    fun `descartar chama o repositorio e recarrega o programa`() = runTest(dispatcher) {
+        val repo = FakeProgramRepository(listResult = AppResult.Success(listOf(program("p1"))))
+        val vm = ProgramDetailViewModel("p1", repo)
+        vm.onEvent(ProgramDetailEvent.Retry)
+        advanceUntilIdle()
+
+        vm.onEvent(ProgramDetailEvent.Descartar("w-1"))
+        advanceUntilIdle()
+
+        assertEquals("w-1", repo.descartarCalledWith)
+        assertEquals("p1", vm.state.value.program?.id)   // recarregou (load forçado), não sumiu
+    }
+
+    @Test
+    fun `descartar com o refresh seguinte falhando ainda assim propaga o erro`() = runTest(dispatcher) {
+        val repo = FakeProgramRepository(listResult = AppResult.Failure(AppError.Connection()))
+        val vm = ProgramDetailViewModel("p1", repo)
+        advanceUntilIdle()
+
+        vm.onEvent(ProgramDetailEvent.Descartar("w-1"))
+        advanceUntilIdle()
+
+        assertEquals("w-1", repo.descartarCalledWith)
+        assertIs<AppError.Connection>(vm.state.value.error)
+    }
 }

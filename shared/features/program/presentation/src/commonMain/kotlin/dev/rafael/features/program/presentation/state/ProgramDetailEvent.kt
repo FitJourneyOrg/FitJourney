@@ -8,4 +8,6 @@ sealed interface ProgramDetailEvent {
     data class SetWorkoutDay(val workoutId: String, val dayOfWeek: Int) : ProgramDetailEvent
     /** V59, migrado do ProgramListScreen -- marca este treino como o ativo do usuário. */
     data class Activate(val workoutId: String) : ProgramDetailEvent
+    /** Usuário reconheceu uma falha permanente do outbox e quer descartar (ARCH #30). */
+    data class Descartar(val alvoId: String) : ProgramDetailEvent
 }

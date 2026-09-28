@@ -23,6 +23,7 @@ import dev.rafael.features.program.domain.model.PendenciaDeSync
 import dev.rafael.features.program.domain.model.Program
 import dev.rafael.features.program.presentation.state.ProgramListEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramListViewModel
+import dev.rafael.app.ui.DescartarPendenciaDialog
 import dev.rafael.app.ui.ErroDeTela
 import dev.rafael.app.ui.ErroEmSnackbar
 import dev.rafael.app.ui.SeloDeSync
@@ -122,6 +123,7 @@ fun ProgramListScreen(
                                 programa = programa,
                                 pendencia = state.pendenciaDe(programa.id),
                                 onClick = { programa.id?.let(onOpenProgram) },
+                                onDescartarPendencia = { programa.id?.let { viewModel.onEvent(ProgramListEvent.Descartar(it)) } },
                             )
                         }
                     }
@@ -132,8 +134,23 @@ fun ProgramListScreen(
 }
 
 @Composable
-private fun ProgramCard(programa: Program, pendencia: PendenciaDeSync?, onClick: () -> Unit) {
+private fun ProgramCard(
+    programa: Program,
+    pendencia: PendenciaDeSync?,
+    onClick: () -> Unit,
+    onDescartarPendencia: () -> Unit,
+) {
     val temTreinoAtivo = programa.workouts.any { it.isActive }
+    var confirmarDescarte by remember { mutableStateOf(false) }
+
+    if (confirmarDescarte) {
+        DescartarPendenciaDialog(
+            mensagem = pendencia?.erroPermanente,
+            onConfirmar = { confirmarDescarte = false; onDescartarPendencia() },
+            onDismiss = { confirmarDescarte = false },
+        )
+    }
+
     OutlinedCard(onClick = onClick) {
         Column(Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -146,7 +163,9 @@ private fun ProgramCard(programa: Program, pendencia: PendenciaDeSync?, onClick:
                 if (programa.locked) {
                     Icon(Icons.Default.Lock, contentDescription = stringResource(R.string.programa_detalhe_bloqueado))
                 }
-                pendencia?.let { SeloDeSync(it) }
+                pendencia?.let {
+                    SeloDeSync(it, onDescartar = if (!it.aguardando) ({ confirmarDescarte = true }) else null)
+                }
             }
             if (temTreinoAtivo) {
                 Spacer(Modifier.height(8.dp))

@@ -624,6 +624,9 @@
     <string name="programa_lista_criar">Create</string>
     <string name="programa_lista_pendente">Pending</string>
     <string name="programa_lista_nao_sincronizou">Didn\'t sync</string>
+    <string name="pendencia_descartar_titulo">This wasn\'t saved</string>
+    <string name="pendencia_descartar_corpo_sem_mensagem">The server rejected this change and it won\'t be retried. Discard it and use the server\'s version?</string>
+    <string name="pendencia_descartar_confirmar">Discard</string>
 
 
     <!-- ============================ Generate with AI ============================ -->
