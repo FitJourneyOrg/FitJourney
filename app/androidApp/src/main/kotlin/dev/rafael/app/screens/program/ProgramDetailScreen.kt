@@ -18,6 +18,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import dev.rafael.app.ui.DescartarPendenciaDialog
 import dev.rafael.app.ui.ErroDeTela
 import dev.rafael.app.ui.SeloDeSync
 import dev.rafael.app.ui.nomeDoPrograma
@@ -234,7 +235,20 @@ fun ProgramDetailScreen(
                                     },
                                     modifier = Modifier.clickable { onOpenPaywall() },
                                 )
-                                else -> ListItem(
+                                else -> {
+                                var confirmarDescarte by remember(w.id) { mutableStateOf(false) }
+                                val pendenciaDoTreino = state.pendenciaDe(w.id)
+                                if (confirmarDescarte) {
+                                    DescartarPendenciaDialog(
+                                        mensagem = pendenciaDoTreino?.erroPermanente,
+                                        onConfirmar = {
+                                            confirmarDescarte = false
+                                            w.id?.let { viewModel.onEvent(ProgramDetailEvent.Descartar(it)) }
+                                        },
+                                        onDismiss = { confirmarDescarte = false },
+                                    )
+                                }
+                                ListItem(
                                     overlineContent = { Text(stringResource(rotuloDoDiaDaSemana(day))) },
                                     headlineContent = {
                                         if (w.isActive) {
@@ -273,7 +287,12 @@ fun ProgramDetailScreen(
                                             verticalAlignment = Alignment.CenterVertically,
                                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         ) {
-                                            state.pendenciaDe(w.id)?.let { SeloDeSync(it) }
+                                            pendenciaDoTreino?.let { pend ->
+                                                SeloDeSync(
+                                                    pend,
+                                                    onDescartar = if (!pend.aguardando) ({ confirmarDescarte = true }) else null,
+                                                )
+                                            }
                                             if (canSchedule) {
                                                 WeekdayPicker(
                                                     day = day,
@@ -293,6 +312,7 @@ fun ProgramDetailScreen(
                                     },
                                     modifier = Modifier.clickable { w.id?.let { onOpenWorkout(it, readOnly) } },
                                 )
+                                }
                             }
                         }
                     }

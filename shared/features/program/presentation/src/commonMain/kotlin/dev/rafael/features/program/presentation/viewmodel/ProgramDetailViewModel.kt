@@ -47,6 +47,7 @@ class ProgramDetailViewModel(
             ProgramDetailEvent.Delete -> delete()
             is ProgramDetailEvent.SetWorkoutDay -> setDay(event.workoutId, event.dayOfWeek)
             is ProgramDetailEvent.Activate -> activate(event.workoutId)
+            is ProgramDetailEvent.Descartar -> descartar(event.alvoId)
         }
     }
 
@@ -114,6 +115,17 @@ class ProgramDetailViewModel(
                 is AppResult.Failure ->
                     _state.update { it.copy(activating = null, error = result.error) }
             }
+        }
+    }
+
+    /**
+     * Só sai da fila LOCALMENTE (nunca falha) -- o `load(forcar = true)` que segue é quem busca
+     * a verdade do servidor e sobrescreve a tentativa recusada (ver KDoc do repositório).
+     */
+    private fun descartar(alvoId: String) {
+        viewModelScope.launch {
+            repository.descartarPendencia(alvoId)
+            load(forcar = true)
         }
     }
 

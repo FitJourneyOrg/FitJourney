@@ -1019,6 +1019,10 @@
     -->
     <string name="programa_lista_pendente">Pendente</string>
     <string name="programa_lista_nao_sincronizou">Não sincronizou</string>
+    <!-- Convite pra descartar uma falha PERMANENTE do outbox (400/403/404/409), ver SeloDeSync.kt. -->
+    <string name="pendencia_descartar_titulo">Isto não foi salvo</string>
+    <string name="pendencia_descartar_corpo_sem_mensagem">O servidor recusou esta alteração e ela não vai ser reenviada. Descartar e usar a versão do servidor?</string>
+    <string name="pendencia_descartar_confirmar">Descartar</string>
 
     <!-- ============================ Gerar com IA ============================ -->
 

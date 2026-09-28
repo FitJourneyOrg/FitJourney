@@ -88,6 +88,9 @@ class FakeProgramas(
 
     /** V59 — não usado pelos testes da Home hoje (eles simulam o ativo direto no fake de dados). */
     override suspend fun activateWorkout(workoutId: String): AppResult<Unit> = AppResult.Success(Unit)
+
+    var descartadoCalledWith: String? = null
+    override suspend fun descartarPendencia(alvoId: String) { descartadoCalledWith = alvoId }
 }
 
 class FakeTreinos : WorkoutRepository {
