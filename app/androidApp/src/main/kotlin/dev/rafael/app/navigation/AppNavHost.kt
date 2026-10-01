@@ -75,6 +75,8 @@ import dev.rafael.app.screens.reveal.ProgramOfferScreen
 import dev.rafael.app.screens.reveal.ProgramRevealScreen
 import dev.rafael.app.screens.session.WorkoutSessionScreen
 import dev.rafael.app.screens.splash.SplashScreen
+import dev.rafael.app.screens.wiki.WikiArticleScreen
+import dev.rafael.app.screens.wiki.WikiScreen
 import dev.rafael.app.screens.workout.WorkoutDetailScreen
 import dev.rafael.app.screens.workout.WorkoutFormScreen
 import dev.rafael.app.R
@@ -186,6 +188,9 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
      */
     val naEntrada = entry?.destination?.let { atual ->
         atual.hasRoute(AppRoute.Splash::class) ||
+            // Preparando pelo MESMO motivo do Splash, e não por semelhança: ele também termina em
+            // `popUpTo(inclusive = true)`, então navegar aqui seria desfeito um segundo depois.
+            atual.hasRoute(AppRoute.Preparando::class) ||
             atual.hasRoute(AppRoute.Login::class) ||
             atual.hasRoute(AppRoute.Nome::class) ||
             atual.hasRoute(AppRoute.Quiz::class)
@@ -404,11 +409,24 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
         }
 
         composable<AppRoute.Login> {
+            // Vai pro Preparando, e não pra Splash: depois do login o banco local está vazio, e
+            // esta é a única entrada em que vale ESPERAR o dado chegar. Ver AppRoute.Preparando.
             LoginScreen(onLoggedIn = {
-                nav.navigate(AppRoute.Splash) {
+                nav.navigate(AppRoute.Preparando) {
                     popUpTo(AppRoute.Login) { inclusive = true }
                 }
             })
+        }
+
+        composable<AppRoute.Preparando> {
+            SplashScreen(
+                posLogin = true,
+                onDecided = { dest ->
+                    nav.navigate(dest) {
+                        popUpTo(AppRoute.Preparando) { inclusive = true }
+                    }
+                },
+            )
         }
 
         composable<AppRoute.Nome> {
@@ -470,11 +488,14 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
         composable<AppRoute.Home> {
             HomeScreen(
                 onOpenLibrary = { nav.navigate(AppRoute.Library) },
-                onOpenWorkouts = { nav.navigate(AppRoute.Programs) },
+                // Programas/Grupos/Progresso são RAÍZES de aba -- trocarDeAba (não navigate cru),
+                // senão a pilha empilha a raiz por cima da Home e a bottom bar trava até voltar
+                // (achado do Rafael, 2026-09-29). Ver KDoc de trocarDeAba em BottomNav.kt.
+                onOpenWorkouts = { nav.trocarDeAba(AppRoute.Programs) },
                 onGenerateWithAI = { nav.navigate(AppRoute.ProgramGenerate) },
                 onStartWorkout = { id -> nav.navigate(AppRoute.WorkoutSession(id)) },
-                onOpenGroups = { nav.navigate(AppRoute.Grupos) },
-                onOpenProgress = { nav.navigate(AppRoute.Progresso) },
+                onOpenGroups = { nav.trocarDeAba(AppRoute.Grupos) },
+                onOpenProgress = { nav.trocarDeAba(AppRoute.Progresso) },
             )
         }
 
@@ -731,11 +752,17 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
             )
         }
 
+        // Fase 8: deixou de ser "em breve". Entra pelo menu lateral, sem barra de abas -- é
+        // destino secundário, e a leitura de um artigo ocupa a tela inteira.
         composable<AppRoute.Wiki> {
-            EmBreveScreen(
-                stringResource(R.string.menu_wiki),
-                stringResource(R.string.nav_wiki_descricao),
+            WikiScreen(
+                onAbrirArtigo = { slug -> nav.navigate(AppRoute.WikiArticle(slug)) },
+                onBack = { nav.popBackStack() },
             )
+        }
+        composable<AppRoute.WikiArticle> { entry ->
+            val rota: AppRoute.WikiArticle = entry.toRoute()
+            WikiArticleScreen(slug = rota.slug, onBack = { nav.popBackStack() })
         }
         composable<AppRoute.Duvidas> {
             EmBreveScreen(

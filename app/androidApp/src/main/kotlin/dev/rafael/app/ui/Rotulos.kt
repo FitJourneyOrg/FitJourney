@@ -17,6 +17,7 @@ import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.profile.TrainingEnvironment
+import dev.rafael.contract.wiki.WikiCategory
 
 /**
  * O rótulo de cada valor de enum, num lugar só (fatia G.3, ARCH #37).
@@ -123,6 +124,20 @@ fun ExerciseCategory.rotulo(): Int = when (this) {
     ExerciseCategory.FOREARMS -> R.string.enum_categoria_forearms
     ExerciseCategory.CARDIO -> R.string.enum_categoria_cardio
     ExerciseCategory.LOWER_BACK -> R.string.enum_categoria_lower_back
+}
+
+/**
+ * Categorias do "Aprender" (Fase 8). `when` exaustivo pelo mesmo motivo de todo enum deste arquivo:
+ * categoria nova no contrato quebra o BUILD até alguém escrever o texto nos dois idiomas, em vez de
+ * aparecer na tela como `MINDSET` -- que é a quinta ocorrência dessa família que o projeto já pagou.
+ */
+@StringRes
+fun WikiCategory.rotulo(): Int = when (this) {
+    WikiCategory.TRAINING -> R.string.enum_wiki_treino
+    WikiCategory.TECHNIQUE -> R.string.enum_wiki_tecnica
+    WikiCategory.NUTRITION -> R.string.enum_wiki_nutricao
+    WikiCategory.RECOVERY -> R.string.enum_wiki_recuperacao
+    WikiCategory.MINDSET -> R.string.enum_wiki_mentalidade
 }
 
 /**

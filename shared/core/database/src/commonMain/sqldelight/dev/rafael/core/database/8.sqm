@@ -1,0 +1,22 @@
+-- Migration 8: o acervo do "Aprender" (Fase 8), espelhando a V61 do servidor.
+--
+-- Cache de LEITURA, sem outbox: o conteúdo é do servidor (entra por migration repetível) e o
+-- cliente nunca escreve nele. Mesmo desenho da tabela `exercise`, e pela mesma razão -- a Home e a
+-- lista pintam offline, e a rede só atualiza (ARCH #30).
+--
+-- `slug` é UNIQUE aqui também, mesmo já sendo garantido no servidor: é por ele que o `INSERT OR
+-- REPLACE` casa a linha, e duas linhas com o mesmo slug fariam o acervo mostrar o artigo duplicado
+-- sem erro nenhum.
+--
+-- `updatedAt` é TEXT (`yyyy-MM-dd`) e não um timestamp: o servidor manda a data da revisão do TEXTO
+-- e a tela a formata no idioma dela. Guardar como número convidaria alguém a fazer conta com ela.
+CREATE TABLE wikiArticle (
+    id         TEXT    NOT NULL PRIMARY KEY,
+    slug       TEXT    NOT NULL UNIQUE,
+    category   TEXT    NOT NULL,
+    title      TEXT    NOT NULL,
+    body       TEXT    NOT NULL,
+    featured   INTEGER NOT NULL DEFAULT 0,
+    orderIndex INTEGER NOT NULL,
+    updatedAt  TEXT    NOT NULL
+);
