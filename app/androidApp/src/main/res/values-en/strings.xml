@@ -268,6 +268,7 @@
 
     <!-- ============================ Common ============================ -->
 
+    <string name="comum_limpar">Clear</string>
     <string name="comum_voltar">Back</string>
     <string name="comum_cancelar">Cancel</string>
     <string name="comum_apagar">Delete</string>
@@ -1091,6 +1092,8 @@
 
     <string name="exercicios_todas">All</string>
     <string name="exercicios_todos_musculos">All</string>
+    <string name="exercicios_buscar">Search exercise</string>
+    <string name="exercicios_busca_vazia">Nothing found for %1$s</string>
     <string name="exercicios_vazio">No exercises.</string>
     <string name="exercicio_nao_encontrado">Exercise not found</string>
     <string name="exercicios_adicionar_titulo">Add exercises</string>

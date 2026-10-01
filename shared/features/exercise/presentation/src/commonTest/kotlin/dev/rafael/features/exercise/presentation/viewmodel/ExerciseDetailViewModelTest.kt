@@ -6,6 +6,7 @@ import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.model.Exercise
+import dev.rafael.features.exercise.domain.model.FiltroDeExercicios
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -41,7 +42,7 @@ class ExerciseDetailViewModelTest {
     )
 
     private class FakeRepo(private val detail: AppResult<Exercise>) : ExerciseRepository {
-        override fun observeExercises(category: ExerciseCategory?, muscleGroup: MuscleGroup?): Flow<List<Exercise>> = flowOf(emptyList())
+        override fun observeExercises(filtro: FiltroDeExercicios): Flow<List<Exercise>> = flowOf(emptyList())
         override suspend fun refresh(forcar: Boolean): AppResult<Unit> = AppResult.Success(Unit)
         override suspend fun alternatives(exerciseId: String): AppResult<List<Exercise>> = AppResult.Success(emptyList())
         override suspend fun getDetail(exerciseId: String): AppResult<Exercise> = detail
