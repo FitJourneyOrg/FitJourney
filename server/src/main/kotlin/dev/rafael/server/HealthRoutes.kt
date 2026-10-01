@@ -23,6 +23,7 @@ import dev.rafael.server.features.session.routes.sessionRoutes
 import dev.rafael.server.features.session.services.SessionService
 import dev.rafael.server.features.stats.StatsService
 import dev.rafael.server.features.stats.AchievementService
+import dev.rafael.server.features.stats.ProgressService
 import dev.rafael.server.features.stats.statsRoutes
 import dev.rafael.server.features.user.routes.userRoutes
 import dev.rafael.server.features.friendship.routes.friendshipRoutes
@@ -72,6 +73,7 @@ fun Application.configureRouting() {
     val sessionService = get<SessionService>()
     val statsService = get<StatsService>()
     val achievementService = get<AchievementService>()
+    val progressService = get<ProgressService>()
     val groupService = get<GroupService>()
     val groupMembershipService = get<GroupMembershipService>()
     val checkInService = get<CheckInService>()
@@ -96,7 +98,7 @@ fun Application.configureRouting() {
         workoutRoutes(workoutService, userService, profileService, programService)
         programRoutes(userService, profileService, programService)
         sessionRoutes(sessionService)
-        statsRoutes(statsService, achievementService)
+        statsRoutes(statsService, achievementService, progressService)
         groupRoutes(groupService)
         groupMembershipRoutes(groupMembershipService)
         checkInRoutes(checkInService)
