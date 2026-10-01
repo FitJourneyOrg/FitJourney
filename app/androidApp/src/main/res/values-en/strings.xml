@@ -804,9 +804,27 @@
     <!-- ============================ Side drawer ============================ -->
 
     <string name="menu_meu_perfil">My profile</string>
-    <string name="menu_wiki">Fitness wiki</string>
-    <string name="menu_wiki_selo">phase 8</string>
+    <string name="menu_wiki">Learn</string>
     <string name="menu_duvidas">FAQ</string>
+
+    <string name="preparando_perfil">Loading your profile</string>
+    <string name="preparando_programas">Getting your workouts ready</string>
+    <string name="preparando_progresso">Fetching your progress</string>
+    <string name="preparando_exercicios">Downloading the exercise catalog</string>
+
+    <string name="aprender_tudo">All</string>
+    <string name="aprender_comece_aqui">Start here</string>
+    <string name="aprender_min_leitura">%1$d min read</string>
+    <!-- MONTH BEFORE DAY, the opposite of pt-BR: %1$02d is still the day. See checkin_data_as. -->
+    <string name="aprender_atualizado">updated %2$02d/%1$02d/%3$d</string>
+    <string name="aprender_vazio">The content has not reached this device yet. Pull to refresh.</string>
+    <string name="aprender_artigo_sumiu">This article is no longer available.</string>
+
+    <string name="enum_wiki_treino">Training</string>
+    <string name="enum_wiki_tecnica">Technique</string>
+    <string name="enum_wiki_nutricao">Nutrition</string>
+    <string name="enum_wiki_recuperacao">Recovery</string>
+    <string name="enum_wiki_mentalidade">Mindset</string>
     <string name="menu_conta">Account settings</string>
     <!--
       ⚠️ "Log out", NOT "Leave". Identical to `grupo_detalhe_sair_confirmar` in pt-BR ("Sair"):
@@ -992,6 +1010,9 @@
     <string name="home_completar_agenda_titulo">Complete your schedule</string>
     <string name="home_completar_agenda_corpo">Set up your program\'s week to get suggestions every day.</string>
 
+    <string name="home_ativar_programa_titulo">Activate a program</string>
+    <string name="home_ativar_programa_corpo">You already have a program ready. Pick one to see today\'s workout.</string>
+
     <string name="home_sem_programa_titulo">Start your first program</string>
     <string name="home_sem_programa_texto">Build a program and the workout of the day shows up here, ready to start.</string>
     <string name="home_montar_com_ia">Build with AI</string>
@@ -1062,7 +1083,6 @@
     <!-- ============================ Navigation and screens to come ============================ -->
 
     <string name="nav_abrir_menu">Open menu</string>
-    <string name="nav_wiki_descricao">Content about training, technique and recovery. Arrives in Phase 8.</string>
     <string name="nav_duvidas_descricao">The most common questions about the app and the workouts.</string>
     <string name="em_breve">Coming soon</string>
 

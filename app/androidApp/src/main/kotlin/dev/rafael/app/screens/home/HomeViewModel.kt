@@ -67,12 +67,19 @@ data class HomeState(
     /** Já baixou programas neste aparelho (carimbo persistido). Ver ProgramListState. */
     val jaSincronizou: Boolean = false,
     /**
-     * V60 (reverte a V59): true = usuário tem programa(s), mas NENHUM tem agenda configurada
-     * (schedule vazio em todos). Não é descanso — é onboarding incompleto (ninguém montou a
-     * semana ainda), e a Home pede pra completar a agenda em vez de sugerir um treino avulso.
-     * Descanso de verdade só existe quando ALGUMA agenda existe e hoje não está nela (ARCH #22).
+     * V60 (reverte a V59): true = o programa ATIVO não tem agenda configurada (schedule vazio).
+     * Não é descanso — é onboarding incompleto (ninguém montou a semana ainda), e a Home pede
+     * pra completar a agenda em vez de sugerir um treino avulso. Descanso de verdade só existe
+     * quando o ativo TEM agenda e hoje não está nela (ARCH #22).
      */
     val precisaCompletarAgenda: Boolean = false,
+    /**
+     * V60: true = usuário tem programa(s) com agenda pronta, mas NENHUM está ativado. Achado
+     * do Rafael testando manualmente: a Home ignorava qual programa era o ativo e mostrava o
+     * treino do primeiro que batesse a agenda -- distinto de [precisaCompletarAgenda] (aqui a
+     * agenda já existe, falta só escolher/ativar um programa).
+     */
+    val precisaAtivarPrograma: Boolean = false,
 )
 
 /**
@@ -86,11 +93,13 @@ data class HomeState(
  * Comparamos com o dia da semana local do aparelho — aqui o relógio do cliente é aceitável
  * porque é só apresentação; nada de XP/validação depende disso (autoridade do servidor).
  * V60 (reverte a V59): sem treino agendado para hoje, NÃO existe mais um treino "ativo" pra
- * cair como sugestão de fallback -- ativação virou conceito de PROGRAMA (ver ProgramListScreen),
- * e a Home não empresta esse ponteiro pra escolher um treino avulso. Sem agenda em NENHUM
- * programa, não é descanso -- é ninguém ter montado a semana ainda (`precisaCompletarAgenda`,
- * pede pro usuário completar). Descanso implícito (ARCH #22) continua valendo só quando alguma
- * agenda existe e hoje não está nela.
+ * cair como sugestão de fallback -- ativação virou conceito de PROGRAMA (ver ProgramListScreen).
+ * "Hoje" só é resolvido dentro do programa marcado como ATIVO (`Program.isActive`) -- nunca
+ * varrendo a agenda de programas que não são o ativo, mesmo que batam o dia (bug achado pelo
+ * Rafael: a Home mostrava o treino de outro programa que só calhou de vir antes na lista).
+ * Sem programa ativo (existem programas, mas nenhum foi ativado), é `precisaAtivarPrograma`.
+ * Ativo sem agenda nenhuma (schedule vazio), é `precisaCompletarAgenda`. Descanso implícito
+ * (ARCH #22) só vale quando o ativo TEM agenda e hoje não está nela.
  */
 class HomeViewModel(
     private val programs: ProgramRepository,
@@ -151,31 +160,49 @@ class HomeViewModel(
     }
 
     /**
-     * Acha o treino de hoje entre os programas locais, só pela agenda (ARCH #22). V60 (reverte
-     * a V59): sem match, não há mais fallback pra um treino "ativo" -- se ninguém montou agenda
-     * nenhuma, a Home pede pra completar a agenda em vez de sugerir um treino avulso.
+     * Acha o treino de hoje SÓ dentro do programa ATIVO (ARCH #22 + V60). Nunca varre a agenda
+     * de programas que não são o ativo -- mesmo que um deles bata o dia, ele não conta: ativação
+     * é ponteiro exclusivo (mesma autoridade do servidor em `ProgramActiveWorkout`), a Home só
+     * espelha, não reimplementa "qualquer programa serve".
      */
     private suspend fun resolverTreinoDeHoje(programas: List<Program>) {
-        val hoje = diaDaSemanaHoje()
-        val achado = programas.firstNotNullOfOrNull { p ->
-            p.schedule.firstOrNull { it.dayOfWeek == hoje }?.let { e -> p to e.workoutId }
-        }
-        if (achado == null) {
-            // Só é descanso de verdade se ALGUMA agenda existe (e hoje não está nela). Schedule
-            // vazio em todos os programas = ninguém configurou nada, não é uma folga escolhida.
-            val agendaConfigurada = programas.any { it.schedule.isNotEmpty() }
+        if (programas.isEmpty()) {
             _state.update {
                 it.copy(
-                    isLoading = false,
-                    today = null,
-                    semPrograma = programas.isEmpty(),
-                    precisaCompletarAgenda = programas.isNotEmpty() && !agendaConfigurada,
+                    isLoading = false, today = null, semPrograma = true,
+                    precisaCompletarAgenda = false, precisaAtivarPrograma = false,
                 )
             }
             return
         }
-        val (programa, workoutId) = achado
-        val resumo = programa.workouts.firstOrNull { it.id == workoutId }
+        val ativo = programas.firstOrNull { it.isActive }
+        if (ativo == null) {
+            // Tem programa(s), mas nenhum foi ativado. Distinto de "sem agenda": a agenda pode
+            // já estar pronta, só falta escolher/ativar um programa (achado do Rafael).
+            _state.update {
+                it.copy(
+                    isLoading = false, today = null, semPrograma = false,
+                    precisaCompletarAgenda = false, precisaAtivarPrograma = true,
+                )
+            }
+            return
+        }
+        val hoje = diaDaSemanaHoje()
+        val entry = ativo.schedule.firstOrNull { it.dayOfWeek == hoje }
+        if (entry == null) {
+            // Só é descanso de verdade se o ATIVO tem agenda (e hoje não está nela). Schedule
+            // vazio no ativo = ninguém configurou nada, não é uma folga escolhida.
+            _state.update {
+                it.copy(
+                    isLoading = false, today = null, semPrograma = false,
+                    precisaAtivarPrograma = false,
+                    precisaCompletarAgenda = ativo.schedule.isEmpty(),
+                )
+            }
+            return
+        }
+        val workoutId = entry.workoutId
+        val resumo = ativo.workouts.firstOrNull { it.id == workoutId }
         // Dia trancado (ARCH #23): não busca o detalhe. O servidor recusa com 403 — o card
         // trancado não mostra duração de qualquer forma, e pedir o que já se sabe negado só
         // enche o log de 403 que parecem bug.
@@ -188,19 +215,20 @@ class HomeViewModel(
                 isLoading = false,
                 semPrograma = false,
                 precisaCompletarAgenda = false,
+                precisaAtivarPrograma = false,
                 today = TodayWorkout(
                     workoutId = workoutId,
                     // Sem fallback aqui: o ViewModel não tem `Context`, e mesmo que tivesse a
                     // palavra é da tela. Mesmo arranjo do `SetEntry.exerciseName`.
                     name = resumo?.name,
-                    programName = programa.name,
-                    programDaysPerWeek = programa.daysPerWeek,
-                    programSplit = programa.split,
+                    programName = ativo.name,
+                    programDaysPerWeek = ativo.daysPerWeek,
+                    programSplit = ativo.split,
                     exerciseCount = resumo?.exerciseCount ?: 0,
                     minutes = minutos,
                     locked = resumo?.locked == true,
-                    week = programa.currentWeek,
-                    totalWeeks = programa.durationWeeks,
+                    week = ativo.currentWeek,
+                    totalWeeks = ativo.durationWeeks,
                 ),
             )
         }

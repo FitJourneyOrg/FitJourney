@@ -1,0 +1,27 @@
+// :shared:features:wiki:data — datasource remoto (Ktor) + local (SQLDelight), mapper, repo impl.
+plugins {
+    id("fitjourney.kmp-client")
+}
+kotlin {
+    androidLibrary {
+        namespace = "dev.rafael.features.wiki.data"
+    }
+    sourceSets {
+        commonMain.dependencies {
+            implementation(projects.shared.features.wiki.domain)
+            implementation(projects.shared.core.result)
+            implementation(projects.shared.core.network)
+            implementation(projects.shared.core.database)          // <- SQLDelight (cache)
+            implementation(projects.sharedContract)
+            implementation(libs.koin.core)
+            implementation(libs.kotlinx.coroutines.core)
+            implementation(libs.ktor.client.core)
+            implementation(libs.ktor.client.contentNegotiation)
+            implementation(libs.sqldelight.coroutinesExtensions)   // <- asFlow().mapToList()
+        }
+        commonTest.dependencies {
+            implementation(kotlin("test"))
+            implementation(libs.kotlinx.coroutines.test)
+        }
+    }
+}

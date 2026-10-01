@@ -52,6 +52,9 @@ include(":shared:features:profile:presentation")
 include(":shared:features:exercise:data")
 include(":shared:features:exercise:domain")
 include(":shared:features:exercise:presentation")
+include(":shared:features:wiki:data")
+include(":shared:features:wiki:domain")
+include(":shared:features:wiki:presentation")
 
 
 include(":shared:features:achievements:data")

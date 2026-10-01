@@ -12,6 +12,8 @@ import dev.rafael.core.network.di.networkModule
 import dev.rafael.features.auth.data.di.authDataModule
 import dev.rafael.features.auth.presentation.di.authPresentationModule
 import dev.rafael.features.exercise.data.di.exerciseDataModule
+import dev.rafael.features.wiki.data.di.wikiDataModule
+import dev.rafael.features.wiki.presentation.di.wikiPresentationModule
 import dev.rafael.features.exercise.presentation.di.exercisePresentationModule
 import dev.rafael.features.achievements.data.di.achievementsDataModule
 import dev.rafael.features.achievements.presentation.di.achievementsPresentationModule
@@ -199,7 +201,10 @@ val appModule = module {
     single { dev.rafael.app.data.checkin.Localizador(androidContext()) }
     viewModel { dev.rafael.app.screens.checkin.CheckInViewModel(get(), get(), get()) }
     single { SyncScheduler(androidContext()) }   // WorkManager: flush da outbox em background
-    viewModelOf(::SplashViewModel)   // injeta AuthRepository + ProfileRepository + ExerciseRepository + CoroutineScope
+    // Mesma instância de grafo pro cold start e pro pós-login: o que difere entre eles é
+    // `posLogin`, e ele chega por `iniciar()` (vindo da rota), não por parâmetro de DI — ver o
+    // KDoc de `SplashViewModel.iniciar`.
+    viewModelOf(::SplashViewModel)
     viewModelOf(::HomeViewModel)     // treino de hoje (não conhece mais sessão — ARCH #34)
     viewModelOf(::MenuViewModel)     // cabeçalho do menu lateral: nome + nível, do cache
     viewModelOf(::PerfilViewModel)   // perfil: nome, nível, conquistas
@@ -243,6 +248,8 @@ val todosOsModulosDoApp: List<Module> = listOf(
     profileDataModule,
     profilePresentationModule,
     exerciseDataModule,
+    wikiDataModule,
+    wikiPresentationModule,
     exercisePresentationModule,
     achievementsDataModule,
     achievementsPresentationModule,
