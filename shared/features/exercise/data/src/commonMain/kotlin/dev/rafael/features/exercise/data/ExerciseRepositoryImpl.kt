@@ -1,6 +1,5 @@
 package dev.rafael.features.exercise.data
 
-import dev.rafael.contract.exercise.ExerciseCategory
 import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.core.database.SyncStamps
@@ -8,6 +7,7 @@ import dev.rafael.core.network.httpResult
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.model.Exercise
+import dev.rafael.features.exercise.domain.model.FiltroDeExercicios
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -30,10 +30,18 @@ class ExerciseRepositoryImpl(
     private val idiomaAtual: () -> Idioma,
 ) : ExerciseRepository {
 
-    override fun observeExercises(category: ExerciseCategory?, muscleGroup: MuscleGroup?): Flow<List<Exercise>> {
-        val rows = if (category == null) local.observeAll()
-        else local.observeByCategory(category.name)
-        return rows.map { list -> list.mapNotNull { it.toDomainOrNull() }.filtradosPorMusculo(muscleGroup) }
+    override fun observeExercises(filtro: FiltroDeExercicios): Flow<List<Exercise>> {
+        // Variável local, e não `filtro.categoria` direto: o Kotlin não faz smart cast em
+        // propriedade de classe de OUTRO módulo (o `FiltroDeExercicios` mora no domain), porque
+        // nada garante que ela não seja um `val` com getter customizado lá.
+        val categoria = filtro.categoria
+        val rows = if (categoria == null) local.observeAll()
+        else local.observeByCategory(categoria.name)
+        return rows.map { list ->
+            list.mapNotNull { it.toDomainOrNull() }
+                .filtradosPorMusculo(filtro.musculo)
+                .filtradosPorBusca(filtro.busca)
+        }
     }
 
     /**
