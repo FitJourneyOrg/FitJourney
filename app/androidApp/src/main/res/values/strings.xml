@@ -1308,13 +1308,37 @@
     <!-- Item da gaveta lateral que leva ao perfil do próprio usuário. -->
     <string name="menu_meu_perfil">Meu perfil</string>
     <!-- Item da gaveta lateral que leva à wiki de exercícios. Também é o título da tela. -->
-    <string name="menu_wiki">Wiki fitness</string>
+    <string name="menu_wiki">Aprender</string>
     <!--
       Selo do item que ainda não existe. Diz em que FASE do roadmap ele entra — o item não vira
       promessa vazia, e quem toca já sabe que vai cair num "em breve". ~10 caracteres.
     -->
-    <string name="menu_wiki_selo">fase 8</string>
     <string name="menu_duvidas">Dúvidas frequentes</string>
+
+    <!-- Tela "Aprender" (Fase 8). O título reusa menu_wiki: a mesma palavra no menu e na tela,
+         de propósito, porque é o mesmo destino. Categorias em enum_wiki_*. -->
+    <!-- Passos do carregamento pós-login (SplashScreen). Frases curtas: aparecem por poucos
+         segundos cada e trocam sozinhas. -->
+    <string name="preparando_perfil">Carregando seu perfil</string>
+    <string name="preparando_programas">Preparando seus treinos</string>
+    <string name="preparando_progresso">Buscando seu progresso</string>
+    <string name="preparando_exercicios">Baixando o catálogo de exercícios</string>
+
+    <string name="aprender_tudo">Tudo</string>
+    <string name="aprender_comece_aqui">Comece aqui</string>
+    <string name="aprender_min_leitura">%1$d min de leitura</string>
+    <!-- Dia antes do mês (pt-BR). O en-US reordena a MESMA frase; ver checkin_data_as. -->
+    <string name="aprender_atualizado">atualizado em %1$02d/%2$02d/%3$d</string>
+    <string name="aprender_vazio">O conteúdo ainda não chegou neste aparelho. Puxe para atualizar.</string>
+    <string name="aprender_artigo_sumiu">Este artigo saiu do ar.</string>
+
+    <!-- Categorias do acervo (WikiCategory). "Treino" coincide com a aba e com o nome padrão de um
+         treino: são três coisas diferentes, ver CatalogoDeStringsTest. -->
+    <string name="enum_wiki_treino">Treino</string>
+    <string name="enum_wiki_tecnica">Técnica</string>
+    <string name="enum_wiki_nutricao">Nutrição</string>
+    <string name="enum_wiki_recuperacao">Recuperação</string>
+    <string name="enum_wiki_mentalidade">Mentalidade</string>
     <string name="menu_conta">Configurações da conta</string>
     <!--
       Rodapé da gaveta. E ele SAI de verdade: não leva a Configurações. ~14 caracteres.
@@ -1590,6 +1614,12 @@
     <string name="home_completar_agenda_titulo">Complete sua agenda</string>
     <string name="home_completar_agenda_corpo">Monte a semana do seu programa para receber sugestões todos os dias.</string>
 
+    <!-- Card de programa(s) com agenda pronta mas NENHUM ativado (V60): distinto do card
+         acima, aqui a agenda já existe, falta escolher qual programa seguir. Botão reusa
+         programa_ativar_botao, não duplica. -->
+    <string name="home_ativar_programa_titulo">Ative um programa</string>
+    <string name="home_ativar_programa_corpo">Você já tem programa pronto. Escolha qual seguir para ver o treino de hoje.</string>
+
     <!-- Card de quem ainda não tem programa nenhum. -->
     <string name="home_sem_programa_titulo">Comece seu primeiro programa</string>
     <string name="home_sem_programa_texto">Monte um programa e o treino do dia aparece aqui, pronto pra começar.</string>
@@ -1697,7 +1727,6 @@
     <!-- Descrição do ícone que abre a gaveta lateral. Nunca visível. -->
     <string name="nav_abrir_menu">Abrir menu</string>
     <!-- Explicações das duas telas que ainda não existem. Ver `EmBreveScreen`. -->
-    <string name="nav_wiki_descricao">Conteúdo sobre treino, técnica e recuperação. Chega na Fase 8.</string>
     <string name="nav_duvidas_descricao">As perguntas mais comuns sobre o app e os treinos.</string>
     <!-- Selo da tela ainda não implementada. ~14 caracteres. -->
     <string name="em_breve">Em breve</string>

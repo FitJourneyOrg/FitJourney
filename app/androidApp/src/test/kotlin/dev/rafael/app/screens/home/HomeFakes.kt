@@ -122,7 +122,12 @@ class FakeAuth : AuthRepository {
         deslogou = true
         return AppResult.Success(Unit)
     }
-    override suspend fun isLoggedIn(): Boolean = true
+    /**
+     * A sessão PERSISTIDA — é por ela que o Splash decide Login vs Home. `var` para o teste do
+     * Splash poder simular "ninguém nunca logou neste aparelho".
+     */
+    var logado = true
+    override suspend fun isLoggedIn(): Boolean = logado
     override suspend fun currentIdToken(): String? = "t"
     override suspend fun fetchMe(): AppResult<AuthUser> = AppResult.Success(AuthUser("u", "e"))
 
@@ -134,11 +139,33 @@ class FakeAuth : AuthRepository {
     override suspend fun usuarioLocal(): AuthUser? = local
 }
 
-class FakePerfil : ProfileRepository {
+/**
+ * Também usado pelos testes do Splash, que precisam VARIAR o que a rede e o cache respondem —
+ * daí os `var` com exatamente os valores que este fake sempre teve, para os testes da Home,
+ * Conta e Menu não notarem diferença.
+ */
+class FakePerfil(
+    /** O que a REDE responde. Default `NotFound`: o cadastro que ainda não existe no servidor. */
+    var resultadoGetProfile: AppResult<Profile> =
+        AppResult.Failure(dev.rafael.core.result.AppError.NotFound()),
+    /** O que o CACHE diz sobre o onboarding — o gate monotônico do Splash. */
+    var onboardingCacheado: Boolean? = true,
+    /**
+     * Suspende para sempre dentro de `getProfile`. Serve ao caminho de falha do preparo pós-login:
+     * é como se simula rede que nunca responde sem depender de tempo real.
+     */
+    var travarGetProfile: Boolean = false,
+) : ProfileRepository {
     var limpouCache = false
-    override suspend fun getProfile(): AppResult<Profile> = AppResult.Failure(dev.rafael.core.result.AppError.NotFound())
+    var buscas = 0
+
+    override suspend fun getProfile(): AppResult<Profile> {
+        buscas++
+        if (travarGetProfile) kotlinx.coroutines.awaitCancellation()
+        return resultadoGetProfile
+    }
     override suspend fun saveProfile(profile: Profile): AppResult<Profile> = AppResult.Success(profile)
-    override suspend fun cachedOnboardingCompleted(): Boolean? = true
+    override suspend fun cachedOnboardingCompleted(): Boolean? = onboardingCacheado
     override suspend fun clearOnboardingCache() { limpouCache = true }
 }
 
@@ -148,9 +175,12 @@ fun programa(
     id: String = "p1",
     workouts: List<ProgramWorkout> = emptyList(),
     schedule: List<ProgramScheduleEntry> = emptyList(),
+    // V60: default false de propósito -- um teste que quer "treino de hoje" tem que pedir
+    // isActive = true explicitamente, do jeito que o servidor exige ativação explícita.
+    isActive: Boolean = false,
 ) = Program(
     id = id, name = "Programa", workouts = workouts, daysPerWeek = 3,
-    split = "FULL_BODY", locked = false, schedule = schedule,
+    split = "FULL_BODY", locked = false, isActive = isActive, schedule = schedule,
     createdAt = null, updatedAt = null,
 )
 

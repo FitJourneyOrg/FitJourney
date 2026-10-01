@@ -72,6 +72,7 @@ class HomeViewModelTest {
             programa(
                 workouts = listOf(ProgramWorkout(id = "w1", name = "Upper", exerciseCount = 6)),
                 schedule = listOf(ProgramScheduleEntry(workoutId = "w1", dayOfWeek = 1)),   // segunda
+                isActive = true,
             ),
         )
         advanceUntilIdle()
@@ -90,11 +91,12 @@ class HomeViewModelTest {
             programa(
                 workouts = listOf(ProgramWorkout(id = "w1", name = "Upper", exerciseCount = 6)),
                 schedule = listOf(ProgramScheduleEntry(workoutId = "w1", dayOfWeek = 3)),   // quarta
+                isActive = true,
             ),
         )
         advanceUntilIdle()
 
-        // Descanso é implícito (ARCH #22): sem treino hoje E com programa = dia de descanso.
+        // Descanso é implícito (ARCH #22): sem treino hoje E com programa (ativo) = dia de descanso.
         assertNull(viewModel.state.value.today)
         assertFalse(viewModel.state.value.semPrograma)
     }
@@ -114,6 +116,7 @@ class HomeViewModelTest {
                     ProgramWorkout(id = "w2", name = "Lower", exerciseCount = 6),
                 ),
                 schedule = listOf(ProgramScheduleEntry(workoutId = "w1", dayOfWeek = 1)),   // segunda
+                isActive = true,
             ),
         )
         advanceUntilIdle()
@@ -136,6 +139,7 @@ class HomeViewModelTest {
                     ProgramWorkout(id = "w2", name = "Treino B", exerciseCount = 4),
                 ),
                 schedule = emptyList(),
+                isActive = true,
             ),
         )
         advanceUntilIdle()
@@ -143,6 +147,58 @@ class HomeViewModelTest {
         assertNull(viewModel.state.value.today)
         assertFalse(viewModel.state.value.semPrograma)
         assertTrue(viewModel.state.value.precisaCompletarAgenda)
+        assertFalse(viewModel.state.value.precisaAtivarPrograma)
+    }
+
+    @Test
+    fun `so considera a agenda do programa ATIVO, ignora os outros mesmo que batam o dia`() = runTest(dispatcher) {
+        // O bug real que o Rafael achou testando manualmente: a Home varria TODOS os programas
+        // e pegava o primeiro cuja agenda batesse hoje, sem olhar isActive -- "ppp" (inativo)
+        // aparecia na Home mesmo com "4x Program" marcado como o ativo.
+        val programas = FakeProgramas()
+        val viewModel = vm(programas = programas)
+        advanceUntilIdle()
+
+        programas.locais.value = listOf(
+            programa(
+                id = "ppp",
+                workouts = listOf(ProgramWorkout(id = "w1", name = "Treino do ppp", exerciseCount = 3)),
+                schedule = listOf(ProgramScheduleEntry(workoutId = "w1", dayOfWeek = 1)),   // segunda, mas NÃO é o ativo
+                isActive = false,
+            ),
+            programa(
+                id = "4x",
+                workouts = listOf(ProgramWorkout(id = "w2", name = "Upper", exerciseCount = 6)),
+                schedule = listOf(ProgramScheduleEntry(workoutId = "w2", dayOfWeek = 1)),   // segunda também, E é o ativo
+                isActive = true,
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals("Upper", viewModel.state.value.today?.name)
+        assertEquals("w2", viewModel.state.value.today?.workoutId)
+    }
+
+    @Test
+    fun `programas com agenda pronta mas nenhum ativado pede pra ativar`() = runTest(dispatcher) {
+        val programas = FakeProgramas()
+        val viewModel = vm(programas = programas)
+        advanceUntilIdle()
+
+        programas.locais.value = listOf(
+            programa(
+                id = "ppp",
+                workouts = listOf(ProgramWorkout(id = "w1", name = "Treino do ppp", exerciseCount = 3)),
+                schedule = listOf(ProgramScheduleEntry(workoutId = "w1", dayOfWeek = 1)),   // segunda
+                isActive = false,
+            ),
+        )
+        advanceUntilIdle()
+
+        assertNull(viewModel.state.value.today)
+        assertFalse(viewModel.state.value.semPrograma)
+        assertFalse(viewModel.state.value.precisaCompletarAgenda)
+        assertTrue(viewModel.state.value.precisaAtivarPrograma)
     }
 
     @Test
@@ -158,6 +214,7 @@ class HomeViewModelTest {
             programa(
                 workouts = listOf(ProgramWorkout(id = "w1", name = "Lower", exerciseCount = 6, locked = true)),
                 schedule = listOf(ProgramScheduleEntry(workoutId = "w1", dayOfWeek = 1)),
+                isActive = true,
             ),
         )
         advanceUntilIdle()

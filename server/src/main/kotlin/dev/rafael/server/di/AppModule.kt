@@ -17,6 +17,9 @@ import dev.rafael.server.features.exercise.engine.ExercisePreFilter
 import dev.rafael.server.features.exercise.engine.StructureEngine
 import dev.rafael.server.features.exercise.engine.WorkoutGenerator
 import dev.rafael.server.features.exercise.services.ExerciseService
+import dev.rafael.server.features.wiki.db.WikiRepository
+import dev.rafael.server.features.wiki.db.WikiRepositoryImpl
+import dev.rafael.server.features.wiki.services.WikiService
 import dev.rafael.server.features.program.db.ProgramRepository
 import dev.rafael.server.features.program.db.ProgramRepositoryImpl
 import dev.rafael.server.features.program.services.ProgramService
@@ -136,6 +139,10 @@ val appModule = module {
 
     single<ExerciseRepository> { ExerciseRepositoryImpl() }
     single { ExerciseService(get(), get()) }   // repo + ExercisePreFilter (registrado abaixo)
+
+    // Aprender / wiki (Fase 8). Read-only: repositório + serviço fino, sem gate de premium.
+    single<WikiRepository> { WikiRepositoryImpl() }
+    single { WikiService(get()) }
 
 
     single<WorkoutRepository> { WorkoutRepositoryImpl() }        // <- ESTA linha sumiu

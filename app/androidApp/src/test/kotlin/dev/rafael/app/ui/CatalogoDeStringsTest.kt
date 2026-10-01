@@ -315,9 +315,10 @@ class CatalogoDeStringsTest {
             // "Todos" (filtro "todos os músculos" da Biblioteca) × paywall_valor_todos (plano de
             // pagamento) — mesma palavra, dois domínios sem nenhuma relação.
             "Sair", "Descanso", "FitJourney", "Fazer check-in", "Treino de hoje", "Todos",
-            // `nav_aba_treino` × `treino_detalhe_titulo_padrao`: a ABA e o nome de um treino sem
-            // nome. Viram `Training` e `Workout` em inglês — falso duplicado descoberto em
-            // 2026-09-11, quando as abas saíram do enum e entraram no catálogo.
+            // `nav_aba_treino` × `treino_detalhe_titulo_padrao` × `enum_wiki_treino`: a ABA, o nome
+            // de um treino sem nome, e a CATEGORIA do acervo "Aprender" (Fase 8). Viram `Training`,
+            // `Workout` e `Training` em inglês — falso duplicado descoberto em 2026-09-11, quando as
+            // abas saíram do enum e entraram no catálogo, e ampliado na Fase 8.
             "Treino",
             // 3. a decidir no portão do pt-BR
             "Voltar", "Tentar de novo", "Invalidar", "E-mail",

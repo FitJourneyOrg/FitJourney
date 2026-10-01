@@ -94,6 +94,13 @@ class SyncStamps(
         // lugar que marca e o que lê — um typo aqui vira "sempre vai à rede", sem erro visível.
         const val PROGRAMAS = "programs"
         const val CATALOGO = "exercises"
+
+        /**
+         * Acervo do "Aprender" (Fase 8). GLOBAL como o catálogo, e pela mesma razão: o conteúdo
+         * é do aparelho, não da conta. A chave real leva o idioma como sufixo -- ver
+         * `WikiRepositoryImpl.refresh`.
+         */
+        const val WIKI = "wiki"
         const val STATS = "stats"
 
         /** `/me` — nome e plano (V35, ARCH #33). */
