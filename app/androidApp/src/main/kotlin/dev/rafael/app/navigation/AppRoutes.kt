@@ -91,6 +91,12 @@ sealed interface AppRoute {
     @Serializable data object Progresso : AppRoute
 
     /**
+     * Histórico de treinos. Tela própria desde o desmembramento do Progresso (2026-10-01):
+     * é CONSULTA, alcançada pelo drawer, não rotina que mereça aba.
+     */
+    @Serializable data object Historico : AppRoute
+
+    /**
      * Conquistas (ARCH #16). Tela própria, alcançada pelo Progresso — não é aba.
      *
      * [destaque] é o id da conquista a celebrar num diálogo ao entrar — vem do

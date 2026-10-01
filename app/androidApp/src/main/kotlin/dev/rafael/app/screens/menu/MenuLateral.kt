@@ -17,7 +17,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.outlined.EmojiEvents
 import androidx.compose.material.icons.outlined.FitnessCenter
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Language
 import androidx.compose.material.icons.outlined.Person
@@ -71,6 +73,8 @@ fun MenuLateral(
     onSaiu: () -> Unit,
     onPerfil: () -> Unit,
     onExercicios: () -> Unit,
+    onConquistas: () -> Unit,
+    onHistorico: () -> Unit,
     onWiki: () -> Unit,
     onDuvidas: () -> Unit,
     onConta: () -> Unit,
@@ -159,6 +163,10 @@ fun MenuLateral(
 
             ItemDoMenu(stringResource(R.string.menu_meu_perfil), Icons.Outlined.Person, onPerfil)
             ItemDoMenu(stringResource(R.string.comum_exercicios), Icons.Outlined.FitnessCenter, onExercicios)
+            // Conquistas e Histórico vieram do Progresso (2026-10-01). Ficam no mesmo grupo de
+            // "coisas minhas que eu consulto", ao lado do perfil.
+            ItemDoMenu(stringResource(R.string.comum_conquistas), Icons.Outlined.EmojiEvents, onConquistas)
+            ItemDoMenu(stringResource(R.string.menu_historico), Icons.Outlined.History, onHistorico)
             // Sem selo de fase desde a Fase 8: o destino existe de verdade agora. O selo continua
             // no item de baixo, que ainda é promessa.
             ItemDoMenu(
