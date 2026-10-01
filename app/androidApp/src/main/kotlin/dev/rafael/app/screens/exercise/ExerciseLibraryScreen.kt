@@ -1,18 +1,35 @@
 package dev.rafael.app.screens.exercise
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.app.ui.rotulo
@@ -70,16 +87,103 @@ fun ExerciseLibraryScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    /*
+     * ⭐ A busca MORA NA BARRA, e o estado de "aberta" mora AQUI — não no ViewModel.
+     *
+     * Abrir ou fechar não muda o que é consultado, só o que é desenhado: é estado de tela, e
+     * estado de tela não sobe pro ViewModel. `rememberSaveable` porque girar o aparelho com a
+     * busca aberta e ver a barra voltar ao título seria perder o que a pessoa estava fazendo.
+     *
+     * > **O ViewModel guarda o que foi perguntado; a tela guarda se o campo está à mostra.**
+     */
+    var buscaAberta by rememberSaveable { mutableStateOf(false) }
+    val focoDoCampo = remember { FocusRequester() }
+
+    /**
+     * Fechar SEMPRE limpa. Fechar mantendo o termo deixaria a lista filtrada sem nada na tela
+     * explicando por quê — e filtro invisível é o pior tipo de filtro: parece catálogo quebrado.
+     */
+    fun fecharBusca() {
+        buscaAberta = false
+        viewModel.onEvent(ExerciseListEvent.BuscaAlterada(""))
+    }
+
+    // O botão do sistema fecha a busca antes de sair da tela, que é o que a pessoa espera de um
+    // campo aberto por cima de outra coisa. Só intercepta enquanto está aberta.
+    BackHandler(enabled = buscaAberta) { fecharBusca() }
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.comum_exercicios)) },
+                title = {
+                    AnimatedContent(
+                        targetState = buscaAberta,
+                        // Entra deslizando de leve e aparecendo; sai só apagando, mais rápido.
+                        // Movimento de saída chamando atenção é movimento competindo com o que
+                        // está entrando. `clip = false` evita o corte durante a troca de largura.
+                        // `ContentTransform` montado à mão em vez do infixo `togetherWith ...
+                        // using ...`: o `using` não é importável nesta versão do Compose, e o
+                        // construtor não depende de qual das duas formas a versão expõe.
+                        transitionSpec = {
+                            ContentTransform(
+                                targetContentEnter = fadeIn(tween(220)) +
+                                    slideInHorizontally(tween(220)) { it / 6 },
+                                initialContentExit = fadeOut(tween(120)),
+                                sizeTransform = SizeTransform(clip = false),
+                            )
+                        },
+                        label = "titulo-ou-busca",
+                    ) { aberta ->
+                        if (aberta) {
+                            /*
+                             * O foco espera UM FRAME. `requestFocus()` disparado no mesmo quadro
+                             * em que o campo entra na composição pode cair num nó que ainda não
+                             * está anexado — e aí o teclado não sobe, de forma intermitente.
+                             */
+                            LaunchedEffect(Unit) {
+                                withFrameNanos { }
+                                focoDoCampo.requestFocus()
+                            }
+                            CampoDeBuscaNaBarra(
+                                valor = state.busca,
+                                onValorAlterado = { viewModel.onEvent(ExerciseListEvent.BuscaAlterada(it)) },
+                                foco = focoDoCampo,
+                            )
+                        } else {
+                            Text(stringResource(R.string.comum_exercicios))
+                        }
+                    }
+                },
                 navigationIcon = {
-                    IconButton(onClick = onBack) {
+                    IconButton(onClick = { if (buscaAberta) fecharBusca() else onBack() }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = stringResource(R.string.comum_voltar),
+                            contentDescription = stringResource(
+                                if (buscaAberta) R.string.comum_fechar else R.string.comum_voltar,
+                            ),
                         )
+                    }
+                },
+                actions = {
+                    // UM botão que troca de papel, e não dois. Lupa abre; X fecha e limpa.
+                    //
+                    // O campo NÃO tem o seu próprio X de limpar quando está na barra: dois X lado
+                    // a lado, num espaço de 48dp, viram adivinhação sobre qual apaga o texto e
+                    // qual fecha. Como fechar já limpa, um só dá conta dos dois desejos.
+                    IconButton(onClick = { if (buscaAberta) fecharBusca() else buscaAberta = true }) {
+                        AnimatedContent(targetState = buscaAberta, label = "lupa-ou-fechar") { aberta ->
+                            if (aberta) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = stringResource(R.string.comum_fechar),
+                                )
+                            } else {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = stringResource(R.string.exercicios_buscar),
+                                )
+                            }
+                        }
                     }
                 },
             )
@@ -116,6 +220,10 @@ fun ExerciseLibraryScreen(
                 Spacer(Modifier.height(8.dp))
                 ExerciseListContent(
                     state = state,
+                    // O campo desta tela vive na TopAppBar; o do seletor de exercícios é embutido,
+                    // porque lá não existe barra nenhuma. Ver `mostrarBusca`.
+                    mostrarBusca = false,
+                    onBuscaAlterada = { viewModel.onEvent(ExerciseListEvent.BuscaAlterada(it)) },
                     onCategorySelected = { viewModel.onEvent(ExerciseListEvent.CategorySelected(it)) },
                     onMuscleGroupSelected = { viewModel.onEvent(ExerciseListEvent.MuscleGroupSelected(it)) },
                     onOpenDetail = onOpenExercise,
@@ -129,6 +237,20 @@ fun ExerciseLibraryScreen(
 @Composable
 fun ExerciseListContent(
     state: ExerciseListState,
+    /**
+     * Obrigatório de propósito, ao contrário de [onMuscleGroupSelected]: não existe tela que
+     * mostre 923 exercícios e não queira busca. Tornar opcional seria abrir a porta para alguém
+     * esquecer e a lista voltar a ser só rolagem.
+     */
+    onBuscaAlterada: (String) -> Unit,
+    /**
+     * Desenha o campo DENTRO do conteúdo. Falso para quem já tem o seu na barra (a Biblioteca),
+     * verdadeiro para quem não tem barra (o seletor dentro da folha de exercícios).
+     *
+     * Note que `onBuscaAlterada` continua obrigatório mesmo com isto falso: quem não desenha o
+     * campo ainda precisa de um jeito de limpar a busca ao fechar.
+     */
+    mostrarBusca: Boolean = true,
     onCategorySelected: (ExerciseCategory?) -> Unit,
     onMuscleGroupSelected: ((MuscleGroup?) -> Unit)? = null,
     selectedIds: Set<String>? = null,
@@ -136,6 +258,38 @@ fun ExerciseListContent(
     onOpenDetail: ((String) -> Unit)? = null,
 ) {
     Column {
+        if (mostrarBusca) {
+            /*
+             * A busca vem ANTES dos chips, e não depois.
+             *
+             * Com 923 itens, quem abre esta tela quase sempre já sabe o nome do que procura — os
+             * chips servem a quem está passeando pelo acervo. O que resolve o caso mais comum fica
+             * onde o polegar chega primeiro.
+             */
+            OutlinedTextField(
+                value = state.busca,
+                onValueChange = onBuscaAlterada,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                placeholder = { Text(stringResource(R.string.exercicios_buscar)) },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                trailingIcon = {
+                    // Só aparece com texto: botão de limpar num campo vazio é um botão que não faz nada.
+                    if (state.busca.isNotEmpty()) {
+                        IconButton(onClick = { onBuscaAlterada("") }) {
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = stringResource(R.string.comum_limpar),
+                            )
+                        }
+                    }
+                },
+                // Busca: o teclado não tem "próximo campo" para onde ir, e a lista já filtrou sozinha.
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            )
+            Spacer(Modifier.height(8.dp))
+        }
+
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
                 FilterChip(
@@ -199,6 +353,14 @@ fun ExerciseListContent(
                             }
                         }
                     }
+                // Duas frases diferentes para dois vazios diferentes: "nada encontrado" é
+                // resultado de uma pergunta; "nenhum exercício" é catálogo que não baixou. Dizer
+                // a segunda a quem digitou faria o app parecer quebrado.
+                state.exercises.isEmpty() && state.busca.isNotBlank() ->
+                    Text(
+                        stringResource(R.string.exercicios_busca_vazia, state.busca),
+                        Modifier.align(Alignment.Center),
+                    )
                 state.exercises.isEmpty() ->
                     Text(stringResource(R.string.exercicios_vazio), Modifier.align(Alignment.Center))
                 else ->
@@ -230,4 +392,53 @@ fun ExerciseListContent(
             }
         }
     }
+}
+/**
+ * O campo que vive DENTRO da `TopAppBar`.
+ *
+ * ## Por que `BasicTextField` e não `TextField`
+ *
+ * O `TextField` do Material carrega **padding interno próprio** (~16dp horizontais), que o `Text`
+ * do título não tem. Resultado observado na bateria: o título começava colado no botão voltar e o
+ * placeholder começava 16dp mais à direita — a barra "pulava" para o lado ao abrir a busca.
+ *
+ * Esse padding não é configurável no `TextField`: a API não expõe `contentPadding`. Zerar exigiria
+ * a decoração completa de qualquer jeito, então é mais honesto usar o `BasicTextField`, que não
+ * desenha decoração nenhuma, e escrever só o que esta barra precisa — o placeholder.
+ *
+ * > **Componente que traz enfeite embutido não serve para encaixar em algo que já tem o seu.**
+ *
+ * A tipografia é a MESMA do título (`titleLarge`) pelo mesmo motivo: o texto tem de nascer onde o
+ * título morreu, no mesmo tamanho e na mesma linha de base. `singleLine` faz o texto longo rolar
+ * na horizontal em vez de truncar.
+ */
+@Composable
+private fun CampoDeBuscaNaBarra(
+    valor: String,
+    onValorAlterado: (String) -> Unit,
+    foco: FocusRequester,
+) {
+    BasicTextField(
+        value = valor,
+        onValueChange = onValorAlterado,
+        modifier = Modifier.fillMaxWidth().focusRequester(foco),
+        singleLine = true,
+        textStyle = MaterialTheme.typography.titleLarge.copy(
+            color = MaterialTheme.colorScheme.onSurface,
+        ),
+        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+        decorationBox = { campo ->
+            Box(contentAlignment = Alignment.CenterStart) {
+                if (valor.isEmpty()) {
+                    Text(
+                        stringResource(R.string.exercicios_buscar),
+                        style = MaterialTheme.typography.titleLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                campo()
+            }
+        },
+    )
 }
