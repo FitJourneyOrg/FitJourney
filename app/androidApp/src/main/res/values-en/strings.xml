@@ -518,7 +518,7 @@
 
     <!-- ============================ Quiz ============================ -->
 
-    <string name="quiz_progresso">%1$d/%2$d</string>
+    <string name="comum_fracao">%1$d/%2$d</string>
     <string name="quiz_concluir">Finish</string>
 
     <string name="quiz_objetivo_titulo">What\'s your main goal?</string>
@@ -732,6 +732,29 @@
 
     <!-- ============================ Workout session ============================ -->
 
+    <string name="sessao_serie_de">Set %1$d of %2$d</string>
+    <string name="sessao_serie_curta">S%1$d</string>
+    <string name="sessao_serie_feita">Set done</string>
+    <string name="sessao_ver_tecnica">View technique</string>
+    <string name="sessao_peso_rotulo">Weight · kg</string>
+    <string name="sessao_descanso_apos">Rest · after the set</string>
+    <string name="sessao_mais_15s">+15s</string>
+    <string name="sessao_anterior">Previous</string>
+    <string name="sessao_proximo">Next</string>
+    <string name="sessao_aumentar_peso">Increase weight</string>
+    <string name="sessao_diminuir_peso">Decrease weight</string>
+    <string name="sessao_aumentar_reps">Increase reps</string>
+    <string name="sessao_diminuir_reps">Decrease reps</string>
+    <string name="sessao_iniciar_descanso">Start rest</string>
+    <string name="sessao_pausar_descanso">Pause rest</string>
+    <string name="sessao_retomar_descanso">Resume rest</string>
+
+    <string name="sessao_vazia">This workout has no exercises.</string>
+    <string name="sessao_sair_titulo">Leave the workout?</string>
+    <string name="sessao_sair_texto">The sets you marked will not be recorded.</string>
+    <string name="sessao_sair_confirmar">Leave without saving</string>
+    <string name="sessao_sair_ficar">Keep training</string>
+    <string name="sessao_ocultar_tecnica">Hide technique</string>
     <string name="sessao_finalizar">Finish workout</string>
     <string name="comum_exercicio">Exercise</string>
     <!-- ⚠️ "Rest", NOT "Rest day": this is the timer between sets. See `programa_detalhe_descanso`. -->
@@ -826,6 +849,7 @@
     <string name="enum_wiki_nutricao">Nutrition</string>
     <string name="enum_wiki_recuperacao">Recovery</string>
     <string name="enum_wiki_mentalidade">Mindset</string>
+    <string name="menu_historico">History</string>
     <string name="menu_conta">Account settings</string>
     <!--
       ⚠️ "Log out", NOT "Leave". Identical to `grupo_detalhe_sair_confirmar` in pt-BR ("Sair"):
@@ -910,7 +934,6 @@
     <string name="progresso_metrica_treinos">Workouts</string>
     <string name="progresso_metrica_semana">This week</string>
     <string name="progresso_metrica_sequencia">Streak</string>
-    <string name="progresso_secao_historico">History</string>
     <string name="progresso_vazio">No workouts logged yet.\nYour history shows up here after your first workout.</string>
     <plurals name="progresso_series">
         <item quantity="one">%1$d set</item>

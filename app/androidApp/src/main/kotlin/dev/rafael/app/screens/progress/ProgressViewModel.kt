@@ -2,7 +2,6 @@ package dev.rafael.app.screens.progress
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import dev.rafael.features.session.domain.SessaoLocal
 import dev.rafael.features.session.domain.HistoricoDeSessoes
 import dev.rafael.features.stats.domain.Stats
 import dev.rafael.contract.stats.UserStatsDto
@@ -15,7 +14,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ProgressState(
-    val historico: List<SessaoLocal> = emptyList(),
     val stats: UserStatsDto? = null,
     val carregandoInicial: Boolean = true,
     /** Arraste-pra-atualizar (G.6): true enquanto flush+sync roda, pra girar o indicador. */
@@ -23,12 +21,20 @@ data class ProgressState(
 )
 
 /**
- * Progresso — OFFLINE-FIRST. A lista vem SEMPRE do banco local (Flow), então a tela pinta
- * na hora e funciona sem rede. O sync com o servidor roda em paralelo e, quando grava,
- * o Flow re-emite e a tela se atualiza sozinha.
+ * Progresso — OFFLINE-FIRST. As métricas vêm do cache local (`Flow`), então a tela pinta na hora
+ * e funciona sem rede. O sync roda em paralelo e, quando grava, o `Flow` re-emite.
  *
- * Diferente do resto do app: aqui não existe estado de "erro de carregamento" — se a rede
- * falhar, o usuário continua vendo o histórico dele. Erro de rede não é erro de tela.
+ * Diferente do resto do app: aqui não existe estado de "erro de carregamento" — se a rede falhar,
+ * a pessoa continua vendo os números dela. *Erro de rede não é erro de tela* quando há dado local.
+ *
+ * ## Por que ainda depende do histórico, mesmo sem mostrá-lo
+ *
+ * A lista saiu daqui no desmembramento (2026-10-01), mas o `flush()` ficou: **as métricas são
+ * derivadas das sessões no SERVIDOR** (ARCH #16, autoridade do servidor). Pedir as métricas sem
+ * subir antes o treino feito offline devolveria número velho, e a pessoa veria "1 treino" logo
+ * depois de terminar o segundo.
+ *
+ * > **Quem depende de um número calculado lá fora tem de mandar o insumo antes de perguntar.**
  */
 class ProgressViewModel(
     private val sessions: HistoricoDeSessoes,
@@ -39,14 +45,9 @@ class ProgressViewModel(
     val state: StateFlow<ProgressState> = _state.asStateFlow()
 
     init {
-        sessions.observarHistorico()
-            .onEach { lista ->
-                _state.update { it.copy(historico = lista, carregandoInicial = false) }
-            }
-            .launchIn(viewModelScope)
         // métricas do cache local: aparecem offline também
         stats.observar()
-            .onEach { s -> _state.update { it.copy(stats = s) } }
+            .onEach { s -> _state.update { it.copy(stats = s, carregandoInicial = false) } }
             .launchIn(viewModelScope)
         sincronizar()
     }
@@ -55,9 +56,8 @@ class ProgressViewModel(
         viewModelScope.launch {
             _state.update { it.copy(sincronizando = true) }
             try {
-                sessions.flush()                  // sobe o que foi feito offline
-                sessions.sincronizarHistorico()   // desce o que falta (o Flow re-emite)
-                stats.sincronizar()               // atualiza o cache de XP (o Flow re-emite)
+                sessions.flush()      // sobe o treino feito offline ANTES de pedir as métricas
+                stats.sincronizar()   // atualiza o cache de XP (o Flow re-emite)
             } finally {
                 _state.update { it.copy(sincronizando = false) }
             }
