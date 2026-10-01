@@ -56,6 +56,7 @@ import dev.rafael.app.idioma.IdiomaDoAparelho
 import dev.rafael.core.network.TokenProvider
 import org.koin.android.ext.koin.androidContext
 import dev.rafael.app.screens.home.HomeViewModel
+import dev.rafael.app.screens.historico.HistoricoViewModel
 import dev.rafael.app.screens.progress.ProgressViewModel
 import dev.rafael.app.screens.paywall.PaywallViewModel
 import dev.rafael.app.screens.reveal.ProgramRevealViewModel
@@ -226,7 +227,8 @@ val appModule = module {
     // A fila de moderação (E.2). Tela própria e não aba: uma quinta aba estaria visível para os
     // 49 membros que não podem abri-la, e escondê-la faria a barra mudar conforme o papel.
     viewModelOf(::ModeracaoViewModel)
-    viewModelOf(::ProgressViewModel) // histórico offline-first + stats
+    viewModelOf(::ProgressViewModel)  // métricas do cache + flush das sessões pendentes
+    viewModelOf(::HistoricoViewModel) // histórico offline-first (saiu do Progresso em 2026-10-01)
     viewModelOf(::ProgramRevealViewModel)   // injeta ProgramRepository (revelação)
     viewModelOf(::PaywallViewModel)          // injeta Billing (página de assinatura)
 }

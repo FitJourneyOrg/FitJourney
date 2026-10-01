@@ -28,86 +28,91 @@ fun QuizScreen(
     val steps = state.visibleSteps          // iniciante/saúde geral não veem o passo de FOCO (#26/#24)
     val stepIndex = steps.indexOf(state.step)
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-    ) {
-        // progresso (passo atual / total)
-        LinearProgressIndicator(
-            progress = { (stepIndex + 1f) / steps.size },
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            stringResource(R.string.quiz_progresso, stepIndex + 1, steps.size),
-            style = MaterialTheme.typography.labelMedium,
-        )
-        Spacer(Modifier.height(24.dp))
-
-        // miolo: a pergunta do passo atual
-        Box(modifier = Modifier.weight(1f)) {
-            when (state.step) {
-                QuizStep.GOAL -> GoalStep(state.goal) { viewModel.onEvent(QuizEvent.GoalSelected(it)) }
-                QuizStep.LEVEL -> LevelStep(state.level) { viewModel.onEvent(QuizEvent.LevelSelected(it)) }
-                QuizStep.AGE -> AgeStep(
-                    age = state.age,
-                    minorSupervised = state.minorSupervised,
-                    onAge = { viewModel.onEvent(QuizEvent.AgeChanged(it)) },
-                    onToggleSupervised = { viewModel.onEvent(QuizEvent.SupervisedToggled) },
-                )
-                QuizStep.DAYS -> DaysStep(state.daysPerWeek) { viewModel.onEvent(QuizEvent.DaysSelected(it)) }
-                QuizStep.REST_DAYS -> RestDaysStep(
-                    selected = state.unavailableDays,
-                    daysPerWeek = state.daysPerWeek ?: 0,
-                    onToggle = { viewModel.onEvent(QuizEvent.RestDayToggled(it)) },
-                )
-                QuizStep.FOCUS -> FocusStep(state.focusAreas) { viewModel.onEvent(QuizEvent.FocusToggled(it)) }
-                QuizStep.ENVIRONMENT -> EnvironmentStep(state.environment) { viewModel.onEvent(QuizEvent.EnvironmentSelected(it)) }
-                QuizStep.SPLIT -> SplitStep(
-                    daysPerWeek = state.daysPerWeek ?: 3,
-                    selected = state.splitPreference,
-                    onSelect = { viewModel.onEvent(QuizEvent.SplitSelected(it)) },
-                )
-                QuizStep.HEALTH -> HealthStep(state.health, onToggle = { viewModel.onEvent(QuizEvent.HealthToggled(it)) }, onAck = { viewModel.onEvent(QuizEvent.AcknowledgedRiskToggled) })
-                QuizStep.LIMITATIONS -> LimitationsStep(state.limitations) {
-                    viewModel.onEvent(QuizEvent.LimitationToggled(it))
-                }
-                QuizStep.BODY -> BodyStep(
-                    weight = state.weightKg,
-                    height = state.heightCm,
-                    onWeight = { viewModel.onEvent(QuizEvent.WeightChanged(it)) },
-                    onHeight = { viewModel.onEvent(QuizEvent.HeightChanged(it)) },
-                )
-            }
-        }
-
-        // erro do servidor, se houver
-        state.error?.let {
-            ErroInline(it)
+    // `Scaffold` sem barra nenhuma: ele existe aqui SÓ para aplicar os insets. Ver a [REGRA]
+    // no KDoc do `AppNavHost` -- o Scaffold de lá não reserva inset para si, então tela sem
+    // Scaffold próprio desenha por baixo da status bar.
+    Scaffold { insetsDaTela ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(insetsDaTela).padding(24.dp),
+        ) {
+            // progresso (passo atual / total)
+            LinearProgressIndicator(
+                progress = { (stepIndex + 1f) / steps.size },
+                modifier = Modifier.fillMaxWidth(),
+            )
             Spacer(Modifier.height(8.dp))
-        }
+            Text(
+                stringResource(R.string.comum_fracao, stepIndex + 1, steps.size),
+                style = MaterialTheme.typography.labelMedium,
+            )
+            Spacer(Modifier.height(24.dp))
 
-        // navegação
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            if (stepIndex > 0) {
-                OutlinedButton(
-                    onClick = { viewModel.onEvent(QuizEvent.Back) },
-                    enabled = !state.isSubmitting,
-                ) { Text(stringResource(R.string.comum_voltar)) }
-            }
-            Button(
-                onClick = { viewModel.onEvent(QuizEvent.Next) },
-                enabled = state.canAdvance && !state.isSubmitting,
-                modifier = Modifier.weight(1f),
-            ) {
-                if (state.isSubmitting) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                } else {
-                    Text(
-                        stringResource(
-                            if (stepIndex == steps.lastIndex) R.string.quiz_concluir
-                            else R.string.comum_continuar,
-                        ),
+            // miolo: a pergunta do passo atual
+            Box(modifier = Modifier.weight(1f)) {
+                when (state.step) {
+                    QuizStep.GOAL -> GoalStep(state.goal) { viewModel.onEvent(QuizEvent.GoalSelected(it)) }
+                    QuizStep.LEVEL -> LevelStep(state.level) { viewModel.onEvent(QuizEvent.LevelSelected(it)) }
+                    QuizStep.AGE -> AgeStep(
+                        age = state.age,
+                        minorSupervised = state.minorSupervised,
+                        onAge = { viewModel.onEvent(QuizEvent.AgeChanged(it)) },
+                        onToggleSupervised = { viewModel.onEvent(QuizEvent.SupervisedToggled) },
                     )
+                    QuizStep.DAYS -> DaysStep(state.daysPerWeek) { viewModel.onEvent(QuizEvent.DaysSelected(it)) }
+                    QuizStep.REST_DAYS -> RestDaysStep(
+                        selected = state.unavailableDays,
+                        daysPerWeek = state.daysPerWeek ?: 0,
+                        onToggle = { viewModel.onEvent(QuizEvent.RestDayToggled(it)) },
+                    )
+                    QuizStep.FOCUS -> FocusStep(state.focusAreas) { viewModel.onEvent(QuizEvent.FocusToggled(it)) }
+                    QuizStep.ENVIRONMENT -> EnvironmentStep(state.environment) { viewModel.onEvent(QuizEvent.EnvironmentSelected(it)) }
+                    QuizStep.SPLIT -> SplitStep(
+                        daysPerWeek = state.daysPerWeek ?: 3,
+                        selected = state.splitPreference,
+                        onSelect = { viewModel.onEvent(QuizEvent.SplitSelected(it)) },
+                    )
+                    QuizStep.HEALTH -> HealthStep(state.health, onToggle = { viewModel.onEvent(QuizEvent.HealthToggled(it)) }, onAck = { viewModel.onEvent(QuizEvent.AcknowledgedRiskToggled) })
+                    QuizStep.LIMITATIONS -> LimitationsStep(state.limitations) {
+                        viewModel.onEvent(QuizEvent.LimitationToggled(it))
+                    }
+                    QuizStep.BODY -> BodyStep(
+                        weight = state.weightKg,
+                        height = state.heightCm,
+                        onWeight = { viewModel.onEvent(QuizEvent.WeightChanged(it)) },
+                        onHeight = { viewModel.onEvent(QuizEvent.HeightChanged(it)) },
+                    )
+                }
+            }
+
+            // erro do servidor, se houver
+            state.error?.let {
+                ErroInline(it)
+                Spacer(Modifier.height(8.dp))
+            }
+
+            // navegação
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (stepIndex > 0) {
+                    OutlinedButton(
+                        onClick = { viewModel.onEvent(QuizEvent.Back) },
+                        enabled = !state.isSubmitting,
+                    ) { Text(stringResource(R.string.comum_voltar)) }
+                }
+                Button(
+                    onClick = { viewModel.onEvent(QuizEvent.Next) },
+                    enabled = state.canAdvance && !state.isSubmitting,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    if (state.isSubmitting) {
+                        CircularProgressIndicator(modifier = Modifier.size(20.dp))
+                    } else {
+                        Text(
+                            stringResource(
+                                if (stepIndex == steps.lastIndex) R.string.quiz_concluir
+                                else R.string.comum_continuar,
+                            ),
+                        )
+                    }
                 }
             }
         }

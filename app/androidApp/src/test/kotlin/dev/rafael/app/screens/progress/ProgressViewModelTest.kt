@@ -34,8 +34,16 @@ class ProgressViewModelTest {
     @BeforeTest fun setup() { Dispatchers.setMain(dispatcher) }
     @AfterTest fun tearDown() { Dispatchers.resetMain() }
 
+    /**
+     * ⭐ O `flush` ficou aqui mesmo depois do histórico sair da tela (desmembramento de
+     * 2026-10-01), e este teste é o que impede alguém de "limpar" essa dependência que parece
+     * sobra: as métricas são derivadas das sessões no SERVIDOR, então subir o treino feito
+     * offline tem de acontecer ANTES de pedir os números.
+     *
+     * Sem ele, terminar o segundo treino offline e abrir o Progresso mostraria "1 treino".
+     */
     @Test
-    fun `sincronizar aciona flush, historico e stats`() = runTest(dispatcher) {
+    fun `sincronizar sobe as sessoes pendentes antes de pedir as metricas`() = runTest(dispatcher) {
         val historico = FakeHistorico()
         val stats = FakeStats()
         val vm = ProgressViewModel(historico, stats)
@@ -44,9 +52,12 @@ class ProgressViewModelTest {
         vm.sincronizar()   // o gesto de arraste chama isto
         advanceUntilIdle()
 
-        assertEquals(2, historico.flushes)          // 1 do init + 1 do arraste
-        assertEquals(2, historico.sincronizacoes)
+        assertEquals(2, historico.flushes, "parou de subir o que foi feito offline")
         assertEquals(2, stats.sincronizacoes)
+        assertEquals(
+            0, historico.sincronizacoes,
+            "o Progresso não mostra mais o histórico -- baixá-lo aqui é requisição sem tela",
+        )
     }
 
     @Test
