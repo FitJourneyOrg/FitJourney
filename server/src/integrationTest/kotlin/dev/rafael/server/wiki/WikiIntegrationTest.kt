@@ -164,6 +164,40 @@ class WikiIntegrationTest {
         )
     }
 
+    /**
+     * ⚠️ **Artigo sem tradução em inglês quebra o build, e isto é uma REGRA DE PRODUTO.**
+     *
+     * O `LEFT JOIN` da V61 tolera tradução ausente de propósito: ele serve o piso pt-BR e a tela
+     * funciona. O problema é que funciona **calado** -- quem usa o app em inglês lê português e
+     * nada no sistema reclama. Foi exatamente o buraco que a tradução dos 5 artigos fechou.
+     *
+     * > **Falha silenciosa não vira defeito: vira costume.**
+     *
+     * O custo é real e aceito: publicar artigo novo exige escrever as duas versões. Se um dia a
+     * decisão for permitir artigo só em português, este teste é a linha que se apaga.
+     */
+    @Test
+    fun `todo artigo do acervo real tem traducao em ingles`() {
+        val semIngles = transaction {
+            val traduzidos = WikiArticleTranslationsTable
+                .selectAll()
+                .filter { it[WikiArticleTranslationsTable.locale] == "en" }
+                .map { it[WikiArticleTranslationsTable.articleId] }
+                .toSet()
+
+            WikiArticlesTable.selectAll()
+                .filterNot { it[WikiArticlesTable.slug].startsWith("teste-") }
+                .filterNot { it[WikiArticlesTable.id] in traduzidos }
+                .map { it[WikiArticlesTable.slug] }
+        }
+
+        assertTrue(
+            semIngles.isEmpty(),
+            "sem tradução em inglês: $semIngles -- quem abrir o app em inglês vai ler português " +
+                "sem nenhum aviso. Escreva conteudo/aprender/en/<slug>.md e rode o gen_wiki.py.",
+        )
+    }
+
     // ---- tradução ----
 
     @Test
