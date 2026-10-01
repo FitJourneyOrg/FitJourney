@@ -87,6 +87,7 @@ class WorkoutServiceTest {
         override suspend fun findByCategory(category: ExerciseCategory, idioma: Idioma) = error("não usado")
         override suspend fun findById(id: Uuid, idioma: Idioma) = error("não usado")
         override suspend fun existsByIds(ids: List<Uuid>) = error("não usado")
+        override suspend fun paraAnalise(ids: List<Uuid>) = error("não usado")
         override suspend fun nomesTraduzidos(ids: List<Uuid>, idioma: Idioma) = error("não usado")
     }
 
