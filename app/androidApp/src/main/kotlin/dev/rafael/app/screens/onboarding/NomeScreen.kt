@@ -12,6 +12,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -53,47 +54,52 @@ fun NomeScreen(
     }
     LaunchedEffect(state.pronto) { if (state.pronto) onPronto() }
 
-    Column(
-        Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Text(
-            stringResource(R.string.nome_titulo),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Medium,
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            stringResource(R.string.nome_explicacao),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(24.dp))
-
-        OutlinedTextField(
-            value = state.nome,
-            onValueChange = viewModel::aoDigitar,
-            label = { Text(stringResource(R.string.comum_seu_nome)) },
-            singleLine = true,
-            enabled = !state.carregando && !state.salvando,
-            isError = state.erro.erroDoCampo("displayName") != null,
-            supportingText = { state.erro.erroDoCampo("displayName")?.let { Text(it) } },
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        state.erro.erroGeral(setOf("displayName"))?.let {
-            Spacer(Modifier.height(8.dp))
-            ErroInline(it)
-        }
-
-        Spacer(Modifier.height(24.dp))
-        Button(
-            onClick = { viewModel.continuar(original.orEmpty()) },
-            enabled = !state.carregando && !state.salvando,
-            modifier = Modifier.fillMaxWidth(),
+    // `Scaffold` sem barra nenhuma: ele existe aqui SÓ para aplicar os insets. Ver a [REGRA]
+    // no KDoc do `AppNavHost` -- o Scaffold de lá não reserva inset para si, então tela sem
+    // Scaffold próprio desenha por baixo da status bar.
+    Scaffold { insetsDaTela ->
+        Column(
+            Modifier.fillMaxSize().padding(insetsDaTela).padding(24.dp),
+            verticalArrangement = Arrangement.Center,
         ) {
-            if (state.salvando) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-            else Text(stringResource(R.string.comum_continuar))
+            Text(
+                stringResource(R.string.nome_titulo),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Medium,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.nome_explicacao),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(24.dp))
+
+            OutlinedTextField(
+                value = state.nome,
+                onValueChange = viewModel::aoDigitar,
+                label = { Text(stringResource(R.string.comum_seu_nome)) },
+                singleLine = true,
+                enabled = !state.carregando && !state.salvando,
+                isError = state.erro.erroDoCampo("displayName") != null,
+                supportingText = { state.erro.erroDoCampo("displayName")?.let { Text(it) } },
+                modifier = Modifier.fillMaxWidth(),
+            )
+
+            state.erro.erroGeral(setOf("displayName"))?.let {
+                Spacer(Modifier.height(8.dp))
+                ErroInline(it)
+            }
+
+            Spacer(Modifier.height(24.dp))
+            Button(
+                onClick = { viewModel.continuar(original.orEmpty()) },
+                enabled = !state.carregando && !state.salvando,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                if (state.salvando) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                else Text(stringResource(R.string.comum_continuar))
+            }
         }
     }
 }

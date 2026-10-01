@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,27 +37,32 @@ fun SplashScreen(
         (state as? SplashState.Decided)?.let { onDecided(it.destination) }
     }
 
-    Column(
-        Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        MarcaDoApp()
-        Spacer(Modifier.height(32.dp))
-        CircularProgressIndicator()
-        Spacer(Modifier.height(20.dp))
+    // `Scaffold` sem barra nenhuma: ele existe aqui SÓ para aplicar os insets. Ver a [REGRA]
+    // no KDoc do `AppNavHost` -- o Scaffold de lá não reserva inset para si, então tela sem
+    // Scaffold próprio desenha por baixo da status bar.
+    Scaffold { insetsDaTela ->
+        Column(
+            Modifier.fillMaxSize().padding(insetsDaTela).padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            MarcaDoApp()
+            Spacer(Modifier.height(32.dp))
+            CircularProgressIndicator()
+            Spacer(Modifier.height(20.dp))
 
-        // Altura reservada mesmo sem texto: sem isto a marca e o indicador PULAM quando a
-        // primeira frase aparece, e um salto no primeiro segundo do app é a pior hora pra ele.
-        Box(Modifier.heightIn(min = 24.dp), contentAlignment = Alignment.Center) {
-            AnimatedContent(targetState = state, label = "passo") { atual ->
-                val passo = (atual as? SplashState.Preparando)?.passo
-                Text(
-                    text = passo?.let { stringResource(it.rotulo()) }.orEmpty(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                )
+            // Altura reservada mesmo sem texto: sem isto a marca e o indicador PULAM quando a
+            // primeira frase aparece, e um salto no primeiro segundo do app é a pior hora pra ele.
+            Box(Modifier.heightIn(min = 24.dp), contentAlignment = Alignment.Center) {
+                AnimatedContent(targetState = state, label = "passo") { atual ->
+                    val passo = (atual as? SplashState.Preparando)?.passo
+                    Text(
+                        text = passo?.let { stringResource(it.rotulo()) }.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
     }

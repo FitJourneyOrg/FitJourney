@@ -854,7 +854,7 @@
       %1$d é o passo (começa em 1) e %2$d o total. O total VARIA — iniciante e "saúde geral"
       não veem o passo de foco (#26/#24).
     -->
-    <string name="quiz_progresso">%1$d/%2$d</string>
+    <string name="comum_fracao">%1$d/%2$d</string>
     <!-- Botão do último passo, no lugar de "Continuar". Botão, ~18 caracteres. -->
     <string name="quiz_concluir">Concluir</string>
 
@@ -1178,6 +1178,32 @@
     <!-- ============================ Execução do treino ============================ -->
 
     <!-- Botão que encerra o treino em execução e grava a sessão. -->
+    <!-- Execução do treino, redesenho de 2026-10-01: um exercício por vez. Caixa alta de
+         "Peso"/"Reps"/"Descanso" é decisão de DESENHO e fica na tela, não no texto. -->
+    <string name="sessao_serie_de">Série %1$d de %2$d</string>
+    <string name="sessao_serie_curta">S%1$d</string>
+    <string name="sessao_serie_feita">Série feita</string>
+    <string name="sessao_ver_tecnica">Ver técnica</string>
+    <string name="sessao_peso_rotulo">Peso · kg</string>
+    <string name="sessao_descanso_apos">Descanso · após a série</string>
+    <string name="sessao_mais_15s">+15s</string>
+    <string name="sessao_anterior">Anterior</string>
+    <string name="sessao_proximo">Próximo</string>
+    <string name="sessao_aumentar_peso">Aumentar peso</string>
+    <string name="sessao_diminuir_peso">Diminuir peso</string>
+    <string name="sessao_aumentar_reps">Aumentar repetições</string>
+    <string name="sessao_diminuir_reps">Diminuir repetições</string>
+    <string name="sessao_iniciar_descanso">Iniciar descanso</string>
+    <string name="sessao_pausar_descanso">Pausar descanso</string>
+    <string name="sessao_retomar_descanso">Retomar descanso</string>
+
+    <string name="sessao_vazia">Este treino não tem exercícios.</string>
+    <!-- Sair da EXECUÇÃO do treino. Não confundir com `sair_pergunta`, que é sair da CONTA. -->
+    <string name="sessao_sair_titulo">Sair do treino?</string>
+    <string name="sessao_sair_texto">As séries que você marcou não serão registradas.</string>
+    <string name="sessao_sair_confirmar">Sair sem salvar</string>
+    <string name="sessao_sair_ficar">Continuar treino</string>
+    <string name="sessao_ocultar_tecnica">Ocultar técnica</string>
     <string name="sessao_finalizar">Finalizar treino</string>
     <!--
       O exercício que ainda não tem nome: o catálogo não conhece o id gravado no treino, ou a
@@ -1341,6 +1367,7 @@
     <string name="enum_wiki_nutricao">Nutrição</string>
     <string name="enum_wiki_recuperacao">Recuperação</string>
     <string name="enum_wiki_mentalidade">Mentalidade</string>
+    <string name="menu_historico">Histórico</string>
     <string name="menu_conta">Configurações da conta</string>
     <!--
       Rodapé da gaveta. E ele SAI de verdade: não leva a Configurações. ~14 caracteres.
@@ -1473,7 +1500,6 @@
     <!-- Dias seguidos treinando. -->
     <string name="progresso_metrica_sequencia">Sequência</string>
     <!-- Cabeçalho do histórico. ~16 caracteres. -->
-    <string name="progresso_secao_historico">Histórico</string>
     <!-- Estado vazio. \n é a quebra de linha entre as duas frases. -->
     <string name="progresso_vazio">Nenhum treino registrado ainda.\nSeu histórico aparece aqui depois do primeiro treino.</string>
     <!-- Séries concluídas num treino do histórico. -->

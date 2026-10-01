@@ -8,7 +8,7 @@ class ExerciseLookupImpl(private val db: FitJourneyDatabase) : ExerciseLookup {
         if (ids.isEmpty()) return emptyMap()          // <- guard
         return db.exerciseQueries.selectByIds(ids)
             .executeAsList()
-            .associate { it.id to ExerciseRef(it.id, it.name, it.thumbRef) }
+            .associate { it.id to ExerciseRef(it.id, it.name, it.thumbRef, it.videoRef) }
     }
 }
 

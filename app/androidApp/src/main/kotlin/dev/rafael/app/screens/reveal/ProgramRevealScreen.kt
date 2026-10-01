@@ -36,20 +36,25 @@ fun ProgramRevealScreen(
     // ao voltar do Paywall (ou do fundo), re-busca o programa — já desbloqueado se assinou.
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.reload() }
 
-    Box(Modifier.fillMaxSize()) {
-        when {
-            state.isGenerating -> GeneratingView()
-            state.program == null -> ErrorView(state.error, onRetry = viewModel::retry)
-            else -> RevealContent(
-                name = state.program!!.name,
-                daysPerWeek = state.program!!.daysPerWeek,
-                split = state.program!!.split,
-                focusMuscles = state.program!!.focusMuscles,
-                workouts = state.program!!.workouts,
-                locked = state.locked,
-                onOpenPaywall = onOpenPaywall,
-                onDone = onDone,
-            )
+    // `Scaffold` sem barra nenhuma: ele existe aqui SÓ para aplicar os insets. Ver a [REGRA]
+    // no KDoc do `AppNavHost` -- o Scaffold de lá não reserva inset para si, então tela sem
+    // Scaffold próprio desenha por baixo da status bar.
+    Scaffold { insetsDaTela ->
+        Box(Modifier.fillMaxSize().padding(insetsDaTela)) {
+            when {
+                state.isGenerating -> GeneratingView()
+                state.program == null -> ErrorView(state.error, onRetry = viewModel::retry)
+                else -> RevealContent(
+                    name = state.program!!.name,
+                    daysPerWeek = state.program!!.daysPerWeek,
+                    split = state.program!!.split,
+                    focusMuscles = state.program!!.focusMuscles,
+                    workouts = state.program!!.workouts,
+                    locked = state.locked,
+                    onOpenPaywall = onOpenPaywall,
+                    onDone = onDone,
+                )
+            }
         }
     }
 }

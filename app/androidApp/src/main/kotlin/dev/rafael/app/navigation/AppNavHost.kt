@@ -59,6 +59,7 @@ import dev.rafael.app.screens.grupos.AbasDoGrupo
 import dev.rafael.app.screens.grupos.GrupoDetalheScreen
 import dev.rafael.app.screens.grupos.GrupoFormScreen
 import dev.rafael.app.screens.grupos.GruposScreen
+import dev.rafael.app.screens.historico.HistoricoScreen
 import dev.rafael.app.screens.home.HomeScreen
 import dev.rafael.app.screens.menu.MenuLateral
 import dev.rafael.app.screens.onboarding.NomeScreen
@@ -286,6 +287,8 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
                 },
                 onPerfil = { navegarDoMenu(AppRoute.Perfil()) },
                 onExercicios = { navegarDoMenu(AppRoute.Library) },
+                onConquistas = { navegarDoMenu(AppRoute.Conquistas()) },
+                onHistorico = { navegarDoMenu(AppRoute.Historico) },
                 onWiki = { navegarDoMenu(AppRoute.Wiki) },
                 onDuvidas = { navegarDoMenu(AppRoute.Duvidas) },
                 onConta = { navegarDoMenu(AppRoute.Conta) },
@@ -376,6 +379,22 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
      * Funciona porque `TopAppBar` e `NavigationBar` do Material 3 **já aplicam o próprio inset**:
      * elas crescem e pintam por baixo da barra do sistema sozinhas. O erro era este `Scaffold`
      * tirar delas essa chance.
+     *
+     * ## ⚠️ O OUTRO LADO DA MESMA REGRA: tela sem `Scaffold` não tem quem aplique o inset
+     *
+     * Com `mostrarAbas` falso o `padding` daqui chega **zero, de propósito** — e aí quem aplica o
+     * inset é o `Scaffold` da tela. Tela que não tem `Scaffold` nenhum fica sem ninguém: desenha
+     * por baixo da status bar.
+     *
+     * Achado pelo Rafael em 2026-10-01, na **barra de progresso do Quiz**, que é a única peça
+     * encostada no topo em todo o onboarding. O defeito já estava em sete telas (Quiz, Nome,
+     * Login, Oferta, Revelação, Em breve e Splash) e só aparecia naquela.
+     *
+     * > **Defeito de inset só é visível onde algum pixel encosta na borda. Nas outras telas ele
+     * > está lá, esperando o dia em que alguém mover um elemento para o topo.**
+     *
+     * As únicas que legitimamente não precisam são as **raízes de aba**: lá `mostrarAbas` é
+     * verdadeiro, e a `TopAppBar` e a `NavigationBar` deste `Scaffold` já cobrem os insets.
      *
      * ⚠️ Nenhuma tela deve chamar `statusBarsPadding`, `navigationBarsPadding` ou
      * `systemBarsPadding`. Quem aplica inset na tela é o `Scaffold` dela, e um modificador solto
@@ -583,6 +602,8 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
         }
         composable<AppRoute.WorkoutSession> { entry ->
             val route: AppRoute.WorkoutSession = entry.toRoute()
+            // Sem rota pro detalhe do exercício: a técnica abre DENTRO da sessão (painel que
+            // expande), para não tirar a pessoa da execução. Ver `PainelDeTecnica`.
             WorkoutSessionScreen(workoutId = route.id, onDone = { nav.popBackStack() })
         }
 
@@ -658,7 +679,10 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
 
         // ---- Abas ainda não implementadas ----
         composable<AppRoute.Progresso> {
-            ProgressScreen(onOpenConquistas = { nav.navigate(AppRoute.Conquistas()) })
+            ProgressScreen()
+        }
+        composable<AppRoute.Historico> {
+            HistoricoScreen(onBack = { nav.popBackStack() })
         }
         composable<AppRoute.Conquistas> { entry ->
             val rota: AppRoute.Conquistas = entry.toRoute()
