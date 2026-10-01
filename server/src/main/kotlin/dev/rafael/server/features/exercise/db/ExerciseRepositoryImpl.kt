@@ -83,6 +83,20 @@ class ExerciseRepositoryImpl : ExerciseRepository {
             found == ids.distinct().size
         }
 
+    override suspend fun paraAnalise(ids: List<Uuid>): AppResult<Map<Uuid, ExercicioParaAnalise>> =
+        dbQuery {
+            if (ids.isEmpty()) return@dbQuery emptyMap()
+            ExercisesTable.selectAll()
+                .where { ExercisesTable.id inList ids }
+                .associate { row ->
+                    row[ExercisesTable.id] to ExercicioParaAnalise(
+                        nomePiso = row[ExercisesTable.name],
+                        musculosPrimarios = row[ExercisesTable.primaryMuscles].orEmpty()
+                            .mapNotNull { runCatching { MuscleGroup.valueOf(it) }.getOrNull() },
+                    )
+                }
+        }
+
     override suspend fun nomesTraduzidos(ids: List<Uuid>, idioma: Idioma): AppResult<Map<Uuid, String>> =
         dbQuery {
             if (ids.isEmpty() || idioma == Idioma.PADRAO) return@dbQuery emptyMap()
