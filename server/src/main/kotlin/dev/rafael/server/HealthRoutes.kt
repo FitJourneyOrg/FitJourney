@@ -3,6 +3,8 @@ package dev.rafael.server
 import dev.rafael.server.db.DatabaseFactory
 import dev.rafael.server.features.exercise.routes.exerciseRoutes
 import dev.rafael.server.features.exercise.services.ExerciseService
+import dev.rafael.server.features.wiki.routes.wikiRoutes
+import dev.rafael.server.features.wiki.services.WikiService
 import dev.rafael.server.features.checkin.routes.checkInRoutes
 import dev.rafael.server.features.checkin.routes.moderacaoRoutes
 import dev.rafael.server.features.checkin.routes.socialRoutes
@@ -64,6 +66,7 @@ fun Application.configureRouting() {
     val notificacoes = get<NotificacaoService>()
     val profileService = get<ProfileService>()
     val exerciseService = get<ExerciseService>()
+    val wikiService = get<WikiService>()
     val workoutService = get<WorkoutService>()
     val programService = get<ProgramService>()
     val sessionService = get<SessionService>()
@@ -89,6 +92,7 @@ fun Application.configureRouting() {
         notificacaoRoutes(notificacoes)
         profileRoutes(profileService)
         exerciseRoutes(exerciseService, profileService)
+        wikiRoutes(wikiService)
         workoutRoutes(workoutService, userService, profileService, programService)
         programRoutes(userService, profileService, programService)
         sessionRoutes(sessionService)

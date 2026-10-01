@@ -1,0 +1,20 @@
+-- Acervo do "Aprender" (tabela `wikiArticle`).
+-- Schema: 8.sqm (nesta pasta). Aqui só ficam as QUERIES.
+
+-- A ordem é do SQL, não da tela: destaque primeiro, depois a ordem editorial. O servidor já
+-- devolve assim, mas o cache não preserva ordem de chegada -- quem lê tem de pedir a ordem.
+selectAll:
+SELECT * FROM wikiArticle ORDER BY featured DESC, orderIndex ASC;
+
+selectBySlug:
+SELECT * FROM wikiArticle WHERE slug = ?;
+
+insertOrReplace:
+INSERT OR REPLACE INTO wikiArticle(id, slug, category, title, body, featured, orderIndex, updatedAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+deleteAll:
+DELETE FROM wikiArticle;
+
+countAll:
+SELECT count(*) FROM wikiArticle;

@@ -220,15 +220,16 @@ object Movimento {
         initialState.ehAba() && targetState.ehAba()
 
     /**
-     * Splash e Login não participam de pilha nenhuma.
+     * Splash, Preparando e Login não participam de pilha nenhuma.
      *
-     * O Splash decide o destino antes de a tela importar, e o logout faz `popUpTo(0)`, que apaga
-     * tudo. Nos dois casos não existe "de onde" nem "para onde" — animar seria decorar uma frase
+     * O Splash e o Preparando decidem o destino antes de a tela importar, e o logout faz
+     * `popUpTo(0)`, que apaga tudo. Nos dois casos não existe "de onde" nem "para onde" — animar seria decorar uma frase
      * sem verbo, e no caso do Splash ainda faria a abertura do app parecer mais lenta.
      */
     private fun AnimatedContentTransitionScope<NavBackStackEntry>.envolveTelaSemPilha(): Boolean =
         listOf(initialState, targetState).any {
             it.destination.hasRoute(AppRoute.Splash::class) ||
+                it.destination.hasRoute(AppRoute.Preparando::class) ||
                 it.destination.hasRoute(AppRoute.Login::class)
         }
 }

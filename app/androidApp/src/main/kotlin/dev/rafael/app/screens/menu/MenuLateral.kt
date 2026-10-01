@@ -159,13 +159,12 @@ fun MenuLateral(
 
             ItemDoMenu(stringResource(R.string.menu_meu_perfil), Icons.Outlined.Person, onPerfil)
             ItemDoMenu(stringResource(R.string.comum_exercicios), Icons.Outlined.FitnessCenter, onExercicios)
-            // O selo de fase existe para o item não virar promessa vazia: quem toca e cai num
-            // "em breve" sem aviso fica com a sensação de app inacabado.
+            // Sem selo de fase desde a Fase 8: o destino existe de verdade agora. O selo continua
+            // no item de baixo, que ainda é promessa.
             ItemDoMenu(
                 stringResource(R.string.menu_wiki),
                 Icons.AutoMirrored.Outlined.MenuBook,
                 onWiki,
-                selo = stringResource(R.string.menu_wiki_selo),
             )
             ItemDoMenu(
                 stringResource(R.string.menu_duvidas),
