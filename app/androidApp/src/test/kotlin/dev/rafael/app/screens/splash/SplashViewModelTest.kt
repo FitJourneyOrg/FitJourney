@@ -7,12 +7,11 @@ import dev.rafael.app.screens.home.FakeHistorico
 import dev.rafael.app.screens.home.FakePerfil
 import dev.rafael.app.screens.home.FakeProgramas
 import dev.rafael.app.screens.home.FakeStats
-import dev.rafael.contract.exercise.ExerciseCategory
 import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.user.UserDto
-import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.model.Exercise
+import dev.rafael.features.exercise.domain.model.FiltroDeExercicios
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
 import dev.rafael.features.profile.domain.model.Profile
 import dev.rafael.features.profile.domain.repository.ProfileRepository
@@ -66,7 +65,7 @@ class SplashViewModelTest {
     /** O catálogo: o passo mais demorado do preparo, e o único sem dublê pronto no projeto. */
     private class FakeExercicios : ExerciseRepository {
         var atualizacoes = 0
-        override fun observeExercises(category: ExerciseCategory?, muscleGroup: MuscleGroup?): Flow<List<Exercise>> =
+        override fun observeExercises(filtro: FiltroDeExercicios): Flow<List<Exercise>> =
             flowOf(emptyList())
         override suspend fun refresh(forcar: Boolean): AppResult<Unit> {
             atualizacoes++

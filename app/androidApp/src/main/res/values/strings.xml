@@ -464,6 +464,8 @@
       visível) E ao botão visível do quiz, onde cabem ~18 caracteres. É a mesma ação e a mesma
       palavra: separar em duas chaves só criaria duas traduções que precisariam combinar.
     -->
+    <!-- Descrição do botão que apaga o texto de um campo (leitor de tela). -->
+    <string name="comum_limpar">Limpar</string>
     <string name="comum_voltar">Voltar</string>
     <!-- Botão que fecha um diálogo sem fazer nada. Botão de diálogo, ~15 caracteres. -->
     <string name="comum_cancelar">Cancelar</string>
@@ -1734,6 +1736,10 @@
     <!-- ============================ Biblioteca de exercícios ============================ -->
 
     <!-- Chip que remove o filtro de categoria. Concorda com "categorias". ~14 caracteres. -->
+    <!-- Busca da Biblioteca de Exercícios (923 itens). %1$s é o termo digitado. -->
+    <string name="exercicios_buscar">Buscar exercício</string>
+    <string name="exercicios_busca_vazia">Nada encontrado para %1$s</string>
+
     <string name="exercicios_todas">Todas</string>
     <string name="exercicios_todos_musculos">Todos</string>
     <string name="exercicios_vazio">Nenhum exercício.</string>
