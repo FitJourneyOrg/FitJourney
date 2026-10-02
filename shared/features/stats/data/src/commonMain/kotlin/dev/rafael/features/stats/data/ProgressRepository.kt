@@ -8,6 +8,7 @@ import dev.rafael.core.database.FitJourneyDatabase
 import dev.rafael.core.database.SyncStamps
 import dev.rafael.core.network.TokenProvider
 import dev.rafael.core.result.AppResult
+import dev.rafael.features.stats.domain.FiltroDeProgresso
 import dev.rafael.features.stats.domain.Progresso
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -48,12 +49,17 @@ class ProgressRepository(
     private val cache = db.cacheQueries
     private val json = Json { ignoreUnknownKeys = true }
 
-    private fun chave(uid: String?, idioma: Idioma) = "progress:${idioma.tag}:${uid ?: ""}"
+    /**
+     * A chave carrega uid, idioma E recorte. Os tres mudam a resposta, e juntar dois deles numa
+     * chave so e como a tela mostra o grafico de outro filtro ate o TTL vencer.
+     */
+    private fun chave(uid: String?, idioma: Idioma, filtro: FiltroDeProgresso) =
+        "progress:${idioma.tag}:${filtro.chave}:${uid ?: ""}"
 
     /** Re-chaveia quando a SESSAO muda — mesmo arranjo do [StatsRepository.observar]. */
-    override fun observar(): Flow<ProgressDto?> =
+    override fun observar(filtro: FiltroDeProgresso): Flow<ProgressDto?> =
         tokenProvider.uidFlow().flatMapLatest { uid ->
-            cache.get(chave(uid, idiomaAtual()))
+            cache.get(chave(uid, idiomaAtual(), filtro))
                 .asFlow()
                 .mapToOneOrNull(Dispatchers.Default)
                 .map { payload ->
@@ -63,17 +69,20 @@ class ProgressRepository(
                 }
         }
 
-    override suspend fun sincronizar(forcar: Boolean) {
+    override suspend fun sincronizar(filtro: FiltroDeProgresso, forcar: Boolean) {
         if (tokenProvider.currentUid() == null) return   // sem sessao, so produziria 401
-        if (!forcar && stamps.fresco(SyncStamps.PROGRESSO, TTL_MS)) return
+        // Carimbo POR RECORTE: um carimbo unico faria trocar de filtro cair no TTL do anterior e
+        // a tela abriria vazia por ate dois minutos, sem explicacao.
+        val carimbo = "${SyncStamps.PROGRESSO}:${filtro.chave}"
+        if (!forcar && stamps.fresco(carimbo, TTL_MS)) return
         val idioma = idiomaAtual()
-        val k = chave(tokenProvider.currentUid(), idioma)
-        when (val r = api.get(idioma.tag)) {
+        val k = chave(tokenProvider.currentUid(), idioma, filtro)
+        when (val r = api.get(idioma.tag, filtro)) {
             is AppResult.Success -> {
                 withContext(Dispatchers.Default) {
                     cache.put(k, json.encodeToString(ProgressDto.serializer(), r.value))
                 }
-                stamps.marcar(SyncStamps.PROGRESSO)
+                stamps.marcar(carimbo)
             }
             // Mantem a ultima analise conhecida: erro de rede nao apaga o grafico de ontem.
             is AppResult.Failure -> Unit

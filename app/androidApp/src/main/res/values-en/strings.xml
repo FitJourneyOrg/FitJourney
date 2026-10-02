@@ -960,6 +960,10 @@
     <string name="progresso_comparacao_titulo">%1$s, against last time</string>
     <string name="progresso_comparacao_variacao">%1$s of load in the same workout</string>
 
+
+    <!-- Progress filter chips (J.3). "Unassigned" covers both no-program and deleted-program. -->
+    <string name="progresso_filtro_todos">All</string>
+    <string name="progresso_filtro_avulsos">Unassigned</string>
     <string name="progresso_carga_semanal">Weekly load</string>
     <string name="progresso_dia_mes">%2$s/%1$s</string>
     <string name="progresso_semana_atual">this week</string>

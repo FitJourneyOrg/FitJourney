@@ -1547,6 +1547,16 @@
     <string name="progresso_comparacao_variacao">%1$s de carga no mesmo treino</string>
 
     <!-- Titulos dos tres blocos pagos. -->
+
+    <!--
+      Chips do filtro de progresso (J.3). "Avulsos" cobre DOIS casos que o usuário não distingue:
+      treino feito fora de qualquer programa, e treino de um programa que ele apagou depois. O
+      segundo não tem nome — o nome do programa era derivado dele (V48) e sumiu junto —, então o
+      rótulo não pode prometer identidade. Traduzir como "sem programa" também serve; o que não
+      serve é "removidos", que fala só de um dos dois.
+    -->
+    <string name="progresso_filtro_todos">Todos</string>
+    <string name="progresso_filtro_avulsos">Avulsos</string>
     <string name="progresso_carga_semanal">Carga por semana</string>
     <!-- Eixo do gráfico semanal: só as pontas. Oito datas não cabem na largura de um celular. -->
     <string name="progresso_dia_mes">%1$s/%2$s</string>
