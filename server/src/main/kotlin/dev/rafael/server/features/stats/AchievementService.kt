@@ -74,6 +74,7 @@ class AchievementService(
                     sessoesValidas = s.totalSessions,
                     streakDias = s.streakDays,
                     nivel = s.level,
+                    cargaTotalKg = s.totalKg,
                 )
                 repository.listByUser(user.id).flatMap { jaConcedidas ->
                     val novas = AchievementPolicy.aConceder(

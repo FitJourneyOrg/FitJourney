@@ -4,6 +4,20 @@ import kotlinx.serialization.Serializable
 
 sealed interface AppRoute {
     @Serializable data object Splash : AppRoute
+
+    /**
+     * O carregamento que roda **depois do login**, e que é uma situação diferente do boot comum.
+     *
+     * No cold start o banco local já tem dado, então a [Splash] decide a rota e deixa o resto
+     * sincronizar de fundo -- é o que faz o usuário recorrente abrir o app instantaneamente, e
+     * está documentado no `SplashViewModel`. Depois do login não existe dado local nenhum: a Home
+     * apareceria e se montaria na frente da pessoa (esqueleto, XP zerado, "sem programa").
+     *
+     * Por isso são DUAS rotas para a mesma tela. A diferença não é visual, é quanto ela espera.
+     *
+     * > **Esperar dado que já está no aparelho é atraso; esperar dado que não existe é carregamento.**
+     */
+    @Serializable data object Preparando : AppRoute
     @Serializable data object Login : AppRoute
     /**
      * Primeiro passo do onboarding: confirmar o nome (decisão 1-A.2).
@@ -77,6 +91,12 @@ sealed interface AppRoute {
     @Serializable data object Progresso : AppRoute
 
     /**
+     * Histórico de treinos. Tela própria desde o desmembramento do Progresso (2026-10-01):
+     * é CONSULTA, alcançada pelo drawer, não rotina que mereça aba.
+     */
+    @Serializable data object Historico : AppRoute
+
+    /**
      * Conquistas (ARCH #16). Tela própria, alcançada pelo Progresso — não é aba.
      *
      * [destaque] é o id da conquista a celebrar num diálogo ao entrar — vem do
@@ -126,8 +146,16 @@ sealed interface AppRoute {
      */
     @Serializable data object Notificacoes : AppRoute
 
-    /** Itens do menu que ainda não existem — abrem EmBreve com o selo da fase. */
+    /** "Aprender" (Fase 8): a lista do acervo. Entra pelo menu lateral. */
     @Serializable data object Wiki : AppRoute
+
+    /**
+     * A leitura de UM artigo, por SLUG e não por id: o slug é estável e legível, e é o que um deep
+     * link de notificação (#36) carregaria. A tela relê do banco local a partir dele.
+     */
+    @Serializable data class WikiArticle(val slug: String) : AppRoute
+
+    /** Item do menu que ainda não existe — abre EmBreve com o selo da fase. */
     @Serializable data object Duvidas : AppRoute
 
     // ARCH #27: "Meus treinos" (lista plana) virou "Meus Programas" (programas com

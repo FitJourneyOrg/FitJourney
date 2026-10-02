@@ -1,55 +1,56 @@
 package dev.rafael.app.screens.program
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.ui.erroDoCampo
+import dev.rafael.app.ui.nomeDoPrograma
 import dev.rafael.app.R
 import dev.rafael.contract.error.ErrorFields
 import dev.rafael.core.result.AppError
 import dev.rafael.features.program.domain.model.PendenciaDeSync
-import dev.rafael.features.program.domain.model.ProgramWorkout
+import dev.rafael.features.program.domain.model.Program
 import dev.rafael.features.program.presentation.state.ProgramListEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramListViewModel
+import dev.rafael.app.ui.DescartarPendenciaDialog
 import dev.rafael.app.ui.ErroDeTela
 import dev.rafael.app.ui.ErroEmSnackbar
+import dev.rafael.app.ui.SeloDeSync
 import dev.rafael.app.ui.ShimmerList
 import org.koin.androidx.compose.koinViewModel
 
 /**
- * "Meus treinos" (V59) — deck achatado por TREINO, não por programa. Substitui a antiga lista
- * por programa na aba Treino: o conceito de programa continua existindo por baixo (é dele que
- * os treinos vêm), mas quem o usuário escolhe no dia a dia é "qual treino está ativo agora",
- * não "qual programa".
+ * "Meus treinos" — lista de PROGRAMAS (restaurado 2026-09-26; era a versão anterior ao V59, que
+ * tinha achatado isto num deck por treino). O programa continua sendo a unidade de navegação:
+ * tocar num card abre [ProgramDetailScreen], que mostra a semana (7 dias).
  *
- * `onOpenProgram` sobrevive só pro fluxo de criar programa MANUAL vazio (que nasce sem
- * nenhum treino — não haveria o que mostrar no deck ainda): a pessoa precisa ir ao detalhe do
- * programa pra adicionar o primeiro treino. Fora desse caso, a tela inteira opera em treino.
+ * V60 (reverte de novo a V59, mas pro lado oposto do que ela tinha feito): "ativar" volta a ser
+ * uma ação de PROGRAMA, e mora AQUI, na lista — não mais um botão por treino dentro do detalhe.
+ * O usuário pensa em termos de programa ("hoje eu sigo o Push/Pull/Legs"), não de um treino
+ * solto; o treino que cai em cada dia é derivado (schedule x dia da semana), não escolhido.
+ *
+ * O único fluxo que fura a regra "tocar abre o detalhe" é a criação de programa manual: nasce
+ * sem nenhum treino, daí precisa navegar direto pro detalhe pra o usuário adicionar o primeiro.
  */
 @Composable
 fun ProgramListScreen(
     onOpenProgram: (String) -> Unit,
-    onOpenWorkout: (id: String, editLocked: Boolean) -> Unit,
-    onStartWorkout: (String) -> Unit,
-    onOpenLibrary: () -> Unit,
     onGenerateWithAI: () -> Unit,
     viewModel: ProgramListViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
     var showCreateDialog by remember { mutableStateOf(false) }
-    var confirmarAtivacao by remember { mutableStateOf<ProgramWorkout?>(null) }
 
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
         viewModel.onEvent(ProgramListEvent.Load)
@@ -70,17 +71,6 @@ fun ProgramListScreen(
         )
     }
 
-    confirmarAtivacao?.let { treino ->
-        ConfirmarAtivacaoDialog(
-            nome = treino.name,
-            onConfirmar = {
-                confirmarAtivacao = null
-                treino.id?.let { viewModel.onEvent(ProgramListEvent.Activate(it)) }
-            },
-            onDismiss = { confirmarAtivacao = null },
-        )
-    }
-
     val snackbarHost = remember { SnackbarHostState() }
 
     ErroEmSnackbar(
@@ -89,10 +79,6 @@ fun ProgramListScreen(
         onConsumir = viewModel::consumeError,
         onAcao = { viewModel.onEvent(ProgramListEvent.Retry) },
     )
-
-    val treinos = remember(state.programs) { state.programs.flatMap { it.workouts } }
-    val ativo = treinos.firstOrNull { it.isActive }
-    val outros = if (ativo != null) treinos.filterNot { it.isActive } else treinos
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHost) },
@@ -109,7 +95,7 @@ fun ProgramListScreen(
     ) { padding ->
         Box(Modifier.padding(padding).fillMaxSize()) {
             when {
-                state.isLoading && treinos.isEmpty() ->
+                state.isLoading && state.programs.isEmpty() ->
                     ShimmerList(modifier = Modifier.padding(16.dp))
                 // NÍVEL 2: vazio POR FALTA DE SYNC ≠ vazio de verdade (ARCH #30).
                 state.vazioPorFaltaDeSync -> ErroDeTela(
@@ -117,54 +103,35 @@ fun ProgramListScreen(
                     modifier = Modifier.align(Alignment.Center).padding(16.dp),
                     onAcao = { viewModel.onEvent(ProgramListEvent.Retry) },
                 )
-                treinos.isEmpty() ->
+                state.programs.isEmpty() ->
                     Text(
                         stringResource(R.string.programa_lista_vazio),
                         Modifier.align(Alignment.Center).padding(16.dp),
                     )
-                else -> LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    item {
-                        Text(stringResource(R.string.programa_lista_titulo), style = MaterialTheme.typography.headlineSmall)
+                else -> {
+                    // Programa ativo sempre no topo -- é o que o usuário quer ver primeiro
+                    // ao abrir a tela. sortedByDescending é estável: quem não tem nenhum ativo
+                    // mantém a ordem que já vinha do servidor.
+                    val programasOrdenados = remember(state.programs) {
+                        state.programs.sortedByDescending { it.isActive }
                     }
-                    item {
-                        if (ativo != null) {
-                            TreinoAtivoCard(
-                                treino = ativo,
-                                onIniciar = { ativo.id?.let(onStartWorkout) },
-                            )
-                        } else {
-                            TreinoAtivoVazio()
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        item {
+                            Text(stringResource(R.string.programa_lista_titulo), style = MaterialTheme.typography.headlineSmall)
                         }
-                    }
-                    item {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Text(
-                                stringResource(
-                                    if (ativo != null) R.string.treino_ativo_secao_outros
-                                    else R.string.treino_ativo_secao_seus,
-                                ) + " · ${outros.size}",
-                                style = MaterialTheme.typography.labelLarge,
+                        items(programasOrdenados) { programa ->
+                            ProgramCard(
+                                programa = programa,
+                                pendencia = state.pendenciaDe(programa.id),
+                                activating = state.activating,
+                                onClick = { programa.id?.let(onOpenProgram) },
+                                onDescartarPendencia = { programa.id?.let { viewModel.onEvent(ProgramListEvent.Descartar(it)) } },
+                                onActivate = { programa.id?.let { viewModel.onEvent(ProgramListEvent.Activate(it)) } },
                             )
-                            TextButton(onClick = onOpenLibrary) {
-                                Text(stringResource(R.string.treino_ativo_ver_biblioteca))
-                            }
                         }
-                    }
-                    items(outros) { treino ->
-                        TreinoRow(
-                            treino = treino,
-                            pendencia = state.pendenciaDe(treino.id),
-                            ativando = state.activating == treino.id,
-                            onClick = { treino.id?.let { onOpenWorkout(it, treino.locked) } },
-                            onAtivar = { confirmarAtivacao = treino },
-                        )
                     }
                 }
             }
@@ -173,86 +140,91 @@ fun ProgramListScreen(
 }
 
 @Composable
-private fun TreinoAtivoCard(treino: ProgramWorkout, onIniciar: () -> Unit) {
-    OutlinedCard(
-        border = BorderStroke(2.dp, MaterialTheme.colorScheme.primary),
-    ) {
+private fun ProgramCard(
+    programa: Program,
+    pendencia: PendenciaDeSync?,
+    activating: String?,
+    onClick: () -> Unit,
+    onDescartarPendencia: () -> Unit,
+    onActivate: () -> Unit,
+) {
+    var confirmarDescarte by remember { mutableStateOf(false) }
+    var confirmarAtivacao by remember { mutableStateOf(false) }
+
+    if (confirmarDescarte) {
+        DescartarPendenciaDialog(
+            mensagem = pendencia?.erroPermanente,
+            onConfirmar = { confirmarDescarte = false; onDescartarPendencia() },
+            onDismiss = { confirmarDescarte = false },
+        )
+    }
+
+    if (confirmarAtivacao) {
+        ConfirmarAtivacaoDialog(
+            nome = nomeDoPrograma(name = programa.name, daysPerWeek = programa.daysPerWeek, split = programa.split),
+            onConfirmar = { confirmarAtivacao = false; onActivate() },
+            onDismiss = { confirmarAtivacao = false },
+        )
+    }
+
+    OutlinedCard(onClick = onClick) {
         Column(Modifier.padding(16.dp)) {
-            // Badge simples (Surface+Text, não AssistChip) -- evita depender de um parametro de
-            // cor "disabled" da API do AssistChip que eu nao tinha como confirmar sem rodar o
-            // Gradle (device_bash nao roda o build neste projeto).
-            Surface(
-                color = MaterialTheme.colorScheme.primaryContainer,
-                shape = MaterialTheme.shapes.small,
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    stringResource(R.string.treino_ativo_badge),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    nomeDoPrograma(name = programa.name, daysPerWeek = programa.daysPerWeek, split = programa.split),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                if (programa.locked) {
+                    Icon(Icons.Default.Lock, contentDescription = stringResource(R.string.programa_detalhe_bloqueado))
+                }
+                pendencia?.let {
+                    SeloDeSync(it, onDescartar = if (!it.aguardando) ({ confirmarDescarte = true }) else null)
+                }
+            }
+            if (programa.isActive) {
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = MaterialTheme.shapes.small,
+                ) {
+                    Text(
+                        stringResource(R.string.treino_ativo_badge),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
+            }
+            if (programa.daysPerWeek > 0) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    stringResource(R.string.programa_detalhe_semana, programa.currentWeek, programa.durationWeeks),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Spacer(Modifier.height(8.dp))
-            Text(treino.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            Text(
-                pluralStringResource(R.plurals.treino_exercicios, treino.exerciseCount, treino.exerciseCount),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(12.dp))
-            Button(onClick = onIniciar, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.comum_iniciar_treino))
+            if (!programa.isActive) {
+                Spacer(Modifier.height(8.dp))
+                OutlinedButton(
+                    onClick = { confirmarAtivacao = true },
+                    enabled = activating != programa.id,
+                    modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.programa_ativar_botao)) }
             }
         }
     }
-}
-
-@Composable
-private fun TreinoAtivoVazio() {
-    OutlinedCard {
-        Column(Modifier.padding(16.dp).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(stringResource(R.string.treino_ativo_nenhum_titulo), style = MaterialTheme.typography.titleMedium)
-            Spacer(Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.treino_ativo_nenhum_corpo),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-private fun TreinoRow(
-    treino: ProgramWorkout,
-    pendencia: PendenciaDeSync?,
-    ativando: Boolean,
-    onClick: () -> Unit,
-    onAtivar: () -> Unit,
-) {
-    ListItem(
-        headlineContent = { Text(treino.name) },
-        supportingContent = { Text(pluralStringResource(R.plurals.treino_exercicios, treino.exerciseCount, treino.exerciseCount)) },
-        trailingContent = {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                pendencia?.let { SeloDeSync(it) }
-                OutlinedButton(onClick = onAtivar, enabled = !ativando) {
-                    Text(stringResource(R.string.treino_ativo_ativar))
-                }
-            }
-        },
-        modifier = Modifier.clickable(onClick = onClick),
-    )
 }
 
 @Composable
 private fun ConfirmarAtivacaoDialog(nome: String, onConfirmar: () -> Unit, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.treino_ativo_confirmar_titulo)) },
-        text = { Text(stringResource(R.string.treino_ativo_confirmar_corpo, nome)) },
+        title = { Text(stringResource(R.string.programa_ativar_confirmar_titulo)) },
+        text = { Text(stringResource(R.string.programa_ativar_confirmar_corpo, nome)) },
         confirmButton = {
-            TextButton(onClick = onConfirmar) { Text(stringResource(R.string.treino_ativo_ativar)) }
+            TextButton(onClick = onConfirmar) { Text(stringResource(R.string.programa_ativar_botao)) }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.comum_cancelar)) }
@@ -291,42 +263,4 @@ private fun CreateProgramDialog(
             TextButton(onClick = onDismiss) { Text(stringResource(R.string.comum_cancelar)) }
         },
     )
-}
-
-/**
- * Selo de sincronização (ARCH #30, B.4).
- *
- * Dois estados, com pesos diferentes de propósito:
- *  - AGUARDANDO: discreto. É o caso normal do offline-first — some sozinho quando a rede
- *    volta, e alarmar o usuário sobre algo que se resolve sem ele seria ruído.
- *  - FALHA PERMANENTE: em `error`. O servidor recusou, ninguém vai tentar de novo, e sem
- *    destaque o usuário seguiria acreditando que salvou.
- *
- * [REGRA] Nada de `lime` aqui: a cor é exclusiva das recompensas do perfil individual (#16).
- */
-@Composable
-private fun SeloDeSync(pendencia: PendenciaDeSync) {
-    if (pendencia.aguardando) {
-        AssistChip(
-            onClick = {},
-            enabled = false,
-            label = {
-                Text(stringResource(R.string.programa_lista_pendente), style = MaterialTheme.typography.labelSmall)
-            },
-        )
-    } else {
-        AssistChip(
-            onClick = {},
-            enabled = false,
-            label = {
-                Text(
-                    stringResource(R.string.programa_lista_nao_sincronizou),
-                    style = MaterialTheme.typography.labelSmall,
-                )
-            },
-            colors = AssistChipDefaults.assistChipColors(
-                disabledLabelColor = MaterialTheme.colorScheme.error,
-            ),
-        )
-    }
 }

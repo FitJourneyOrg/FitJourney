@@ -88,14 +88,28 @@ fun Route.programRoutes(
             val result = userService.findOrCreate(principal.uid, principal.email)
                 .flatMap { user ->
                     // ARCH #23: aplica o blur em cada programa da lista (o detalhe filtra daqui).
-                    // V59: isActive marcado DEPOIS do blur — mesmo id sobrevive ao blur, a
-                    // comparação não quebra pra quem não é premium.
+                    // V60 (reverte a V59): isActive marcado DEPOIS do blur -- mesmo id sobrevive
+                    // ao blur, a comparação não quebra pra quem não é premium.
                     programService.listForUser(user.id)
                         .map { list ->
                             list.map { ProgramBlur.apply(it, user.isPremium) }
-                                .map { ProgramActiveWorkout.apply(it, user.activeWorkoutId?.toString()) }
+                                .map { ProgramActiveWorkout.apply(it, user.activeProgramId?.toString()) }
                         }
                 }
+            call.respondResult(result)
+        }
+
+        // V60 (reverte a V59): ativar agora e por PROGRAMA, nao por treino.
+        post("/programs/{id}/activate") {
+            val principal = call.principal<FirebaseUser>()!!
+            val programId = call.programIdParam()
+            val result = if (programId == null) {
+                AppError.Validation("Não consegui abrir este programa.", code = ErrorCodes.ID_DE_PROGRAMA_INVALIDO).asFailure()
+            } else {
+                userService.findOrCreate(principal.uid, principal.email).flatMap { user ->
+                    programService.activate(user.id, programId)
+                }
+            }
             call.respondResult(result)
         }
 

@@ -12,8 +12,8 @@ import kotlin.test.assertTrue
  */
 class AchievementPolicyTest {
 
-    private fun progresso(sessoes: Int = 0, streak: Int = 0, nivel: Int = 1) =
-        Progresso(sessoesValidas = sessoes, streakDias = streak, nivel = nivel)
+    private fun progresso(sessoes: Int = 0, streak: Int = 0, nivel: Int = 1, cargaKg: Double = 0.0) =
+        Progresso(sessoesValidas = sessoes, streakDias = streak, nivel = nivel, cargaTotalKg = cargaKg)
 
     /**
      * ⭐ **O enum do servidor e o vocabulário do contrato são o MESMO conjunto** (G.5, ARCH #37).
@@ -142,4 +142,44 @@ class AchievementPolicyTest {
         assertTrue(Conquista.STREAK_7 !in r)
         assertEquals(setOf(Conquista.PRIMEIRO_TREINO, Conquista.TREINOS_10), r)
     }
+
+    // ---- carga acumulada (J.2) ---------------------------------------------
+
+    @Test
+    fun `carga e medida em toneladas, nao em quilos`() {
+        // 10.000 kg = 10 t: alcanca a de 1 t e a de 10 t, nao a de 50 t
+        val alcancadas = AchievementPolicy.alcancadas(progresso(cargaKg = 10_000.0))
+        assertTrue(Conquista.CARGA_1T in alcancadas)
+        assertTrue(Conquista.CARGA_10T in alcancadas)
+        assertTrue(Conquista.CARGA_50T !in alcancadas)
+    }
+
+    @Test
+    fun `tonelada incompleta nao concede - 999 kg ainda e zero tonelada`() {
+        assertTrue(Conquista.CARGA_1T !in AchievementPolicy.alcancadas(progresso(cargaKg = 999.0)))
+    }
+
+    @Test
+    fun `quem so treina peso corporal nao alcanca medalha de carga`() {
+        // carga zero, mas 80 sessoes: ganha as de sessao e nenhuma de carga
+        val alcancadas = AchievementPolicy.alcancadas(progresso(sessoes = 80, cargaKg = 0.0))
+        assertTrue(Conquista.TREINOS_50 in alcancadas)
+        assertTrue(alcancadas.none { it.metrica == AchievementPolicy.Metrica.CARGA })
+    }
+
+    @Test
+    fun `carga retroativa concede todas as faixas de uma vez`() {
+        // 175,8 t: as quatro primeiras faixas, nao a de 250 t
+        val novas = AchievementPolicy.aConceder(progresso(cargaKg = 175_876.0), jaConcedidas = emptySet())
+        val deCarga = novas.filter { it.metrica == AchievementPolicy.Metrica.CARGA }
+        assertEquals(4, deCarga.size)
+        assertTrue(Conquista.CARGA_250T !in novas)
+    }
+
+    @Test
+    fun `carga nao contamina as outras metricas`() {
+        val alcancadas = AchievementPolicy.alcancadas(progresso(cargaKg = 500_000.0))
+        assertTrue(alcancadas.all { it.metrica == AchievementPolicy.Metrica.CARGA })
+    }
+
 }

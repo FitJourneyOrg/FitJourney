@@ -17,6 +17,9 @@ import dev.rafael.server.features.exercise.engine.ExercisePreFilter
 import dev.rafael.server.features.exercise.engine.StructureEngine
 import dev.rafael.server.features.exercise.engine.WorkoutGenerator
 import dev.rafael.server.features.exercise.services.ExerciseService
+import dev.rafael.server.features.wiki.db.WikiRepository
+import dev.rafael.server.features.wiki.db.WikiRepositoryImpl
+import dev.rafael.server.features.wiki.services.WikiService
 import dev.rafael.server.features.program.db.ProgramRepository
 import dev.rafael.server.features.program.db.ProgramRepositoryImpl
 import dev.rafael.server.features.program.services.ProgramService
@@ -41,6 +44,7 @@ import dev.rafael.server.features.notificacao.services.NotificacaoService
 import dev.rafael.server.features.notificacao.services.Aviso
 import dev.rafael.server.features.notificacao.services.Notificador
 import dev.rafael.server.features.notificacao.services.NotificadorFcm
+import dev.rafael.server.features.stats.ProgressService
 import dev.rafael.server.features.stats.StatsService
 import dev.rafael.server.features.stats.db.AchievementRepository
 import dev.rafael.server.features.stats.db.AchievementRepositoryImpl
@@ -137,9 +141,13 @@ val appModule = module {
     single<ExerciseRepository> { ExerciseRepositoryImpl() }
     single { ExerciseService(get(), get()) }   // repo + ExercisePreFilter (registrado abaixo)
 
+    // Aprender / wiki (Fase 8). Read-only: repositório + serviço fino, sem gate de premium.
+    single<WikiRepository> { WikiRepositoryImpl() }
+    single { WikiService(get()) }
+
 
     single<WorkoutRepository> { WorkoutRepositoryImpl() }        // <- ESTA linha sumiu
-    single { WorkoutService(get(), get(), get(), get(), get()) }
+    single { WorkoutService(get(), get(), get(), get()) }
 
 
     // Motor (Fatia F) — as três peças + a interface.
@@ -149,7 +157,7 @@ val appModule = module {
 
     // Persistência + orquestração (G.1).
     single<ProgramRepository> { ProgramRepositoryImpl() }
-    single { ProgramService(get(), get()) }
+    single { ProgramService(get(), get(), get()) }
 
     // Sessão de treino (Fase 5 — execução).
     single<SessionRepository> { SessionRepositoryImpl() }
@@ -163,6 +171,10 @@ val appModule = module {
         )
     }
     single { StatsService(get(), get(), get()) }   // userService + sessionRepo + programService (ARCH #16)
+
+    // Analise de progressao (J.2). NAO depende do ProgramService: semana aqui e semana de
+    // calendario, e o schedule so existe por causa do streak.
+    single { ProgressService(get(), get(), get()) }   // userService + sessionRepo + exerciseRepo
 
     // Conquistas (ARCH #16). Reusa o StatsService (via ProgressoDeStats) em vez de recalcular
     // sessoes/streak/nivel: duas contas do mesmo numero acabariam divergindo.

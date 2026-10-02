@@ -5,6 +5,7 @@ import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.model.Exercise
+import dev.rafael.features.exercise.domain.model.FiltroDeExercicios
 import dev.rafael.features.exercise.domain.repository.ExerciseRepository
 import dev.rafael.features.exercise.presentation.state.ExerciseListEvent
 import kotlinx.coroutines.Dispatchers
@@ -24,8 +25,12 @@ import kotlin.test.assertIs
 import kotlin.test.assertNull
 
 /**
- * A parte nova: os dois filtros (categoria e músculo) COEXISTEM e o ViewModel precisa
- * re-observar com os dois juntos a cada evento, não só com o que acabou de mudar.
+ * Dois comportamentos sob teste aqui:
+ *
+ * 1. Os eixos de filtro **coexistem** — o ViewModel re-observa com todos juntos a cada evento, e
+ *    não só com o que acabou de mudar.
+ * 2. A busca é **debounced** e o campo **não é** — digitar três letras seguidas gera UMA consulta,
+ *    enquanto o texto na tela acompanha a tecla.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class ExerciseListViewModelTest {
@@ -43,15 +48,17 @@ class ExerciseListViewModelTest {
         isCompound = null, unilateral = null, prescriptionType = null, level = null,
     )
 
-    /** Registra os pares (category, muscleGroup) com que foi observado, na ordem em que chegaram. */
+    /** Registra os filtros com que foi observado, na ordem em que chegaram. */
     private inner class FakeRepo(
         private val refreshResult: AppResult<Unit> = AppResult.Success(Unit),
     ) : ExerciseRepository {
-        val chamadas = mutableListOf<Pair<ExerciseCategory?, MuscleGroup?>>()
+        val chamadas = mutableListOf<FiltroDeExercicios>()
 
-        override fun observeExercises(category: ExerciseCategory?, muscleGroup: MuscleGroup?): Flow<List<Exercise>> {
-            chamadas += category to muscleGroup
-            return flowOf(if (muscleGroup == null) listOf(exercise("ex-1")) else emptyList())
+        override fun observeExercises(filtro: FiltroDeExercicios): Flow<List<Exercise>> {
+            chamadas += filtro
+            val lista = if (filtro.musculo != null) emptyList()
+            else listOf(exercise("ex-1")).filter { filtro.busca.isBlank() || filtro.busca in it.id }
+            return flowOf(lista)
         }
 
         override suspend fun refresh(forcar: Boolean): AppResult<Unit> = refreshResult
@@ -65,7 +72,7 @@ class ExerciseListViewModelTest {
         ExerciseListViewModel(repo)
         advanceUntilIdle()
 
-        assertEquals(listOf<Pair<ExerciseCategory?, MuscleGroup?>>(null to null), repo.chamadas)
+        assertEquals(listOf(FiltroDeExercicios()), repo.chamadas)
     }
 
     @Test
@@ -79,7 +86,10 @@ class ExerciseListViewModelTest {
         vm.onEvent(ExerciseListEvent.MuscleGroupSelected(MuscleGroup.GLUTES))
         advanceUntilIdle()
 
-        assertEquals(ExerciseCategory.LEGS to MuscleGroup.GLUTES, repo.chamadas.last())
+        assertEquals(
+            FiltroDeExercicios(categoria = ExerciseCategory.LEGS, musculo = MuscleGroup.GLUTES),
+            repo.chamadas.last(),
+        )
         assertEquals(MuscleGroup.GLUTES, vm.state.value.selectedMuscleGroup)
         assertEquals(ExerciseCategory.LEGS, vm.state.value.selectedCategory)
     }
@@ -95,7 +105,10 @@ class ExerciseListViewModelTest {
         vm.onEvent(ExerciseListEvent.CategorySelected(ExerciseCategory.FUNCTIONAL_HIT))
         advanceUntilIdle()
 
-        assertEquals(ExerciseCategory.FUNCTIONAL_HIT to MuscleGroup.CORE, repo.chamadas.last())
+        assertEquals(
+            FiltroDeExercicios(categoria = ExerciseCategory.FUNCTIONAL_HIT, musculo = MuscleGroup.CORE),
+            repo.chamadas.last(),
+        )
     }
 
     @Test
@@ -126,5 +139,73 @@ class ExerciseListViewModelTest {
 
         assertIs<AppError.Connection>(vm.state.value.error)
         assertEquals(MuscleGroup.SHOULDERS, vm.state.value.selectedMuscleGroup)
+    }
+
+    @Test
+    fun `digitar tres letras seguidas gera UMA consulta, com o texto final`() = runTest(dispatcher) {
+        val repo = FakeRepo()
+        val vm = ExerciseListViewModel(repo)
+        advanceUntilIdle()
+        val antes = repo.chamadas.size
+
+        vm.onEvent(ExerciseListEvent.BuscaAlterada("e"))
+        vm.onEvent(ExerciseListEvent.BuscaAlterada("ex"))
+        vm.onEvent(ExerciseListEvent.BuscaAlterada("ex-"))
+        advanceUntilIdle()
+
+        assertEquals(
+            1, repo.chamadas.size - antes,
+            "o debounce não colapsou as teclas -- cada letra relê 923 linhas do SQLite",
+        )
+        assertEquals("ex-", repo.chamadas.last().busca)
+    }
+
+    @Test
+    fun `o campo acompanha a tecla sem esperar o debounce`() = runTest(dispatcher) {
+        val repo = FakeRepo()
+        val vm = ExerciseListViewModel(repo)
+        advanceUntilIdle()
+        val antes = repo.chamadas.size
+
+        vm.onEvent(ExerciseListEvent.BuscaAlterada("ros"))
+        // De propósito SEM avançar o tempo: é o instante entre a tecla e a consulta.
+
+        assertEquals("ros", vm.state.value.busca, "a letra digitada demorou a aparecer no campo")
+        assertEquals(antes, repo.chamadas.size, "a consulta não esperou o debounce")
+    }
+
+    @Test
+    fun `apagar a busca volta a mostrar o acervo`() = runTest(dispatcher) {
+        val repo = FakeRepo()
+        val vm = ExerciseListViewModel(repo)
+        advanceUntilIdle()
+
+        vm.onEvent(ExerciseListEvent.BuscaAlterada("supino"))
+        advanceUntilIdle()
+        assertEquals(emptyList(), vm.state.value.exercises, "termo sem resultado tinha de esvaziar")
+
+        vm.onEvent(ExerciseListEvent.BuscaAlterada(""))
+        advanceUntilIdle()
+
+        assertEquals(listOf("ex-1"), vm.state.value.exercises.map { it.id })
+        assertEquals("", repo.chamadas.last().busca)
+    }
+
+    @Test
+    fun `buscar nao apaga os chips ja escolhidos`() = runTest(dispatcher) {
+        val repo = FakeRepo()
+        val vm = ExerciseListViewModel(repo)
+        advanceUntilIdle()
+
+        vm.onEvent(ExerciseListEvent.CategorySelected(ExerciseCategory.CROSSFIT))
+        advanceUntilIdle()
+        vm.onEvent(ExerciseListEvent.BuscaAlterada("ex"))
+        advanceUntilIdle()
+
+        assertEquals(
+            FiltroDeExercicios(busca = "ex", categoria = ExerciseCategory.CROSSFIT),
+            repo.chamadas.last(),
+        )
+        assertEquals(ExerciseCategory.CROSSFIT, vm.state.value.selectedCategory)
     }
 }

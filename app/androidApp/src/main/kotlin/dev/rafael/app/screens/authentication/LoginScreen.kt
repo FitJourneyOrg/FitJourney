@@ -26,47 +26,52 @@ fun LoginScreen(
         if (state.loggedInUserId != null) onLoggedIn()
     }
 
-    Column(
-        modifier = Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(stringResource(R.string.login_titulo), style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(24.dp))
-        OutlinedTextField(
-            value = state.email,
-            onValueChange = { viewModel.onEvent(LoginEvent.EmailChanged(it)) },
-            label = { Text(stringResource(R.string.login_email)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(12.dp))
-        OutlinedTextField(
-            value = state.password,
-            onValueChange = { viewModel.onEvent(LoginEvent.PasswordChanged(it)) },
-            label = { Text(stringResource(R.string.login_senha)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(20.dp))
-        if (state.isLoading) {
-            CircularProgressIndicator()
-        } else {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Button(
-                    onClick = { viewModel.onEvent(LoginEvent.SubmitLogin) },
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.login_entrar)) }
-                OutlinedButton(
-                    onClick = { viewModel.onEvent(LoginEvent.SubmitSignUp) },
-                    modifier = Modifier.weight(1f),
-                ) { Text(stringResource(R.string.login_cadastrar)) }
+    // `Scaffold` sem barra nenhuma: ele existe aqui SÓ para aplicar os insets. Ver a [REGRA]
+    // no KDoc do `AppNavHost` -- o Scaffold de lá não reserva inset para si, então tela sem
+    // Scaffold próprio desenha por baixo da status bar.
+    Scaffold { insetsDaTela ->
+        Column(
+            modifier = Modifier.fillMaxSize().padding(insetsDaTela).padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(stringResource(R.string.login_titulo), style = MaterialTheme.typography.headlineSmall)
+            Spacer(Modifier.height(24.dp))
+            OutlinedTextField(
+                value = state.email,
+                onValueChange = { viewModel.onEvent(LoginEvent.EmailChanged(it)) },
+                label = { Text(stringResource(R.string.login_email)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(12.dp))
+            OutlinedTextField(
+                value = state.password,
+                onValueChange = { viewModel.onEvent(LoginEvent.PasswordChanged(it)) },
+                label = { Text(stringResource(R.string.login_senha)) },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Spacer(Modifier.height(20.dp))
+            if (state.isLoading) {
+                CircularProgressIndicator()
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(
+                        onClick = { viewModel.onEvent(LoginEvent.SubmitLogin) },
+                        modifier = Modifier.weight(1f),
+                    ) { Text(stringResource(R.string.login_entrar)) }
+                    OutlinedButton(
+                        onClick = { viewModel.onEvent(LoginEvent.SubmitSignUp) },
+                        modifier = Modifier.weight(1f),
+                    ) { Text(stringResource(R.string.login_cadastrar)) }
+                }
             }
-        }
-        state.error?.let {
-            Spacer(Modifier.height(16.dp))
-            // AUTENTICANDO: aqui 401 é "senha errada", não "sessão expirada" (ver ErrorUi).
-            ErroInline(it, contexto = ErroContexto.AUTENTICANDO)
+            state.error?.let {
+                Spacer(Modifier.height(16.dp))
+                // AUTENTICANDO: aqui 401 é "senha errada", não "sessão expirada" (ver ErrorUi).
+                ErroInline(it, contexto = ErroContexto.AUTENTICANDO)
+            }
         }
     }
 }

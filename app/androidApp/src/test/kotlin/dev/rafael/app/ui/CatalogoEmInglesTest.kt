@@ -204,11 +204,21 @@ class CatalogoEmInglesTest {
             "exercicio_execucao_unilateral", "grupo_detalhe_aba_posts", "grupo_detalhe_aba_ranking",
             "grupo_detalhe_admin", "grupo_form_data_botao", "home_treino_minutos", "home_xp_de_hoje",
             "login_titulo", "moderacao_motivo_item", "paywall_coluna_free", "perfil_publico_xp",
-            "programa_detalhe_dia_atual", "quiz_progresso", "sessao_mais_30s", "sessao_tempo",
+            "programa_detalhe_dia_atual", "sessao_tempo",
+            // Fração "x/y": era `quiz_progresso` e virou comum quando a execução do treino passou
+            // a mostrar "3/8" com o mesmo formato. Número e barra não se traduzem.
+            "comum_fracao",
+            // Execução do treino (redesenho de 2026-10-01). `S1` é a abreviação de série no chip,
+            // e a letra calha de ser a mesma em "Série" e "Set"; `+15s` é número e unidade.
+            "sessao_serie_curta", "sessao_mais_15s",
             // RIR (reps in reserve) é jargão de treino, igual "kg" ou "XP" — não é palavra
             // portuguesa nem inglesa, e as duas telas mostram a mesma sigla (débito P2
             // "Exibir RIR na tela de detalhe do treino", 2026-09-22).
             "treino_detalhe_rir",
+            // `t` de tonelada e símbolo do SI, não palavra: igual em português e em inglês, como
+            // `kg`. Traduzir para `ton` seria trocar a unidade padrão por uma abreviação ambígua
+            // (a ton curta americana tem 907 kg) — num número que o servidor manda em quilos.
+            "progresso_unidade_tonelada",
         )
 
         val porChaveEn = en.entradas.associate { it.chave to it.valor }

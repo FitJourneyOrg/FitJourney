@@ -167,12 +167,17 @@ class ProgramRepositoryImpl(
         httpResult { remote.generate().toDomain() }.also { invalidate() }
 
     /**
-     * ONLINE-ONLY (V59) -- mesma razão do [generate]: sem otimismo, `invalidate()` faz o
-     * próximo `list()`/resume ir à rede e trazer o `isActive` verdadeiro. Sem devolver o
+     * ONLINE-ONLY (V60, reverte a V59) -- mesma razão do [generate]: sem otimismo, `invalidate()`
+     * faz o próximo `list()`/resume ir à rede e trazer o `isActive` verdadeiro. Sem devolver o
      * `Program` inteiro porque quem chama já tem a tela reagindo ao Flow do cache.
      */
-    override suspend fun activateWorkout(workoutId: String): AppResult<Unit> =
-        httpResult { remote.activateWorkout(workoutId) }.also { invalidate() }
+    override suspend fun activateProgram(programId: String): AppResult<Unit> =
+        httpResult { remote.activateProgram(programId) }.also { invalidate() }
+
+    /** Só remove da fila -- LOCAL, nunca falha. O chamador segue com `refresh()`. */
+    override suspend fun descartarPendencia(alvoId: String) {
+        outbox.descartar(alvoId)
+    }
 
     /**
      * Criação otimista com id do CLIENTE (B.1 fez o servidor aceitá-lo), o que torna o POST

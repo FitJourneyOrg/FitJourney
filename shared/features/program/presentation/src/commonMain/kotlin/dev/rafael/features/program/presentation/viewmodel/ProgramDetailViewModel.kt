@@ -11,6 +11,8 @@ import dev.rafael.features.program.presentation.state.ProgramDetailState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -30,12 +32,21 @@ class ProgramDetailViewModel(
     // Sem init { load() }: a tela dispara Retry no ON_RESUME (1ª entrada + refresh ao voltar
     // do paywall). Ter os dois causava GET /programs duplicado ao abrir o detalhe.
 
+    init {
+        // Selo de pendente (ARCH #30, B.4), migrado do ProgramListViewModel junto com a
+        // ativação: reativo, some sozinho quando o worker sincroniza.
+        repository.observarPendentes()
+            .onEach { p -> _state.update { it.copy(pendencias = p) } }
+            .launchIn(viewModelScope)
+    }
+
     fun onEvent(event: ProgramDetailEvent) {
         when (event) {
             ProgramDetailEvent.Retry -> load()
             is ProgramDetailEvent.Rename -> rename(event.name)
             ProgramDetailEvent.Delete -> delete()
             is ProgramDetailEvent.SetWorkoutDay -> setDay(event.workoutId, event.dayOfWeek)
+            is ProgramDetailEvent.Descartar -> descartar(event.alvoId)
         }
     }
 
@@ -66,10 +77,10 @@ class ProgramDetailViewModel(
         }
     }
 
-    private fun load() {
+    private fun load(forcar: Boolean = false) {
         _state.update { it.copy(isLoading = true, error = null) }
         viewModelScope.launch {
-            when (val result = repository.list()) {
+            when (val result = if (forcar) repository.refresh() else repository.list()) {
                 is AppResult.Success -> {
                     val found = result.value.firstOrNull { it.id == programId }
                     _state.update {
@@ -83,6 +94,17 @@ class ProgramDetailViewModel(
                 is AppResult.Failure ->
                     _state.update { it.copy(isLoading = false, error = result.error) }
             }
+        }
+    }
+
+    /**
+     * Só sai da fila LOCALMENTE (nunca falha) -- o `load(forcar = true)` que segue é quem busca
+     * a verdade do servidor e sobrescreve a tentativa recusada (ver KDoc do repositório).
+     */
+    private fun descartar(alvoId: String) {
+        viewModelScope.launch {
+            repository.descartarPendencia(alvoId)
+            load(forcar = true)
         }
     }
 
