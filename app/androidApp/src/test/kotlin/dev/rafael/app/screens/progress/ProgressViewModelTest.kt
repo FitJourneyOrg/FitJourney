@@ -1,9 +1,11 @@
 package dev.rafael.app.screens.progress
 
 import dev.rafael.app.screens.home.FakeHistorico
+import dev.rafael.app.screens.home.FakeProgramas
 import dev.rafael.app.screens.home.FakeProgresso
 import dev.rafael.app.screens.home.FakeStats
 import dev.rafael.contract.stats.ProgressDto
+import dev.rafael.features.stats.domain.FiltroDeProgresso
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -50,7 +52,7 @@ class ProgressViewModelTest {
         val historico = FakeHistorico()
         val stats = FakeStats()
         val analise = FakeProgresso()
-        val vm = ProgressViewModel(historico, stats, analise)
+        val vm = ProgressViewModel(historico, stats, analise, FakeProgramas())
         advanceUntilIdle()   // consome o sync automático do init
 
         vm.sincronizar()   // o gesto de arraste chama isto
@@ -71,7 +73,7 @@ class ProgressViewModelTest {
 
     @Test
     fun `sincronizando volta a false ao terminar (indicador nao fica preso girando)`() = runTest(dispatcher) {
-        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), FakeProgresso())
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), FakeProgresso(), FakeProgramas())
         advanceUntilIdle()
 
         assertFalse(vm.state.value.sincronizando)
@@ -92,7 +94,7 @@ class ProgressViewModelTest {
     @Test
     fun `trancado sai do analysisLocked, e nao da ausencia dos blocos`() = runTest(dispatcher) {
         val analise = FakeProgresso()
-        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise)
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
 
         analise.valores.value = ProgressDto(totalKg = 0.0, totalSessions = 3, analysisLocked = true)
         advanceUntilIdle()
@@ -108,7 +110,7 @@ class ProgressViewModelTest {
     @Test
     fun `quem tem carga nao cai no estado vazio`() = runTest(dispatcher) {
         val analise = FakeProgresso()
-        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise)
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
 
         analise.valores.value = ProgressDto(
             totalKg = 3600.0,
@@ -119,6 +121,89 @@ class ProgressViewModelTest {
 
         assertFalse(vm.state.value.semCarga)
         assertFalse(vm.state.value.trancado)
+    }
+
+
+    // ---- filtro por programa (J.3) -----------------------------------------
+
+    /**
+     * ⭐ Trocar de chip troca a CHAVE observada, nao so o que se pede.
+     *
+     * O cache e por recorte. Um ViewModel que observasse um fluxo fixo e so disparasse o sync
+     * passaria num fake de fluxo unico — e na tela mostraria o grafico do recorte anterior ate a
+     * rede responder, que e o defeito mais dificil de notar: o numero esta certo, mas e de outro
+     * filtro.
+     */
+    @Test
+    fun `selecionar um programa passa a observar o recorte DELE`() = runTest(dispatcher) {
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
+        advanceUntilIdle()
+
+        val doPrograma = FiltroDeProgresso.DoPrograma("prog-x")
+        analise.fluxo(FiltroDeProgresso.Todos).value = ProgressDto(totalKg = 999.0, totalSessions = 9)
+        analise.fluxo(doPrograma).value = ProgressDto(totalKg = 111.0, totalSessions = 1)
+
+        vm.selecionar(doPrograma)
+        advanceUntilIdle()
+
+        assertEquals(111.0, vm.state.value.analise?.totalKg, "mostrou o recorte errado")
+        assertEquals(doPrograma, vm.state.value.filtro)
+        assertTrue(doPrograma in analise.sincronizados)
+    }
+
+    @Test
+    fun `selecionar o mesmo filtro de novo nao repede nada`() = runTest(dispatcher) {
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
+        advanceUntilIdle()
+        val antes = analise.sincronizacoes
+
+        val f = FiltroDeProgresso.DoPrograma("prog-x")
+        vm.selecionar(f)
+        advanceUntilIdle()
+        vm.selecionar(f)
+        advanceUntilIdle()
+
+        assertEquals(antes + 1, analise.sincronizacoes, "tocar no chip ja ativo foi a rede de novo")
+    }
+
+    @Test
+    fun `o arraste-pra-atualizar repede o recorte ATUAL, nao o padrao`() = runTest(dispatcher) {
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
+        advanceUntilIdle()
+
+        val f = FiltroDeProgresso.DoPrograma("prog-x")
+        vm.selecionar(f)
+        advanceUntilIdle()
+        analise.sincronizados.clear()
+
+        vm.sincronizar()
+        advanceUntilIdle()
+
+        // Tipado: `listOf(f)` sozinho da List<DoPrograma> contra MutableList<FiltroDeProgresso>,
+        // e o assertEquals nao acha um T comum entre as sobrecargas.
+        assertEquals(
+            listOf<FiltroDeProgresso>(f),
+            analise.sincronizados.toList(),
+            "voltou a pedir 'todos' depois de filtrar",
+        )
+    }
+
+    @Test
+    fun `recorte ainda nao baixado e carregando, nao vazio`() = runTest(dispatcher) {
+        // Sem isto a tela diria "voce nao treinou nisso" para um recorte que ela so nao baixou.
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
+        analise.valores.value = ProgressDto(totalKg = 10.0, totalSessions = 1, sinceDate = "2026-09-21")
+        advanceUntilIdle()
+
+        vm.selecionar(FiltroDeProgresso.DoPrograma("prog-novo"))
+        advanceUntilIdle()
+
+        assertTrue(vm.state.value.carregandoRecorte)
+        assertFalse(vm.state.value.semCarga, "recorte sem cache nao e 'sem carga'")
     }
 
 }

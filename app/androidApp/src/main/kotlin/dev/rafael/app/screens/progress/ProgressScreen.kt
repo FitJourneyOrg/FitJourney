@@ -2,6 +2,7 @@ package dev.rafael.app.screens.progress
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -15,11 +16,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.R
+import dev.rafael.app.ui.nomeDoPrograma
 import dev.rafael.app.ui.rotulo
 import dev.rafael.contract.stats.ExerciseTrendDto
 import dev.rafael.contract.stats.MuscleVolumeDto
 import dev.rafael.contract.stats.ProgressDto
 import dev.rafael.contract.stats.WeeklyLoadDto
+import dev.rafael.features.program.domain.model.Program
+import dev.rafael.features.stats.domain.FiltroDeProgresso
 import dev.rafael.core.designsystem.Chart1
 import dev.rafael.core.designsystem.Chart2
 import dev.rafael.core.designsystem.Chart3
@@ -57,15 +61,15 @@ fun ProgressScreen(
     val state by viewModel.state.collectAsState()
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { viewModel.sincronizar() }
 
-    Column(
-        Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 20.dp),
-    ) {
+    // ⚠️ A margem NAO vive na coluna de fora. A fileira de chips rola na horizontal e precisa
+    // SANGRAR ate a borda da tela: com a margem no pai, o chip e cortado 20dp antes do fim e a
+    // lista parece ter acabado. A margem desce para cada bloco, e a fileira a aplica por dentro
+    // do scroll, onde ela vira padding de CONTEUDO.
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Spacer(Modifier.height(20.dp))
         Text(
             stringResource(R.string.comum_progresso),
+            Modifier.padding(horizontal = MARGEM),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
         )
@@ -73,20 +77,107 @@ fun ProgressScreen(
 
         val analise = state.analise
 
-        CartaoDeTotais(analise, state.stats?.totalSessions ?: 0)
-        analise?.lastVsPrevious?.let { c ->
-            Spacer(Modifier.height(10.dp))
-            CartaoDeComparacao(c)
-        }
+        FiltroDeProgramas(
+            analise = analise,
+            programas = state.programas,
+            selecionado = state.filtro,
+            onSelecionar = viewModel::selecionar,
+        )
 
-        Spacer(Modifier.height(10.dp))
-        when {
-            state.trancado -> CartaoTrancado(onOpenPaywall)
-            state.semCarga -> CartaoSemCarga()
-            analise != null -> BlocosPagos(analise)
+        Column(Modifier.padding(horizontal = MARGEM)) {
+            CartaoDeTotais(analise, state.stats?.totalSessions ?: 0)
+            analise?.lastVsPrevious?.let { c ->
+                Spacer(Modifier.height(10.dp))
+                CartaoDeComparacao(c)
+            }
+
+            Spacer(Modifier.height(10.dp))
+            when {
+                state.trancado -> CartaoTrancado(onOpenPaywall)
+                state.semCarga -> CartaoSemCarga()
+                analise != null -> BlocosPagos(analise)
+            }
         }
         Spacer(Modifier.height(24.dp))
     }
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Filtro (J.3)                                                               */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Os chips de recorte: Todos, um por programa com sessao, e Avulsos.
+ *
+ * ## Some quando nao ha o que escolher
+ *
+ * Com um unico programa e nenhuma sessao avulsa, "Todos" e o programa mostram **o mesmo grafico**
+ * — um filtro que nao filtra e ruido que ensina a pessoa a ignorar a fileira. Por isso a regra e
+ * duas opcoes de verdade, nao "existe programa".
+ *
+ * ## O nome sai do cache LOCAL de programas, nunca do servidor
+ *
+ * O `availablePrograms` traz so ids, porque o nome e derivado de `daysPerWeek` + `split` no
+ * idioma da tela (V48/ARCH #37). Id que o cache local ainda nao conhece e PULADO em vez de virar
+ * um chip generico: dois chips escritos "Programa" sao piores que um chip a menos, e a ausencia
+ * se resolve sozinha no proximo sync.
+ */
+@Composable
+private fun FiltroDeProgramas(
+    analise: ProgressDto?,
+    programas: List<Program>,
+    selecionado: FiltroDeProgresso,
+    onSelecionar: (FiltroDeProgresso) -> Unit,
+) {
+    val porId = programas.mapNotNull { p -> p.id?.let { it to p } }.toMap()
+    val comNome = analise?.availablePrograms.orEmpty().mapNotNull { id -> porId[id]?.let { id to it } }
+    val temAvulsos = analise?.hasUnassigned == true
+    if (comNome.size + (if (temAvulsos) 1 else 0) < 2) return
+
+    Row(
+        // A ordem importa: `padding` DEPOIS do `horizontalScroll` fica DENTRO da area rolavel,
+        // entao e padding de CONTEUDO e nao recorte da area visivel.
+        //
+        // ⚠️ So no `start`. O comeco alinha com o titulo e os cartoes, porque e dali que o olho
+        // parte; o fim NAO ganha margem de proposito — chip encostando na borda direita e o que
+        // diz "tem mais, role". Fechar dos dois lados faria a fileira parecer completa mesmo
+        // quando nao esta.
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(start = MARGEM),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Chip(
+            texto = stringResource(R.string.progresso_filtro_todos),
+            ativo = selecionado is FiltroDeProgresso.Todos,
+            onClick = { onSelecionar(FiltroDeProgresso.Todos) },
+        )
+        comNome.forEach { (id, p) ->
+            Chip(
+                texto = nomeDoPrograma(p.name, p.daysPerWeek, p.split),
+                ativo = selecionado is FiltroDeProgresso.DoPrograma && selecionado.programId == id,
+                onClick = { onSelecionar(FiltroDeProgresso.DoPrograma(id)) },
+            )
+        }
+        if (temAvulsos) {
+            Chip(
+                texto = stringResource(R.string.progresso_filtro_avulsos),
+                ativo = selecionado is FiltroDeProgresso.Avulsos,
+                onClick = { onSelecionar(FiltroDeProgresso.Avulsos) },
+            )
+        }
+    }
+    Spacer(Modifier.height(12.dp))
+}
+
+@Composable
+private fun Chip(texto: String, ativo: Boolean, onClick: () -> Unit) {
+    FilterChip(
+        selected = ativo,
+        onClick = onClick,
+        label = { Text(texto, maxLines = 1) },
+    )
 }
 
 /* -------------------------------------------------------------------------- */
@@ -486,6 +577,9 @@ private fun CartaoDeGrafico(titulo: String, conteudo: @Composable ColumnScope.()
 /* -------------------------------------------------------------------------- */
 /*  Formatacao                                                                 */
 /* -------------------------------------------------------------------------- */
+
+/** Margem lateral da tela. Vive aqui porque cada bloco a aplica por conta: ver o KDoc do topo. */
+private val MARGEM = 20.dp
 
 private const val LINHAS_DA_COMPARACAO = 4
 
