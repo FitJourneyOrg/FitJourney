@@ -907,6 +907,22 @@
     <string name="conquista_nivel_10_titulo">Level 10</string>
     <string name="conquista_nivel_10_descricao">Reach level 10</string>
 
+    <!-- Accumulated external load (J.2). Target is in TONNES, matching the server. -->
+    <string name="conquista_carga_1t_titulo">First tonne</string>
+    <string name="conquista_carga_1t_descricao">Move 1 tonne in total</string>
+
+    <string name="conquista_carga_10t_titulo">Ten tonnes</string>
+    <string name="conquista_carga_10t_descricao">Move 10 tonnes in total</string>
+
+    <string name="conquista_carga_50t_titulo">Fifty tonnes</string>
+    <string name="conquista_carga_50t_descricao">Move 50 tonnes in total</string>
+
+    <string name="conquista_carga_100t_titulo">One hundred tonnes</string>
+    <string name="conquista_carga_100t_descricao">Move 100 tonnes in total</string>
+
+    <string name="conquista_carga_250t_titulo">Two hundred fifty tonnes</string>
+    <string name="conquista_carga_250t_descricao">Move 250 tonnes in total</string>
+
     <string name="conquista_treinos_10_descricao_progresso">Log %1$d workouts</string>
     <string name="conquista_treinos_50_descricao_progresso">Log %1$d workouts</string>
     <string name="conquista_treinos_100_descricao_progresso">Log %1$d workouts</string>
@@ -915,6 +931,11 @@
     <string name="conquista_streak_90_descricao_progresso">%1$d days on plan</string>
     <string name="conquista_nivel_5_descricao_progresso">Reach level %1$d</string>
     <string name="conquista_nivel_10_descricao_progresso">Reach level %1$d</string>
+    <string name="conquista_carga_1t_descricao_progresso">Move %1$d tonne in total</string>
+    <string name="conquista_carga_10t_descricao_progresso">Move %1$d tonnes in total</string>
+    <string name="conquista_carga_50t_descricao_progresso">Move %1$d tonnes in total</string>
+    <string name="conquista_carga_100t_descricao_progresso">Move %1$d tonnes in total</string>
+    <string name="conquista_carga_250t_descricao_progresso">Move %1$d tonnes in total</string>
     <string name="conquistas_dialogo_titulo">Achievement unlocked!</string>
 
     <!-- ============================ Someone else's profile ============================ -->

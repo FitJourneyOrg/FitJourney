@@ -329,6 +329,7 @@ class CatalogoDeStringsTest {
             "Grupos", "Progresso",
             // 5. moldes de conquista compartilhados de propósito (ver acima)
             "Registre %1\$d treinos", "%1\$d dias seguindo o plano", "Alcance o nível %1\$d",
+            "Movimente %1\$d toneladas no total",
         )
 
         val repetidos = entradas
