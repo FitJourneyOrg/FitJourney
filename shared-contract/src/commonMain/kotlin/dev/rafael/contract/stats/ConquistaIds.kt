@@ -54,6 +54,14 @@ object ConquistaIds {
     const val NIVEL_5 = "NIVEL_5"
     const val NIVEL_10 = "NIVEL_10"
 
+    // ---- carga acumulada (Metrica.CARGA) ----
+    // O sufixo é a TONELADA, que é a unidade do alvo — ver o KDoc do `AchievementPolicy`.
+    const val CARGA_1T = "CARGA_1T"
+    const val CARGA_10T = "CARGA_10T"
+    const val CARGA_50T = "CARGA_50T"
+    const val CARGA_100T = "CARGA_100T"
+    const val CARGA_250T = "CARGA_250T"
+
     /**
      * Todas, para quem precisa percorrer: o teste de cobertura do catálogo no cliente e o teste do
      * servidor que amarra este conjunto ao `AchievementPolicy.Conquista`.
@@ -66,5 +74,6 @@ object ConquistaIds {
         PRIMEIRO_TREINO, TREINOS_10, TREINOS_50, TREINOS_100,
         STREAK_7, STREAK_30, STREAK_90,
         NIVEL_5, NIVEL_10,
+        CARGA_1T, CARGA_10T, CARGA_50T, CARGA_100T, CARGA_250T,
     )
 }
