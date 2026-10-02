@@ -113,6 +113,13 @@ class SyncStamps(
         const val CONQUISTAS = "achievements"
         const val HISTORICO = "sessions"
 
+        /**
+         * Analise de progressao (J.2). Mesma janela do [STATS], e pelo mesmo motivo: os dois
+         * numeros saem das MESMAS sessoes, entao mudam juntos. Carimbos diferentes fariam a
+         * tonelagem do topo e o grafico de baixo discordarem por ate dois minutos.
+         */
+        const val PROGRESSO = "progress"
+
         /** Carimbo de um treino específico. */
         fun treino(id: String) = "workout:$id"
     }

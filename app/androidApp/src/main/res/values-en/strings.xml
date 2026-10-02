@@ -965,6 +965,29 @@
     <string name="progresso_aguardando_sync">Waiting to sync</string>
     <string name="progresso_pendente">pending</string>
 
+    <!-- Progress analysis (J.2). -->
+    <string name="progresso_total_rotulo">moved</string>
+    <string name="progresso_unidade_tonelada">t</string>
+    <string name="progresso_desde">Since %2$s/%1$s</string>
+
+    <string name="progresso_comparacao_titulo">%1$s, against last time</string>
+    <string name="progresso_comparacao_variacao">%1$s of load in the same workout</string>
+
+    <string name="progresso_carga_semanal">Weekly load</string>
+    <string name="progresso_dia_mes">%2$s/%1$s</string>
+    <string name="progresso_semana_atual">this week</string>
+    <string name="progresso_toque_semana">tap a bar to see that week</string>
+    <string name="progresso_evolucao">Estimated load per exercise</string>
+    <string name="progresso_volume">Weekly sets per muscle group</string>
+    <string name="progresso_volume_nota">Sets, not kilos: load does not compare between machine and dumbbell.</string>
+    <string name="progresso_nao_classificado">No group</string>
+
+    <string name="progresso_bloqueado_titulo">See how your load has grown</string>
+    <string name="progresso_bloqueado_descricao">Eight weeks of history, per-exercise progression and balance across muscle groups.</string>
+
+    <string name="progresso_sem_carga_titulo">Your workouts do not log load yet</string>
+    <string name="progresso_sem_carga_descricao">The analysis uses set weight. Streak, XP and achievements keep counting as usual.</string>
+
 
     <!-- ============================ Common (social and the rest) ============================ -->
 

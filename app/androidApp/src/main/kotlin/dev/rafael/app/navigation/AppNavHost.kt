@@ -677,9 +677,8 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
             )
         }
 
-        // ---- Abas ainda não implementadas ----
         composable<AppRoute.Progresso> {
-            ProgressScreen()
+            ProgressScreen(onOpenPaywall = { nav.navigate(AppRoute.Paywall()) })
         }
         composable<AppRoute.Historico> {
             HistoricoScreen(onBack = { nav.popBackStack() })
