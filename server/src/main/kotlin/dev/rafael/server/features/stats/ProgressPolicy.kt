@@ -47,7 +47,10 @@ object ProgressPolicy {
     fun elegivel(done: Boolean, weightKg: Double?): Boolean =
         done && weightKg != null && weightKg > 0.0
 
-    fun cargaDaSerie(s: SerieFeita): Double = s.reps * s.kg
+    /** A formula, isolada: quem tem reps e kg na mao nao precisa montar uma [SerieFeita]. */
+    fun cargaDaSerie(reps: Int, kg: Double): Double = reps * kg
+
+    fun cargaDaSerie(s: SerieFeita): Double = cargaDaSerie(s.reps, s.kg)
 
     fun tonelagem(series: List<SerieFeita>): Double = series.sumOf { cargaDaSerie(it) }
 

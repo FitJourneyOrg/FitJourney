@@ -22,4 +22,13 @@ data class UserStatsDto(
     // Hoje: a Home usa pra mostrar "treino concluído" em vez de oferecer o mesmo treino de novo.
     val trainedToday: Boolean = false,
     val xpToday: Int = 0,
+    /**
+     * Carga externa acumulada, em quilos (J.2). Derivada das sessoes, como todo o resto daqui.
+     *
+     * Vive AQUI, e nao so no `ProgressDto`, porque e desta porta que a conquista de carga le o
+     * progresso: o `AchievementService` monta o `Progresso` a partir deste DTO. Calcular a mesma
+     * tonelagem num segundo lugar e o que o KDoc do servico chama de "duas contas do mesmo numero
+     * acabariam divergindo" - as duas chamam `ProgressPolicy.cargaDaSerie`.
+     */
+    val totalKg: Double = 0.0,
 )

@@ -1451,6 +1451,30 @@
     <string name="conquista_nivel_10_descricao">Alcance o nível 10</string>
 
     <!--
+      Carga acumulada (J.2). ⚠️ A unidade é a TONELADA e o alvo do servidor também: o %1$d vem do
+      AchievementDto.target, que vale 1, 10, 50, 100 ou 250. Nunca traduzir para quilos sem mudar
+      o AchievementPolicy junto, senão a frase pede uma coisa e a barra conta outra.
+
+      "Movimente" é peso levantado somado (séries x repetições x carga), não peso de uma série. E
+      conta só CARGA EXTERNA: quem treina peso corporal não alcança estas medalhas, e a frase
+      precisa deixar claro que o número é de carga, não de esforço.
+    -->
+    <string name="conquista_carga_1t_titulo">Primeira tonelada</string>
+    <string name="conquista_carga_1t_descricao">Movimente 1 tonelada no total</string>
+
+    <string name="conquista_carga_10t_titulo">Dez toneladas</string>
+    <string name="conquista_carga_10t_descricao">Movimente 10 toneladas no total</string>
+
+    <string name="conquista_carga_50t_titulo">Cinquenta toneladas</string>
+    <string name="conquista_carga_50t_descricao">Movimente 50 toneladas no total</string>
+
+    <string name="conquista_carga_100t_titulo">Cem toneladas</string>
+    <string name="conquista_carga_100t_descricao">Movimente 100 toneladas no total</string>
+
+    <string name="conquista_carga_250t_titulo">Duzentas e cinquenta toneladas</string>
+    <string name="conquista_carga_250t_descricao">Movimente 250 toneladas no total</string>
+
+    <!--
       Mesma frase de cima, mas parametrizada pelo AchievementDto.target de verdade (débito
       "números de conquista cravam constante do servidor", debitos.md) — usada só onde a barra de
       progresso aparece ao lado (AchievementsScreen, perfil próprio), pra que a frase e a barra
@@ -1470,6 +1494,12 @@
     <string name="conquista_streak_90_descricao_progresso">%1$d dias seguindo o plano</string>
     <string name="conquista_nivel_5_descricao_progresso">Alcance o nível %1$d</string>
     <string name="conquista_nivel_10_descricao_progresso">Alcance o nível %1$d</string>
+    <!-- O de 1 t fica no singular: é o único cujo alvo não pluraliza. -->
+    <string name="conquista_carga_1t_descricao_progresso">Movimente %1$d tonelada no total</string>
+    <string name="conquista_carga_10t_descricao_progresso">Movimente %1$d toneladas no total</string>
+    <string name="conquista_carga_50t_descricao_progresso">Movimente %1$d toneladas no total</string>
+    <string name="conquista_carga_100t_descricao_progresso">Movimente %1$d toneladas no total</string>
+    <string name="conquista_carga_250t_descricao_progresso">Movimente %1$d toneladas no total</string>
     <string name="conquistas_dialogo_titulo">Conquista desbloqueada!</string>
 
     <!-- ============================ Perfil de outra pessoa ============================ -->
