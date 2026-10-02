@@ -72,6 +72,7 @@ class HomeViewModelTest {
             programa(
                 workouts = listOf(ProgramWorkout(id = "w1", name = "Upper", exerciseCount = 6)),
                 schedule = listOf(ProgramScheduleEntry(workoutId = "w1", dayOfWeek = 1)),   // segunda
+                isActive = true,
             ),
         )
         advanceUntilIdle()
@@ -90,43 +91,20 @@ class HomeViewModelTest {
             programa(
                 workouts = listOf(ProgramWorkout(id = "w1", name = "Upper", exerciseCount = 6)),
                 schedule = listOf(ProgramScheduleEntry(workoutId = "w1", dayOfWeek = 3)),   // quarta
+                isActive = true,
             ),
         )
         advanceUntilIdle()
 
-        // Descanso é implícito (ARCH #22): sem treino hoje E com programa = dia de descanso.
+        // Descanso é implícito (ARCH #22): sem treino hoje E com programa (ativo) = dia de descanso.
         assertNull(viewModel.state.value.today)
         assertFalse(viewModel.state.value.semPrograma)
     }
 
     @Test
-    fun `sem agenda para hoje sugere o treino ativo`() = runTest(dispatcher) {
-        // Achado do Rafael navegando no app: treino sem agenda nenhuma, mas com um ativo (V59)
-        // — a Home tem que sugerir ESSE treino, não declarar descanso.
-        val programas = FakeProgramas()
-        val viewModel = vm(programas = programas)
-        advanceUntilIdle()
-
-        programas.locais.value = listOf(
-            programa(
-                workouts = listOf(
-                    ProgramWorkout(id = "w1", name = "Push", exerciseCount = 5, isActive = true),
-                    ProgramWorkout(id = "w2", name = "Pull", exerciseCount = 5),
-                ),
-                schedule = emptyList(),
-            ),
-        )
-        advanceUntilIdle()
-
-        assertEquals("Push", viewModel.state.value.today?.name)
-        assertTrue(viewModel.state.value.today?.viaTreinoAtivo == true)
-        assertFalse(viewModel.state.value.precisaAtivarTreino)
-    }
-
-    @Test
-    fun `agenda configurada em outro dia prevalece sobre o treino ativo`() = runTest(dispatcher) {
-        // A agenda (ARCH #22) é a fonte de verdade quando existe: o ativo é só um FALLBACK
-        // para quando ela não resolve nada, nunca uma prioridade sobre ela.
+    fun `agenda configurada resolve o treino de hoje mesmo com outros treinos no programa`() = runTest(dispatcher) {
+        // A agenda (ARCH #22) é a fonte de verdade -- V60 (reverte a V59) removeu o fallback
+        // pro "treino ativo": não existe mais prioridade nenhuma pra disputar com a agenda.
         val programas = FakeProgramas()
         val viewModel = vm(programas = programas)
         advanceUntilIdle()
@@ -135,21 +113,21 @@ class HomeViewModelTest {
             programa(
                 workouts = listOf(
                     ProgramWorkout(id = "w1", name = "Upper", exerciseCount = 6),
-                    ProgramWorkout(id = "w2", name = "Lower", exerciseCount = 6, isActive = true),
+                    ProgramWorkout(id = "w2", name = "Lower", exerciseCount = 6),
                 ),
                 schedule = listOf(ProgramScheduleEntry(workoutId = "w1", dayOfWeek = 1)),   // segunda
+                isActive = true,
             ),
         )
         advanceUntilIdle()
 
         assertEquals("Upper", viewModel.state.value.today?.name)
-        assertFalse(viewModel.state.value.today?.viaTreinoAtivo == true)
     }
 
     @Test
-    fun `sem agenda nenhuma e sem treino ativo pede pra ativar`() = runTest(dispatcher) {
-        // O bug de verdade: 4 treinos manuais, nenhum agendado, nenhum ativo. Antes virava
-        // "Dia de descanso" (mentira); agora tem que pedir pra ativar um.
+    fun `sem agenda nenhuma pede pra completar a agenda`() = runTest(dispatcher) {
+        // O bug de verdade: 4 treinos manuais, nenhum agendado. Antes virava "Dia de descanso"
+        // (mentira); V60 (reverte a V59) pede pra completar a agenda, sem sugerir treino avulso.
         val programas = FakeProgramas()
         val viewModel = vm(programas = programas)
         advanceUntilIdle()
@@ -161,13 +139,66 @@ class HomeViewModelTest {
                     ProgramWorkout(id = "w2", name = "Treino B", exerciseCount = 4),
                 ),
                 schedule = emptyList(),
+                isActive = true,
             ),
         )
         advanceUntilIdle()
 
         assertNull(viewModel.state.value.today)
         assertFalse(viewModel.state.value.semPrograma)
-        assertTrue(viewModel.state.value.precisaAtivarTreino)
+        assertTrue(viewModel.state.value.precisaCompletarAgenda)
+        assertFalse(viewModel.state.value.precisaAtivarPrograma)
+    }
+
+    @Test
+    fun `so considera a agenda do programa ATIVO, ignora os outros mesmo que batam o dia`() = runTest(dispatcher) {
+        // O bug real que o Rafael achou testando manualmente: a Home varria TODOS os programas
+        // e pegava o primeiro cuja agenda batesse hoje, sem olhar isActive -- "ppp" (inativo)
+        // aparecia na Home mesmo com "4x Program" marcado como o ativo.
+        val programas = FakeProgramas()
+        val viewModel = vm(programas = programas)
+        advanceUntilIdle()
+
+        programas.locais.value = listOf(
+            programa(
+                id = "ppp",
+                workouts = listOf(ProgramWorkout(id = "w1", name = "Treino do ppp", exerciseCount = 3)),
+                schedule = listOf(ProgramScheduleEntry(workoutId = "w1", dayOfWeek = 1)),   // segunda, mas NÃO é o ativo
+                isActive = false,
+            ),
+            programa(
+                id = "4x",
+                workouts = listOf(ProgramWorkout(id = "w2", name = "Upper", exerciseCount = 6)),
+                schedule = listOf(ProgramScheduleEntry(workoutId = "w2", dayOfWeek = 1)),   // segunda também, E é o ativo
+                isActive = true,
+            ),
+        )
+        advanceUntilIdle()
+
+        assertEquals("Upper", viewModel.state.value.today?.name)
+        assertEquals("w2", viewModel.state.value.today?.workoutId)
+    }
+
+    @Test
+    fun `programas com agenda pronta mas nenhum ativado pede pra ativar`() = runTest(dispatcher) {
+        val programas = FakeProgramas()
+        val viewModel = vm(programas = programas)
+        advanceUntilIdle()
+
+        programas.locais.value = listOf(
+            programa(
+                id = "ppp",
+                workouts = listOf(ProgramWorkout(id = "w1", name = "Treino do ppp", exerciseCount = 3)),
+                schedule = listOf(ProgramScheduleEntry(workoutId = "w1", dayOfWeek = 1)),   // segunda
+                isActive = false,
+            ),
+        )
+        advanceUntilIdle()
+
+        assertNull(viewModel.state.value.today)
+        assertFalse(viewModel.state.value.semPrograma)
+        assertFalse(viewModel.state.value.precisaCompletarAgenda)
+        assertTrue(viewModel.state.value.precisaAtivarPrograma)
     }
 
     @Test
@@ -183,6 +214,7 @@ class HomeViewModelTest {
             programa(
                 workouts = listOf(ProgramWorkout(id = "w1", name = "Lower", exerciseCount = 6, locked = true)),
                 schedule = listOf(ProgramScheduleEntry(workoutId = "w1", dayOfWeek = 1)),
+                isActive = true,
             ),
         )
         advanceUntilIdle()

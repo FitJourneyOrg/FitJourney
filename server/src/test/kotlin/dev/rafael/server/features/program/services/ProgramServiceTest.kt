@@ -16,6 +16,8 @@ import dev.rafael.server.features.exercise.engine.WorkoutGenerator
 import dev.rafael.server.features.program.db.ProgramRepository
 import dev.rafael.server.features.program.models.Program
 import dev.rafael.server.features.program.models.ProgramCounts
+import dev.rafael.server.features.user.db.UserRepository
+import dev.rafael.server.features.user.models.User
 import dev.rafael.server.features.workout.models.Workout
 import kotlinx.datetime.LocalDateTime
 import kotlinx.coroutines.runBlocking
@@ -79,6 +81,28 @@ class ProgramServiceTest {
         }
     }
 
+    /** V60: activate() precisa gravar o ponteiro no USUÁRIO, não no programa. */
+    private class FakeUserRepository : UserRepository {
+        var setActiveProgramCalledWith: Uuid? = null
+        var setActiveProgramCallCount = 0
+
+        override suspend fun findByFirebaseUid(firebaseUid: String) = error("não usado")
+        override suspend fun findById(userId: Uuid) = error("não usado")
+        override suspend fun findByCode(code: String) = error("não usado")
+        override suspend fun updateCode(userId: Uuid, code: String) = error("não usado")
+        override suspend fun create(id: Uuid, firebaseUid: String, email: String?, displayName: String, code: String) =
+            error("não usado")
+        override suspend fun setPremium(userId: Uuid, premium: Boolean) = error("não usado")
+        override suspend fun updateDisplayName(userId: Uuid, displayName: String) = error("não usado")
+        override suspend fun updateIdioma(userId: Uuid, idioma: dev.rafael.contract.i18n.Idioma) = error("não usado")
+
+        override suspend fun setActiveProgram(userId: Uuid, programId: Uuid?): AppResult<User?> {
+            setActiveProgramCallCount++
+            setActiveProgramCalledWith = programId
+            return AppResult.Success(null)
+        }
+    }
+
     private class FakeGenerator(private val throwInvalid: Boolean = false) : WorkoutGenerator {
         override suspend fun generate(profile: ProfileDto, prompt: String?): ProgramDto {
             if (throwInvalid) throw IllegalArgumentException("environment obrigatório")
@@ -99,8 +123,11 @@ class ProgramServiceTest {
         onboardingCompleted = true,
     )
 
-    private fun service(repo: FakeRepo = FakeRepo(), gen: FakeGenerator = FakeGenerator()) =
-        ProgramService(gen, repo)
+    private fun service(
+        repo: FakeRepo = FakeRepo(),
+        gen: FakeGenerator = FakeGenerator(),
+        userRepo: FakeUserRepository = FakeUserRepository(),
+    ) = ProgramService(gen, repo, userRepo)
 
     // ---------- generate ----------
 
@@ -382,5 +409,33 @@ class ProgramServiceTest {
         assertEquals(1, counts.ai)
         assertEquals(2, counts.manual)
         assertEquals(3, counts.total)
+    }
+
+    // ---------- activate (V60: ativar agora é por PROGRAMA, não por treino) ----------
+
+    @Test
+    fun `activate grava o ponteiro quando o programa e do usuario`() = runBlocking {
+        val repo = FakeRepo()
+        val pid = seedProgram(repo)
+        val userRepo = FakeUserRepository()
+
+        val r = service(repo, userRepo = userRepo).activate(user, pid)
+
+        assertIs<AppResult.Success<Unit>>(r)
+        assertEquals(1, userRepo.setActiveProgramCallCount, "setActiveProgram deveria ter sido chamado uma vez")
+        assertEquals(pid, userRepo.setActiveProgramCalledWith)
+    }
+
+    @Test
+    fun `activate falha e nao mexe no ponteiro quando o programa nao e do usuario (ou nao existe)`() = runBlocking {
+        val repo = FakeRepo()
+        val userRepo = FakeUserRepository()
+
+        // findByIdForUser trata "não existe" e "não é do usuário" igual (mesmo NotFound, sem
+        // vazar diferença) -- um id que nunca foi inserido no repo cobre os dois casos.
+        val r = service(repo, userRepo = userRepo).activate(user, Uuid.random())
+
+        assertTrue(r is AppResult.Failure && r.error is AppError.NotFound)
+        assertEquals(0, userRepo.setActiveProgramCallCount, "não pode gravar ponteiro pra programa que não é do usuário")
     }
 }

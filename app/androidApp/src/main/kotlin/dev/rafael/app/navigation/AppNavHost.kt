@@ -59,6 +59,7 @@ import dev.rafael.app.screens.grupos.AbasDoGrupo
 import dev.rafael.app.screens.grupos.GrupoDetalheScreen
 import dev.rafael.app.screens.grupos.GrupoFormScreen
 import dev.rafael.app.screens.grupos.GruposScreen
+import dev.rafael.app.screens.historico.HistoricoScreen
 import dev.rafael.app.screens.home.HomeScreen
 import dev.rafael.app.screens.menu.MenuLateral
 import dev.rafael.app.screens.onboarding.NomeScreen
@@ -75,6 +76,8 @@ import dev.rafael.app.screens.reveal.ProgramOfferScreen
 import dev.rafael.app.screens.reveal.ProgramRevealScreen
 import dev.rafael.app.screens.session.WorkoutSessionScreen
 import dev.rafael.app.screens.splash.SplashScreen
+import dev.rafael.app.screens.wiki.WikiArticleScreen
+import dev.rafael.app.screens.wiki.WikiScreen
 import dev.rafael.app.screens.workout.WorkoutDetailScreen
 import dev.rafael.app.screens.workout.WorkoutFormScreen
 import dev.rafael.app.R
@@ -186,6 +189,9 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
      */
     val naEntrada = entry?.destination?.let { atual ->
         atual.hasRoute(AppRoute.Splash::class) ||
+            // Preparando pelo MESMO motivo do Splash, e não por semelhança: ele também termina em
+            // `popUpTo(inclusive = true)`, então navegar aqui seria desfeito um segundo depois.
+            atual.hasRoute(AppRoute.Preparando::class) ||
             atual.hasRoute(AppRoute.Login::class) ||
             atual.hasRoute(AppRoute.Nome::class) ||
             atual.hasRoute(AppRoute.Quiz::class)
@@ -281,6 +287,8 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
                 },
                 onPerfil = { navegarDoMenu(AppRoute.Perfil()) },
                 onExercicios = { navegarDoMenu(AppRoute.Library) },
+                onConquistas = { navegarDoMenu(AppRoute.Conquistas()) },
+                onHistorico = { navegarDoMenu(AppRoute.Historico) },
                 onWiki = { navegarDoMenu(AppRoute.Wiki) },
                 onDuvidas = { navegarDoMenu(AppRoute.Duvidas) },
                 onConta = { navegarDoMenu(AppRoute.Conta) },
@@ -372,6 +380,22 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
      * elas crescem e pintam por baixo da barra do sistema sozinhas. O erro era este `Scaffold`
      * tirar delas essa chance.
      *
+     * ## ⚠️ O OUTRO LADO DA MESMA REGRA: tela sem `Scaffold` não tem quem aplique o inset
+     *
+     * Com `mostrarAbas` falso o `padding` daqui chega **zero, de propósito** — e aí quem aplica o
+     * inset é o `Scaffold` da tela. Tela que não tem `Scaffold` nenhum fica sem ninguém: desenha
+     * por baixo da status bar.
+     *
+     * Achado pelo Rafael em 2026-10-01, na **barra de progresso do Quiz**, que é a única peça
+     * encostada no topo em todo o onboarding. O defeito já estava em sete telas (Quiz, Nome,
+     * Login, Oferta, Revelação, Em breve e Splash) e só aparecia naquela.
+     *
+     * > **Defeito de inset só é visível onde algum pixel encosta na borda. Nas outras telas ele
+     * > está lá, esperando o dia em que alguém mover um elemento para o topo.**
+     *
+     * As únicas que legitimamente não precisam são as **raízes de aba**: lá `mostrarAbas` é
+     * verdadeiro, e a `TopAppBar` e a `NavigationBar` deste `Scaffold` já cobrem os insets.
+     *
      * ⚠️ Nenhuma tela deve chamar `statusBarsPadding`, `navigationBarsPadding` ou
      * `systemBarsPadding`. Quem aplica inset na tela é o `Scaffold` dela, e um modificador solto
      * por cima volta a somar duas vezes — o defeito 1, agora numa tela só. Regra travada no
@@ -404,11 +428,24 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
         }
 
         composable<AppRoute.Login> {
+            // Vai pro Preparando, e não pra Splash: depois do login o banco local está vazio, e
+            // esta é a única entrada em que vale ESPERAR o dado chegar. Ver AppRoute.Preparando.
             LoginScreen(onLoggedIn = {
-                nav.navigate(AppRoute.Splash) {
+                nav.navigate(AppRoute.Preparando) {
                     popUpTo(AppRoute.Login) { inclusive = true }
                 }
             })
+        }
+
+        composable<AppRoute.Preparando> {
+            SplashScreen(
+                posLogin = true,
+                onDecided = { dest ->
+                    nav.navigate(dest) {
+                        popUpTo(AppRoute.Preparando) { inclusive = true }
+                    }
+                },
+            )
         }
 
         composable<AppRoute.Nome> {
@@ -470,11 +507,14 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
         composable<AppRoute.Home> {
             HomeScreen(
                 onOpenLibrary = { nav.navigate(AppRoute.Library) },
-                onOpenWorkouts = { nav.navigate(AppRoute.Programs) },
+                // Programas/Grupos/Progresso são RAÍZES de aba -- trocarDeAba (não navigate cru),
+                // senão a pilha empilha a raiz por cima da Home e a bottom bar trava até voltar
+                // (achado do Rafael, 2026-09-29). Ver KDoc de trocarDeAba em BottomNav.kt.
+                onOpenWorkouts = { nav.trocarDeAba(AppRoute.Programs) },
                 onGenerateWithAI = { nav.navigate(AppRoute.ProgramGenerate) },
                 onStartWorkout = { id -> nav.navigate(AppRoute.WorkoutSession(id)) },
-                onOpenGroups = { nav.navigate(AppRoute.Grupos) },
-                onOpenProgress = { nav.navigate(AppRoute.Progresso) },
+                onOpenGroups = { nav.trocarDeAba(AppRoute.Grupos) },
+                onOpenProgress = { nav.trocarDeAba(AppRoute.Progresso) },
             )
         }
 
@@ -492,12 +532,10 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
         // ---- Programas (ARCH #27 — substitui a antiga AppRoute.Workout flat) ----
 
         composable<AppRoute.Programs> {
+            // Hierarquia restaurada (2026-09-26): lista de PROGRAMAS de novo (reverte o "deck
+            // achatado por treino" do V59) -- onOpenProgram volta a ser a ação primária.
             ProgramListScreen(
                 onOpenProgram = { id -> nav.navigate(AppRoute.ProgramDetail(id)) },
-                // V59: deck achatado por treino -- navegação direta, sem passar pelo programa.
-                onOpenWorkout = { id, editLocked -> nav.navigate(AppRoute.WorkoutDetail(id, editLocked)) },
-                onStartWorkout = { id -> nav.navigate(AppRoute.WorkoutSession(id)) },
-                onOpenLibrary = { nav.navigate(AppRoute.Library) },
                 onGenerateWithAI = { nav.navigate(AppRoute.ProgramGenerate) },
             )
         }
@@ -564,6 +602,8 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
         }
         composable<AppRoute.WorkoutSession> { entry ->
             val route: AppRoute.WorkoutSession = entry.toRoute()
+            // Sem rota pro detalhe do exercício: a técnica abre DENTRO da sessão (painel que
+            // expande), para não tirar a pessoa da execução. Ver `PainelDeTecnica`.
             WorkoutSessionScreen(workoutId = route.id, onDone = { nav.popBackStack() })
         }
 
@@ -637,9 +677,11 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
             )
         }
 
-        // ---- Abas ainda não implementadas ----
         composable<AppRoute.Progresso> {
-            ProgressScreen(onOpenConquistas = { nav.navigate(AppRoute.Conquistas()) })
+            ProgressScreen(onOpenPaywall = { nav.navigate(AppRoute.Paywall()) })
+        }
+        composable<AppRoute.Historico> {
+            HistoricoScreen(onBack = { nav.popBackStack() })
         }
         composable<AppRoute.Conquistas> { entry ->
             val rota: AppRoute.Conquistas = entry.toRoute()
@@ -733,11 +775,17 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
             )
         }
 
+        // Fase 8: deixou de ser "em breve". Entra pelo menu lateral, sem barra de abas -- é
+        // destino secundário, e a leitura de um artigo ocupa a tela inteira.
         composable<AppRoute.Wiki> {
-            EmBreveScreen(
-                stringResource(R.string.menu_wiki),
-                stringResource(R.string.nav_wiki_descricao),
+            WikiScreen(
+                onAbrirArtigo = { slug -> nav.navigate(AppRoute.WikiArticle(slug)) },
+                onBack = { nav.popBackStack() },
             )
+        }
+        composable<AppRoute.WikiArticle> { entry ->
+            val rota: AppRoute.WikiArticle = entry.toRoute()
+            WikiArticleScreen(slug = rota.slug, onBack = { nav.popBackStack() })
         }
         composable<AppRoute.Duvidas> {
             EmBreveScreen(

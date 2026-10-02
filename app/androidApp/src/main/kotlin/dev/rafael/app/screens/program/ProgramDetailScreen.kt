@@ -18,7 +18,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import dev.rafael.app.ui.DescartarPendenciaDialog
 import dev.rafael.app.ui.ErroDeTela
+import dev.rafael.app.ui.SeloDeSync
 import dev.rafael.app.ui.nomeDoPrograma
 import dev.rafael.app.ui.rationaleDoPrograma
 import dev.rafael.app.ui.rotuloDoDiaDaSemana
@@ -85,7 +87,6 @@ fun ProgramDetailScreen(
             },
         )
     }
-
 
     Scaffold(
         topBar = {
@@ -221,9 +222,44 @@ fun ProgramDetailScreen(
                                     },
                                     modifier = Modifier.clickable { onOpenPaywall() },
                                 )
-                                else -> ListItem(
+                                else -> {
+                                var confirmarDescarte by remember(w.id) { mutableStateOf(false) }
+                                val pendenciaDoTreino = state.pendenciaDe(w.id)
+                                if (confirmarDescarte) {
+                                    DescartarPendenciaDialog(
+                                        mensagem = pendenciaDoTreino?.erroPermanente,
+                                        onConfirmar = {
+                                            confirmarDescarte = false
+                                            w.id?.let { viewModel.onEvent(ProgramDetailEvent.Descartar(it)) }
+                                        },
+                                        onDismiss = { confirmarDescarte = false },
+                                    )
+                                }
+                                ListItem(
                                     overlineContent = { Text(stringResource(rotuloDoDiaDaSemana(day))) },
-                                    headlineContent = { Text(w.name) },
+                                    headlineContent = {
+                                        if (w.isActive) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            ) {
+                                                Text(w.name)
+                                                Surface(
+                                                    color = MaterialTheme.colorScheme.primaryContainer,
+                                                    shape = MaterialTheme.shapes.small,
+                                                ) {
+                                                    Text(
+                                                        stringResource(R.string.treino_ativo_badge),
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                                    )
+                                                }
+                                            }
+                                        } else {
+                                            Text(w.name)
+                                        }
+                                    },
                                     supportingContent = {
                                         Text(
                                             pluralStringResource(
@@ -233,17 +269,29 @@ fun ProgramDetailScreen(
                                             ),
                                         )
                                     },
-                                    trailingContent = if (!canSchedule) null else {
-                                        {
-                                            WeekdayPicker(
-                                                day = day,
-                                                enabled = !state.isReordering,
-                                                onPick = { d -> w.id?.let { viewModel.onEvent(ProgramDetailEvent.SetWorkoutDay(it, d)) } },
-                                            )
+                                    trailingContent = {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        ) {
+                                            pendenciaDoTreino?.let { pend ->
+                                                SeloDeSync(
+                                                    pend,
+                                                    onDescartar = if (!pend.aguardando) ({ confirmarDescarte = true }) else null,
+                                                )
+                                            }
+                                            if (canSchedule) {
+                                                WeekdayPicker(
+                                                    day = day,
+                                                    enabled = !state.isReordering,
+                                                    onPick = { d -> w.id?.let { viewModel.onEvent(ProgramDetailEvent.SetWorkoutDay(it, d)) } },
+                                                )
+                                            }
                                         }
                                     },
                                     modifier = Modifier.clickable { w.id?.let { onOpenWorkout(it, readOnly) } },
                                 )
+                                }
                             }
                         }
                     }

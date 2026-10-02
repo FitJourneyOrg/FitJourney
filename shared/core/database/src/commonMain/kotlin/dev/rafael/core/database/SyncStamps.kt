@@ -94,6 +94,13 @@ class SyncStamps(
         // lugar que marca e o que lê — um typo aqui vira "sempre vai à rede", sem erro visível.
         const val PROGRAMAS = "programs"
         const val CATALOGO = "exercises"
+
+        /**
+         * Acervo do "Aprender" (Fase 8). GLOBAL como o catálogo, e pela mesma razão: o conteúdo
+         * é do aparelho, não da conta. A chave real leva o idioma como sufixo -- ver
+         * `WikiRepositoryImpl.refresh`.
+         */
+        const val WIKI = "wiki"
         const val STATS = "stats"
 
         /** `/me` — nome e plano (V35, ARCH #33). */
@@ -105,6 +112,13 @@ class SyncStamps(
         /** Mesma janela do STATS: as duas telas mostram o mesmo progresso (ARCH #16). */
         const val CONQUISTAS = "achievements"
         const val HISTORICO = "sessions"
+
+        /**
+         * Analise de progressao (J.2). Mesma janela do [STATS], e pelo mesmo motivo: os dois
+         * numeros saem das MESMAS sessoes, entao mudam juntos. Carimbos diferentes fariam a
+         * tonelagem do topo e o grafico de baixo discordarem por ate dois minutos.
+         */
+        const val PROGRESSO = "progress"
 
         /** Carimbo de um treino específico. */
         fun treino(id: String) = "workout:$id"

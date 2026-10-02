@@ -100,12 +100,6 @@ fun Route.workoutRoutes(
             call.respondResult(result)
         }
 
-        post("/workouts/{id}/activate") {
-            val p = call.principal<FirebaseUser>()!!
-            val id = call.workoutIdParam() ?: return@post call.respondResult(notFound<Unit>())
-            call.respondResult(service.activate(p.uid, p.email, id))
-        }
-
         delete("/workouts/{id}") {
             val p = call.principal<FirebaseUser>()!!
             val id = call.workoutIdParam() ?: return@delete call.respondResult(notFound<Unit>())

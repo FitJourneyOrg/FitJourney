@@ -6,4 +6,6 @@ sealed interface ProgramDetailEvent {
     data object Delete : ProgramDetailEvent
     /** Agenda (G.2): define o dia da semana (1=Seg..7=Dom) de um treino. */
     data class SetWorkoutDay(val workoutId: String, val dayOfWeek: Int) : ProgramDetailEvent
+    /** Usuário reconheceu uma falha permanente do outbox e quer descartar (ARCH #30). */
+    data class Descartar(val alvoId: String) : ProgramDetailEvent
 }

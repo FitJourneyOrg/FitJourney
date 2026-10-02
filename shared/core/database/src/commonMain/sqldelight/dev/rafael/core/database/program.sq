@@ -8,8 +8,8 @@
 salvarPrograma:
 INSERT OR REPLACE INTO program(
     id, uid, name, origin, daysPerWeek, split, focusMuscles,
-    locked, durationWeeks, startedAt, currentWeek, updatedAt
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+    locked, isActive, durationWeeks, startedAt, currentWeek, updatedAt
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 salvarAgenda:
 INSERT OR REPLACE INTO program_schedule(programId, workoutId, uid, dayOfWeek)

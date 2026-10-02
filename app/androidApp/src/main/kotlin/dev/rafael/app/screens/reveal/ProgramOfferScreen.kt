@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -44,39 +45,44 @@ fun ProgramOfferScreen(
     onGerar: () -> Unit,
     onPular: () -> Unit,
 ) {
-    Column(
-        Modifier.fillMaxSize().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-    ) {
-        Icon(
-            Icons.Outlined.AutoAwesome,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.secondary,   // roxo = IA ([REGRA] ARCH #16)
-            modifier = Modifier.size(48.dp),
-        )
-        Spacer(Modifier.height(20.dp))
-        Text(
-            stringResource(R.string.programa_oferta_titulo),
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            // Uma string só: no código eram dois literais concatenados, e a frase precisa
-            // chegar inteira ao tradutor — a segunda metade depende da primeira.
-            stringResource(R.string.programa_oferta_texto),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(32.dp))
-        Button(onClick = onGerar, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.programa_oferta_gerar))
-        }
-        TextButton(onClick = onPular, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(R.string.programa_oferta_pular))
+    // `Scaffold` sem barra nenhuma: ele existe aqui SÓ para aplicar os insets. Ver a [REGRA]
+    // no KDoc do `AppNavHost` -- o Scaffold de lá não reserva inset para si, então tela sem
+    // Scaffold próprio desenha por baixo da status bar.
+    Scaffold { insetsDaTela ->
+        Column(
+            Modifier.fillMaxSize().padding(insetsDaTela).padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Icon(
+                Icons.Outlined.AutoAwesome,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.secondary,   // roxo = IA ([REGRA] ARCH #16)
+                modifier = Modifier.size(48.dp),
+            )
+            Spacer(Modifier.height(20.dp))
+            Text(
+                stringResource(R.string.programa_oferta_titulo),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                // Uma string só: no código eram dois literais concatenados, e a frase precisa
+                // chegar inteira ao tradutor — a segunda metade depende da primeira.
+                stringResource(R.string.programa_oferta_texto),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(32.dp))
+            Button(onClick = onGerar, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.programa_oferta_gerar))
+            }
+            TextButton(onClick = onPular, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.programa_oferta_pular))
+            }
         }
     }
 }
