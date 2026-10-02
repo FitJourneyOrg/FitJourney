@@ -65,9 +65,9 @@ interface UserRepository {
     suspend fun updateIdioma(userId: Uuid, idioma: Idioma): AppResult<User?>
 
     /**
-     * V59. Marca `workoutId` como o treino ativo do usuário (ponteiro simples, substitui o
-     * anterior — sempre exclusivo). `null` desativa (nenhum treino ativo). `null` de retorno
-     * do método = usuário não existe.
+     * V60 (reverte a V59). Marca `programId` como o programa ativo do usuário (ponteiro
+     * simples, substitui o anterior — sempre exclusivo). `null` desativa (nenhum ativo).
+     * `null` de retorno do método = usuário não existe.
      */
-    suspend fun setActiveWorkout(userId: Uuid, workoutId: Uuid?): AppResult<User?>
+    suspend fun setActiveProgram(userId: Uuid, programId: Uuid?): AppResult<User?>
 }

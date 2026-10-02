@@ -38,7 +38,7 @@ class ProfileServiceTest {
             code: String,
         ) = error("não deveria ser chamado")
         override suspend fun setPremium(userId: kotlin.uuid.Uuid, premium: Boolean) = error("não deveria ser chamado")
-        override suspend fun setActiveWorkout(userId: kotlin.uuid.Uuid, workoutId: kotlin.uuid.Uuid?) = error("não deveria ser chamado")
+        override suspend fun setActiveProgram(userId: kotlin.uuid.Uuid, programId: kotlin.uuid.Uuid?) = error("não deveria ser chamado")
         override suspend fun updateDisplayName(userId: kotlin.uuid.Uuid, displayName: String) =
             error("não deveria ser chamado")
         override suspend fun updateIdioma(userId: kotlin.uuid.Uuid, idioma: Idioma) =

@@ -63,6 +63,25 @@ enum class BottomTab(
 }
 
 /**
+ * Troca para a raiz de uma das 4 abas (mesmo padrão da [FitJourneyBottomBar]).
+ *
+ * Existe porque `nav.navigate(rota)` cru **empilha** a raiz por cima da atual em vez de TROCAR
+ * de aba: achado do Rafael testando manualmente (2026-09-29) -- os atalhos da Home pra Programas/
+ * Grupos/Progresso usavam a chamada crua, deixando a pilha `[Home, Programs]` em vez de só
+ * `[Programs]` com o estado da Home salvo (`popUpTo`/`saveState`/`restoreState`), e a bottom bar
+ * ficava sem responder a toque até apertar voltar. Qualquer atalho que leve a uma das 4 raízes
+ * -- e não só a própria barra -- precisa passar por aqui, não reimplementar o bloco.
+ */
+fun NavHostController.trocarDeAba(rota: AppRoute) {
+    navigate(rota) {
+        // volta pra raiz da aba atual sem empilhar cópias
+        popUpTo(AppRoute.Home) { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
+}
+
+/**
  * Barra de navegação das abas. Só aparece nas telas-raiz (ver `AppNavHost`): telas de
  * detalhe/execução ocupam a tela inteira, sem a barra.
  */
@@ -76,16 +95,7 @@ fun FitJourneyBottomBar(nav: NavHostController) {
             val selecionada = destino?.hierarchy?.any { it.hasRoute(tab.routeClass) } == true
             NavigationBarItem(
                 selected = selecionada,
-                onClick = {
-                    if (!selecionada) {
-                        nav.navigate(tab.route) {
-                            // volta pra raiz da aba atual sem empilhar cópias
-                            popUpTo(AppRoute.Home) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                },
+                onClick = { if (!selecionada) nav.trocarDeAba(tab.route) },
                 // A mesma chave nos dois: o ícone e o rótulo nomeiam a MESMA aba, e o leitor de
                 // tela lê os dois em sequência. Duas frases diferentes ali viram repetição confusa.
                 icon = { Icon(tab.icon, contentDescription = stringResource(tab.rotulo)) },

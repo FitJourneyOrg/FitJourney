@@ -464,6 +464,8 @@
       visível) E ao botão visível do quiz, onde cabem ~18 caracteres. É a mesma ação e a mesma
       palavra: separar em duas chaves só criaria duas traduções que precisariam combinar.
     -->
+    <!-- Descrição do botão que apaga o texto de um campo (leitor de tela). -->
+    <string name="comum_limpar">Limpar</string>
     <string name="comum_voltar">Voltar</string>
     <!-- Botão que fecha um diálogo sem fazer nada. Botão de diálogo, ~15 caracteres. -->
     <string name="comum_cancelar">Cancelar</string>
@@ -852,7 +854,7 @@
       %1$d é o passo (começa em 1) e %2$d o total. O total VARIA — iniciante e "saúde geral"
       não veem o passo de foco (#26/#24).
     -->
-    <string name="quiz_progresso">%1$d/%2$d</string>
+    <string name="comum_fracao">%1$d/%2$d</string>
     <!-- Botão do último passo, no lugar de "Continuar". Botão, ~18 caracteres. -->
     <string name="quiz_concluir">Concluir</string>
 
@@ -978,10 +980,6 @@
     <string name="comum_kg">kg</string>
 
     <!-- Quantos treinos um programa tem. No cartão da lista de programas. -->
-    <plurals name="programa_treinos">
-        <item quantity="one">%1$d treino</item>
-        <item quantity="other">%1$d treinos</item>
-    </plurals>
     <!-- Quantos exercícios um treino tem. Na semana do programa e na revelação. -->
     <plurals name="treino_exercicios">
         <item quantity="one">%1$d exercício</item>
@@ -991,24 +989,21 @@
     <!-- ============================ Lista de programas ============================ -->
 
     <!-- Barra do topo da lista de programas do usuário. -->
-    <string name="programa_lista_titulo">Meus treinos</string>
+    <string name="programa_lista_titulo">Meus programas</string>
     <!-- Estado vazio da lista de programas. -->
     <string name="programa_lista_vazio">Você ainda não tem nenhum treino.</string>
-    <!-- V59: treino ativo (deck de "Meus treinos"). Prefixo treino_ativo_, nao conquista_/conquistas_
-         (reservados pelo catalogo de conquistas). Contagem de exercicios reusa o plural
-         treino_exercicios existente, nao duplica; o botao "Iniciar treino" reusa comum_iniciar_treino
-         pelo mesmo motivo (achado pelo CatalogoDeStringsTest depois do fato, corrigido 2026-09-26). -->
+    <!-- Selo do treino/programa em destaque (V60, reverte a V59, ver comentario abaixo).
+         Prefixo treino_ativo_, nao conquista_/conquistas_ (reservados pelo catalogo de
+         conquistas). treino_ativo_secao_outros/seus/ver_biblioteca sao debito pre-existente de
+         uma reversao anterior (orfas, nao removidas aqui). -->
     <string name="treino_ativo_badge">Ativo</string>
-    <string name="treino_ativo_nenhum_titulo">Nenhum treino ativo</string>
-    <string name="treino_ativo_nenhum_corpo">Ative um dos seus treinos para ele aparecer aqui.</string>
-    <string name="treino_ativo_secao_outros">Outros treinos</string>
-    <string name="treino_ativo_secao_seus">Seus treinos</string>
-    <string name="treino_ativo_ativar">Ativar</string>
-    <string name="treino_ativo_confirmar_titulo">Ativar este treino?</string>
-    <string name="treino_ativo_confirmar_corpo">%1$s passa a ser o seu treino em destaque.</string>
-    <string name="treino_ativo_ver_biblioteca">Ver biblioteca</string>
+    <!-- V60 (reverte a V59): ativar volta a ser acao de PROGRAMA (botao no card da lista), nao
+         mais de treino dentro do detalhe. %1$s em programa_ativar_confirmar_corpo e o nome do
+         programa. -->
+    <string name="programa_ativar_botao">Ativar programa</string>
+    <string name="programa_ativar_confirmar_titulo">Ativar este programa?</string>
+    <string name="programa_ativar_confirmar_corpo">%1$s passa a ser o seu programa em destaque.</string>
     <!-- Progresso no cartão. %1$d é a semana atual e %2$d o total. -->
-    <string name="programa_lista_semana">Semana %1$d/%2$d</string>
     <!-- Diálogo de criação manual. -->
     <string name="programa_lista_novo">Novo programa</string>
     <string name="programa_lista_criar">Criar</string>
@@ -1019,6 +1014,10 @@
     -->
     <string name="programa_lista_pendente">Pendente</string>
     <string name="programa_lista_nao_sincronizou">Não sincronizou</string>
+    <!-- Convite pra descartar uma falha PERMANENTE do outbox (400/403/404/409), ver SeloDeSync.kt. -->
+    <string name="pendencia_descartar_titulo">Isto não foi salvo</string>
+    <string name="pendencia_descartar_corpo_sem_mensagem">O servidor recusou esta alteração e ela não vai ser reenviada. Descartar e usar a versão do servidor?</string>
+    <string name="pendencia_descartar_confirmar">Descartar</string>
 
     <!-- ============================ Gerar com IA ============================ -->
 
@@ -1171,6 +1170,32 @@
     <!-- ============================ Execução do treino ============================ -->
 
     <!-- Botão que encerra o treino em execução e grava a sessão. -->
+    <!-- Execução do treino, redesenho de 2026-10-01: um exercício por vez. Caixa alta de
+         "Peso"/"Reps"/"Descanso" é decisão de DESENHO e fica na tela, não no texto. -->
+    <string name="sessao_serie_de">Série %1$d de %2$d</string>
+    <string name="sessao_serie_curta">S%1$d</string>
+    <string name="sessao_serie_feita">Série feita</string>
+    <string name="sessao_ver_tecnica">Ver técnica</string>
+    <string name="sessao_peso_rotulo">Peso · kg</string>
+    <string name="sessao_descanso_apos">Descanso · após a série</string>
+    <string name="sessao_mais_15s">+15s</string>
+    <string name="sessao_anterior">Anterior</string>
+    <string name="sessao_proximo">Próximo</string>
+    <string name="sessao_aumentar_peso">Aumentar peso</string>
+    <string name="sessao_diminuir_peso">Diminuir peso</string>
+    <string name="sessao_aumentar_reps">Aumentar repetições</string>
+    <string name="sessao_diminuir_reps">Diminuir repetições</string>
+    <string name="sessao_iniciar_descanso">Iniciar descanso</string>
+    <string name="sessao_pausar_descanso">Pausar descanso</string>
+    <string name="sessao_retomar_descanso">Retomar descanso</string>
+
+    <string name="sessao_vazia">Este treino não tem exercícios.</string>
+    <!-- Sair da EXECUÇÃO do treino. Não confundir com `sair_pergunta`, que é sair da CONTA. -->
+    <string name="sessao_sair_titulo">Sair do treino?</string>
+    <string name="sessao_sair_texto">As séries que você marcou não serão registradas.</string>
+    <string name="sessao_sair_confirmar">Sair sem salvar</string>
+    <string name="sessao_sair_ficar">Continuar treino</string>
+    <string name="sessao_ocultar_tecnica">Ocultar técnica</string>
     <string name="sessao_finalizar">Finalizar treino</string>
     <!--
       O exercício que ainda não tem nome: o catálogo não conhece o id gravado no treino, ou a
@@ -1183,11 +1208,8 @@
     <!-- O tempo restante. %1$d são os minutos e %2$02d os segundos. -->
     <string name="sessao_tempo">%1$d:%2$02d</string>
     <!-- Acrescenta meio minuto ao descanso. Botão estreito: ~8 caracteres. -->
-    <string name="sessao_mais_30s">+30s</string>
     <!-- Encerra o descanso antes da hora. Botão estreito: ~8 caracteres. -->
-    <string name="sessao_pular">Pular</string>
     <!-- Abaixo do campo de repetições: quantas o motor prescreveu. %1$d é o alvo. -->
-    <string name="sessao_alvo">alvo %1$d</string>
 
 
     <!-- ============================ Comum (acrescentado na área de Paywall e conta) ============================ -->
@@ -1303,13 +1325,38 @@
     <!-- Item da gaveta lateral que leva ao perfil do próprio usuário. -->
     <string name="menu_meu_perfil">Meu perfil</string>
     <!-- Item da gaveta lateral que leva à wiki de exercícios. Também é o título da tela. -->
-    <string name="menu_wiki">Wiki fitness</string>
+    <string name="menu_wiki">Aprender</string>
     <!--
       Selo do item que ainda não existe. Diz em que FASE do roadmap ele entra — o item não vira
       promessa vazia, e quem toca já sabe que vai cair num "em breve". ~10 caracteres.
     -->
-    <string name="menu_wiki_selo">fase 8</string>
     <string name="menu_duvidas">Dúvidas frequentes</string>
+
+    <!-- Tela "Aprender" (Fase 8). O título reusa menu_wiki: a mesma palavra no menu e na tela,
+         de propósito, porque é o mesmo destino. Categorias em enum_wiki_*. -->
+    <!-- Passos do carregamento pós-login (SplashScreen). Frases curtas: aparecem por poucos
+         segundos cada e trocam sozinhas. -->
+    <string name="preparando_perfil">Carregando seu perfil</string>
+    <string name="preparando_programas">Preparando seus treinos</string>
+    <string name="preparando_progresso">Buscando seu progresso</string>
+    <string name="preparando_exercicios">Baixando o catálogo de exercícios</string>
+
+    <string name="aprender_tudo">Tudo</string>
+    <string name="aprender_comece_aqui">Comece aqui</string>
+    <string name="aprender_min_leitura">%1$d min de leitura</string>
+    <!-- Dia antes do mês (pt-BR). O en-US reordena a MESMA frase; ver checkin_data_as. -->
+    <string name="aprender_atualizado">atualizado em %1$02d/%2$02d/%3$d</string>
+    <string name="aprender_vazio">O conteúdo ainda não chegou neste aparelho. Puxe para atualizar.</string>
+    <string name="aprender_artigo_sumiu">Este artigo saiu do ar.</string>
+
+    <!-- Categorias do acervo (WikiCategory). "Treino" coincide com a aba e com o nome padrão de um
+         treino: são três coisas diferentes, ver CatalogoDeStringsTest. -->
+    <string name="enum_wiki_treino">Treino</string>
+    <string name="enum_wiki_tecnica">Técnica</string>
+    <string name="enum_wiki_nutricao">Nutrição</string>
+    <string name="enum_wiki_recuperacao">Recuperação</string>
+    <string name="enum_wiki_mentalidade">Mentalidade</string>
+    <string name="menu_historico">Histórico</string>
     <string name="menu_conta">Configurações da conta</string>
     <!--
       Rodapé da gaveta. E ele SAI de verdade: não leva a Configurações. ~14 caracteres.
@@ -1393,6 +1440,30 @@
     <string name="conquista_nivel_10_descricao">Alcance o nível 10</string>
 
     <!--
+      Carga acumulada (J.2). ⚠️ A unidade é a TONELADA e o alvo do servidor também: o %1$d vem do
+      AchievementDto.target, que vale 1, 10, 50, 100 ou 250. Nunca traduzir para quilos sem mudar
+      o AchievementPolicy junto, senão a frase pede uma coisa e a barra conta outra.
+
+      "Movimente" é peso levantado somado (séries x repetições x carga), não peso de uma série. E
+      conta só CARGA EXTERNA: quem treina peso corporal não alcança estas medalhas, e a frase
+      precisa deixar claro que o número é de carga, não de esforço.
+    -->
+    <string name="conquista_carga_1t_titulo">Primeira tonelada</string>
+    <string name="conquista_carga_1t_descricao">Movimente 1 tonelada no total</string>
+
+    <string name="conquista_carga_10t_titulo">Dez toneladas</string>
+    <string name="conquista_carga_10t_descricao">Movimente 10 toneladas no total</string>
+
+    <string name="conquista_carga_50t_titulo">Cinquenta toneladas</string>
+    <string name="conquista_carga_50t_descricao">Movimente 50 toneladas no total</string>
+
+    <string name="conquista_carga_100t_titulo">Cem toneladas</string>
+    <string name="conquista_carga_100t_descricao">Movimente 100 toneladas no total</string>
+
+    <string name="conquista_carga_250t_titulo">Duzentas e cinquenta toneladas</string>
+    <string name="conquista_carga_250t_descricao">Movimente 250 toneladas no total</string>
+
+    <!--
       Mesma frase de cima, mas parametrizada pelo AchievementDto.target de verdade (débito
       "números de conquista cravam constante do servidor", debitos.md) — usada só onde a barra de
       progresso aparece ao lado (AchievementsScreen, perfil próprio), pra que a frase e a barra
@@ -1412,6 +1483,12 @@
     <string name="conquista_streak_90_descricao_progresso">%1$d dias seguindo o plano</string>
     <string name="conquista_nivel_5_descricao_progresso">Alcance o nível %1$d</string>
     <string name="conquista_nivel_10_descricao_progresso">Alcance o nível %1$d</string>
+    <!-- O de 1 t fica no singular: é o único cujo alvo não pluraliza. -->
+    <string name="conquista_carga_1t_descricao_progresso">Movimente %1$d tonelada no total</string>
+    <string name="conquista_carga_10t_descricao_progresso">Movimente %1$d toneladas no total</string>
+    <string name="conquista_carga_50t_descricao_progresso">Movimente %1$d toneladas no total</string>
+    <string name="conquista_carga_100t_descricao_progresso">Movimente %1$d toneladas no total</string>
+    <string name="conquista_carga_250t_descricao_progresso">Movimente %1$d toneladas no total</string>
     <string name="conquistas_dialogo_titulo">Conquista desbloqueada!</string>
 
     <!-- ============================ Perfil de outra pessoa ============================ -->
@@ -1438,11 +1515,8 @@
 
     <!-- Rótulos dos três números do topo. MUITO curtos: ~14 caracteres. -->
     <string name="progresso_metrica_treinos">Treinos</string>
-    <string name="progresso_metrica_semana">Nesta semana</string>
     <!-- Dias seguidos treinando. -->
-    <string name="progresso_metrica_sequencia">Sequência</string>
     <!-- Cabeçalho do histórico. ~16 caracteres. -->
-    <string name="progresso_secao_historico">Histórico</string>
     <!-- Estado vazio. \n é a quebra de linha entre as duas frases. -->
     <string name="progresso_vazio">Nenhum treino registrado ainda.\nSeu histórico aparece aqui depois do primeiro treino.</string>
     <!-- Séries concluídas num treino do histórico. -->
@@ -1458,6 +1532,52 @@
     <!-- Selo de sync do item do histórico: descrição do ícone e a palavra ao lado. -->
     <string name="progresso_aguardando_sync">Aguardando sincronizar</string>
     <string name="progresso_pendente">pendente</string>
+
+    <!--
+      Análise de progressão (J.2). A unidade é a TONELADA: o servidor manda quilos e a tela
+      divide, porque "175,8 t" se le e "175876 kg" nao. "movimentadas" concorda com toneladas.
+    -->
+    <string name="progresso_total_rotulo">movimentadas</string>
+    <string name="progresso_unidade_tonelada">t</string>
+    <!-- Data da sessão com carga mais antiga. %1$s já vem formatado. -->
+    <string name="progresso_desde">Desde %1$s/%2$s</string>
+
+    <!-- Comparação com a sessão anterior DO MESMO treino. %1$s é o nome do treino. -->
+    <string name="progresso_comparacao_titulo">%1$s, contra a vez anterior</string>
+    <string name="progresso_comparacao_variacao">%1$s de carga no mesmo treino</string>
+
+    <!-- Titulos dos tres blocos pagos. -->
+    <string name="progresso_carga_semanal">Carga por semana</string>
+    <!-- Eixo do gráfico semanal: só as pontas. Oito datas não cabem na largura de um celular. -->
+    <string name="progresso_dia_mes">%1$s/%2$s</string>
+    <string name="progresso_semana_atual">esta semana</string>
+    <!-- Dica de descoberta: sem ela ninguém adivinha que a barra responde ao toque. -->
+    <string name="progresso_toque_semana">toque numa barra para ver a semana</string>
+    <string name="progresso_evolucao">Carga estimada por exercício</string>
+    <string name="progresso_volume">Séries por grupo, por semana</string>
+    <!--
+      Rodapé do gráfico de volume: explica por que ele conta SÉRIES e não quilos. Sem isso a
+      pessoa compara com o bloco de cima e acha que um dos dois está errado.
+    -->
+    <string name="progresso_volume_nota">Séries, e não quilos: carga não se compara entre máquina e halter.</string>
+    <!-- Barra dos exercícios sem grupo muscular no catálogo. -->
+    <string name="progresso_nao_classificado">Sem grupo</string>
+
+    <!--
+      Bloco trancado. Aparece quando o servidor diz analysisLocked = true, nunca porque os dados
+      vieram nulos: nulo também acontece com quem ainda não treinou com carga, e mostrar paywall
+      a essa pessoa seria cobrar por algo que ela não pode usar ainda.
+    -->
+    <string name="progresso_bloqueado_titulo">Veja como sua carga evoluiu</string>
+    <string name="progresso_bloqueado_descricao">Oito semanas de histórico, evolução por exercício e equilíbrio entre grupos musculares.</string>
+
+    <!--
+      Estado vazio de quem treina só com peso corporal. ⚠️ NÃO é erro e NÃO é paywall: a frase
+      precisa deixar claro que o resto da gamificação continua valendo, senão a pessoa conclui
+      que o app ignora o treino dela.
+    -->
+    <string name="progresso_sem_carga_titulo">Seus treinos ainda não registram carga</string>
+    <string name="progresso_sem_carga_descricao">A análise usa o peso das séries. Sequência, XP e conquistas continuam contando normalmente.</string>
 
 
     <!-- ============================ Comum (acrescentado na área Social e resto) ============================ -->
@@ -1580,6 +1700,17 @@
     <!-- Treino fora do programa, feito por conta. Botão, ~20 caracteres. -->
     <string name="home_treino_avulso">Treino avulso</string>
 
+    <!-- Card de programa(s) sem NENHUMA agenda configurada (V60, reverte a V59): não é
+         descanso, é onboarding incompleto. Botão reusa programa_lista_titulo, não duplica. -->
+    <string name="home_completar_agenda_titulo">Complete sua agenda</string>
+    <string name="home_completar_agenda_corpo">Monte a semana do seu programa para receber sugestões todos os dias.</string>
+
+    <!-- Card de programa(s) com agenda pronta mas NENHUM ativado (V60): distinto do card
+         acima, aqui a agenda já existe, falta escolher qual programa seguir. Botão reusa
+         programa_ativar_botao, não duplica. -->
+    <string name="home_ativar_programa_titulo">Ative um programa</string>
+    <string name="home_ativar_programa_corpo">Você já tem programa pronto. Escolha qual seguir para ver o treino de hoje.</string>
+
     <!-- Card de quem ainda não tem programa nenhum. -->
     <string name="home_sem_programa_titulo">Comece seu primeiro programa</string>
     <string name="home_sem_programa_texto">Monte um programa e o treino do dia aparece aqui, pronto pra começar.</string>
@@ -1687,7 +1818,6 @@
     <!-- Descrição do ícone que abre a gaveta lateral. Nunca visível. -->
     <string name="nav_abrir_menu">Abrir menu</string>
     <!-- Explicações das duas telas que ainda não existem. Ver `EmBreveScreen`. -->
-    <string name="nav_wiki_descricao">Conteúdo sobre treino, técnica e recuperação. Chega na Fase 8.</string>
     <string name="nav_duvidas_descricao">As perguntas mais comuns sobre o app e os treinos.</string>
     <!-- Selo da tela ainda não implementada. ~14 caracteres. -->
     <string name="em_breve">Em breve</string>
@@ -1695,6 +1825,10 @@
     <!-- ============================ Biblioteca de exercícios ============================ -->
 
     <!-- Chip que remove o filtro de categoria. Concorda com "categorias". ~14 caracteres. -->
+    <!-- Busca da Biblioteca de Exercícios (923 itens). %1$s é o termo digitado. -->
+    <string name="exercicios_buscar">Buscar exercício</string>
+    <string name="exercicios_busca_vazia">Nada encontrado para %1$s</string>
+
     <string name="exercicios_todas">Todas</string>
     <string name="exercicios_todos_musculos">Todos</string>
     <string name="exercicios_vazio">Nenhum exercício.</string>

@@ -2,6 +2,7 @@ package dev.rafael.server.features.exercise.db
 
 import dev.rafael.contract.exercise.ExerciseCategory
 import dev.rafael.contract.i18n.Idioma
+import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.core.result.AppResult
 import dev.rafael.server.features.exercise.models.Exercise
 import kotlin.uuid.Uuid
@@ -41,5 +42,27 @@ interface ExerciseRepository {
      *
      * Devolve só o que EXISTE: id sem tradução fica fora do mapa, e quem chama cai no piso.
      */
+    /**
+     * Leitura CRUA para calculo: musculos primarios + nome de piso, **sem `idioma`**.
+     *
+     * Agrupar series por musculo e DECIDIR, nao exibir, e o KDoc acima ja separa os dois
+     * caminhos. O rotulo "Pernas"/"Legs" sai do `strings.xml` do cliente pelo enum (ARCH #37);
+     * o nome do exercicio, que e catalogo e nao enum, e traduzido na BORDA pelo
+     * [nomesTraduzidos] sobre os poucos ids que sobram - o mesmo arranjo do `alternatives`.
+     *
+     * > **Quem le para calcular nao precisa saber que idiomas existem.**
+     *
+     * Id sem `primary_muscles` (a coluna e nullable) vem com lista VAZIA em vez de ficar fora do
+     * mapa: quem chama distingue "nao classificado" de "nao existe".
+     */
+    suspend fun paraAnalise(ids: List<Uuid>): AppResult<Map<Uuid, ExercicioParaAnalise>>
+
     suspend fun nomesTraduzidos(ids: List<Uuid>, idioma: Idioma): AppResult<Map<Uuid, String>>
 }
+
+/** Projecao minima do catalogo para a analise de progressao (J.2). */
+data class ExercicioParaAnalise(
+    /** `exercises.name` — pt-BR desde a V49. Piso quando nao ha traducao no idioma pedido. */
+    val nomePiso: String,
+    val musculosPrimarios: List<MuscleGroup>,
+)

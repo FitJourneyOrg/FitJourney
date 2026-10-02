@@ -29,6 +29,7 @@ fun ExercisePickerSheet(
             Box(Modifier.weight(1f)) {
                 ExerciseListContent(
                     state = state,
+                    onBuscaAlterada = { viewModel.onEvent(ExerciseListEvent.BuscaAlterada(it)) },
                     onCategorySelected = { viewModel.onEvent(ExerciseListEvent.CategorySelected(it)) },
                     onMuscleGroupSelected = { viewModel.onEvent(ExerciseListEvent.MuscleGroupSelected(it)) },
                     selectedIds = selected,

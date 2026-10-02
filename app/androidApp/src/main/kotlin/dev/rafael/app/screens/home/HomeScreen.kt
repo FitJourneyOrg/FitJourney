@@ -96,9 +96,12 @@ fun HomeScreen(
                 onIniciar = { onStartWorkout(state.today!!.workoutId) },
                 onVerPrograma = onOpenWorkouts,
             )
-            // Sem agenda em programa nenhum e sem treino ativo (V59): não é descanso, é
-            // ninguém ter configurado nada ainda. Ver KDoc de HomeState.precisaAtivarTreino.
-            state.precisaAtivarTreino -> CardNenhumTreinoAtivo(onAtivar = onOpenWorkouts)
+            // V60: programa(s) com agenda pronta, mas nenhum ativado -- distinto do card
+            // abaixo (aqui falta ativar, não montar a semana). Ver KDoc de precisaAtivarPrograma.
+            state.precisaAtivarPrograma -> CardAtivarPrograma(onAtivar = onOpenWorkouts)
+            // V60 (reverte a V59): sem agenda no ativo não é descanso, é ninguém ter montado
+            // a semana ainda. Ver KDoc de HomeState.precisaCompletarAgenda.
+            state.precisaCompletarAgenda -> CardCompletarAgenda(onCompletar = onOpenWorkouts)
             else -> CardDiaDeDescanso(onTreinoAvulso = onOpenWorkouts, onProgresso = onOpenProgress)
         }
 
@@ -241,23 +244,11 @@ private fun CardTreinoDeHoje(
 ) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    stringResource(R.string.home_secao_treino_de_hoje),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.primary,
-                )
-                // V59: este treino não estava na agenda de hoje, é o ativo usado como sugestão —
-                // o selo evita que pareça um agendamento que não existe.
-                if (treino.viaTreinoAtivo) {
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        "· " + stringResource(R.string.treino_ativo_badge),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
+            Text(
+                stringResource(R.string.home_secao_treino_de_hoje),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+            )
             Spacer(Modifier.height(8.dp))
             Text(
                 treino.name ?: stringResource(R.string.home_treino_de_hoje),
@@ -397,12 +388,17 @@ private fun CardDiaDeDescanso(onTreinoAvulso: () -> Unit, onProgresso: () -> Uni
 }
 
 /**
- * Nenhum programa tem agenda configurada e nenhum treino está ativo (V59) — achado real do
- * Rafael navegando no app: a Home dizia "Dia de descanso" quando na verdade ninguém tinha
- * ativado treino nenhum. Reaproveita as strings do estado vazio de "Meus treinos".
+ * V60 (reverte a V59): nenhum programa tem agenda configurada -- achado real do Rafael
+ * navegando no app, quando a Home dizia "Dia de descanso" sem ninguém ter montado a semana.
+ * Pede pra completar a agenda em vez de sugerir um treino avulso (decisão do Rafael).
+ */
+/**
+ * V60: programa(s) com agenda já pronta, mas NENHUM ativado -- achado do Rafael testando
+ * manualmente a ativação (a Home ignorava qual programa estava ativo). Botão reusa
+ * `programa_lista_titulo`, mesmo padrão do [CardCompletarAgenda] logo abaixo.
  */
 @Composable
-private fun CardNenhumTreinoAtivo(onAtivar: () -> Unit) {
+private fun CardAtivarPrograma(onAtivar: () -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(
             Modifier.fillMaxWidth().padding(24.dp),
@@ -414,19 +410,51 @@ private fun CardNenhumTreinoAtivo(onAtivar: () -> Unit) {
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                stringResource(R.string.treino_ativo_nenhum_titulo),
+                stringResource(R.string.home_ativar_programa_titulo),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                stringResource(R.string.treino_ativo_nenhum_corpo),
+                stringResource(R.string.home_ativar_programa_corpo),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(16.dp))
             Button(onClick = onAtivar, modifier = Modifier.fillMaxWidth()) {
+                Text(stringResource(R.string.programa_lista_titulo))
+            }
+        }
+    }
+}
+
+@Composable
+private fun CardCompletarAgenda(onCompletar: () -> Unit) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.fillMaxWidth().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Icon(
+                Icons.Outlined.PlayCircleOutline, contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(40.dp),
+            )
+            Spacer(Modifier.height(12.dp))
+            Text(
+                stringResource(R.string.home_completar_agenda_titulo),
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                stringResource(R.string.home_completar_agenda_corpo),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(16.dp))
+            Button(onClick = onCompletar, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.programa_lista_titulo))
             }
         }
