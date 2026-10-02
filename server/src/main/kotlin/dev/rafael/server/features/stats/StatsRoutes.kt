@@ -1,7 +1,12 @@
 package dev.rafael.server.features.stats
 
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.i18n.IdiomaPolicy
+import dev.rafael.core.result.AppError
+import dev.rafael.core.result.AppResult
+import dev.rafael.core.result.asFailure
+import dev.rafael.core.result.asSuccess
 import dev.rafael.server.auth.FirebaseUser
 import dev.rafael.server.error.respondResult
 import dev.rafael.server.plugins.FIREBASE_AUTH
@@ -10,6 +15,7 @@ import io.ktor.server.auth.principal
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import kotlin.uuid.Uuid
 
 fun Route.statsRoutes(
     service: StatsService,
@@ -41,9 +47,47 @@ fun Route.statsRoutes(
          */
         get("/me/progress") {
             val p = call.principal<FirebaseUser>()!!
-            call.respondResult(progress.forUser(p.uid, p.email, call.idiomaPedido()))
+            when (val f = call.filtroPedido()) {
+                is AppResult.Failure -> call.respondResult(f)
+                is AppResult.Success ->
+                    call.respondResult(progress.forUser(p.uid, p.email, call.idiomaPedido(), f.value))
+            }
         }
     }
+}
+
+/** O valor de `?programId=` que pede as sessoes FORA de programa. */
+private const val AVULSOS = "avulsos"
+
+/**
+ * O recorte pedido na query: `?programId=<uuid|avulsos>&de=<n>&ate=<n>`.
+ *
+ * ⚠️ **Id malformado vira 400, nao "todos".** Cair no padrao em silencio mostraria um grafico
+ * que ninguem pediu, com cara de resposta certa — e o cliente nunca saberia que mandou lixo.
+ * O codigo ja existe desde a G.2.
+ *
+ * `de`/`ate` fora de ordem ou fora do programa NAO sao erro: o servico os encaixa na janela
+ * real. Faixa e ajuste de visualizacao, e corrigir em silencio ali e o certo; id errado e outra
+ * coisa, porque muda QUAL dado responde.
+ */
+private fun ApplicationCall.filtroPedido(): AppResult<ProgressService.Filtro> {
+    val bruto = request.queryParameters["programId"] ?: return ProgressService.Filtro.Todos.asSuccess()
+    if (bruto == AVULSOS) return ProgressService.Filtro.Avulsos.asSuccess()
+
+    val id = runCatching { Uuid.parse(bruto) }.getOrNull()
+        ?: return AppError.Validation(
+            message = "Identificador de programa inválido.",
+            // ⚠️ O 2o parametro posicional de Validation e `fieldErrors`, nao o codigo. Nomear
+            // evita o erro que o compilador so pegou porque os tipos diferem -- se os dois
+            // fossem String, teria compilado com o codigo virando mensagem de campo.
+            code = ErrorCodes.ID_DE_PROGRAMA_INVALIDO,
+        ).asFailure()
+
+    return ProgressService.Filtro.DoPrograma(
+        programId = id,
+        de = request.queryParameters["de"]?.toIntOrNull(),
+        ate = request.queryParameters["ate"]?.toIntOrNull(),
+    ).asSuccess()
 }
 
 /** Mesmo contrato das demais rotas que exibem catalogo: `?locale=`, nunca cabecalho (REGRA G.1). */

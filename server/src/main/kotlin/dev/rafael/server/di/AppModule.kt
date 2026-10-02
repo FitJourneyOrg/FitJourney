@@ -174,7 +174,7 @@ val appModule = module {
 
     // Analise de progressao (J.2). NAO depende do ProgramService: semana aqui e semana de
     // calendario, e o schedule so existe por causa do streak.
-    single { ProgressService(get(), get(), get()) }   // userService + sessionRepo + exerciseRepo
+    single { ProgressService(get(), get(), get(), get()) }   // userService + sessionRepo + exerciseRepo + programRepo (J.3)
 
     // Conquistas (ARCH #16). Reusa o StatsService (via ProgressoDeStats) em vez de recalcular
     // sessoes/streak/nivel: duas contas do mesmo numero acabariam divergindo.

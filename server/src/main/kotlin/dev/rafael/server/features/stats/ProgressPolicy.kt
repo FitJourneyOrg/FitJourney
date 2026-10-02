@@ -98,6 +98,84 @@ object ProgressPolicy {
         }
     }
 
+    // ---- semanas DO PROGRAMA (J.3) -----------------------------------------
+
+    /**
+     * Em que semana do programa (1-based) [data] caiu, dado o [inicio] dele.
+     *
+     * ## Conta por DIAS corridos, nao por semana ISO
+     *
+     * Semana 1 e o periodo de 7 dias a partir do `started_at`, mesmo que ele caia numa quarta.
+     * Usar a segunda-feira ISO faria a "semana 1" durar as vezes dois dias — quem comecou na
+     * sexta veria a primeira semana acabar no domingo seguinte, com um treino dentro, e
+     * concluiria que o programa esta errado.
+     *
+     * > **A semana do programa pertence ao programa, nao ao calendario.** O eixo de calendario
+     * > continua existindo para quando nenhum programa esta selecionado — sao duas reguas, e
+     * > misturar as duas e o que faz "semana 10" nao significar nada.
+     *
+     * Data ANTES do inicio devolve numero <= 0. Nao e erro: sessao mais antiga que o programa
+     * existe (o programa foi criado depois), e quem chama a descarta pela faixa.
+     */
+    fun semanaDoPrograma(data: LocalDate, inicio: LocalDate): Int {
+        // `floorDiv`, e nao `/`: divisao de Int em Kotlin trunca em direcao a ZERO, entao um dia
+        // ANTES do inicio (-3 dias) daria semana 1 em vez de 0, misturando o que veio antes do
+        // programa com a primeira semana dele.
+        val dias = (data.toEpochDays() - inicio.toEpochDays()).toInt()
+        return Math.floorDiv(dias, 7) + 1
+    }
+
+    data class CargaDaSemanaDoPrograma(val semana: Int, val kg: Double)
+
+    /**
+     * Carga por semana DO PROGRAMA, de [de] ate [ate], sempre com uma posicao por semana.
+     *
+     * Mesma regra do [porSemana]: semana sem treino vem com `0.0` em vez de sumir. Aqui ela pesa
+     * ainda mais — numa faixa escolhida a mao ("semana 10 a 14"), uma semana ausente deixaria a
+     * faixa com menos barras do que a pessoa pediu, e ela leria isso como dado faltando.
+     */
+    fun porSemanaDoPrograma(
+        series: List<SerieFeita>,
+        inicio: LocalDate,
+        de: Int,
+        ate: Int,
+    ): List<CargaDaSemanaDoPrograma> {
+        require(de >= 1 && ate >= de) { "faixa invalida: $de..$ate" }
+        val porNumero = series
+            .groupBy { semanaDoPrograma(it.data, inicio) }
+            .mapValues { (_, s) -> tonelagem(s) }
+        return (de..ate).map { CargaDaSemanaDoPrograma(it, porNumero[it] ?: 0.0) }
+    }
+
+    /**
+     * So as series que caem na faixa [de]..[ate] do programa.
+     *
+     * Existe como funcao propria porque TODOS os blocos usam a mesma faixa: tonelagem, evolucao,
+     * volume por grupo e a comparacao. Recortar em cada um separadamente e como quatro recortes
+     * discordam sobre o que e "a faixa".
+     */
+    fun naFaixaDoPrograma(
+        series: List<SerieFeita>,
+        inicio: LocalDate,
+        de: Int,
+        ate: Int,
+    ): List<SerieFeita> = series.filter { semanaDoPrograma(it.data, inicio) in de..ate }
+
+    /** [evolucao], mas com o ponto rotulado pela semana do programa em vez da data. */
+    fun evolucaoNoPrograma(
+        series: List<SerieFeita>,
+        exercicioId: Uuid,
+        inicio: LocalDate,
+    ): List<PontoNoPrograma> =
+        series.filter { it.exercicioId == exercicioId }
+            .groupBy { semanaDoPrograma(it.data, inicio) }
+            .map { (semana, doGrupo) ->
+                PontoNoPrograma(semana, doGrupo.maxOf { e1rm(it.kg, it.reps) })
+            }
+            .sortedBy { it.semana }
+
+    data class PontoNoPrograma(val semana: Int, val e1rm: Double)
+
     // ---- carga estimada ----------------------------------------------------
 
     /**
