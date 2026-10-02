@@ -1,6 +1,7 @@
 package dev.rafael.features.program.presentation.state
 
 import dev.rafael.core.result.AppError
+import dev.rafael.features.program.domain.model.PendenciaDeSync
 import dev.rafael.features.program.domain.model.Program
 
 data class ProgramDetailState(
@@ -10,4 +11,8 @@ data class ProgramDetailState(
     val isReordering: Boolean = false,   // durante o PUT /schedule (desabilita as setas)
     val error: AppError? = null,
     val isDeleted: Boolean = false,   // sinaliza pra tela voltar pra lista
-)
+    val pendencias: Set<PendenciaDeSync> = emptySet(),
+) {
+    fun pendenciaDe(workoutId: String?): PendenciaDeSync? =
+        workoutId?.let { id -> pendencias.firstOrNull { it.alvoId == id } }
+}

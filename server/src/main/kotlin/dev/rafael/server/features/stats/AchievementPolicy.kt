@@ -21,7 +21,7 @@ object AchievementPolicy {
      * O que a conquista mede. Existe para a UI mostrar progresso ("7 de 10") nas bloqueadas
      * sem precisar saber o que cada id significa.
      */
-    enum class Metrica { SESSOES, STREAK, NIVEL }
+    enum class Metrica { SESSOES, STREAK, NIVEL, CARGA }
 
     /**
      * [REGRA] Os ids são CONTRATO — vão para o banco e nunca mudam de significado. Renomear um
@@ -61,6 +61,21 @@ object AchievementPolicy {
 
         NIVEL_5(Metrica.NIVEL, 5),
         NIVEL_10(Metrica.NIVEL, 10),
+
+        // Carga acumulada (J.2). ⚠️ O ALVO ESTA EM TONELADAS, nao em quilos, e isso e decisao de
+        // texto virando decisao de regra: a frase da medalha diz "Movimente %1$d toneladas" e o
+        // %1$d vem do `target`, entao um alvo em quilos imprimiria "250000" no cartao. A tonelada
+        // tambem e a unidade em que a barra de progresso faz sentido - 175 de 250, nao
+        // 175876 de 250000.
+        //
+        // So conta CARGA EXTERNA (ProgressPolicy.elegivel): quem treina peso corporal nao alcanca
+        // estas, e a descricao precisa dizer isso. Preferimos a medalha honesta e inalcancavel
+        // para alguns a uma medalha que finge medir esforco quando mede alavanca.
+        CARGA_1T(Metrica.CARGA, 1),
+        CARGA_10T(Metrica.CARGA, 10),
+        CARGA_50T(Metrica.CARGA, 50),
+        CARGA_100T(Metrica.CARGA, 100),
+        CARGA_250T(Metrica.CARGA, 250),
         ;
     }
 
@@ -69,13 +84,20 @@ object AchievementPolicy {
         val sessoesValidas: Int,
         val streakDias: Int,
         val nivel: Int,
+        /** Carga externa acumulada, em QUILOS. A conversao para tonelada acontece no [valorDe]. */
+        val cargaTotalKg: Double = 0.0,
     ) {
         fun valorDe(metrica: Metrica): Int = when (metrica) {
             Metrica.SESSOES -> sessoesValidas
             Metrica.STREAK -> streakDias
             Metrica.NIVEL -> nivel
+            // Trunca de proposito: 999 kg sao zero toneladas, e a medalha de 1 t cai quando a
+            // tonelada fecha. Arredondar para cima concederia a primeira medalha a 500 kg.
+            Metrica.CARGA -> (cargaTotalKg / KG_POR_TONELADA).toInt()
         }
     }
+
+    const val KG_POR_TONELADA = 1_000.0
 
     /** Tudo que o progresso atual já alcança — inclusive o que já estava concedido. */
     fun alcancadas(progresso: Progresso): Set<Conquista> =

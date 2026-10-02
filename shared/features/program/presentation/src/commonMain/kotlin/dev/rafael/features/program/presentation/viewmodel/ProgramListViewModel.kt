@@ -47,7 +47,8 @@ class ProgramListViewModel(
             ProgramListEvent.Load -> load(forcar = false)   // cache-first: trocar de aba não vai à rede
             ProgramListEvent.Retry -> load(forcar = true)   // o usuário pediu de novo: força a rede
             is ProgramListEvent.CreateManual -> createManual(event.name)
-            is ProgramListEvent.Activate -> activate(event.workoutId)
+            is ProgramListEvent.Activate -> activate(event.programId)
+            is ProgramListEvent.Descartar -> descartar(event.alvoId)
         }
     }
 
@@ -99,14 +100,15 @@ class ProgramListViewModel(
     }
 
     /**
-     * V59. ONLINE-ONLY (ver [dev.rafael.features.program.domain.repository.ProgramRepository.activateWorkout]):
-     * sucesso força um `load(forcar = true)` pra tela já mostrar o `isActive` novo, sem
+     * V60 (reverte a V59): ONLINE-ONLY (ver
+     * [dev.rafael.features.program.domain.repository.ProgramRepository.activateProgram]).
+     * Sucesso força um `load(forcar = true)` pra tela já mostrar o `isActive` novo, sem
      * esperar o próximo ON_RESUME.
      */
-    private fun activate(workoutId: String) {
-        _state.update { it.copy(activating = workoutId, error = null) }
+    private fun activate(programId: String) {
+        _state.update { it.copy(activating = programId, error = null) }
         viewModelScope.launch {
-            when (val result = repository.activateWorkout(workoutId)) {
+            when (val result = repository.activateProgram(programId)) {
                 is AppResult.Success -> {
                     _state.update { it.copy(activating = null) }
                     load(forcar = true)
@@ -114,6 +116,17 @@ class ProgramListViewModel(
                 is AppResult.Failure ->
                     _state.update { it.copy(activating = null, error = result.error) }
             }
+        }
+    }
+
+    /**
+     * Só sai da fila LOCALMENTE (nunca falha) -- o `load(forcar = true)` que segue é quem busca
+     * a verdade do servidor e sobrescreve a tentativa recusada (ver KDoc do repositório).
+     */
+    private fun descartar(alvoId: String) {
+        viewModelScope.launch {
+            repository.descartarPendencia(alvoId)
+            load(forcar = true)
         }
     }
 }

@@ -2,7 +2,7 @@
 -- Schema: 1.sqm + 5.sqm (nesta pasta). Aqui só ficam as QUERIES.
 
 selectByIds:
-SELECT id, name, thumbRef FROM exercise WHERE id IN ?;
+SELECT id, name, thumbRef, videoRef FROM exercise WHERE id IN ?;
 
 -- Detalhe de UM exercício. Antes o cliente baixava o catálogo inteiro (965 linhas)
 -- e filtrava em memória para abrir uma tela de detalhe.

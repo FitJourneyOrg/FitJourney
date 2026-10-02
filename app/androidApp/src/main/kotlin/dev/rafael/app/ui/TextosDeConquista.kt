@@ -58,6 +58,11 @@ object TextosDeConquista {
         ConquistaIds.STREAK_90 -> R.string.conquista_streak_90_titulo
         ConquistaIds.NIVEL_5 -> R.string.conquista_nivel_5_titulo
         ConquistaIds.NIVEL_10 -> R.string.conquista_nivel_10_titulo
+        ConquistaIds.CARGA_1T -> R.string.conquista_carga_1t_titulo
+        ConquistaIds.CARGA_10T -> R.string.conquista_carga_10t_titulo
+        ConquistaIds.CARGA_50T -> R.string.conquista_carga_50t_titulo
+        ConquistaIds.CARGA_100T -> R.string.conquista_carga_100t_titulo
+        ConquistaIds.CARGA_250T -> R.string.conquista_carga_250t_titulo
         else -> null
     }
 
@@ -87,6 +92,11 @@ object TextosDeConquista {
         ConquistaIds.STREAK_90 -> R.string.conquista_streak_90_descricao
         ConquistaIds.NIVEL_5 -> R.string.conquista_nivel_5_descricao
         ConquistaIds.NIVEL_10 -> R.string.conquista_nivel_10_descricao
+        ConquistaIds.CARGA_1T -> R.string.conquista_carga_1t_descricao
+        ConquistaIds.CARGA_10T -> R.string.conquista_carga_10t_descricao
+        ConquistaIds.CARGA_50T -> R.string.conquista_carga_50t_descricao
+        ConquistaIds.CARGA_100T -> R.string.conquista_carga_100t_descricao
+        ConquistaIds.CARGA_250T -> R.string.conquista_carga_250t_descricao
         else -> null
     }
 
@@ -120,6 +130,11 @@ object TextosDeConquista {
         ConquistaIds.STREAK_90 -> R.string.conquista_streak_90_descricao_progresso
         ConquistaIds.NIVEL_5 -> R.string.conquista_nivel_5_descricao_progresso
         ConquistaIds.NIVEL_10 -> R.string.conquista_nivel_10_descricao_progresso
+        ConquistaIds.CARGA_1T -> R.string.conquista_carga_1t_descricao_progresso
+        ConquistaIds.CARGA_10T -> R.string.conquista_carga_10t_descricao_progresso
+        ConquistaIds.CARGA_50T -> R.string.conquista_carga_50t_descricao_progresso
+        ConquistaIds.CARGA_100T -> R.string.conquista_carga_100t_descricao_progresso
+        ConquistaIds.CARGA_250T -> R.string.conquista_carga_250t_descricao_progresso
         else -> null
     }
 

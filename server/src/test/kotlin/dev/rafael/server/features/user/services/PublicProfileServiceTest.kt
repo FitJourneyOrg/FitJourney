@@ -53,7 +53,7 @@ class PublicProfileServiceTest {
         override suspend fun updateCode(userId: Uuid, code: String) = error("não deveria ser chamado")
 
         override suspend fun setPremium(userId: Uuid, premium: Boolean) = error("não deveria ser chamado")
-        override suspend fun setActiveWorkout(userId: Uuid, workoutId: Uuid?) = error("não deveria ser chamado")
+        override suspend fun setActiveProgram(userId: Uuid, programId: Uuid?) = error("não deveria ser chamado")
         override suspend fun updateDisplayName(userId: Uuid, displayName: String) =
             error("não deveria ser chamado")
         override suspend fun updateIdioma(userId: Uuid, idioma: Idioma) =

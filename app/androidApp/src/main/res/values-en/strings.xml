@@ -268,6 +268,7 @@
 
     <!-- ============================ Common ============================ -->
 
+    <string name="comum_limpar">Clear</string>
     <string name="comum_voltar">Back</string>
     <string name="comum_cancelar">Cancel</string>
     <string name="comum_apagar">Delete</string>
@@ -517,7 +518,7 @@
 
     <!-- ============================ Quiz ============================ -->
 
-    <string name="quiz_progresso">%1$d/%2$d</string>
+    <string name="comum_fracao">%1$d/%2$d</string>
     <string name="quiz_concluir">Finish</string>
 
     <string name="quiz_objetivo_titulo">What\'s your main goal?</string>
@@ -596,10 +597,6 @@
     <string name="comum_reps">reps</string>
     <string name="comum_kg">kg</string>
 
-    <plurals name="programa_treinos">
-        <item quantity="one">%1$d workout</item>
-        <item quantity="other">%1$d workouts</item>
-    </plurals>
     <plurals name="treino_exercicios">
         <item quantity="one">%1$d exercise</item>
         <item quantity="other">%1$d exercises</item>
@@ -608,22 +605,19 @@
 
     <!-- ============================ Program list ============================ -->
 
-    <string name="programa_lista_titulo">My workouts</string>
+    <string name="programa_lista_titulo">My programs</string>
     <string name="programa_lista_vazio">You don\'t have any workouts yet.</string>
     <string name="treino_ativo_badge">Active</string>
-    <string name="treino_ativo_nenhum_titulo">No active workout</string>
-    <string name="treino_ativo_nenhum_corpo">Activate one of your workouts for it to show up here.</string>
-    <string name="treino_ativo_secao_outros">Other workouts</string>
-    <string name="treino_ativo_secao_seus">Your workouts</string>
-    <string name="treino_ativo_ativar">Activate</string>
-    <string name="treino_ativo_confirmar_titulo">Activate this workout?</string>
-    <string name="treino_ativo_confirmar_corpo">%1$s becomes your featured workout.</string>
-    <string name="treino_ativo_ver_biblioteca">View library</string>
-    <string name="programa_lista_semana">Week %1$d/%2$d</string>
+    <string name="programa_ativar_botao">Activate program</string>
+    <string name="programa_ativar_confirmar_titulo">Activate this program?</string>
+    <string name="programa_ativar_confirmar_corpo">%1$s becomes your featured program.</string>
     <string name="programa_lista_novo">New program</string>
     <string name="programa_lista_criar">Create</string>
     <string name="programa_lista_pendente">Pending</string>
     <string name="programa_lista_nao_sincronizou">Didn\'t sync</string>
+    <string name="pendencia_descartar_titulo">This wasn\'t saved</string>
+    <string name="pendencia_descartar_corpo_sem_mensagem">The server rejected this change and it won\'t be retried. Discard it and use the server\'s version?</string>
+    <string name="pendencia_descartar_confirmar">Discard</string>
 
 
     <!-- ============================ Generate with AI ============================ -->
@@ -730,14 +724,34 @@
 
     <!-- ============================ Workout session ============================ -->
 
+    <string name="sessao_serie_de">Set %1$d of %2$d</string>
+    <string name="sessao_serie_curta">S%1$d</string>
+    <string name="sessao_serie_feita">Set done</string>
+    <string name="sessao_ver_tecnica">View technique</string>
+    <string name="sessao_peso_rotulo">Weight · kg</string>
+    <string name="sessao_descanso_apos">Rest · after the set</string>
+    <string name="sessao_mais_15s">+15s</string>
+    <string name="sessao_anterior">Previous</string>
+    <string name="sessao_proximo">Next</string>
+    <string name="sessao_aumentar_peso">Increase weight</string>
+    <string name="sessao_diminuir_peso">Decrease weight</string>
+    <string name="sessao_aumentar_reps">Increase reps</string>
+    <string name="sessao_diminuir_reps">Decrease reps</string>
+    <string name="sessao_iniciar_descanso">Start rest</string>
+    <string name="sessao_pausar_descanso">Pause rest</string>
+    <string name="sessao_retomar_descanso">Resume rest</string>
+
+    <string name="sessao_vazia">This workout has no exercises.</string>
+    <string name="sessao_sair_titulo">Leave the workout?</string>
+    <string name="sessao_sair_texto">The sets you marked will not be recorded.</string>
+    <string name="sessao_sair_confirmar">Leave without saving</string>
+    <string name="sessao_sair_ficar">Keep training</string>
+    <string name="sessao_ocultar_tecnica">Hide technique</string>
     <string name="sessao_finalizar">Finish workout</string>
     <string name="comum_exercicio">Exercise</string>
     <!-- ⚠️ "Rest", NOT "Rest day": this is the timer between sets. See `programa_detalhe_descanso`. -->
     <string name="sessao_descanso">Rest</string>
     <string name="sessao_tempo">%1$d:%2$02d</string>
-    <string name="sessao_mais_30s">+30s</string>
-    <string name="sessao_pular">Skip</string>
-    <string name="sessao_alvo">target %1$d</string>
 
 
     <!-- ============================ Common (paywall and account) ============================ -->
@@ -803,9 +817,28 @@
     <!-- ============================ Side drawer ============================ -->
 
     <string name="menu_meu_perfil">My profile</string>
-    <string name="menu_wiki">Fitness wiki</string>
-    <string name="menu_wiki_selo">phase 8</string>
+    <string name="menu_wiki">Learn</string>
     <string name="menu_duvidas">FAQ</string>
+
+    <string name="preparando_perfil">Loading your profile</string>
+    <string name="preparando_programas">Getting your workouts ready</string>
+    <string name="preparando_progresso">Fetching your progress</string>
+    <string name="preparando_exercicios">Downloading the exercise catalog</string>
+
+    <string name="aprender_tudo">All</string>
+    <string name="aprender_comece_aqui">Start here</string>
+    <string name="aprender_min_leitura">%1$d min read</string>
+    <!-- MONTH BEFORE DAY, the opposite of pt-BR: %1$02d is still the day. See checkin_data_as. -->
+    <string name="aprender_atualizado">updated %2$02d/%1$02d/%3$d</string>
+    <string name="aprender_vazio">The content has not reached this device yet. Pull to refresh.</string>
+    <string name="aprender_artigo_sumiu">This article is no longer available.</string>
+
+    <string name="enum_wiki_treino">Training</string>
+    <string name="enum_wiki_tecnica">Technique</string>
+    <string name="enum_wiki_nutricao">Nutrition</string>
+    <string name="enum_wiki_recuperacao">Recovery</string>
+    <string name="enum_wiki_mentalidade">Mindset</string>
+    <string name="menu_historico">History</string>
     <string name="menu_conta">Account settings</string>
     <!--
       ⚠️ "Log out", NOT "Leave". Identical to `grupo_detalhe_sair_confirmar` in pt-BR ("Sair"):
@@ -863,6 +896,22 @@
     <string name="conquista_nivel_10_titulo">Level 10</string>
     <string name="conquista_nivel_10_descricao">Reach level 10</string>
 
+    <!-- Accumulated external load (J.2). Target is in TONNES, matching the server. -->
+    <string name="conquista_carga_1t_titulo">First tonne</string>
+    <string name="conquista_carga_1t_descricao">Move 1 tonne in total</string>
+
+    <string name="conquista_carga_10t_titulo">Ten tonnes</string>
+    <string name="conquista_carga_10t_descricao">Move 10 tonnes in total</string>
+
+    <string name="conquista_carga_50t_titulo">Fifty tonnes</string>
+    <string name="conquista_carga_50t_descricao">Move 50 tonnes in total</string>
+
+    <string name="conquista_carga_100t_titulo">One hundred tonnes</string>
+    <string name="conquista_carga_100t_descricao">Move 100 tonnes in total</string>
+
+    <string name="conquista_carga_250t_titulo">Two hundred fifty tonnes</string>
+    <string name="conquista_carga_250t_descricao">Move 250 tonnes in total</string>
+
     <string name="conquista_treinos_10_descricao_progresso">Log %1$d workouts</string>
     <string name="conquista_treinos_50_descricao_progresso">Log %1$d workouts</string>
     <string name="conquista_treinos_100_descricao_progresso">Log %1$d workouts</string>
@@ -871,6 +920,11 @@
     <string name="conquista_streak_90_descricao_progresso">%1$d days on plan</string>
     <string name="conquista_nivel_5_descricao_progresso">Reach level %1$d</string>
     <string name="conquista_nivel_10_descricao_progresso">Reach level %1$d</string>
+    <string name="conquista_carga_1t_descricao_progresso">Move %1$d tonne in total</string>
+    <string name="conquista_carga_10t_descricao_progresso">Move %1$d tonnes in total</string>
+    <string name="conquista_carga_50t_descricao_progresso">Move %1$d tonnes in total</string>
+    <string name="conquista_carga_100t_descricao_progresso">Move %1$d tonnes in total</string>
+    <string name="conquista_carga_250t_descricao_progresso">Move %1$d tonnes in total</string>
     <string name="conquistas_dialogo_titulo">Achievement unlocked!</string>
 
     <!-- ============================ Someone else's profile ============================ -->
@@ -888,9 +942,6 @@
     <!-- ============================ Progress ============================ -->
 
     <string name="progresso_metrica_treinos">Workouts</string>
-    <string name="progresso_metrica_semana">This week</string>
-    <string name="progresso_metrica_sequencia">Streak</string>
-    <string name="progresso_secao_historico">History</string>
     <string name="progresso_vazio">No workouts logged yet.\nYour history shows up here after your first workout.</string>
     <plurals name="progresso_series">
         <item quantity="one">%1$d set</item>
@@ -900,6 +951,29 @@
     <string name="progresso_data">%2$s %1$s %3$s</string>
     <string name="progresso_aguardando_sync">Waiting to sync</string>
     <string name="progresso_pendente">pending</string>
+
+    <!-- Progress analysis (J.2). -->
+    <string name="progresso_total_rotulo">moved</string>
+    <string name="progresso_unidade_tonelada">t</string>
+    <string name="progresso_desde">Since %2$s/%1$s</string>
+
+    <string name="progresso_comparacao_titulo">%1$s, against last time</string>
+    <string name="progresso_comparacao_variacao">%1$s of load in the same workout</string>
+
+    <string name="progresso_carga_semanal">Weekly load</string>
+    <string name="progresso_dia_mes">%2$s/%1$s</string>
+    <string name="progresso_semana_atual">this week</string>
+    <string name="progresso_toque_semana">tap a bar to see that week</string>
+    <string name="progresso_evolucao">Estimated load per exercise</string>
+    <string name="progresso_volume">Weekly sets per muscle group</string>
+    <string name="progresso_volume_nota">Sets, not kilos: load does not compare between machine and dumbbell.</string>
+    <string name="progresso_nao_classificado">No group</string>
+
+    <string name="progresso_bloqueado_titulo">See how your load has grown</string>
+    <string name="progresso_bloqueado_descricao">Eight weeks of history, per-exercise progression and balance across muscle groups.</string>
+
+    <string name="progresso_sem_carga_titulo">Your workouts do not log load yet</string>
+    <string name="progresso_sem_carga_descricao">The analysis uses set weight. Streak, XP and achievements keep counting as usual.</string>
 
 
     <!-- ============================ Common (social and the rest) ============================ -->
@@ -988,6 +1062,12 @@
     <string name="home_descanso_texto">Recovering is part of progress: muscle is built while you rest.</string>
     <string name="home_treino_avulso">One-off workout</string>
 
+    <string name="home_completar_agenda_titulo">Complete your schedule</string>
+    <string name="home_completar_agenda_corpo">Set up your program\'s week to get suggestions every day.</string>
+
+    <string name="home_ativar_programa_titulo">Activate a program</string>
+    <string name="home_ativar_programa_corpo">You already have a program ready. Pick one to see today\'s workout.</string>
+
     <string name="home_sem_programa_titulo">Start your first program</string>
     <string name="home_sem_programa_texto">Build a program and the workout of the day shows up here, ready to start.</string>
     <string name="home_montar_com_ia">Build with AI</string>
@@ -1058,7 +1138,6 @@
     <!-- ============================ Navigation and screens to come ============================ -->
 
     <string name="nav_abrir_menu">Open menu</string>
-    <string name="nav_wiki_descricao">Content about training, technique and recovery. Arrives in Phase 8.</string>
     <string name="nav_duvidas_descricao">The most common questions about the app and the workouts.</string>
     <string name="em_breve">Coming soon</string>
 
@@ -1067,6 +1146,8 @@
 
     <string name="exercicios_todas">All</string>
     <string name="exercicios_todos_musculos">All</string>
+    <string name="exercicios_buscar">Search exercise</string>
+    <string name="exercicios_busca_vazia">Nothing found for %1$s</string>
     <string name="exercicios_vazio">No exercises.</string>
     <string name="exercicio_nao_encontrado">Exercise not found</string>
     <string name="exercicios_adicionar_titulo">Add exercises</string>

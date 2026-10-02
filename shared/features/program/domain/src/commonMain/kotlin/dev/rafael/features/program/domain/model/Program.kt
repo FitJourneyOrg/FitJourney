@@ -22,6 +22,9 @@ data class Program(
     // Vazio = sem foco, ou programa anterior a esta fatia (legado, sem snapshot).
     val focusMuscles: List<String> = emptyList(),
     val locked: Boolean,
+    // V60 (reverte a V59): true pro programa marcado como ativo (ponteiro exclusivo,
+    // autoridade do servidor).
+    val isActive: Boolean = false,
     val schedule: List<ProgramScheduleEntry>,
     val durationWeeks: Int = 8,   // janela do cronograma (ARCH #22)
     val currentWeek: Int = 1,     // semana atual, derivada no servidor
@@ -40,7 +43,8 @@ data class ProgramWorkout(
     val name: String,
     val exerciseCount: Int,
     val locked: Boolean = false,   // ARCH #23: dia trancado (não-premium). exerciseCount = quantos há por trás.
-    // V59: true pro treino marcado como ativo (ponteiro exclusivo, autoridade do servidor).
+    // V60 (reverte a V59): true pro treino que cai no dia de hoje DENTRO do programa ativo --
+    // derivado no servidor (schedule x dia da semana), não mais ponteiro direto por treino.
     val isActive: Boolean = false,
 )
 

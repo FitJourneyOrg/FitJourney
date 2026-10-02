@@ -30,6 +30,11 @@ data class ProgramDto(
     val focusMuscles: List<MuscleGroup> = emptyList(),   // snapshot do foco NO MOMENTO da geração (fatia "rationale
                                            // derivado") — não é profile.focusAreas ao vivo, que pode ter mudado depois.
     val locked: Boolean = false,
+    // V60 (reverte a V59 -- ativo agora e por PROGRAMA, nao por treino): true pro programa
+    // marcado como ativo pelo usuario (ponteiro exclusivo, autoridade do servidor). Marcado
+    // FORA do mapper (ver ProgramActiveWorkout) -- este DTO nao sabe de ponteiro de usuario,
+    // so carrega o resultado.
+    val isActive: Boolean = false,
     val schedule: List<ScheduleEntry> = emptyList(),
     val durationWeeks: Int = 8,           // janela do cronograma (ARCH #22); mín/default 8 (2 meses)
     val startedAt: String? = null,        // início da janela (ISO); servidor preenche
