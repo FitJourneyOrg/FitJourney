@@ -215,6 +215,10 @@ class CatalogoEmInglesTest {
             // portuguesa nem inglesa, e as duas telas mostram a mesma sigla (débito P2
             // "Exibir RIR na tela de detalhe do treino", 2026-09-22).
             "treino_detalhe_rir",
+            // `t` de tonelada e símbolo do SI, não palavra: igual em português e em inglês, como
+            // `kg`. Traduzir para `ton` seria trocar a unidade padrão por uma abreviação ambígua
+            // (a ton curta americana tem 907 kg) — num número que o servidor manda em quilos.
+            "progresso_unidade_tonelada",
         )
 
         val porChaveEn = en.entradas.associate { it.chave to it.valor }

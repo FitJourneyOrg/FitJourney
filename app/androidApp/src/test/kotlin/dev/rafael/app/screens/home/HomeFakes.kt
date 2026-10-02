@@ -2,8 +2,10 @@ package dev.rafael.app.screens.home
 
 import dev.rafael.features.session.domain.HistoricoDeSessoes
 import dev.rafael.features.session.domain.SessaoLocal
+import dev.rafael.features.stats.domain.Progresso
 import dev.rafael.features.stats.domain.Stats
 import dev.rafael.contract.session.WorkoutSessionDto
+import dev.rafael.contract.stats.ProgressDto
 import dev.rafael.contract.stats.UserStatsDto
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.auth.domain.model.AuthUser
@@ -52,6 +54,19 @@ class FakeStats : Stats {
     var forcadas = 0
 
     override fun observar(): Flow<UserStatsDto?> = valores
+    override suspend fun sincronizar(forcar: Boolean) {
+        sincronizacoes++
+        if (forcar) forcadas++
+    }
+}
+
+/** A analise da J.2. Mesma forma do [FakeStats]: cache observavel + contador de sync. */
+class FakeProgresso : Progresso {
+    val valores = MutableStateFlow<ProgressDto?>(null)
+    var sincronizacoes = 0
+    var forcadas = 0
+
+    override fun observar(): Flow<ProgressDto?> = valores
     override suspend fun sincronizar(forcar: Boolean) {
         sincronizacoes++
         if (forcar) forcadas++
