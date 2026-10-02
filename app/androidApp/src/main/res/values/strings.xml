@@ -980,10 +980,6 @@
     <string name="comum_kg">kg</string>
 
     <!-- Quantos treinos um programa tem. No cartão da lista de programas. -->
-    <plurals name="programa_treinos">
-        <item quantity="one">%1$d treino</item>
-        <item quantity="other">%1$d treinos</item>
-    </plurals>
     <!-- Quantos exercícios um treino tem. Na semana do programa e na revelação. -->
     <plurals name="treino_exercicios">
         <item quantity="one">%1$d exercício</item>
@@ -1001,9 +997,6 @@
          conquistas). treino_ativo_secao_outros/seus/ver_biblioteca sao debito pre-existente de
          uma reversao anterior (orfas, nao removidas aqui). -->
     <string name="treino_ativo_badge">Ativo</string>
-    <string name="treino_ativo_secao_outros">Outros treinos</string>
-    <string name="treino_ativo_secao_seus">Seus treinos</string>
-    <string name="treino_ativo_ver_biblioteca">Ver biblioteca</string>
     <!-- V60 (reverte a V59): ativar volta a ser acao de PROGRAMA (botao no card da lista), nao
          mais de treino dentro do detalhe. %1$s em programa_ativar_confirmar_corpo e o nome do
          programa. -->
@@ -1011,7 +1004,6 @@
     <string name="programa_ativar_confirmar_titulo">Ativar este programa?</string>
     <string name="programa_ativar_confirmar_corpo">%1$s passa a ser o seu programa em destaque.</string>
     <!-- Progresso no cartão. %1$d é a semana atual e %2$d o total. -->
-    <string name="programa_lista_semana">Semana %1$d/%2$d</string>
     <!-- Diálogo de criação manual. -->
     <string name="programa_lista_novo">Novo programa</string>
     <string name="programa_lista_criar">Criar</string>
@@ -1216,11 +1208,8 @@
     <!-- O tempo restante. %1$d são os minutos e %2$02d os segundos. -->
     <string name="sessao_tempo">%1$d:%2$02d</string>
     <!-- Acrescenta meio minuto ao descanso. Botão estreito: ~8 caracteres. -->
-    <string name="sessao_mais_30s">+30s</string>
     <!-- Encerra o descanso antes da hora. Botão estreito: ~8 caracteres. -->
-    <string name="sessao_pular">Pular</string>
     <!-- Abaixo do campo de repetições: quantas o motor prescreveu. %1$d é o alvo. -->
-    <string name="sessao_alvo">alvo %1$d</string>
 
 
     <!-- ============================ Comum (acrescentado na área de Paywall e conta) ============================ -->
@@ -1526,9 +1515,7 @@
 
     <!-- Rótulos dos três números do topo. MUITO curtos: ~14 caracteres. -->
     <string name="progresso_metrica_treinos">Treinos</string>
-    <string name="progresso_metrica_semana">Nesta semana</string>
     <!-- Dias seguidos treinando. -->
-    <string name="progresso_metrica_sequencia">Sequência</string>
     <!-- Cabeçalho do histórico. ~16 caracteres. -->
     <!-- Estado vazio. \n é a quebra de linha entre as duas frases. -->
     <string name="progresso_vazio">Nenhum treino registrado ainda.\nSeu histórico aparece aqui depois do primeiro treino.</string>
