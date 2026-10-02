@@ -5,6 +5,7 @@ import dev.rafael.server.features.stats.ProgressPolicy.SerieFeita
 import kotlinx.datetime.LocalDate
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.uuid.Uuid
@@ -181,4 +182,79 @@ class ProgressPolicyTest {
     fun `historico vazio nao compara nada`() {
         assertNull(ProgressPolicy.ultimoVsAnterior(emptyList()))
     }
+
+    // ---- semanas do programa (J.3) -----------------------------------------
+
+    private val inicio = LocalDate.parse("2026-08-05")   // uma QUARTA, de proposito
+
+    @Test
+    fun `semana 1 do programa comeca no started_at, nao na segunda-feira`() {
+        // O programa comecou numa quarta. Os 7 dias a partir dela sao a semana 1 INTEIRA —
+        // se a regua fosse a semana ISO, a semana 1 acabaria no domingo, com 5 dias.
+        assertEquals(1, ProgressPolicy.semanaDoPrograma(LocalDate.parse("2026-08-05"), inicio))
+        assertEquals(1, ProgressPolicy.semanaDoPrograma(LocalDate.parse("2026-08-11"), inicio))
+        assertEquals(2, ProgressPolicy.semanaDoPrograma(LocalDate.parse("2026-08-12"), inicio))
+    }
+
+    @Test
+    fun `sessao ANTERIOR ao programa cai em semana zero ou negativa, nao na semana 1`() {
+        // Sessao mais velha que o programa existe: o programa foi criado depois. Truncar em
+        // direcao a zero (o `/` do Kotlin) colocaria esse treino dentro da semana 1.
+        assertEquals(0, ProgressPolicy.semanaDoPrograma(LocalDate.parse("2026-08-04"), inicio))
+        assertEquals(0, ProgressPolicy.semanaDoPrograma(LocalDate.parse("2026-07-30"), inicio))
+        assertEquals(-1, ProgressPolicy.semanaDoPrograma(LocalDate.parse("2026-07-28"), inicio))
+    }
+
+    @Test
+    fun `semana 10 e a decima, contada de sete em sete`() {
+        // 9 semanas depois do inicio = 63 dias
+        assertEquals(10, ProgressPolicy.semanaDoPrograma(LocalDate.parse("2026-10-07"), inicio))
+    }
+
+    @Test
+    fun `a faixa devolve uma posicao por semana, inclusive as vazias`() {
+        val s = listOf(
+            serie("2026-08-05", 60.0),   // semana 1 — fora da faixa pedida
+            serie("2026-09-02", 50.0),   // semana 5
+        )
+        val faixa = ProgressPolicy.porSemanaDoPrograma(s, inicio, de = 4, ate = 7)
+
+        assertEquals(listOf(4, 5, 6, 7), faixa.map { it.semana })
+        assertEquals(listOf(0.0, 500.0, 0.0, 0.0), faixa.map { it.kg })
+    }
+
+    @Test
+    fun `faixa invertida e recusada em vez de devolver lista vazia`() {
+        // Lista vazia esconderia o erro de quem chamou; a tela mostraria "sem dado" e ninguem
+        // saberia que a faixa estava ao contrario.
+        assertFailsWith<IllegalArgumentException> {
+            ProgressPolicy.porSemanaDoPrograma(emptyList(), inicio, de = 7, ate = 4)
+        }
+    }
+
+    @Test
+    fun `naFaixaDoPrograma recorta UMA vez para todos os blocos usarem o mesmo corte`() {
+        val s = listOf(
+            serie("2026-08-05", 60.0),   // semana 1
+            serie("2026-09-02", 50.0),   // semana 5
+            serie("2026-09-30", 40.0),   // semana 9
+        )
+        val recortado = ProgressPolicy.naFaixaDoPrograma(s, inicio, de = 4, ate = 7)
+
+        assertEquals(1, recortado.size)
+        assertEquals(500.0, ProgressPolicy.tonelagem(recortado))
+    }
+
+    @Test
+    fun `evolucao no programa rotula o ponto pela semana, e pula a que nao teve o exercicio`() {
+        val s = listOf(
+            serie("2026-08-05", 60.0, reps = 8),    // semana 1
+            serie("2026-09-02", 65.0, reps = 8),    // semana 5 — pulou da 2 a 4
+        )
+        val pontos = ProgressPolicy.evolucaoNoPrograma(s, agachamento, inicio)
+
+        assertEquals(listOf(1, 5), pontos.map { it.semana })
+        assertTrue(pontos[0].e1rm < pontos[1].e1rm)
+    }
+
 }

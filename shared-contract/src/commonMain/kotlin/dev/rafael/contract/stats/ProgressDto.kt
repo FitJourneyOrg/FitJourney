@@ -42,11 +42,48 @@ data class ProgressDto(
 
     /** `true` = os tres blocos acima sao nulos por PLANO, nao por falta de dado. */
     val analysisLocked: Boolean = false,
+
+    // ---- filtro (J.3) ----
+    /**
+     * Ids dos programas que TEM sessao no historico — o que o filtro pode oferecer.
+     *
+     * So ids: o NOME do programa e derivado no cliente a partir de `daysPerWeek` + `split`
+     * (V48/ARCH #37), e mandar o nome daqui seria re-persistir texto traduzido. O cliente cruza
+     * esta lista com os programas que ja tem em cache.
+     */
+    val availablePrograms: List<String> = emptyList(),
+
+    /**
+     * Existe sessao fora de programa — `program_id` nulo **ou** apontando para programa apagado.
+     *
+     * Os dois casos viram o mesmo balde porque o segundo **nao tem como ser nomeado**: o programa
+     * sumiu, e o nome dele era derivado dele. Oferecer "Programa removido" como se fosse um item
+     * seria inventar identidade para algo que nao existe mais.
+     */
+    val hasUnassigned: Boolean = false,
+
+    /** Semanas disponiveis do programa filtrado — o teto do seletor de faixa. `null` em "todos". */
+    val programWeeks: Int? = null,
+
+    /** Faixa aplicada (1-based, inclusiva). `null` em "todos". */
+    val fromWeek: Int? = null,
+    val toWeek: Int? = null,
 )
 
-/** Carga total de uma semana. `weekStart` e sempre a segunda-feira (ISO). */
+/**
+ * Carga total de uma semana.
+ *
+ * ⚠️ **Duas reguas, e a resposta diz qual esta em uso.** Sem filtro de programa, `weekStart` e a
+ * segunda-feira ISO e `weekNumber` vem nulo. Com um programa escolhido, `weekNumber` e a semana
+ * DELE (1-based, contada em dias corridos a partir do `started_at`) e e esse o rotulo do eixo.
+ * Misturar as duas e o que faz "semana 10" nao significar nada.
+ */
 @Serializable
-data class WeeklyLoadDto(val weekStart: String, val kg: Double)
+data class WeeklyLoadDto(
+    val weekStart: String,
+    val kg: Double,
+    val weekNumber: Int? = null,
+)
 
 /**
  * Evolucao de UM exercicio em 1RM estimado (Epley).
@@ -64,7 +101,12 @@ data class ExerciseTrendDto(
 )
 
 @Serializable
-data class TrendPointDto(val weekStart: String, val estimated1rm: Double)
+data class TrendPointDto(
+    val weekStart: String,
+    val estimated1rm: Double,
+    /** Semana do programa, quando ha filtro. Mesma regra do [WeeklyLoadDto.weekNumber]. */
+    val weekNumber: Int? = null,
+)
 
 /**
  * Media semanal de SERIES por grupo. Series, nao quilos: carga nao e comparavel entre
