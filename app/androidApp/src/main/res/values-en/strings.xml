@@ -597,10 +597,6 @@
     <string name="comum_reps">reps</string>
     <string name="comum_kg">kg</string>
 
-    <plurals name="programa_treinos">
-        <item quantity="one">%1$d workout</item>
-        <item quantity="other">%1$d workouts</item>
-    </plurals>
     <plurals name="treino_exercicios">
         <item quantity="one">%1$d exercise</item>
         <item quantity="other">%1$d exercises</item>
@@ -612,13 +608,9 @@
     <string name="programa_lista_titulo">My programs</string>
     <string name="programa_lista_vazio">You don\'t have any workouts yet.</string>
     <string name="treino_ativo_badge">Active</string>
-    <string name="treino_ativo_secao_outros">Other workouts</string>
-    <string name="treino_ativo_secao_seus">Your workouts</string>
-    <string name="treino_ativo_ver_biblioteca">View library</string>
     <string name="programa_ativar_botao">Activate program</string>
     <string name="programa_ativar_confirmar_titulo">Activate this program?</string>
     <string name="programa_ativar_confirmar_corpo">%1$s becomes your featured program.</string>
-    <string name="programa_lista_semana">Week %1$d/%2$d</string>
     <string name="programa_lista_novo">New program</string>
     <string name="programa_lista_criar">Create</string>
     <string name="programa_lista_pendente">Pending</string>
@@ -760,9 +752,6 @@
     <!-- ⚠️ "Rest", NOT "Rest day": this is the timer between sets. See `programa_detalhe_descanso`. -->
     <string name="sessao_descanso">Rest</string>
     <string name="sessao_tempo">%1$d:%2$02d</string>
-    <string name="sessao_mais_30s">+30s</string>
-    <string name="sessao_pular">Skip</string>
-    <string name="sessao_alvo">target %1$d</string>
 
 
     <!-- ============================ Common (paywall and account) ============================ -->
@@ -953,8 +942,6 @@
     <!-- ============================ Progress ============================ -->
 
     <string name="progresso_metrica_treinos">Workouts</string>
-    <string name="progresso_metrica_semana">This week</string>
-    <string name="progresso_metrica_sequencia">Streak</string>
     <string name="progresso_vazio">No workouts logged yet.\nYour history shows up here after your first workout.</string>
     <plurals name="progresso_series">
         <item quantity="one">%1$d set</item>

@@ -159,7 +159,7 @@ private fun CartaoDeComparacao(c: dev.rafael.contract.stats.WorkoutComparisonDto
             )
             Spacer(Modifier.height(6.dp))
             Text(
-                comSinal(delta, "kg"),
+                comSinal(delta, stringResource(R.string.comum_kg)),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 color = corDoDelta(delta),
@@ -179,7 +179,7 @@ private fun CartaoDeComparacao(c: dev.rafael.contract.stats.WorkoutComparisonDto
                         maxLines = 1,
                     )
                     Text(
-                        comSinal(e.deltaKg, "kg"),
+                        comSinal(e.deltaKg, stringResource(R.string.comum_kg)),
                         style = MaterialTheme.typography.bodyMedium,
                         color = corDoDelta(e.deltaKg),
                     )
@@ -500,6 +500,13 @@ internal fun umaCasa(v: Double): String = String.format(Locale.getDefault(), "%.
 /**
  * O sinal e parte do numero, nao enfeite: "+335 kg" e "335 kg" dizem coisas diferentes quando o
  * assunto e variacao, e o `+` e o que diz que subiu sem precisar da cor.
+ * ⚠️ [unidade] vem de FORA, do `strings.xml`: o quilo e `R.string.comum_kg`. Escrever o literal
+ * aqui era texto de usuario escondido em Kotlin, a classe de defeito que o inventario da G.3
+ * existe para pegar. A chave ja existia e estava ORFA justamente por isso.
+ *
+ * O porcento e a UNICA excecao, e e deliberada: esse valor sozinho no catalogo tropecaria no
+ * invariante `todo placeholder e posicional` do `CatalogoDeStringsTest`, que leria o sinal solto
+ * como placeholder sem indice. Simbolo matematico fica no codigo; palavra, nao.
  */
 internal fun comSinal(v: Double, unidade: String): String {
     val sinal = if (v > 0) "+" else if (v < 0) "-" else ""
