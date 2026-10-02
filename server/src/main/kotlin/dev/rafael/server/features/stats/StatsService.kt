@@ -98,13 +98,8 @@ class StatsService(
                         // Mesma formula do /me/progress: as duas chamam ProgressPolicy, entao
                         // nao ha dois calculos a divergir (ver KDoc do AchievementService).
                         totalKg = historico.sumOf { sessao ->
-                            sessao.sets.sumOf { set ->
-                                val kg = set.weightKg
-                                if (kg != null && ProgressPolicy.elegivel(set.done, kg)) {
-                                    ProgressPolicy.cargaDaSerie(set.repsDone, kg)
-                                } else {
-                                    0.0
-                                }
+                            sessao.sets.sumOf {
+                                ProgressPolicy.cargaDeSerieCrua(it.done, it.repsDone, it.weightKg)
                             }
                         },
                     )

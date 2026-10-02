@@ -4,6 +4,9 @@ import dev.rafael.contract.checkin.CheckInStatus
 import dev.rafael.server.features.checkin.db.CheckInsTable
 import dev.rafael.server.features.group.db.GroupMembersTable
 import dev.rafael.server.features.group.db.GroupsTable
+import dev.rafael.server.features.exercise.db.ExercisesTable
+import dev.rafael.server.features.session.db.SessionSetLogsTable
+import dev.rafael.server.features.session.db.WorkoutSessionsTable
 import dev.rafael.server.features.user.db.UsersTable
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
@@ -129,4 +132,74 @@ object Semear {
         }
         return id
     }
+
+    /**
+     * Um exercicio no catalogo, com id PROPRIO.
+     *
+     * ⚠️ `exercises` NAO entra no TRUNCATE do [BancoDeTeste] - o catalogo das migrations tem de
+     * sobreviver. Entao cada linha semeada aqui fica no banco para sempre, e por isso o id e
+     * aleatorio: dois testes nunca disputam a mesma linha.
+     *
+     * [musculos] `null` grava a coluna como NULL, que e o caso que o `paraAnalise` precisa
+     * distinguir de "lista vazia" - e que existe de verdade no catalogo real.
+     */
+    fun exercicio(nome: String, musculos: List<String>?): Uuid {
+        val id = Uuid.random()
+        transaction {
+            ExercisesTable.insert {
+                it[ExercisesTable.id] = id
+                it[name] = nome
+                it[category] = "STRENGTH"
+                it[videoRef] = "teste/$id.webm"
+                it[thumbRef] = "teste/$id.webp"
+                it[isBase] = true
+                it[primaryMuscles] = musculos
+            }
+        }
+        return id
+    }
+
+    /**
+     * Uma sessao executada com suas series. [series] e (exercicio, reps, kg ou null, feita).
+     *
+     * `kg` nulo e peso corporal (V20) - o caso que a analise de progressao exclui, e que so
+     * contra Postgres prova que a coluna nullable volta nula do driver.
+     */
+    fun sessao(
+        usuario: Uuid,
+        treino: String,
+        dia: LocalDate,
+        series: List<Quadrupla>,
+    ): Uuid {
+        val id = Uuid.random()
+        val fim = LocalDateTime(dia.year, dia.month, dia.day, 19, 0)
+        transaction {
+            WorkoutSessionsTable.insert {
+                it[WorkoutSessionsTable.id] = id
+                it[userId] = usuario
+                it[workoutName] = treino
+                it[startedAt] = LocalDateTime(dia.year, dia.month, dia.day, 18, 0)
+                it[finishedAt] = fim
+                it[createdAt] = fim
+            }
+            series.forEachIndexed { indice, s ->
+                SessionSetLogsTable.insert {
+                    it[SessionSetLogsTable.id] = Uuid.random()
+                    it[sessionId] = id
+                    it[exerciseId] = s.exercicio
+                    it[orderIndex] = indice
+                    it[setIndex] = indice
+                    it[targetReps] = s.reps
+                    it[repsDone] = s.reps
+                    it[weightKg] = s.kg
+                    it[done] = s.feita
+                }
+            }
+        }
+        return id
+    }
+
+    /** Uma serie a semear. Nomeada para o teste nao virar uma fileira de literais sem rotulo. */
+    data class Quadrupla(val exercicio: Uuid, val reps: Int, val kg: Double?, val feita: Boolean = true)
+
 }
