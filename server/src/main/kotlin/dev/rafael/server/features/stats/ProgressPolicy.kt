@@ -54,6 +54,17 @@ object ProgressPolicy {
 
     fun tonelagem(series: List<SerieFeita>): Double = series.sumOf { cargaDaSerie(it) }
 
+    /**
+     * Elegibilidade + formula numa chamada so, para quem tem o SetLog cru e nao monta
+     * [SerieFeita]: hoje o `StatsService`, que calcula o `totalKg` do `/me/stats`.
+     *
+     * Existe porque "mesma formula" nao basta: se um lado chamasse [elegivel] e o outro
+     * repetisse a condicao, a conquista de carga e a tela de progresso poderiam discordar sobre
+     * uma serie de 0 kg. Serie nao elegivel vale 0.0, nunca e descartada pelo chamador.
+     */
+    fun cargaDeSerieCrua(done: Boolean, reps: Int, weightKg: Double?): Double =
+        if (elegivel(done, weightKg) && weightKg != null) cargaDaSerie(reps, weightKg) else 0.0
+
     // ---- semanas -----------------------------------------------------------
 
     private fun isoDia(d: LocalDate): Int = when (d.dayOfWeek) {
