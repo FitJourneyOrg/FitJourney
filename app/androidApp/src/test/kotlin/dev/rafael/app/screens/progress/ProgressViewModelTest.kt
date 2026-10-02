@@ -1,7 +1,9 @@
 package dev.rafael.app.screens.progress
 
 import dev.rafael.app.screens.home.FakeHistorico
+import dev.rafael.app.screens.home.FakeProgresso
 import dev.rafael.app.screens.home.FakeStats
+import dev.rafael.contract.stats.ProgressDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -14,6 +16,7 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertTrue
 
 /**
  * G.6 -- "arraste para atualizar" na tela de Progresso. Reusa os fakes da Home
@@ -46,7 +49,8 @@ class ProgressViewModelTest {
     fun `sincronizar sobe as sessoes pendentes antes de pedir as metricas`() = runTest(dispatcher) {
         val historico = FakeHistorico()
         val stats = FakeStats()
-        val vm = ProgressViewModel(historico, stats)
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(historico, stats, analise)
         advanceUntilIdle()   // consome o sync automático do init
 
         vm.sincronizar()   // o gesto de arraste chama isto
@@ -54,6 +58,11 @@ class ProgressViewModelTest {
 
         assertEquals(2, historico.flushes, "parou de subir o que foi feito offline")
         assertEquals(2, stats.sincronizacoes)
+        assertEquals(2, analise.sincronizacoes, "a analise tambem sai das sessoes - tem de ser repedida")
+        assertEquals(
+            2, analise.forcadas,
+            "depois do flush o TTL de 2 min nao vale: SABEMOS que o numero mudou",
+        )
         assertEquals(
             0, historico.sincronizacoes,
             "o Progresso não mostra mais o histórico -- baixá-lo aqui é requisição sem tela",
@@ -62,7 +71,7 @@ class ProgressViewModelTest {
 
     @Test
     fun `sincronizando volta a false ao terminar (indicador nao fica preso girando)`() = runTest(dispatcher) {
-        val vm = ProgressViewModel(FakeHistorico(), FakeStats())
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), FakeProgresso())
         advanceUntilIdle()
 
         assertFalse(vm.state.value.sincronizando)
@@ -72,4 +81,44 @@ class ProgressViewModelTest {
 
         assertFalse(vm.state.value.sincronizando)
     }
+
+    /**
+     * ⭐ O portao vem do SERVIDOR, nunca do nulo.
+     *
+     * Os tres blocos pagos tambem vem nulos para quem so treina peso corporal. Se a tela
+     * deduzisse "trancado" do nulo, mostraria paywall a quem nao conseguiria usar a analise nem
+     * pagando — e esconderia a explicacao que ela precisa ler.
+     */
+    @Test
+    fun `trancado sai do analysisLocked, e nao da ausencia dos blocos`() = runTest(dispatcher) {
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise)
+
+        analise.valores.value = ProgressDto(totalKg = 0.0, totalSessions = 3, analysisLocked = true)
+        advanceUntilIdle()
+        assertTrue(vm.state.value.trancado)
+
+        // mesmos blocos nulos, mas premium: e estado vazio, nao paywall
+        analise.valores.value = ProgressDto(totalKg = 0.0, totalSessions = 3, analysisLocked = false)
+        advanceUntilIdle()
+        assertFalse(vm.state.value.trancado)
+        assertTrue(vm.state.value.semCarga, "sem sinceDate nao ha o que desenhar")
+    }
+
+    @Test
+    fun `quem tem carga nao cai no estado vazio`() = runTest(dispatcher) {
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise)
+
+        analise.valores.value = ProgressDto(
+            totalKg = 3600.0,
+            totalSessions = 2,
+            sinceDate = "2026-09-21",
+        )
+        advanceUntilIdle()
+
+        assertFalse(vm.state.value.semCarga)
+        assertFalse(vm.state.value.trancado)
+    }
+
 }

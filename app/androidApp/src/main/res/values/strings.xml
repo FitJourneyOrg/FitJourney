@@ -1546,6 +1546,52 @@
     <string name="progresso_aguardando_sync">Aguardando sincronizar</string>
     <string name="progresso_pendente">pendente</string>
 
+    <!--
+      Análise de progressão (J.2). A unidade é a TONELADA: o servidor manda quilos e a tela
+      divide, porque "175,8 t" se le e "175876 kg" nao. "movimentadas" concorda com toneladas.
+    -->
+    <string name="progresso_total_rotulo">movimentadas</string>
+    <string name="progresso_unidade_tonelada">t</string>
+    <!-- Data da sessão com carga mais antiga. %1$s já vem formatado. -->
+    <string name="progresso_desde">Desde %1$s/%2$s</string>
+
+    <!-- Comparação com a sessão anterior DO MESMO treino. %1$s é o nome do treino. -->
+    <string name="progresso_comparacao_titulo">%1$s, contra a vez anterior</string>
+    <string name="progresso_comparacao_variacao">%1$s de carga no mesmo treino</string>
+
+    <!-- Titulos dos tres blocos pagos. -->
+    <string name="progresso_carga_semanal">Carga por semana</string>
+    <!-- Eixo do gráfico semanal: só as pontas. Oito datas não cabem na largura de um celular. -->
+    <string name="progresso_dia_mes">%1$s/%2$s</string>
+    <string name="progresso_semana_atual">esta semana</string>
+    <!-- Dica de descoberta: sem ela ninguém adivinha que a barra responde ao toque. -->
+    <string name="progresso_toque_semana">toque numa barra para ver a semana</string>
+    <string name="progresso_evolucao">Carga estimada por exercício</string>
+    <string name="progresso_volume">Séries por grupo, por semana</string>
+    <!--
+      Rodapé do gráfico de volume: explica por que ele conta SÉRIES e não quilos. Sem isso a
+      pessoa compara com o bloco de cima e acha que um dos dois está errado.
+    -->
+    <string name="progresso_volume_nota">Séries, e não quilos: carga não se compara entre máquina e halter.</string>
+    <!-- Barra dos exercícios sem grupo muscular no catálogo. -->
+    <string name="progresso_nao_classificado">Sem grupo</string>
+
+    <!--
+      Bloco trancado. Aparece quando o servidor diz analysisLocked = true, nunca porque os dados
+      vieram nulos: nulo também acontece com quem ainda não treinou com carga, e mostrar paywall
+      a essa pessoa seria cobrar por algo que ela não pode usar ainda.
+    -->
+    <string name="progresso_bloqueado_titulo">Veja como sua carga evoluiu</string>
+    <string name="progresso_bloqueado_descricao">Oito semanas de histórico, evolução por exercício e equilíbrio entre grupos musculares.</string>
+
+    <!--
+      Estado vazio de quem treina só com peso corporal. ⚠️ NÃO é erro e NÃO é paywall: a frase
+      precisa deixar claro que o resto da gamificação continua valendo, senão a pessoa conclui
+      que o app ignora o treino dela.
+    -->
+    <string name="progresso_sem_carga_titulo">Seus treinos ainda não registram carga</string>
+    <string name="progresso_sem_carga_descricao">A análise usa o peso das séries. Sequência, XP e conquistas continuam contando normalmente.</string>
+
 
     <!-- ============================ Comum (acrescentado na área Social e resto) ============================ -->
 
