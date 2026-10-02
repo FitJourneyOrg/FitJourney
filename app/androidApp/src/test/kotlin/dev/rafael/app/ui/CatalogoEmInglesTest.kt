@@ -204,7 +204,7 @@ class CatalogoEmInglesTest {
             "exercicio_execucao_unilateral", "grupo_detalhe_aba_posts", "grupo_detalhe_aba_ranking",
             "grupo_detalhe_admin", "grupo_form_data_botao", "home_treino_minutos", "home_xp_de_hoje",
             "login_titulo", "moderacao_motivo_item", "paywall_coluna_free", "perfil_publico_xp",
-            "programa_detalhe_dia_atual", "sessao_mais_30s", "sessao_tempo",
+            "programa_detalhe_dia_atual", "sessao_tempo",
             // Fração "x/y": era `quiz_progresso` e virou comum quando a execução do treino passou
             // a mostrar "3/8" com o mesmo formato. Número e barra não se traduzem.
             "comum_fracao",
