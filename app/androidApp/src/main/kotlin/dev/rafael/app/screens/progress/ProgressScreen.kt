@@ -464,7 +464,9 @@ private fun BlocosDaAnalise(analise: ProgressDto, trancado: Boolean, onOpenPaywa
         return
     }
     analise.strengthTrend?.takeIf { it.isNotEmpty() }?.let {
-        BlocoDeEvolucao(it)
+        // A regua vem do `weeklyLoad`: ele E a lista de semanas da janela, em ordem. Sem ela a
+        // linha se espalha pela largura do cartao independente do periodo (ver `posicaoNaRegua`).
+        BlocoDeEvolucao(it, analise.weeklyLoad.orEmpty().map { s -> s.weekStart })
         Spacer(Modifier.height(10.dp))
     }
     analise.setsByMuscle?.takeIf { it.byMuscle.isNotEmpty() }?.let {
@@ -637,6 +639,21 @@ private fun BlocoDeCargaSemanal(semanas: List<WeeklyLoadDto>) {
 }
 
 /**
+ * Onde a semana cai no eixo X, de 0 a 1, dada a regua de semanas da janela.
+ *
+ * Pura e `internal` de proposito: e a conta que a J.4.3b veio consertar, e conta dentro de
+ * `Composable` nao tem teste. Devolve nulo para semana fora da regua — ver a chamada.
+ *
+ * Regua de um elemento so devolve 0: com uma semana nao ha eixo, e dividir por zero ali daria
+ * `NaN`, que o Canvas desenha como nada e vira "o grafico sumiu" sem erro nenhum.
+ */
+internal fun posicaoNaRegua(semana: String, regua: List<String>): Float? {
+    val i = regua.indexOf(semana)
+    if (i < 0) return null
+    return if (regua.size > 1) i.toFloat() / (regua.size - 1) else 0f
+}
+
+/**
  * Como a semana se chama no eixo.
  *
  * Num recorte de programa a data nao e a referencia que a pessoa usa — ela pensa "semana 10 do
@@ -665,7 +682,7 @@ private fun diaMes(iso: String): String {
 }
 
 @Composable
-private fun BlocoDeEvolucao(trend: List<ExerciseTrendDto>) {
+private fun BlocoDeEvolucao(trend: List<ExerciseTrendDto>, regua: List<String>) {
     // Escala COMPARTILHADA pelas tres linhas: cada uma na sua escala faria subidas de tamanhos
     // diferentes parecerem iguais — a mentira mais comum em grafico de linha.
     val todos = trend.flatMap { it.points.map { p -> p.estimated1rm } }
@@ -677,7 +694,19 @@ private fun BlocoDeEvolucao(trend: List<ExerciseTrendDto>) {
     // de base como se a carga fosse zero. Linha sem variacao mora no MEIO do grafico.
     val semVariacao = amplitude <= 0.0
 
-    val semanas = trend.flatMap { it.points.map { p -> p.weekStart } }.distinct().sorted()
+    // ⚠️ A regua do eixo X e a JANELA, nao os pontos que existem.
+    //
+    // Antes o x saia do indice do ponto entre os pontos presentes: oito pontos viravam
+    // 0, 1/7 … 1 e a linha preenchia a largura INDEPENDENTE da janela. Com 8 semanas isso era
+    // inofensivo, porque dado e janela coincidiam; com 52, a linha desenhava um ano de
+    // progressao onde havia dois meses de dado — e grafico que mente continua convincente.
+    //
+    // Agora a linha comeca onde o dado comeca e os buracos aparecem como buracos. O `ifEmpty`
+    // cobre o caso de a carga por semana nao ter vindo: sem regua, volta ao comportamento
+    // antigo, que e ruim mas e melhor do que nao desenhar.
+    val semanas = regua.ifEmpty {
+        trend.flatMap { it.points.map { p -> p.weekStart } }.distinct().sorted()
+    }
     val cores = listOf(Chart1, Chart2, Chart3)
 
     CartaoDeGrafico(stringResource(R.string.progresso_evolucao)) {
@@ -696,12 +725,12 @@ private fun BlocoDeEvolucao(trend: List<ExerciseTrendDto>) {
                     LinhaDoGrafico(
                         nome = ex.name,
                         cor = cores[i % cores.size],
-                        pontos = ex.points.map { p ->
-                            val x = if (semanas.size > 1) {
-                                semanas.indexOf(p.weekStart).toFloat() / (semanas.size - 1)
-                            } else {
-                                0f
-                            }
+                        // `mapNotNull`: ponto fora da regua e DESCARTADO, nao encaixado na
+                        // ponta. Por construcao nao acontece (as duas listas saem do mesmo
+                        // recorte, com a mesma conta de semana), e e justamente por isso que
+                        // encaixar seria pior: esconderia a divergencia em vez de some-la.
+                        pontos = ex.points.mapNotNull { p ->
+                            val x = posicaoNaRegua(p.weekStart, semanas) ?: return@mapNotNull null
                             val y = if (semVariacao) 0.5 else (p.estimated1rm - minimo) / amplitude
                             x to y.toFloat()
                         },
