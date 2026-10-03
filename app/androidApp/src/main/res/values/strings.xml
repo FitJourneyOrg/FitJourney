@@ -1570,6 +1570,13 @@
     <string name="progresso_semana_n">Semana %1$d</string>
     <string name="progresso_semana_atual">esta semana</string>
     <!-- Dica de descoberta: sem ela ninguém adivinha que a barra responde ao toque. -->
+    <!--
+      Chips da janela de calendario. %1$d e o numero de semanas (8, 26, 52 — ver
+      JanelasDeProgresso no contrato). "semanas" no plural sempre: nao existe janela de 1.
+    -->
+    <string name="progresso_janela">%1$d semanas</string>
+    <!-- Dica quando o grafico rola: as pontas do eixo deixam de localizar as barras. -->
+    <string name="progresso_arraste_semana">arraste e toque para ver cada semana</string>
     <string name="progresso_toque_semana">toque numa barra para ver a semana</string>
     <string name="progresso_evolucao">Carga estimada por exercício</string>
     <string name="progresso_volume">Séries por grupo, por semana</string>
@@ -1586,8 +1593,8 @@
       vieram nulos: nulo também acontece com quem ainda não treinou com carga, e mostrar paywall
       a essa pessoa seria cobrar por algo que ela não pode usar ainda.
     -->
-    <string name="progresso_bloqueado_titulo">Veja como sua carga evoluiu</string>
-    <string name="progresso_bloqueado_descricao">Oito semanas de histórico, evolução por exercício e equilíbrio entre grupos musculares.</string>
+    <string name="progresso_bloqueado_titulo">Veja um ano de progresso</string>
+    <string name="progresso_bloqueado_descricao">Até 52 semanas de histórico, evolução por exercício e equilíbrio entre grupos musculares.</string>
 
     <!--
       Estado vazio de quem treina só com peso corporal. ⚠️ NÃO é erro e NÃO é paywall: a frase

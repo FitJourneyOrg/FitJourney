@@ -141,7 +141,7 @@ class ProgressViewModelTest {
         advanceUntilIdle()
 
         val doPrograma = FiltroDeProgresso.DoPrograma("prog-x")
-        analise.fluxo(FiltroDeProgresso.Todos).value = ProgressDto(totalKg = 999.0, totalSessions = 9)
+        analise.fluxo(FiltroDeProgresso.Todos()).value = ProgressDto(totalKg = 999.0, totalSessions = 9)
         analise.fluxo(doPrograma).value = ProgressDto(totalKg = 111.0, totalSessions = 1)
 
         vm.selecionar(doPrograma)
@@ -191,6 +191,73 @@ class ProgressViewModelTest {
         )
     }
 
+    // ---- janela de calendario (J.4.3) --------------------------------------
+
+    @Test
+    fun `selecionarJanela troca a janela mantendo o recorte`() = runTest(dispatcher) {
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
+        advanceUntilIdle()
+
+        vm.selecionar(FiltroDeProgresso.Avulsos())
+        advanceUntilIdle()
+        vm.selecionarJanela(26)
+        advanceUntilIdle()
+
+        assertEquals(FiltroDeProgresso.Avulsos(26), vm.state.value.filtro, "trocou de recorte junto")
+        assertTrue(FiltroDeProgresso.Avulsos(26) in analise.sincronizados)
+    }
+
+    /**
+     * ⭐ Cada janela e uma CHAVE de cache diferente.
+     *
+     * 8 e 26 semanas do mesmo recorte sao duas respostas, e guardar as duas sob a mesma chave
+     * mostraria o grafico errado ate o TTL vencer — o defeito mais dificil de notar, porque o
+     * numero esta certo, so e de outro periodo.
+     */
+    @Test
+    fun `cada janela observa o proprio recorte no cache`() = runTest(dispatcher) {
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
+        analise.fluxo(FiltroDeProgresso.Todos(8)).value =
+            ProgressDto(totalKg = 10.0, totalSessions = 1, weeksWindow = 8)
+        analise.fluxo(FiltroDeProgresso.Todos(26)).value =
+            ProgressDto(totalKg = 90.0, totalSessions = 9, weeksWindow = 26)
+        advanceUntilIdle()
+        assertEquals(10.0, vm.state.value.analise?.totalKg)
+
+        vm.selecionarJanela(26)
+        advanceUntilIdle()
+
+        assertEquals(90.0, vm.state.value.analise?.totalKg, "mostrou a janela anterior")
+        assertEquals(26, vm.state.value.estrutura.janela, "o chip marcaria 8 com o eixo em 26")
+    }
+
+    /**
+     * Caminho de falha: no recorte de programa a FAIXA e a janela.
+     *
+     * O controle nem aparece lá, mas o ViewModel nao pode depender disso: aceitar a chamada
+     * criaria um recorte com duas janelas concorrentes — e o servidor devolve `weeksWindow` nulo
+     * justamente para dizer que ali quem manda e a faixa.
+     */
+    @Test
+    fun `selecionarJanela e no-op no recorte de programa`() = runTest(dispatcher) {
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
+        advanceUntilIdle()
+
+        val programa = FiltroDeProgresso.DoPrograma("prog-x", de = 2, ate = 5)
+        vm.selecionar(programa)
+        advanceUntilIdle()
+        val antes = analise.sincronizacoes
+
+        vm.selecionarJanela(52)
+        advanceUntilIdle()
+
+        assertEquals(programa, vm.state.value.filtro, "a faixa foi trocada por uma janela")
+        assertEquals(antes, analise.sincronizacoes, "janela sem referente virou requisicao")
+    }
+
     // ---- faixa de semanas (J.3.3b) -----------------------------------------
 
     /**
@@ -234,12 +301,12 @@ class ProgressViewModelTest {
         val antes = analise.sincronizacoes
 
         vm.selecionarFaixa(10, 14)
-        vm.selecionar(FiltroDeProgresso.Avulsos)
+        vm.selecionar(FiltroDeProgresso.Avulsos())
         advanceUntilIdle()
         vm.selecionarFaixa(2, 3)
         advanceUntilIdle()
 
-        assertEquals(FiltroDeProgresso.Avulsos, vm.state.value.filtro)
+        assertEquals(FiltroDeProgresso.Avulsos(), vm.state.value.filtro)
         assertEquals(antes + 1, analise.sincronizacoes, "faixa sem programa virou requisicao")
     }
 
@@ -255,7 +322,7 @@ class ProgressViewModelTest {
     fun `a estrutura do filtro sobrevive ao recorte que ainda nao chegou`() = runTest(dispatcher) {
         val analise = FakeProgresso()
         val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
-        analise.fluxo(FiltroDeProgresso.Todos).value = ProgressDto(
+        analise.fluxo(FiltroDeProgresso.Todos()).value = ProgressDto(
             totalKg = 10.0,
             totalSessions = 1,
             sinceDate = "2026-09-21",

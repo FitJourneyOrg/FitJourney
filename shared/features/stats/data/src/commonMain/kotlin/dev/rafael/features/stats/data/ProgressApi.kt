@@ -26,6 +26,7 @@ class ProgressApi(private val client: HttpClient) {
                 parameter("programId", filtro.parametro)
                 parameter("de", filtro.de)
                 parameter("ate", filtro.ate)
+                parameter("semanas", filtro.semanas)
             }.body()
         }
 }

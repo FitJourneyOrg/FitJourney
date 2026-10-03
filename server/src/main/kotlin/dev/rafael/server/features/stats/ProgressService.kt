@@ -3,6 +3,7 @@ package dev.rafael.server.features.stats
 import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.stats.ExerciseDeltaDto
 import dev.rafael.contract.stats.ExerciseSummaryDto
+import dev.rafael.contract.stats.JanelasDeProgresso
 import dev.rafael.contract.stats.ExerciseTrendDto
 import dev.rafael.contract.stats.MuscleVolumeDto
 import dev.rafael.contract.stats.ProgressDto
@@ -82,14 +83,11 @@ class ProgressService(
     }
 
     companion object {
-        /** Oito semanas cobrem um mesociclo inteiro com deload — e o que a tela abre. */
-        const val JANELA_PADRAO = 8
-
-        /** Teto do plano free. O que se paga e a profundidade, nao o grafico. */
-        const val JANELA_FREE = 8
-
-        /** As janelas oferecidas: 2 meses, 6 meses, 1 ano. Qualquer outro valor cai no padrao. */
-        val JANELAS = listOf(8, 26, 52)
+        // Vem do CONTRATO: o cliente desenha um chip por janela oferecida, e as duas listas
+        // divergiriam na primeira vez que alguem acrescentasse uma.
+        const val JANELA_PADRAO = JanelasDeProgresso.PADRAO
+        const val JANELA_FREE = JanelasDeProgresso.FREE
+        val JANELAS = JanelasDeProgresso.OFERECIDAS
 
         /** Linhas no grafico de evolucao. Mais que tres vira emaranhado em tela de celular. */
         const val EXERCICIOS_NO_GRAFICO = 3

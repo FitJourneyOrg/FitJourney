@@ -26,6 +26,24 @@ import kotlinx.serialization.Serializable
  * no outro sentido ao NAO mandar premium para o paywall. Com a flag, o cliente escolhe entre
  * paywall e estado vazio.
  */
+/**
+ * As janelas de calendario oferecidas na analise — CONTRATO, nao detalhe de cada lado.
+ *
+ * Servidor e cliente precisam concordar sobre quais existem: o servidor encaixa o que vem fora
+ * da lista, o cliente desenha um chip por item. Escrita duas vezes, a lista divergiria na
+ * primeira vez que alguem acrescentasse uma janela — e o sintoma seria um chip que nao filtra.
+ */
+object JanelasDeProgresso {
+    /** O que a tela abre. Oito semanas cobrem um mesociclo inteiro com deload. */
+    const val PADRAO = 8
+
+    /** Teto do plano free. O que se paga e a PROFUNDIDADE, nao o grafico. */
+    const val FREE = 8
+
+    /** 2 meses, 6 meses, 1 ano. */
+    val OFERECIDAS = listOf(8, 26, 52)
+}
+
 @Serializable
 data class ProgressDto(
     // ---- sempre visivel ----
