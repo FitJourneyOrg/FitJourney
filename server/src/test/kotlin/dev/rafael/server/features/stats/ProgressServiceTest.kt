@@ -39,6 +39,9 @@ class ProgressServiceTest {
 
     private val agachamento = Uuid.parse("00000001-0000-0000-0000-000000000000")
     private val prancha = Uuid.parse("00000002-0000-0000-0000-000000000000")
+    private val supino = Uuid.parse("00000003-0000-0000-0000-000000000000")
+    private val remada = Uuid.parse("00000004-0000-0000-0000-000000000000")
+    private val rosca = Uuid.parse("00000005-0000-0000-0000-000000000000")
 
     /** 2026-10-01, uma quinta. */
     private val relogio: Clock = object : Clock {
@@ -109,6 +112,9 @@ class ProgressServiceTest {
     private val catalogo = mapOf(
         agachamento to ExercicioParaAnalise("Agachamento Livre com Barra", listOf(MuscleGroup.LEGS)),
         prancha to ExercicioParaAnalise("Prancha Isométrica", emptyList()),
+        supino to ExercicioParaAnalise("Supino Reto com Barra", listOf(MuscleGroup.CHEST)),
+        remada to ExercicioParaAnalise("Remada Curvada", listOf(MuscleGroup.BACK)),
+        rosca to ExercicioParaAnalise("Rosca Direta", listOf(MuscleGroup.BICEPS)),
     )
 
     /** Programas que o usuario AINDA tem. O que nao esta aqui conta como apagado (J.3). */
@@ -307,6 +313,118 @@ class ProgressServiceTest {
 
         assertNull(dto.weeksWindow, "duas janelas concorrentes no mesmo recorte")
         assertEquals(1, dto.fromWeek)
+    }
+
+    // ---- lista de exercicios e selecao das linhas (J.4.2) ------------------
+
+    /** Agachamento 1200 kg, supino 500, remada 300 — ordem de relevancia garantida. */
+    private val quatroExercicios = listOf(
+        sessaoEm(
+            "2026-09-28", "Full body",
+            listOf(
+                serie(agachamento, 60.0, ordem = 0),
+                serie(agachamento, 60.0, ordem = 1),
+                serie(supino, 50.0, ordem = 2),
+                serie(remada, 30.0, ordem = 3),
+                serie(rosca, 10.0, ordem = 4),
+            ),
+        ),
+    )
+
+    @Test
+    fun `a lista traz TODOS os exercicios da janela, em ordem de relevancia`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = quatroExercicios)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO))
+
+        assertEquals(
+            listOf(agachamento, supino, remada, rosca).map { it.toString() },
+            dto.exerciseSummary?.map { it.exerciseId },
+        )
+        assertEquals(3, dto.strengthTrend?.size, "o grafico continua com tres linhas")
+        assertEquals("Supino Reto com Barra", dto.exerciseSummary?.get(1)?.name, "nome da lista nao veio")
+        assertEquals(2, dto.exerciseSummary?.first()?.sets, "a contagem de series e por serie, nao por sessao")
+    }
+
+    /** O portao: a lista responde a mesma pergunta do grafico de 1RM, entao e paga junto. */
+    @Test
+    fun `free nao recebe a lista de exercicios`() = runBlocking {
+        val (s, _) = servico(premium = false, historico = quatroExercicios)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO))
+
+        assertNull(dto.exerciseSummary)
+        assertNull(dto.strengthTrend)
+    }
+
+    @Test
+    fun `a escolha da pessoa vence o padrao das tres linhas`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = quatroExercicios)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, exercicios = listOf(rosca)))
+
+        assertEquals(listOf(rosca.toString()), dto.strengthTrend?.map { it.exerciseId })
+        assertEquals(4, dto.exerciseSummary?.size, "a lista nao muda com a selecao")
+    }
+
+    @Test
+    fun `escolher mais de tres desenha so os tres primeiros`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = quatroExercicios)
+
+        val dto = ok(
+            s.forUser("fb", null, Idioma.PADRAO, exercicios = listOf(rosca, remada, supino, agachamento)),
+        )
+
+        assertEquals(
+            listOf(rosca, remada, supino).map { it.toString() },
+            dto.strengthTrend?.map { it.exerciseId },
+            "o limite de tres e do SERVIDOR tambem: cliente nao e autoridade",
+        )
+    }
+
+    /**
+     * Caminho de falha da selecao: id que nao esta na janela e descartado, nao recusado.
+     *
+     * Ele nao tem ponto nenhum para plotar, e linha vazia e pior que linha ausente. Diferente do
+     * `programId`, que vira 400 — esse muda QUAL dado responde.
+     */
+    @Test
+    fun `id fora da janela e descartado e o grafico cai no padrao`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = quatroExercicios)
+        val nuncaTreinado = Uuid.parse("000000ff-0000-0000-0000-000000000000")
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, exercicios = listOf(nuncaTreinado)))
+
+        assertEquals(
+            listOf(agachamento, supino, remada).map { it.toString() },
+            dto.strengthTrend?.map { it.exerciseId },
+            "selecao vazia depois do descarte tinha de cair no padrao, nao ficar sem grafico",
+        )
+    }
+
+    /**
+     * ⭐ `current1rm` e da ULTIMA semana em que o exercicio apareceu, nao a media do periodo.
+     *
+     * A pergunta da lista e "onde estou hoje". Media de dez semanas responde outra, e responderia
+     * para baixo justamente para quem esta progredindo.
+     */
+    @Test
+    fun `current1rm vem da ultima semana, e a variacao do primeiro ao ultimo ponto`() = runBlocking {
+        val h = listOf(
+            sessaoEm("2026-08-24", "Inferior A", listOf(serie(agachamento, 50.0))),
+            sessaoEm("2026-09-28", "Inferior A", listOf(serie(agachamento, 60.0))),
+        )
+        val (s, _) = servico(premium = true, historico = h)
+
+        val linha = ok(s.forUser("fb", null, Idioma.PADRAO)).exerciseSummary?.first()
+
+        // ⚠️ TOLERANCIA, nao igualdade. Epley divide por 30 e a variacao divide de novo: a
+        // resposta honesta para +20% e 20.000000000000018. Igualdade exata aqui falharia por
+        // motivo nenhum — e seria o TESTE errado, nao a conta. (Foi o que aconteceu: este
+        // assert quebrou na primeira execucao.)
+        assertEquals(60.0 * 4 / 3, linha?.current1rm ?: 0.0, 1e-9)
+        assertEquals(2, linha?.weeks)
+        assertEquals(20.0, linha?.changePercent ?: 0.0, 1e-9, "de 50 para 60 em 1RM estimado e +20%")
     }
 
     // ---- calistenia --------------------------------------------------------

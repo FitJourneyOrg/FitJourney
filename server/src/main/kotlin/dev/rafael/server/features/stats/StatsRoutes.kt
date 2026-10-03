@@ -49,8 +49,9 @@ fun Route.statsRoutes(
             val p = call.principal<FirebaseUser>()!!
             when (val f = call.filtroPedido()) {
                 is AppResult.Failure -> call.respondResult(f)
-                is AppResult.Success ->
-                    call.respondResult(progress.forUser(p.uid, p.email, call.idiomaPedido(), f.value))
+                is AppResult.Success -> call.respondResult(
+                    progress.forUser(p.uid, p.email, call.idiomaPedido(), f.value, call.exerciciosPedidos()),
+                )
             }
         }
     }
@@ -58,6 +59,21 @@ fun Route.statsRoutes(
 
 /** O valor de `?programId=` que pede as sessoes FORA de programa. */
 private const val AVULSOS = "avulsos"
+
+/**
+ * `?exercicios=uuid,uuid` — quais ganham linha no grafico de 1RM.
+ *
+ * ⚠️ Id malformado e DESCARTADO, nao 400 — ao contrario do `programId`. A regra e a mesma dos
+ * dois lados: `programId` muda QUAL dado responde, entao id errado ali e erro de verdade; a
+ * selecao so muda o que e desenhado, e o `strengthTrend` da resposta ja diz quais entraram.
+ * Recusar a requisicao inteira por um id ruim deixaria a tela sem grafico nenhum.
+ */
+private fun ApplicationCall.exerciciosPedidos(): List<Uuid> =
+    request.queryParameters["exercicios"]
+        ?.split(',')
+        ?.mapNotNull { runCatching { Uuid.parse(it.trim()) }.getOrNull() }
+        ?.distinct()
+        .orEmpty()
 
 /**
  * O recorte pedido na query: `?programId=<uuid|avulsos>&de=<n>&ate=<n>`.

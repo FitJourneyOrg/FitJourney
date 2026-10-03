@@ -132,6 +132,40 @@ class ProgressPolicyTest {
         assertEquals(listOf(agachamento, supino), ProgressPolicy.maisRelevantes(s, quantos = 2))
     }
 
+    // ---- lista de exercicios (J.4.2) ---------------------------------------
+
+    @Test
+    fun `contagem por exercicio conta serie, nao sessao`() {
+        val s = listOf(
+            serie("2026-09-28", 60.0, ex = agachamento),
+            serie("2026-09-28", 62.5, ex = agachamento),
+            serie("2026-09-28", 40.0, ex = supino),
+        )
+        assertEquals(mapOf(agachamento to 2, supino to 1), ProgressPolicy.contagemPorExercicio(s))
+    }
+
+    /**
+     * ⭐ A lista ordena por TONELAGEM, o mesmo criterio do grafico — e nao por variacao.
+     *
+     * Delta% ordenaria bem num mundo onde todo exercicio tem historico. No real, quem fez uma
+     * unica serie pesada lidera com +40% acima do agachamento treinado ha dois meses. Usar o
+     * mesmo criterio tem um efeito colateral bom: a cabeca da lista E o que esta desenhado.
+     */
+    @Test
+    fun `porRelevancia devolve todos, do maior volume para o menor`() {
+        val s = listOf(
+            serie("2026-09-28", 20.0, ex = supino),            // 200 kg
+            serie("2026-09-28", 60.0, ex = agachamento),        // 600 kg
+            serie("2026-09-28", 10.0, reps = 5, ex = prancha),  //  50 kg
+        )
+        assertEquals(listOf(agachamento, supino, prancha), ProgressPolicy.porRelevancia(s))
+    }
+
+    @Test
+    fun `porRelevancia de historico vazio e lista vazia, nao erro`() {
+        assertEquals(emptyList<Uuid>(), ProgressPolicy.porRelevancia(emptyList()))
+    }
+
     // ---- volume por grupo --------------------------------------------------
 
     @Test
