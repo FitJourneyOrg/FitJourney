@@ -167,7 +167,20 @@ class ProgressService(
 
         // Treino conta como treino mesmo sem carga: calistenia nao deixa de ser sessao so porque
         // nao entra no grafico. Mesmo criterio do StatsService (ao menos uma serie feita).
-        val sessoesValidas = doFiltro.count { s -> s.sets.any { it.done } }
+        //
+        // ⚠️ Conta pela DATA, nao pelas series recortadas: a sessao de peso corporal nao produz
+        // nenhuma `SerieFeita`, entao derivar a contagem de `series` apagaria justamente o treino
+        // que a regra acima manda contar. E tem de obedecer a faixa — tonelagem de 5 semanas ao
+        // lado da contagem do programa inteiro e o mesmo defeito do rotulo "esta semana" com
+        // faixa: dois numeros vizinhos medindo periodos diferentes, sem nada dizendo isso.
+        val sessoesDoRecorte = if (faixa != null && inicio != null) {
+            doFiltro.filter {
+                ProgressPolicy.semanaDoPrograma(it.finishedAt.date, inicio) in faixa.first..faixa.second
+            }
+        } else {
+            doFiltro
+        }
+        val sessoesValidas = sessoesDoRecorte.count { s -> s.sets.any { it.done } }
 
         val vazio = ProgressDto(
             totalKg = 0.0,

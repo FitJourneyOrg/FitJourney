@@ -91,7 +91,11 @@ fun ProgressScreen(
         )
 
         Column(Modifier.padding(horizontal = MARGEM)) {
-            CartaoDeTotais(analise, state.stats?.totalSessions ?: 0)
+            // ⚠️ `analise.totalSessions`, nunca o `stats` global: o `stats` conta TODOS os
+            // treinos de sempre, e ao lado de uma tonelagem recortada isso lia
+            // "40,2 t · 30 treinos" com os 30 incluindo o outro programa e os avulsos. Os dois
+            // numeros do cartao tem de medir o mesmo recorte.
+            CartaoDeTotais(analise, analise?.totalSessions ?: 0)
             analise?.lastVsPrevious?.let { c ->
                 Spacer(Modifier.height(10.dp))
                 CartaoDeComparacao(c)
