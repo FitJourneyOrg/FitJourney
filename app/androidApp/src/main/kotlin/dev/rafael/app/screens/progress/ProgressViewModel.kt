@@ -16,9 +16,37 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/**
+ * O que a tela precisa para DESENHAR OS CONTROLES, preservado entre recortes.
+ *
+ * ## Por que nao le isso direto do [ProgressDto]
+ *
+ * O cache e por recorte, entao escolher um recorte novo da **cache miss garantido** e o `analise`
+ * fica nulo ate a rede responder. Controle que le o `analise` **desaparece no instante em que a
+ * pessoa o usa** e volta depois, com o layout saltando — o chip sumindo ao ser tocado, o slider
+ * sumindo sob o dedo. Entao a parte ESTRUTURAL (quais recortes existem, quantas semanas o
+ * programa tem) sobrevive do ultimo dado que chegou.
+ *
+ * Os NUMEROS continuam saindo do `analise`: lembrar tonelagem de um recorte enquanto outro
+ * carrega seria mostrar dado errado, nao controle estavel.
+ *
+ * @param programaMedido de QUAL programa [semanas] fala. Sem isso, trocar do programa de 12
+ *   semanas para um de 8 desenharia o slider do segundo com o teto do primeiro durante o
+ *   carregamento — e a pessoa poderia escolher a semana 11 de um programa que tem 8.
+ */
+data class EstruturaDoFiltro(
+    val programas: List<String> = emptyList(),
+    val temAvulsos: Boolean = false,
+    val programaMedido: String? = null,
+    val semanas: Int? = null,
+    val de: Int? = null,
+    val ate: Int? = null,
+)
 
 data class ProgressState(
     val stats: UserStatsDto? = null,
@@ -26,6 +54,8 @@ data class ProgressState(
     /** Os programas que o usuario tem — a fonte do NOME de cada chip (V48, derivado). */
     val programas: List<Program> = emptyList(),
     val filtro: FiltroDeProgresso = FiltroDeProgresso.Todos,
+    /** Ver [EstruturaDoFiltro]: sobrevive ao nulo entre recortes, para o controle nao piscar. */
+    val estrutura: EstruturaDoFiltro = EstruturaDoFiltro(),
     val carregandoInicial: Boolean = true,
     /** Arraste-pra-atualizar (G.6): true enquanto flush+sync roda, pra girar o indicador. */
     val sincronizando: Boolean = false,
@@ -98,8 +128,20 @@ class ProgressViewModel(
         // troca a CHAVE observada. Observar uma so e atualizar na mao faria a tela mostrar o
         // recorte anterior ate a rede responder.
         filtro
-            .flatMapLatest { f -> progresso.observar(f) }
-            .onEach { a -> _state.update { it.copy(analise = a, carregandoInicial = false) } }
+            // O `map` carrega o filtro JUNTO do dado em vez de reler `filtro.value` depois: a
+            // emissao pertence ao recorte que a produziu, e ler o estado atual atribuiria o dado
+            // ao filtro errado se a pessoa trocasse de chip no meio do caminho.
+            .flatMapLatest { f -> progresso.observar(f).map { a -> f to a } }
+            .onEach { (f, a) ->
+                _state.update {
+                    it.copy(
+                        analise = a,
+                        // `?: it.estrutura`: o nulo do recorte em voo NAO apaga os controles.
+                        estrutura = a?.let { d -> estruturaDe(d, f) } ?: it.estrutura,
+                        carregandoInicial = false,
+                    )
+                }
+            }
             .launchIn(viewModelScope)
 
         // Os programas vem do cache local (offline-first): os chips aparecem sem rede.
@@ -128,6 +170,27 @@ class ProgressViewModel(
             }
         }
     }
+
+    /**
+     * Troca so a FAIXA, mantendo o programa. Chamado quando o dedo SAI do slider, nunca durante
+     * o arraste: cada valor intermediario e um recorte com chave de cache propria, entao aplicar
+     * a cada pixel viraria dezenas de requisicoes e dezenas de entradas de cache por gesto.
+     *
+     * Ignora quando nao ha programa escolhido — faixa de semanas sem programa nao tem referente.
+     */
+    fun selecionarFaixa(de: Int, ate: Int) {
+        val atual = filtro.value as? FiltroDeProgresso.DoPrograma ?: return
+        selecionar(atual.copy(de = de, ate = ate))
+    }
+
+    private fun estruturaDe(d: ProgressDto, f: FiltroDeProgresso) = EstruturaDoFiltro(
+        programas = d.availablePrograms,
+        temAvulsos = d.hasUnassigned,
+        programaMedido = (f as? FiltroDeProgresso.DoPrograma)?.programId,
+        semanas = d.programWeeks,
+        de = d.fromWeek,
+        ate = d.toWeek,
+    )
 
     fun sincronizar() {
         viewModelScope.launch {

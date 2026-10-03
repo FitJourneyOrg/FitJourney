@@ -964,8 +964,10 @@
     <!-- Progress filter chips (J.3). "Unassigned" covers both no-program and deleted-program. -->
     <string name="progresso_filtro_todos">All</string>
     <string name="progresso_filtro_avulsos">Unassigned</string>
+    <string name="progresso_faixa">Weeks %1$d to %2$d</string>
     <string name="progresso_carga_semanal">Weekly load</string>
     <string name="progresso_dia_mes">%2$s/%1$s</string>
+    <string name="progresso_semana_n">Week %1$d</string>
     <string name="progresso_semana_atual">this week</string>
     <string name="progresso_toque_semana">tap a bar to see that week</string>
     <string name="progresso_evolucao">Estimated load per exercise</string>
