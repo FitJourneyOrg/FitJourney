@@ -101,8 +101,13 @@ class ProgressServiceTest {
     )
 
     /** Sessao em data arbitraria — o [sessao] fixa setembro, e janela de 26 semanas sai do mes. */
-    private fun sessaoEm(iso: String, treino: String, sets: List<SetLog>) = WorkoutSession(
-        id = Uuid.random(), userId = Uuid.random(), programId = null, workoutId = null,
+    private fun sessaoEm(
+        iso: String,
+        treino: String,
+        sets: List<SetLog>,
+        programId: Uuid? = null,
+    ) = WorkoutSession(
+        id = Uuid.random(), userId = Uuid.random(), programId = programId, workoutId = null,
         workoutName = treino,
         startedAt = LocalDateTime.parse(iso + "T18:00:00"),
         finishedAt = LocalDateTime.parse(iso + "T19:00:00"),
@@ -618,6 +623,62 @@ class ProgressServiceTest {
 
         assertEquals(1, dto.totalSessions)
         assertEquals(0.0, dto.totalKg, "sem carga externa nao ha tonelagem")
+    }
+
+    /**
+     * ⭐ O teto da faixa CRESCE com o treino.
+     *
+     * `duration_weeks` e um PLANO, nao um limite: quem programou 8 semanas e continuou treinando
+     * ate a 10 nao pode ver as duas ultimas sumirem do grafico. Por isso o teto e o maior entre a
+     * duracao declarada e a ultima semana com dado.
+     *
+     * O inverso ja esta coberto (`faixa fora da janela e encaixada`): sem dado alem da duracao, o
+     * teto fica nela.
+     */
+    @Test
+    fun `o teto da faixa cresce com o treino, e nao para na duracao declarada`() = runBlocking {
+        // Programa comecou em 27/07 e declara 8 semanas; ha treino em 28/09, que e a semana 10.
+        val h = listOf(
+            sessaoEm("2026-07-27", "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX),
+            sessaoEm("2026-09-28", "Inferior X", List(2) { serie(agachamento, 70.0) }, programId = progX),
+        )
+        val (s, _) = servico(
+            premium = true,
+            historico = h,
+            programas = listOf(programa(progX, "2026-07-27", semanas = 8)),
+        )
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX)))
+
+        assertEquals(10, dto.programWeeks, "o slider pararia na 8 e esconderia as duas ultimas")
+        assertEquals(1 to 10, dto.fromWeek to dto.toWeek, "abriu sem mostrar o periodo inteiro")
+        assertEquals(10, dto.weeklyLoad?.size)
+        assertEquals(1400.0, dto.weeklyLoad?.first { it.weekNumber == 10 }?.kg)
+    }
+
+    /**
+     * Caminho de falha do mesmo teto: pedir alem dele encaixa em silencio.
+     *
+     * Faixa e ajuste de VISUALIZACAO — e quem pediu 1..20 num programa de 10 semanas nao cometeu
+     * erro, so arrastou o slider antes de o teto chegar do servidor.
+     */
+    @Test
+    fun `pedir alem do teto que cresceu encaixa no teto novo`() = runBlocking {
+        val h = listOf(
+            sessaoEm("2026-09-28", "Inferior X", List(2) { serie(agachamento, 70.0) }, programId = progX),
+        )
+        val (s, _) = servico(
+            premium = true,
+            historico = h,
+            programas = listOf(programa(progX, "2026-07-27", semanas = 8)),
+        )
+
+        val dto = ok(
+            s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX, de = 1, ate = 20)),
+        )
+
+        assertEquals(10, dto.toWeek)
+        assertEquals(10, dto.weeklyLoad?.size)
     }
 
     @Test
