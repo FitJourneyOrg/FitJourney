@@ -6,6 +6,7 @@ import dev.rafael.core.result.AppResult
 import dev.rafael.server.BancoDeTeste
 import dev.rafael.server.Semear
 import dev.rafael.server.features.exercise.db.ExerciseRepositoryImpl
+import dev.rafael.server.features.program.db.ProgramRepositoryImpl
 import dev.rafael.server.features.session.db.SessionRepositoryImpl
 import dev.rafael.server.features.stats.ProgressService
 import dev.rafael.server.features.user.db.UserRepositoryImpl
@@ -42,10 +43,14 @@ class ProgressIntegrationTest {
     private val exercicios = ExerciseRepositoryImpl()
     private val sessoes = SessionRepositoryImpl()
     private val usuarios = UserRepositoryImpl()
+    private val programas = ProgramRepositoryImpl()
     private val progresso = ProgressService(
         userService = UserService(usuarios),
         sessions = sessoes,
         exercises = exercicios,
+        // Repositorio REAL, e e esse o ponto do Tier 3: o caso "programa apagado com sessao
+        // orfa" so existe no Postgres, porque workout_sessions.program_id nao tem FK (V20).
+        programs = programas,
         clock = object : Clock { override fun now() = Instant.parse("2026-10-01T10:00:00Z") },
     )
 
