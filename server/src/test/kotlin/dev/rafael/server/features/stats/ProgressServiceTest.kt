@@ -336,6 +336,51 @@ class ProgressServiceTest {
         assertEquals(2.0, dto.setsByMuscle?.byMuscle?.get(MuscleGroup.LEGS), "4 series em 2 semanas")
     }
 
+    /**
+     * ⭐ A contagem de treinos obedece a faixa.
+     *
+     * Dois numeros vizinhos no mesmo cartao medindo periodos diferentes e o defeito mais barato
+     * de cometer e o mais caro de notar: ninguem desconfia de "2 treinos", so do grafico.
+     */
+    @Test
+    fun `a contagem de treinos obedece a faixa, nao o programa inteiro`() = runBlocking {
+        val h = listOf(
+            sessao(21, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX),
+            sessao(28, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX),
+        )
+        val (s, _) = servico(premium = true, historico = h, programas = listOf(programa(progX, "2026-09-21")))
+
+        val tudo = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX)))
+        val soSemana2 = ok(
+            s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX, de = 2, ate = 2)),
+        )
+
+        assertEquals(2, tudo.totalSessions)
+        assertEquals(1, soSemana2.totalSessions, "contou o treino da semana 1, que esta fora da faixa")
+        assertEquals(1200.0, soSemana2.totalKg, "a tonelagem ja obedecia — era a contagem que nao")
+    }
+
+    /**
+     * Caminho de falha do criterio: treino de peso corporal DENTRO da faixa continua contando.
+     *
+     * A contagem sai da data, nao das series elegiveis. Derivar de `series` seria mais curto e
+     * apagaria exatamente a sessao de calistenia — que a regra manda contar como treino.
+     */
+    @Test
+    fun `treino sem carga dentro da faixa conta como treino`() = runBlocking {
+        val h = listOf(
+            sessao(28, "Peso do corpo", List(3) { serie(agachamento, null) }, programId = progX),
+        )
+        val (s, _) = servico(premium = true, historico = h, programas = listOf(programa(progX, "2026-09-21")))
+
+        val dto = ok(
+            s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX, de = 2, ate = 2)),
+        )
+
+        assertEquals(1, dto.totalSessions)
+        assertEquals(0.0, dto.totalKg, "sem carga externa nao ha tonelagem")
+    }
+
     @Test
     fun `faixa fora da janela e encaixada, nao recusada`() = runBlocking {
         // Faixa e ajuste de VISUALIZACAO: corrigir em silencio ali e o certo. Id errado, nao --
