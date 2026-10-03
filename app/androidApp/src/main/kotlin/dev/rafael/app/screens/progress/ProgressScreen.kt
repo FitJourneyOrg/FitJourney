@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +21,7 @@ import dev.rafael.app.R
 import dev.rafael.app.ui.nomeDoPrograma
 import dev.rafael.app.ui.rotulo
 import dev.rafael.contract.stats.ExerciseTrendDto
+import dev.rafael.contract.stats.JanelasDeProgresso
 import dev.rafael.contract.stats.MuscleVolumeDto
 import dev.rafael.contract.stats.ProgressDto
 import dev.rafael.contract.stats.WeeklyLoadDto
@@ -89,6 +92,13 @@ fun ProgressScreen(
             selecionado = state.filtro,
             onEscolher = viewModel::selecionarFaixa,
         )
+        SeletorDeJanela(
+            estrutura = state.estrutura,
+            selecionado = state.filtro,
+            trancado = state.trancado,
+            onEscolher = viewModel::selecionarJanela,
+            onOpenPaywall = onOpenPaywall,
+        )
 
         Column(Modifier.padding(horizontal = MARGEM)) {
             // ⚠️ `analise.totalSessions`, nunca o `stats` global: o `stats` conta TODOS os
@@ -102,10 +112,20 @@ fun ProgressScreen(
             }
 
             Spacer(Modifier.height(10.dp))
+            // ⚠️ A ordem e a hierarquia aqui mudaram na J.4.3, e e o ponto delicado da fatia.
+            //
+            // Antes `trancado` pulava o corpo inteiro: havia tres estados mutuamente exclusivos.
+            // Com a carga por semana no gratis, "trancado" deixou de significar "nao ha nada a
+            // mostrar" e passou a significar "falta o resto" — entao o grafico semanal e o
+            // cartao de assinatura aparecem JUNTOS.
+            //
+            // `semCarga` continua tendo precedencia sobre os dois: quem so treina peso corporal
+            // tem de ler a explicacao, nao um grafico de oito zeros com um paywall embaixo.
             when {
-                state.trancado -> CartaoTrancado(onOpenPaywall)
                 state.semCarga -> CartaoSemCarga()
-                analise != null -> BlocosPagos(analise)
+                analise != null -> {
+                    BlocosDaAnalise(analise, state.trancado, onOpenPaywall)
+                }
             }
         }
         Spacer(Modifier.height(24.dp))
@@ -158,10 +178,15 @@ private fun FiltroDeProgramas(
             .padding(start = MARGEM),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
+        // A janela escolhida SOBREVIVE a troca de recorte: quem esta vendo 52 semanas de tudo e
+        // toca em "avulsos" quer 52 semanas de avulsos. Vindo de um programa (que nao tem
+        // janela) cai no padrao. E o `!ativo` impede que tocar no chip ativo zere a janela.
+        val janelaAtual = selecionado.semanas ?: JanelasDeProgresso.PADRAO
+        val emTodos = selecionado is FiltroDeProgresso.Todos
         Chip(
             texto = stringResource(R.string.progresso_filtro_todos),
-            ativo = selecionado is FiltroDeProgresso.Todos,
-            onClick = { onSelecionar(FiltroDeProgresso.Todos) },
+            ativo = emTodos,
+            onClick = { if (!emTodos) onSelecionar(FiltroDeProgresso.Todos(janelaAtual)) },
         )
         comNome.forEach { (id, p) ->
             val ativo = selecionado is FiltroDeProgresso.DoPrograma && selecionado.programId == id
@@ -176,10 +201,11 @@ private fun FiltroDeProgramas(
             )
         }
         if (temAvulsos) {
+            val emAvulsos = selecionado is FiltroDeProgresso.Avulsos
             Chip(
                 texto = stringResource(R.string.progresso_filtro_avulsos),
-                ativo = selecionado is FiltroDeProgresso.Avulsos,
-                onClick = { onSelecionar(FiltroDeProgresso.Avulsos) },
+                ativo = emAvulsos,
+                onClick = { if (!emAvulsos) onSelecionar(FiltroDeProgresso.Avulsos(janelaAtual)) },
             )
         }
     }
@@ -374,11 +400,14 @@ private fun CartaoTrancado(onOpenPaywall: () -> Unit) {
             Modifier.fillMaxWidth().padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Uma amostra do grafico, esmaecida: mostra O QUE se destrava, sem entregar numero.
-            GraficoDeBarras(
-                valores = AMOSTRA_DO_PAYWALL,
-                destaque = -1,
-                cor = Chart1.copy(alpha = 0.35f),
+            // ⚠️ LINHA, nao barras. A amostra era um grafico de barras esmaecido — e desde a
+            // J.4.1 o grafico de barras de VERDADE fica logo acima deste cartao. Barra falsa
+            // debaixo de barra real lia "assine para ver isto que voce ja esta vendo". A linha
+            // representa o que de fato esta trancado: a evolucao por exercicio.
+            GraficoDeLinhas(
+                linhas = listOf(
+                    LinhaDoGrafico("", AMOSTRA_DO_PAYWALL, Chart2.copy(alpha = 0.35f)),
+                ),
                 modifier = Modifier.fillMaxWidth().height(60.dp),
             )
             Spacer(Modifier.height(16.dp))
@@ -423,10 +452,16 @@ private fun CartaoSemCarga() {
 /* -------------------------------------------------------------------------- */
 
 @Composable
-private fun BlocosPagos(analise: ProgressDto) {
+private fun BlocosDaAnalise(analise: ProgressDto, trancado: Boolean, onOpenPaywall: () -> Unit) {
+    // Gratis desde a J.4.1 — e por isso vem ANTES do cartao de assinatura: o que se vende e a
+    // profundidade, e mostrar a janela curta primeiro e o argumento.
     analise.weeklyLoad?.takeIf { it.isNotEmpty() }?.let {
         BlocoDeCargaSemanal(it)
         Spacer(Modifier.height(10.dp))
+    }
+    if (trancado) {
+        CartaoTrancado(onOpenPaywall)
+        return
     }
     analise.strengthTrend?.takeIf { it.isNotEmpty() }?.let {
         BlocoDeEvolucao(it)
@@ -435,6 +470,60 @@ private fun BlocosPagos(analise: ProgressDto) {
     analise.setsByMuscle?.takeIf { it.byMuscle.isNotEmpty() }?.let {
         BlocoDeVolume(it)
     }
+}
+
+/**
+ * Os chips de janela: 8 / 26 / 52 semanas. So no eixo de CALENDARIO.
+ *
+ * ## Travado e VISIVEL, nunca escondido
+ *
+ * Esconder 26 e 52 do free nao vende nada — ninguem quer o que nao sabe que existe, e era
+ * exatamente o problema de quando o grafico inteiro era pago. O chip travado leva ao paywall em
+ * vez de mandar a requisicao; o servidor encaixa igual, porque o cliente nao e autoridade (#16).
+ *
+ * ## O selecionado sai do `weeksWindow`, nao do que a tela pediu
+ *
+ * O servidor devolve a janela APLICADA. Marcar o que foi pedido deixaria o chip dizendo 52 com o
+ * eixo desenhando 8 — a mesma mentira do rotulo "esta semana" numa faixa que terminou semanas
+ * atras. O `?:` so cobre o instante antes da primeira resposta.
+ */
+@Composable
+private fun SeletorDeJanela(
+    estrutura: EstruturaDoFiltro,
+    selecionado: FiltroDeProgresso,
+    trancado: Boolean,
+    onEscolher: (Int) -> Unit,
+    onOpenPaywall: () -> Unit,
+) {
+    val pedida = selecionado.semanas ?: return   // recorte de programa: a faixa e a janela
+    val atual = estrutura.janela ?: pedida
+
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(start = MARGEM),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        JanelasDeProgresso.OFERECIDAS.forEach { semanas ->
+            val travado = trancado && semanas > JanelasDeProgresso.FREE
+            val ativo = semanas == atual
+            FilterChip(
+                selected = ativo,
+                onClick = {
+                    when {
+                        travado -> onOpenPaywall()
+                        !ativo -> onEscolher(semanas)
+                    }
+                },
+                label = { Text(stringResource(R.string.progresso_janela, semanas), maxLines = 1) },
+                trailingIcon = if (!travado) null else {
+                    { Icon(Icons.Outlined.Lock, null, Modifier.size(14.dp)) }
+                },
+            )
+        }
+    }
+    Spacer(Modifier.height(12.dp))
 }
 
 @Composable
@@ -449,6 +538,11 @@ private fun BlocoDeCargaSemanal(semanas: List<WeeklyLoadDto>) {
     // custa um `remember` e nao quebra nada disso.
     var selecionada by remember { mutableStateOf<Int?>(null) }
     val semana = selecionada?.let { semanas.getOrNull(it) }
+
+    // Decidido pela CONTAGEM, nao pela largura medida: a decisao tambem governa os rotulos do
+    // eixo, que ficam fora do `Row` do grafico. Oito barras cabem com folga; vinte e seis nao
+    // cabem em celular nenhum, e barra de 11dp e alvo de toque ruim antes de ser grafico ruim.
+    val rola = semanas.size > SEMANAS_QUE_CABEM
 
     CartaoDeGrafico(stringResource(R.string.progresso_carga_semanal)) {
         // Altura FIXA: sem isso o cartao pula de tamanho ao selecionar a primeira barra.
@@ -482,21 +576,47 @@ private fun BlocoDeCargaSemanal(semanas: List<WeeklyLoadDto>) {
                 de_cima_para_baixo = listOf(emToneladas(pico), emToneladas(pico / 2), "0"),
                 altura = 120.dp,
             )
-            GraficoDeBarras(
-                valores = semanas.map { (it.kg / maior).toFloat() },
-                destaque = selecionada ?: indiceDoPico,
-                cor = Chart1,
-                modifier = Modifier.weight(1f).height(120.dp),
-                // Tocar a mesma barra DESMARCA: sem isso nao haveria como voltar ao estado de
-                // resumo, e a tela ficaria presa na ultima semana que alguem encostou.
-                onSelecionar = { i -> selecionada = if (selecionada == i) null else i },
-            )
+            val valores = semanas.map { (it.kg / maior).toFloat() }
+            // Tocar a mesma barra DESMARCA: sem isso nao haveria como voltar ao estado de
+            // resumo, e a tela ficaria presa na ultima semana que alguem encostou.
+            val alternar = { i: Int -> selecionada = if (selecionada == i) null else i }
+
+            if (!rola) {
+                GraficoDeBarras(valores, selecionada ?: indiceDoPico, Chart1,
+                    Modifier.weight(1f).height(120.dp), alternar)
+            } else {
+                // ⚠️ A CALHA DO Y FICA FORA do scroll (ela e a irma deste `else`, no mesmo Row):
+                // escala que rola junto com as barras deixa de ser escala. So o desenho rola.
+                val rolagem = rememberScrollState()
+                // Comeca no FIM. A pergunta padrao e "como estou agora", nao "como eu estava em
+                // janeiro" — abrir 52 semanas no comeco faria a pessoa arrastar a cada visita.
+                // A chave e o `maxValue` porque antes da medida ele e zero: so depois do layout
+                // existe fim para onde ir.
+                LaunchedEffect(rolagem.maxValue) { rolagem.scrollTo(rolagem.maxValue) }
+                Row(Modifier.weight(1f).horizontalScroll(rolagem)) {
+                    GraficoDeBarras(valores, selecionada ?: indiceDoPico, Chart1,
+                        Modifier.width(LARGURA_POR_BARRA * semanas.size).height(120.dp), alternar)
+                }
+            }
         }
-        // Eixo so nas PONTAS. Oito datas nao cabem na largura de um celular, e rotulo que se
-        // corta nao e rotulo; o que a pessoa precisa saber e onde a serie comeca e que a ultima
-        // barra e a semana dela — o meio se interpola sozinho.
         Spacer(Modifier.height(6.dp))
-        Row(Modifier.fillMaxWidth().padding(start = LARGURA_DA_CALHA)) {
+        // Eixo so nas PONTAS, e so quando NAO rola.
+        //
+        // Parado, oito datas nao cabem na largura de um celular e rotulo que se corta nao e
+        // rotulo: o que a pessoa precisa saber e onde a serie comeca e que a ultima barra e a
+        // semana dela — o meio se interpola sozinho.
+        //
+        // Rolando, as pontas passam a MENTIR: a primeira e a ultima barra visiveis nao sao a
+        // primeira e a ultima da serie, e rotulo que depende de onde o dedo parou nao e rotulo.
+        // Ali o eixo da lugar a dica, e quem localiza a semana e o toque.
+        if (rola) {
+            Text(
+                stringResource(R.string.progresso_arraste_semana),
+                Modifier.padding(start = LARGURA_DA_CALHA),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else Row(Modifier.fillMaxWidth().padding(start = LARGURA_DA_CALHA)) {
             Text(
                 rotuloDaSemana(semanas.first()),
                 style = MaterialTheme.typography.labelSmall,
@@ -692,7 +812,19 @@ private val MARGEM = 20.dp
 private const val LINHAS_DA_COMPARACAO = 4
 
 /** Silhueta generica no cartao trancado — nao sao dados de ninguem. */
-private val AMOSTRA_DO_PAYWALL = listOf(0.45f, 0.62f, 0.5f, 0.3f, 0.78f, 0.55f, 0.6f, 0.7f)
+/** Subida com um deload no meio: a forma de um progresso real, sem numero nenhum. */
+private val AMOSTRA_DO_PAYWALL = listOf(
+    0f to 0.15f, 0.2f to 0.32f, 0.4f to 0.45f, 0.6f to 0.38f, 0.8f to 0.62f, 1f to 0.8f,
+)
+
+/**
+ * Largura de cada barra quando o grafico rola. Alvo de toque confortavel; abaixo de ~16dp a
+ * barra vira alvo ruim antes de virar grafico ruim.
+ */
+private val LARGURA_POR_BARRA = 22.dp
+
+/** Acima disto o grafico rola. Oito cabem com folga, vinte e seis nao cabem em celular nenhum. */
+private const val SEMANAS_QUE_CABEM = 12
 
 /** Quilos viram toneladas com uma casa: "175,8" se le, "175876" nao. */
 internal fun emToneladas(kg: Double): String = umaCasa(kg / 1000.0)

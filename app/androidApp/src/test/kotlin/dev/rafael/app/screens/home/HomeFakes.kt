@@ -81,7 +81,7 @@ class FakeProgresso : Progresso {
         porFiltro.getOrPut(filtro.chave) { MutableStateFlow(null) }
 
     /** Atalho para o recorte padrao — a maioria dos testes so se importa com ele. */
-    val valores: MutableStateFlow<ProgressDto?> get() = fluxo(FiltroDeProgresso.Todos)
+    val valores: MutableStateFlow<ProgressDto?> get() = fluxo(FiltroDeProgresso.Todos())
 
     override fun observar(filtro: FiltroDeProgresso): Flow<ProgressDto?> = fluxo(filtro)
     override suspend fun sincronizar(filtro: FiltroDeProgresso, forcar: Boolean) {

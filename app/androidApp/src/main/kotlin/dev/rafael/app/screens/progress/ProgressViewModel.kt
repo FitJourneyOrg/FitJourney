@@ -44,6 +44,11 @@ data class EstruturaDoFiltro(
     val temAvulsos: Boolean = false,
     val programaMedido: String? = null,
     val semanas: Int? = null,
+    /**
+     * A janela de calendario APLICADA, vinda do servidor. Preservada entre recortes pelo mesmo
+     * motivo do resto: o chip nao pode sumir no instante em que e tocado.
+     */
+    val janela: Int? = null,
     val de: Int? = null,
     val ate: Int? = null,
 )
@@ -53,7 +58,7 @@ data class ProgressState(
     val analise: ProgressDto? = null,
     /** Os programas que o usuario tem — a fonte do NOME de cada chip (V48, derivado). */
     val programas: List<Program> = emptyList(),
-    val filtro: FiltroDeProgresso = FiltroDeProgresso.Todos,
+    val filtro: FiltroDeProgresso = FiltroDeProgresso.Todos(),
     /** Ver [EstruturaDoFiltro]: sobrevive ao nulo entre recortes, para o controle nao piscar. */
     val estrutura: EstruturaDoFiltro = EstruturaDoFiltro(),
     val carregandoInicial: Boolean = true,
@@ -117,7 +122,7 @@ class ProgressViewModel(
     val state: StateFlow<ProgressState> = _state.asStateFlow()
 
     /** O recorte escolhido. Fonte do que se OBSERVA, nao so do que se pede. */
-    private val filtro = MutableStateFlow<FiltroDeProgresso>(FiltroDeProgresso.Todos)
+    private val filtro = MutableStateFlow<FiltroDeProgresso>(FiltroDeProgresso.Todos())
 
     init {
         stats.observar()
@@ -190,7 +195,17 @@ class ProgressViewModel(
         semanas = d.programWeeks,
         de = d.fromWeek,
         ate = d.toWeek,
+        janela = d.weeksWindow,
     )
+
+    /**
+     * Troca a JANELA de calendario, mantendo o recorte.
+     *
+     * No recorte de programa e no-op: lá a faixa e a janela, e o controle nem aparece. O
+     * [FiltroDeProgresso.comJanela] devolve `this` nesse caso, e o `selecionar` descarta por
+     * igualdade — entao nao ha requisicao a toa nem estado invalido possivel.
+     */
+    fun selecionarJanela(semanas: Int) = selecionar(filtro.value.comJanela(semanas))
 
     fun sincronizar() {
         viewModelScope.launch {
