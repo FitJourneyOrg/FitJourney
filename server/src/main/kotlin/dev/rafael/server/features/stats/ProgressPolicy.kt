@@ -85,9 +85,40 @@ object ProgressPolicy {
      * semana que a pessoa faltou - e omiti-la faria o grafico mentir sobre a continuidade,
      * encostando duas semanas que nao sao vizinhas.
      */
-    fun porSemana(series: List<SerieFeita>, hoje: LocalDate, semanas: Int = 8): List<CargaDaSemana> {
+    /**
+     * Segunda-feira da primeira semana de uma janela de [semanas] que termina na semana de [hoje].
+     *
+     * Existe como funcao propria porque DOIS lugares precisam do mesmo corte: o agrupamento das
+     * barras e o recorte das series que alimentam os graficos. Calcular o corte duas vezes e como
+     * dois blocos discordarem sobre onde a janela comeca — foi exatamente o defeito que a J.4.1
+     * veio consertar.
+     */
+    fun primeiraSemanaDaJanela(hoje: LocalDate, semanas: Int): LocalDate {
         require(semanas > 0) { "semanas tem de ser positivo" }
-        val primeira = segundaDaSemana(hoje).minus(DatePeriod(days = 7 * (semanas - 1)))
+        return segundaDaSemana(hoje).minus(DatePeriod(days = 7 * (semanas - 1)))
+    }
+
+    /**
+     * So as series que caem na janela de calendario — o espelho do [naFaixaDoPrograma].
+     *
+     * ## Por que precisou existir
+     *
+     * No recorte de programa todos os blocos usam UM recorte. No de calendario cada bloco
+     * recortava sozinho, e os tres discordavam: as barras filtravam 8 semanas por dentro, a linha
+     * de 1RM plotava o historico inteiro, e a media de series dividia o historico inteiro por 8 —
+     * inflando o volume semanal de quem treina ha mais de dois meses. Uma funcao, um corte.
+     */
+    fun naJanelaDeCalendario(
+        series: List<SerieFeita>,
+        hoje: LocalDate,
+        semanas: Int,
+    ): List<SerieFeita> {
+        val primeira = primeiraSemanaDaJanela(hoje, semanas)
+        return series.filter { it.data >= primeira }
+    }
+
+    fun porSemana(series: List<SerieFeita>, hoje: LocalDate, semanas: Int = 8): List<CargaDaSemana> {
+        val primeira = primeiraSemanaDaJanela(hoje, semanas)
         val porInicio = series
             .filter { it.data >= primeira }
             .groupBy { segundaDaSemana(it.data) }

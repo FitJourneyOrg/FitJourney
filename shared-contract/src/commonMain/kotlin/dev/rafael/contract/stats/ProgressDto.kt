@@ -68,6 +68,15 @@ data class ProgressDto(
     /** Faixa aplicada (1-based, inclusiva). `null` em "todos". */
     val fromWeek: Int? = null,
     val toWeek: Int? = null,
+    /**
+     * A janela de calendario APLICADA, em semanas (8, 26 ou 52). Nula no recorte de programa,
+     * onde quem define o periodo e a faixa [fromWeek]..[toWeek].
+     *
+     * ⚠️ E a aplicada, nao a pedida: o free pedindo 52 recebe 8 aqui, e a tela tem de refletir
+     * isso. Seletor marcando 52 com o eixo desenhando 8 e a mesma mentira do rotulo "esta
+     * semana" numa faixa que termina semanas atras.
+     */
+    val weeksWindow: Int? = null,
 )
 
 /**

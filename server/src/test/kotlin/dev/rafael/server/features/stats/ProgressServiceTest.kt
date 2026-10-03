@@ -97,6 +97,15 @@ class ProgressServiceTest {
         sets = sets,
     )
 
+    /** Sessao em data arbitraria — o [sessao] fixa setembro, e janela de 26 semanas sai do mes. */
+    private fun sessaoEm(iso: String, treino: String, sets: List<SetLog>) = WorkoutSession(
+        id = Uuid.random(), userId = Uuid.random(), programId = null, workoutId = null,
+        workoutName = treino,
+        startedAt = LocalDateTime.parse(iso + "T18:00:00"),
+        finishedAt = LocalDateTime.parse(iso + "T19:00:00"),
+        sets = sets,
+    )
+
     private val catalogo = mapOf(
         agachamento to ExercicioParaAnalise("Agachamento Livre com Barra", listOf(MuscleGroup.LEGS)),
         prancha to ExercicioParaAnalise("Prancha Isométrica", emptyList()),
@@ -145,12 +154,20 @@ class ProgressServiceTest {
 
     // ---- o portao ----------------------------------------------------------
 
+    /**
+     * ⭐ O que e pago e a PROFUNDIDADE, nao o grafico (J.4.1).
+     *
+     * A carga por semana saiu do portao. Antes ela era 100% paga, e por isso "janela longa" nao
+     * vendia nada: nao existia quem visse 8 semanas e quisesse 26. O `analysisLocked` continua
+     * true — ele diz que a ANALISE esta trancada, e o nulo dos outros dois e portao, nao falta
+     * de dado.
+     */
     @Test
-    fun `free nao recebe nenhum dos blocos pagos`() = runBlocking {
+    fun `free recebe a carga por semana, mas nao os blocos pagos`() = runBlocking {
         val (s, _) = servico(premium = false, historico = duasSessoesIguais)
         val dto = assertIs<AppResult.Success<ProgressDto>>(s.forUser("fb", null, Idioma.PADRAO)).value
 
-        assertNull(dto.weeklyLoad)
+        assertEquals(ProgressService.JANELA_FREE, dto.weeklyLoad?.size, "o free perdeu o grafico de novo")
         assertNull(dto.strengthTrend)
         assertNull(dto.setsByMuscle)
         assertTrue(dto.analysisLocked)
@@ -182,10 +199,114 @@ class ProgressServiceTest {
         val (s, _) = servico(premium = true, historico = duasSessoesIguais)
         val dto = assertIs<AppResult.Success<ProgressDto>>(s.forUser("fb", null, Idioma.PADRAO)).value
 
-        assertEquals(ProgressService.SEMANAS, dto.weeklyLoad?.size)
+        assertEquals(ProgressService.JANELA_PADRAO, dto.weeklyLoad?.size)
         assertEquals(1, dto.strengthTrend?.size)
-        assertEquals(1.0 / ProgressService.SEMANAS * 2, dto.setsByMuscle?.byMuscle?.get(MuscleGroup.LEGS))
+        assertEquals(1.0 / ProgressService.JANELA_PADRAO * 2, dto.setsByMuscle?.byMuscle?.get(MuscleGroup.LEGS))
         assertTrue(!dto.analysisLocked)
+    }
+
+    // ---- janela de calendario (J.4.1) --------------------------------------
+
+    /** Relogio em 2026-10-01: janela de 8 comeca em 2026-08-10; a de 26, em 2026-04-06. */
+    private val antesEDepois = listOf(
+        sessaoEm("2026-06-15", "Inferior A", List(4) { serie(agachamento, 60.0, ordem = it) }),
+        sessaoEm("2026-09-28", "Inferior A", List(2) { serie(agachamento, 65.0, ordem = it) }),
+    )
+
+    /**
+     * ⭐ O defeito que a J.4.1 veio consertar.
+     *
+     * `seriesPorGrupo` recebia o historico INTEIRO e dividia por 8. Quem treina ha seis meses
+     * tinha a media semanal inflada — e esse e justamente o bloco cujo trabalho inteiro e ser um
+     * diagnostico. Passou na validacao original porque o seed tem exatamente 8 semanas: o numero
+     * certo por coincidencia.
+     */
+    @Test
+    fun `a media de series divide pela janela, e nao pelo historico inteiro`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = antesEDepois)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.Todos(8)))
+
+        // So as 2 series de 28/09 entram na janela: 2/8. Com o bug eram 6/8.
+        assertEquals(2.0 / 8, dto.setsByMuscle?.byMuscle?.get(MuscleGroup.LEGS))
+        assertEquals(
+            4 * 10 * 60.0 + 2 * 10 * 65.0, dto.totalKg,
+            "o TOTAL e de sempre: 'desde' e a primeira sessao da vida e as conquistas acumulam",
+        )
+    }
+
+    /**
+     * ⭐ O segundo: as barras mostravam 2 meses e a linha de 1RM mostrava o historico inteiro, na
+     * mesma tela, sem nada dizendo isso. `evolucao` nao recortava nada.
+     */
+    @Test
+    fun `a linha de 1RM respeita a mesma janela das barras`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = antesEDepois)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.Todos(8)))
+
+        assertEquals(1, dto.strengthTrend?.first()?.points?.size, "plotou ponto de fora da janela")
+        assertEquals(8, dto.weeklyLoad?.size)
+    }
+
+    @Test
+    fun `janela de 26 alcanca o que a de 8 cortava`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = antesEDepois)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.Todos(26)))
+
+        assertEquals(26, dto.weeksWindow)
+        assertEquals(26, dto.weeklyLoad?.size)
+        assertEquals(2, dto.strengthTrend?.first()?.points?.size, "a sessao de junho tinha de entrar")
+        assertEquals(6.0 / 26, dto.setsByMuscle?.byMuscle?.get(MuscleGroup.LEGS), "6 series em 26 semanas")
+    }
+
+    /**
+     * Caminho de falha do portao: o limite do free e no SERVIDOR.
+     *
+     * A tela nao deixa escolher 52 no free, mas cliente nao e autoridade (#16). E o DTO devolve a
+     * janela APLICADA, nao a pedida — seletor marcando 52 com o eixo desenhando 8 e a mesma
+     * mentira do rotulo "esta semana" numa faixa que terminou semanas atras.
+     */
+    @Test
+    fun `free pedindo 52 semanas recebe 8, e o DTO diz 8`() = runBlocking {
+        val (s, _) = servico(premium = false, historico = antesEDepois)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.Todos(52)))
+
+        assertEquals(8, dto.weeksWindow, "o cliente pediria 52 e a tela mostraria 52 em cima de 8")
+        assertEquals(8, dto.weeklyLoad?.size)
+    }
+
+    /**
+     * Caminho de falha da entrada: janela fora da lista encaixa, nao recusa.
+     *
+     * Janela e ajuste de VISUALIZACAO — mesma decisao da faixa do programa. Cliente velho pedindo
+     * 12 nao pode receber erro. Id de programa invalido continua 400, porque esse muda QUAL dado
+     * responde.
+     */
+    @Test
+    fun `janela fora da lista cai no padrao, e nao em erro`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = antesEDepois)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.Todos(12)))
+
+        assertEquals(ProgressService.JANELA_PADRAO, dto.weeksWindow)
+        assertEquals(ProgressService.JANELA_PADRAO, dto.weeklyLoad?.size)
+    }
+
+    @Test
+    fun `no recorte de programa a janela e a faixa, e weeksWindow vem nulo`() = runBlocking {
+        val (s, _) = servico(
+            premium = true,
+            historico = listOf(sessao(28, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX)),
+            programas = listOf(programa(progX, "2026-09-21")),
+        )
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX)))
+
+        assertNull(dto.weeksWindow, "duas janelas concorrentes no mesmo recorte")
+        assertEquals(1, dto.fromWeek)
     }
 
     // ---- calistenia --------------------------------------------------------
@@ -280,7 +401,7 @@ class ProgressServiceTest {
         // `apagado` NAO esta na lista de programas: foi excluido.
         val (s, _) = servico(premium = true, historico = h, programas = listOf(programa(progX, "2026-09-21")))
 
-        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.Avulsos))
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.Avulsos()))
 
         assertEquals(1000.0 + 600.0, dto.totalKg, "o apagado conta como avulso, nao some")
         assertTrue(dto.hasUnassigned)

@@ -120,7 +120,7 @@ class ProgressIntegrationTest {
     }
 
     @Test
-    fun `free recebe o que e gratis e NENHUM bloco pago`() = runBlocking {
+    fun `free recebe a carga por semana e NENHUM bloco pago`() = runBlocking {
         val (usuario, _) = cenario(premium = false)
 
         val dto = ok(progresso.forUser(uid(usuario), null, Idioma.PADRAO))
@@ -128,10 +128,26 @@ class ProgressIntegrationTest {
         assertEquals(3600.0, dto.totalKg)          // 2 sessões x 3 séries x 10 reps x 60 kg
         assertEquals(2, dto.totalSessions)
         assertNotNull(dto.lastVsPrevious)
-        assertNull(dto.weeklyLoad)
+        // J.4.1: a carga por semana saiu do portao — o free ve a janela curta e paga pela longa.
+        assertEquals(ProgressService.JANELA_FREE, dto.weeklyLoad?.size)
+        assertEquals(ProgressService.JANELA_FREE, dto.weeksWindow)
         assertNull(dto.strengthTrend)
         assertNull(dto.setsByMuscle)
         assertTrue(dto.analysisLocked)
+    }
+
+    /**
+     * ⭐ O limite do free e aplicado contra o `is_premium` do BANCO, nao contra um booleano
+     * montado no teste — e e no servidor, porque o cliente nao e autoridade (#16).
+     */
+    @Test
+    fun `free pedindo janela de 52 recebe 8, lendo o plano do banco`() = runBlocking {
+        val (usuario, _) = cenario(premium = false)
+
+        val dto = ok(progresso.forUser(uid(usuario), null, Idioma.PADRAO, ProgressService.Filtro.Todos(52)))
+
+        assertEquals(8, dto.weeksWindow)
+        assertEquals(8, dto.weeklyLoad?.size)
     }
 
     @Test
@@ -140,7 +156,7 @@ class ProgressIntegrationTest {
 
         val dto = ok(progresso.forUser(uid(usuario), null, Idioma.PADRAO))
 
-        assertEquals(ProgressService.SEMANAS, dto.weeklyLoad?.size)
+        assertEquals(ProgressService.JANELA_PADRAO, dto.weeklyLoad?.size)
         assertEquals(1, dto.strengthTrend?.size)
         assertNotNull(dto.setsByMuscle?.byMuscle?.get(MuscleGroup.LEGS))
         assertEquals(0.0, dto.setsByMuscle?.unclassified)
