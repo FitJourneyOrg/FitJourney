@@ -3,6 +3,7 @@ package dev.rafael.app.screens.home
 import dev.rafael.features.session.domain.HistoricoDeSessoes
 import dev.rafael.features.session.domain.SessaoLocal
 import dev.rafael.features.stats.domain.FiltroDeProgresso
+import dev.rafael.features.stats.domain.SelecaoDeExercicios
 import dev.rafael.features.stats.domain.Progresso
 import dev.rafael.features.stats.domain.Stats
 import dev.rafael.contract.session.WorkoutSessionDto
@@ -77,15 +78,28 @@ class FakeProgresso : Progresso {
 
     val sincronizacoes: Int get() = sincronizados.size
 
-    fun fluxo(filtro: FiltroDeProgresso): MutableStateFlow<ProgressDto?> =
-        porFiltro.getOrPut(filtro.chave) { MutableStateFlow(null) }
+    /** Os recortes pedidos vem em pares (filtro, selecao): a chave do cache real soma os dois. */
+    val selecionados = mutableListOf<SelecaoDeExercicios>()
+
+    fun fluxo(
+        filtro: FiltroDeProgresso,
+        selecao: SelecaoDeExercicios = SelecaoDeExercicios.PADRAO,
+    ): MutableStateFlow<ProgressDto?> =
+        porFiltro.getOrPut("${filtro.chave}|${selecao.chave}") { MutableStateFlow(null) }
 
     /** Atalho para o recorte padrao — a maioria dos testes so se importa com ele. */
     val valores: MutableStateFlow<ProgressDto?> get() = fluxo(FiltroDeProgresso.Todos())
 
-    override fun observar(filtro: FiltroDeProgresso): Flow<ProgressDto?> = fluxo(filtro)
-    override suspend fun sincronizar(filtro: FiltroDeProgresso, forcar: Boolean) {
+    override fun observar(filtro: FiltroDeProgresso, selecao: SelecaoDeExercicios): Flow<ProgressDto?> =
+        fluxo(filtro, selecao)
+
+    override suspend fun sincronizar(
+        filtro: FiltroDeProgresso,
+        selecao: SelecaoDeExercicios,
+        forcar: Boolean,
+    ) {
         sincronizados += filtro
+        selecionados += selecao
         if (forcar) forcadas++
     }
 }

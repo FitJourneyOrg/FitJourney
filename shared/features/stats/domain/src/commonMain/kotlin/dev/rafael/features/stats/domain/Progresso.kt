@@ -34,7 +34,10 @@ interface Progresso {
      * e o unico sempre presente depois do primeiro uso, porque e o que a tela abre — os recortes
      * sao best-effort, e a tela precisa dizer isso em vez de mostrar grafico vazio.
      */
-    fun observar(filtro: FiltroDeProgresso = FiltroDeProgresso.Todos()): Flow<ProgressDto?>
+    fun observar(
+        filtro: FiltroDeProgresso = FiltroDeProgresso.Todos(),
+        selecao: SelecaoDeExercicios = SelecaoDeExercicios.PADRAO,
+    ): Flow<ProgressDto?>
 
     /**
      * Busca no servidor e grava no cache; o Flow re-emite. Offline: nao faz nada, sem erro.
@@ -42,5 +45,9 @@ interface Progresso {
      * @param forcar ignora o TTL. Use depois de subir sessao pendente — e o unico momento em que
      *   os numeros mudam de verdade.
      */
-    suspend fun sincronizar(filtro: FiltroDeProgresso = FiltroDeProgresso.Todos(), forcar: Boolean = false)
+    suspend fun sincronizar(
+        filtro: FiltroDeProgresso = FiltroDeProgresso.Todos(),
+        selecao: SelecaoDeExercicios = SelecaoDeExercicios.PADRAO,
+        forcar: Boolean = false,
+    )
 }

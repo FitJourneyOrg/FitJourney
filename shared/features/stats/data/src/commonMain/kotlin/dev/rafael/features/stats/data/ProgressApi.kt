@@ -5,6 +5,7 @@ import dev.rafael.core.network.HttpClientFactory
 import dev.rafael.core.network.httpResult
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.stats.domain.FiltroDeProgresso
+import dev.rafael.features.stats.domain.SelecaoDeExercicios
 import io.ktor.client.HttpClient
 import io.ktor.client.call.body
 import io.ktor.client.request.get
@@ -17,7 +18,11 @@ import io.ktor.client.request.parameter
  * traduzido, e quem le para MOSTRAR declara em que idioma.
  */
 class ProgressApi(private val client: HttpClient) {
-    suspend fun get(locale: String, filtro: FiltroDeProgresso): AppResult<ProgressDto> =
+    suspend fun get(
+        locale: String,
+        filtro: FiltroDeProgresso,
+        selecao: SelecaoDeExercicios = SelecaoDeExercicios.PADRAO,
+    ): AppResult<ProgressDto> =
         httpResult {
             client.get("${HttpClientFactory.BASE_URL}/me/progress") {
                 parameter("locale", locale)
@@ -27,6 +32,9 @@ class ProgressApi(private val client: HttpClient) {
                 parameter("de", filtro.de)
                 parameter("ate", filtro.ate)
                 parameter("semanas", filtro.semanas)
+                // Ausente = o servidor escolhe os tres de maior volume. Lista vazia seria lida
+                // como "nenhum", e a resposta viria sem grafico.
+                parameter("exercicios", selecao.parametro)
             }.body()
         }
 }

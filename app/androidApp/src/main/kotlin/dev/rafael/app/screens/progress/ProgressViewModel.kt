@@ -9,9 +9,11 @@ import dev.rafael.features.program.domain.repository.ProgramRepository
 import dev.rafael.features.session.domain.HistoricoDeSessoes
 import dev.rafael.features.stats.domain.FiltroDeProgresso
 import dev.rafael.features.stats.domain.Progresso
+import dev.rafael.features.stats.domain.SelecaoDeExercicios
 import dev.rafael.features.stats.domain.Stats
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -59,6 +61,8 @@ data class ProgressState(
     /** Os programas que o usuario tem — a fonte do NOME de cada chip (V48, derivado). */
     val programas: List<Program> = emptyList(),
     val filtro: FiltroDeProgresso = FiltroDeProgresso.Todos(),
+    /** Quais exercicios ganham linha. Vazia = os tres que o servidor escolheu. */
+    val selecao: SelecaoDeExercicios = SelecaoDeExercicios.PADRAO,
     /** Ver [EstruturaDoFiltro]: sobrevive ao nulo entre recortes, para o controle nao piscar. */
     val estrutura: EstruturaDoFiltro = EstruturaDoFiltro(),
     val carregandoInicial: Boolean = true,
@@ -124,6 +128,9 @@ class ProgressViewModel(
     /** O recorte escolhido. Fonte do que se OBSERVA, nao so do que se pede. */
     private val filtro = MutableStateFlow<FiltroDeProgresso>(FiltroDeProgresso.Todos())
 
+    /** Ver [SelecaoDeExercicios]. Eixo proprio: qualquer recorte aceita qualquer selecao. */
+    private val selecao = MutableStateFlow(SelecaoDeExercicios.PADRAO)
+
     init {
         stats.observar()
             .onEach { s -> _state.update { it.copy(stats = s, carregandoInicial = false) } }
@@ -132,11 +139,11 @@ class ProgressViewModel(
         // `flatMapLatest` e nao um `observar()` fixo: o cache e por filtro, entao trocar de chip
         // troca a CHAVE observada. Observar uma so e atualizar na mao faria a tela mostrar o
         // recorte anterior ate a rede responder.
-        filtro
+        combine(filtro, selecao) { f, s -> f to s }
             // O `map` carrega o filtro JUNTO do dado em vez de reler `filtro.value` depois: a
             // emissao pertence ao recorte que a produziu, e ler o estado atual atribuiria o dado
             // ao filtro errado se a pessoa trocasse de chip no meio do caminho.
-            .flatMapLatest { f -> progresso.observar(f).map { a -> f to a } }
+            .flatMapLatest { (f, s) -> progresso.observar(f, s).map { a -> f to a } }
             .onEach { (f, a) ->
                 _state.update {
                     it.copy(
@@ -165,11 +172,35 @@ class ProgressViewModel(
     fun selecionar(novo: FiltroDeProgresso) {
         if (filtro.value == novo) return
         filtro.value = novo
-        _state.update { it.copy(filtro = novo) }
+        // ⚠️ A SELECAO RESETA. Os exercicios do Programa A nao sao os do B, e levar ids que nao
+        // existem no recorte novo faria o servidor descarta-los e cair no padrao — o grafico
+        // mudaria sozinho sem explicar por que. Recorte novo abre com os tres mais relevantes
+        // DELE, que e o que a pessoa espera ver.
+        selecao.value = SelecaoDeExercicios.PADRAO
+        _state.update { it.copy(filtro = novo, selecao = SelecaoDeExercicios.PADRAO) }
+        pedir(novo, SelecaoDeExercicios.PADRAO)
+    }
+
+    /**
+     * Poe ou tira um exercicio do grafico.
+     *
+     * [visiveis] sao os que estao desenhados AGORA: com a selecao vazia quem escolheu foi o
+     * servidor, e o primeiro toque precisa partir dali — senao ele levaria o grafico de tres
+     * linhas para uma so, do nada. Ver [SelecaoDeExercicios.alternar].
+     */
+    fun alternarExercicio(id: String, visiveis: List<String>) {
+        val nova = selecao.value.alternar(id, visiveis)
+        if (nova == selecao.value) return   // toque que esvaziaria: ignorado
+        selecao.value = nova
+        _state.update { it.copy(selecao = nova) }
+        pedir(filtro.value, nova)
+    }
+
+    private fun pedir(f: FiltroDeProgresso, s: SelecaoDeExercicios) {
         viewModelScope.launch {
             _state.update { it.copy(sincronizando = true) }
             try {
-                progresso.sincronizar(novo)
+                progresso.sincronizar(f, s)
             } finally {
                 _state.update { it.copy(sincronizando = false) }
             }
@@ -213,7 +244,7 @@ class ProgressViewModel(
             try {
                 sessions.flush()                      // sobe o treino offline ANTES de perguntar
                 stats.sincronizar(forcar = true)
-                progresso.sincronizar(filtro.value, forcar = true)
+                progresso.sincronizar(filtro.value, selecao.value, forcar = true)
             } finally {
                 _state.update { it.copy(sincronizando = false) }
             }

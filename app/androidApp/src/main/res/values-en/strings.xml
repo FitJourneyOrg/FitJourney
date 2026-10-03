@@ -973,6 +973,10 @@
     <string name="progresso_arraste_semana">swipe and tap to see each week</string>
     <string name="progresso_toque_semana">tap a bar to see that week</string>
     <string name="progresso_evolucao">Estimated load per exercise</string>
+    <string name="progresso_ver_todos">See all (%1$d)</string>
+    <string name="progresso_ver_menos">Show less</string>
+    <string name="progresso_series_contagem">%1$d sets</string>
+    <string name="progresso_toque_exercicio">tap an exercise to add or remove it from the chart</string>
     <string name="progresso_volume">Weekly sets per muscle group</string>
     <string name="progresso_volume_nota">Sets, not kilos: load does not compare between machine and dumbbell.</string>
     <string name="progresso_nao_classificado">No group</string>

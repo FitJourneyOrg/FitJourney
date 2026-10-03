@@ -1,6 +1,7 @@
 package dev.rafael.app.screens.progress
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -14,12 +15,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import dev.rafael.app.R
 import dev.rafael.app.ui.nomeDoPrograma
 import dev.rafael.app.ui.rotulo
+import dev.rafael.contract.stats.ExerciseSummaryDto
 import dev.rafael.contract.stats.ExerciseTrendDto
 import dev.rafael.contract.stats.JanelasDeProgresso
 import dev.rafael.contract.stats.MuscleVolumeDto
@@ -124,7 +127,7 @@ fun ProgressScreen(
             when {
                 state.semCarga -> CartaoSemCarga()
                 analise != null -> {
-                    BlocosDaAnalise(analise, state.trancado, onOpenPaywall)
+                    BlocosDaAnalise(analise, state.trancado, onOpenPaywall, viewModel::alternarExercicio)
                 }
             }
         }
@@ -452,7 +455,12 @@ private fun CartaoSemCarga() {
 /* -------------------------------------------------------------------------- */
 
 @Composable
-private fun BlocosDaAnalise(analise: ProgressDto, trancado: Boolean, onOpenPaywall: () -> Unit) {
+private fun BlocosDaAnalise(
+    analise: ProgressDto,
+    trancado: Boolean,
+    onOpenPaywall: () -> Unit,
+    onAlternarExercicio: (String, List<String>) -> Unit,
+) {
     // Gratis desde a J.4.1 — e por isso vem ANTES do cartao de assinatura: o que se vende e a
     // profundidade, e mostrar a janela curta primeiro e o argumento.
     analise.weeklyLoad?.takeIf { it.isNotEmpty() }?.let {
@@ -466,7 +474,12 @@ private fun BlocosDaAnalise(analise: ProgressDto, trancado: Boolean, onOpenPaywa
     analise.strengthTrend?.takeIf { it.isNotEmpty() }?.let {
         // A regua vem do `weeklyLoad`: ele E a lista de semanas da janela, em ordem. Sem ela a
         // linha se espalha pela largura do cartao independente do periodo (ver `posicaoNaRegua`).
-        BlocoDeEvolucao(it, analise.weeklyLoad.orEmpty().map { s -> s.weekStart })
+        BlocoDeEvolucao(
+            trend = it,
+            regua = analise.weeklyLoad.orEmpty().map { s -> s.weekStart },
+            resumo = analise.exerciseSummary.orEmpty(),
+            onAlternar = onAlternarExercicio,
+        )
         Spacer(Modifier.height(10.dp))
     }
     analise.setsByMuscle?.takeIf { it.byMuscle.isNotEmpty() }?.let {
@@ -682,7 +695,12 @@ private fun diaMes(iso: String): String {
 }
 
 @Composable
-private fun BlocoDeEvolucao(trend: List<ExerciseTrendDto>, regua: List<String>) {
+private fun BlocoDeEvolucao(
+    trend: List<ExerciseTrendDto>,
+    regua: List<String>,
+    resumo: List<ExerciseSummaryDto>,
+    onAlternar: (String, List<String>) -> Unit,
+) {
     // Escala COMPARTILHADA pelas tres linhas: cada uma na sua escala faria subidas de tamanhos
     // diferentes parecerem iguais — a mentira mais comum em grafico de linha.
     val todos = trend.flatMap { it.points.map { p -> p.estimated1rm } }
@@ -740,21 +758,139 @@ private fun BlocoDeEvolucao(trend: List<ExerciseTrendDto>, regua: List<String>) 
             )
         }
         Spacer(Modifier.height(12.dp))
-        trend.forEachIndexed { i, ex ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(10.dp).background(cores[i % cores.size], MaterialTheme.shapes.extraSmall))
-                Spacer(Modifier.width(8.dp))
-                Text(ex.name, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, maxLines = 1)
-                // Com um ponto so nao ha variacao a declarar. "+0,0 %" ali parece estagnacao
-                // medida, quando e so falta de historico.
-                if (ex.points.size >= 2) {
-                    Text(
-                        comSinal(ex.changePercent, "%"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = corDoDelta(ex.changePercent),
+        ListaDeExercicios(
+            // Cache antigo ainda nao tem `exerciseSummary`. Em vez de um cartao sem legenda por
+            // alguns segundos, a lista e SINTETIZADA do proprio trend — `sets = 0` apaga a linha
+            // de baixo, entao o que falta simplesmente nao aparece.
+            resumo = resumo.ifEmpty {
+                trend.map {
+                    ExerciseSummaryDto(
+                        exerciseId = it.exerciseId,
+                        name = it.name,
+                        current1rm = it.points.lastOrNull()?.estimated1rm ?: 0.0,
+                        changePercent = it.changePercent,
+                        sets = 0,
+                        weeks = it.points.size,
                     )
                 }
-            }
+            },
+            desenhados = trend.map { it.exerciseId },
+            cores = cores,
+            onAlternar = onAlternar,
+        )
+    }
+}
+
+/**
+ * A lista de exercicios do recorte — e o CONTROLE das linhas do grafico (J.4.4).
+ *
+ * ## Por que ela substituiu a legenda em vez de conviver com ela
+ *
+ * A legenda listava os tres desenhados com nome e variacao. Os tres primeiros itens desta lista
+ * dizem exatamente isso, logo abaixo dela: dois controles para a mesma informacao. Aqui o
+ * quadradinho de cor nao e so decoracao de legenda — ele responde "por que ESTES tres", e o
+ * toque troca.
+ *
+ * ## Entra colapsada
+ *
+ * Trinta itens empurrariam o "series por grupo" para fora da tela. Colapsada mostra os
+ * desenhados; "ver todos" abre o resto.
+ *
+ * ## O que a lista responde que o grafico nao responde
+ *
+ * "Como esta minha rosca direta." As tres linhas dividem a mesma escala — e e isso que quebra com
+ * mais linhas: leg press a 200 kg e rosca a 20 kg no mesmo eixo achatam a rosca numa reta, e ela
+ * pode ter subido 30%. A lista da o numero sem desenhar nada.
+ */
+@Composable
+private fun ListaDeExercicios(
+    resumo: List<ExerciseSummaryDto>,
+    desenhados: List<String>,
+    cores: List<Color>,
+    onAlternar: (String, List<String>) -> Unit,
+) {
+    if (resumo.isEmpty()) return
+    // `remember(resumo.size)`: trocar de recorte recolhe a lista. Manter aberta uma lista de 27
+    // ao mudar para um recorte de 4 deixaria a tela num estado que a pessoa nao pediu.
+    var expandida by remember(resumo.size) { mutableStateOf(false) }
+    val mostrados = if (expandida) resumo else resumo.filter { it.exerciseId in desenhados }
+
+    mostrados.forEach { item ->
+        // ⚠️ A cor vem da POSICAO NO GRAFICO, nao do exercicio: tirar uma linha reatribui as
+        // cores das outras. E consciente, nao descuido.
+        //
+        // Cor fixa por exercicio seria melhor de ler, mas exigiria uma cor distinguivel por
+        // exercicio — e a familia Chart1/2/3 tem TRES, escolhidas juntas e validadas para
+        // daltonismo contra a superficie. Com treze exercicios e tres cores, dois selecionados
+        // cairiam na mesma e virariam duas linhas indistinguiveis. Cor que muda e pior que cor
+        // repetida so ate alguem tentar ler duas linhas da mesma cor.
+        val i = desenhados.indexOf(item.exerciseId)
+        LinhaDeExercicio(
+            item = item,
+            cor = if (i >= 0) cores[i % cores.size] else null,
+            onClick = { onAlternar(item.exerciseId, desenhados) },
+        )
+    }
+
+    if (resumo.size > mostrados.size || expandida) {
+        TextButton(onClick = { expandida = !expandida }, Modifier.padding(top = 2.dp)) {
+            Text(
+                if (expandida) stringResource(R.string.progresso_ver_menos)
+                else stringResource(R.string.progresso_ver_todos, resumo.size),
+                style = MaterialTheme.typography.labelLarge,
+            )
+        }
+    }
+    if (expandida) {
+        Text(
+            stringResource(R.string.progresso_toque_exercicio),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun LinhaDeExercicio(item: ExerciseSummaryDto, cor: Color?, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Quadrado APAGADO quando nao esta desenhado, nunca ausente: o espaco fica, entao a lista
+        // nao salta quando um exercicio entra ou sai do grafico.
+        Box(
+            Modifier
+                .size(10.dp)
+                .background(cor ?: MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.extraSmall),
+        )
+        Spacer(Modifier.width(8.dp))
+        Column(Modifier.weight(1f)) {
+            Text(
+                item.name,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            val kg = umaCasa(item.current1rm) + " " + stringResource(R.string.comum_kg)
+            Text(
+                if (item.sets > 0) {
+                    kg + " · " + stringResource(R.string.progresso_series_contagem, item.sets)
+                } else {
+                    kg
+                },
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        // Com uma semana so nao ha variacao a declarar. "+0,0 %" ali parece estagnacao medida,
+        // quando e falta de historico — mesma regra que o grafico ja usava.
+        if (item.weeks >= 2) {
+            Spacer(Modifier.width(8.dp))
+            Text(
+                comSinal(item.changePercent, "%"),
+                style = MaterialTheme.typography.bodySmall,
+                color = corDoDelta(item.changePercent),
+            )
         }
     }
 }
