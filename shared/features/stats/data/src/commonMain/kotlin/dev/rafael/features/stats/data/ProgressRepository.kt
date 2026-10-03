@@ -10,6 +10,7 @@ import dev.rafael.core.network.TokenProvider
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.stats.domain.FiltroDeProgresso
 import dev.rafael.features.stats.domain.Progresso
+import dev.rafael.features.stats.domain.SelecaoDeExercicios
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -53,13 +54,17 @@ class ProgressRepository(
      * A chave carrega uid, idioma E recorte. Os tres mudam a resposta, e juntar dois deles numa
      * chave so e como a tela mostra o grafico de outro filtro ate o TTL vencer.
      */
-    private fun chave(uid: String?, idioma: Idioma, filtro: FiltroDeProgresso) =
-        "progress:${idioma.tag}:${filtro.chave}:${uid ?: ""}"
+    private fun chave(
+        uid: String?,
+        idioma: Idioma,
+        filtro: FiltroDeProgresso,
+        selecao: SelecaoDeExercicios,
+    ) = "progress:${idioma.tag}:${filtro.chave}:${selecao.chave}:${uid ?: ""}"
 
     /** Re-chaveia quando a SESSAO muda — mesmo arranjo do [StatsRepository.observar]. */
-    override fun observar(filtro: FiltroDeProgresso): Flow<ProgressDto?> =
+    override fun observar(filtro: FiltroDeProgresso, selecao: SelecaoDeExercicios): Flow<ProgressDto?> =
         tokenProvider.uidFlow().flatMapLatest { uid ->
-            cache.get(chave(uid, idiomaAtual(), filtro))
+            cache.get(chave(uid, idiomaAtual(), filtro, selecao))
                 .asFlow()
                 .mapToOneOrNull(Dispatchers.Default)
                 .map { payload ->
@@ -69,15 +74,19 @@ class ProgressRepository(
                 }
         }
 
-    override suspend fun sincronizar(filtro: FiltroDeProgresso, forcar: Boolean) {
+    override suspend fun sincronizar(
+        filtro: FiltroDeProgresso,
+        selecao: SelecaoDeExercicios,
+        forcar: Boolean,
+    ) {
         if (tokenProvider.currentUid() == null) return   // sem sessao, so produziria 401
         // Carimbo POR RECORTE: um carimbo unico faria trocar de filtro cair no TTL do anterior e
         // a tela abriria vazia por ate dois minutos, sem explicacao.
-        val carimbo = "${SyncStamps.PROGRESSO}:${filtro.chave}"
+        val carimbo = "${SyncStamps.PROGRESSO}:${filtro.chave}:${selecao.chave}"
         if (!forcar && stamps.fresco(carimbo, TTL_MS)) return
         val idioma = idiomaAtual()
-        val k = chave(tokenProvider.currentUid(), idioma, filtro)
-        when (val r = api.get(idioma.tag, filtro)) {
+        val k = chave(tokenProvider.currentUid(), idioma, filtro, selecao)
+        when (val r = api.get(idioma.tag, filtro, selecao)) {
             is AppResult.Success -> {
                 withContext(Dispatchers.Default) {
                     cache.put(k, json.encodeToString(ProgressDto.serializer(), r.value))

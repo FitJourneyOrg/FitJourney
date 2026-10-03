@@ -6,6 +6,7 @@ import dev.rafael.app.screens.home.FakeProgresso
 import dev.rafael.app.screens.home.FakeStats
 import dev.rafael.contract.stats.ProgressDto
 import dev.rafael.features.stats.domain.FiltroDeProgresso
+import dev.rafael.features.stats.domain.SelecaoDeExercicios
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
@@ -189,6 +190,111 @@ class ProgressViewModelTest {
             analise.sincronizados.toList(),
             "voltou a pedir 'todos' depois de filtrar",
         )
+    }
+
+    // ---- selecao de exercicios (J.4.4) -------------------------------------
+
+    private val tresVisiveis = listOf("agachamento", "supino", "remada")
+
+    /**
+     * ⭐ O primeiro toque parte dos VISIVEIS, nao do vazio.
+     *
+     * Selecao vazia significa "o servidor escolheu" — tres linhas na tela. Se `alternar` partisse
+     * de uma lista vazia, tocar num exercicio novo levaria o grafico de tres linhas para UMA, do
+     * nada. Partindo dos visiveis, o quarto entra e o mais antigo sai: o toque sempre faz uma
+     * coisa so, e visivel.
+     */
+    @Test
+    fun `tocar num exercicio novo entra no lugar do mais antigo`() = runTest(dispatcher) {
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
+        advanceUntilIdle()
+
+        vm.alternarExercicio("rosca", tresVisiveis)
+        advanceUntilIdle()
+
+        assertEquals(listOf("supino", "remada", "rosca"), vm.state.value.selecao.ids)
+        assertEquals(
+            SelecaoDeExercicios(listOf("supino", "remada", "rosca")),
+            analise.selecionados.last(),
+            "a selecao nova nao foi pedida — o grafico ficaria no anterior ate o TTL vencer",
+        )
+    }
+
+    @Test
+    fun `tocar num exercicio desenhado tira ele do grafico`() = runTest(dispatcher) {
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
+        advanceUntilIdle()
+
+        vm.alternarExercicio("supino", tresVisiveis)
+        advanceUntilIdle()
+
+        assertEquals(listOf("agachamento", "remada"), vm.state.value.selecao.ids)
+    }
+
+    /**
+     * Caminho de falha: o toque que esvaziaria o grafico e ignorado.
+     *
+     * Sem isto, tirar o ultimo deixaria um cartao de 200dp desenhando nada — e com a selecao
+     * vazia o servidor voltaria a escolher tres sozinho, entao a pessoa veria TRES linhas
+     * aparecerem depois de tirar a ultima. Nenhuma das duas e um resultado defensavel.
+     */
+    @Test
+    fun `tirar o unico exercicio desenhado e ignorado`() = runTest(dispatcher) {
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
+        advanceUntilIdle()
+        val antes = analise.sincronizacoes
+
+        vm.alternarExercicio("agachamento", listOf("agachamento"))
+        advanceUntilIdle()
+
+        assertEquals(SelecaoDeExercicios.PADRAO, vm.state.value.selecao)
+        assertEquals(antes, analise.sincronizacoes, "toque que nao muda nada foi a rede")
+    }
+
+    /**
+     * ⭐ Trocar de recorte RESETA a selecao.
+     *
+     * Os exercicios do Programa A nao sao os do B. Levar ids que nao existem no recorte novo
+     * faria o servidor descarta-los e cair no padrao — o grafico mudaria sozinho, sem explicar
+     * por que. Recorte novo abre com os tres mais relevantes DELE.
+     */
+    @Test
+    fun `trocar de recorte reseta a selecao de exercicios`() = runTest(dispatcher) {
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
+        advanceUntilIdle()
+        vm.alternarExercicio("rosca", tresVisiveis)
+        advanceUntilIdle()
+
+        vm.selecionar(FiltroDeProgresso.DoPrograma("prog-x"))
+        advanceUntilIdle()
+
+        assertEquals(SelecaoDeExercicios.PADRAO, vm.state.value.selecao)
+        assertEquals(SelecaoDeExercicios.PADRAO, analise.selecionados.last())
+    }
+
+    /**
+     * ⭐ Cada selecao e uma CHAVE de cache diferente — o servidor so manda os PONTOS dos
+     * escolhidos, entao duas selecoes sao duas respostas.
+     */
+    @Test
+    fun `cada selecao observa o proprio recorte no cache`() = runTest(dispatcher) {
+        val analise = FakeProgresso()
+        val vm = ProgressViewModel(FakeHistorico(), FakeStats(), analise, FakeProgramas())
+        val escolhida = SelecaoDeExercicios(listOf("supino", "remada", "rosca"))
+        analise.fluxo(FiltroDeProgresso.Todos()).value = ProgressDto(totalKg = 10.0, totalSessions = 1)
+        analise.fluxo(FiltroDeProgresso.Todos(), escolhida).value =
+            ProgressDto(totalKg = 77.0, totalSessions = 7)
+        advanceUntilIdle()
+        assertEquals(10.0, vm.state.value.analise?.totalKg)
+
+        vm.alternarExercicio("rosca", tresVisiveis)
+        advanceUntilIdle()
+
+        assertEquals(77.0, vm.state.value.analise?.totalKg, "mostrou o grafico da selecao anterior")
     }
 
     // ---- janela de calendario (J.4.3) --------------------------------------

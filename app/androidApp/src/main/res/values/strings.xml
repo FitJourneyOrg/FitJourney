@@ -1579,6 +1579,11 @@
     <string name="progresso_arraste_semana">arraste e toque para ver cada semana</string>
     <string name="progresso_toque_semana">toque numa barra para ver a semana</string>
     <string name="progresso_evolucao">Carga estimada por exercício</string>
+    <!-- Lista de exercicios (J.4.4). %1$d = quantos existem no recorte. -->
+    <string name="progresso_ver_todos">Ver todos (%1$d)</string>
+    <string name="progresso_ver_menos">Ver menos</string>
+    <string name="progresso_series_contagem">%1$d séries</string>
+    <string name="progresso_toque_exercicio">toque num exercício para pôr ou tirar do gráfico</string>
     <string name="progresso_volume">Séries por grupo, por semana</string>
     <!--
       Rodapé do gráfico de volume: explica por que ele conta SÉRIES e não quilos. Sem isso a
