@@ -2,6 +2,7 @@ package dev.rafael.server.features.stats
 
 import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.stats.ExerciseDeltaDto
+import dev.rafael.contract.stats.ExerciseSummaryDto
 import dev.rafael.contract.stats.ExerciseTrendDto
 import dev.rafael.contract.stats.MuscleVolumeDto
 import dev.rafael.contract.stats.ProgressDto
@@ -114,6 +115,7 @@ class ProgressService(
         email: String?,
         idioma: Idioma,
         filtro: Filtro = Filtro.Todos(),
+        exercicios: List<Uuid> = emptyList(),
     ): AppResult<ProgressDto> =
         userService.findOrCreate(firebaseUid, email).flatMap { user ->
             sessions.listByUser(user.id).flatMap { historico ->
@@ -121,7 +123,7 @@ class ProgressService(
                 // entao uma consulta resolve as tres perguntas: quais existem (para separar o
                 // apagado do avulso), qual o started_at do filtrado, e o que oferecer no filtro.
                 programs.findAllByUser(user.id).flatMap { meusProgramas ->
-                    montar(historico, meusProgramas, user.isPremium, idioma, filtro)
+                    montar(historico, meusProgramas, user.isPremium, idioma, filtro, exercicios)
                 }
             }
         }
@@ -132,6 +134,7 @@ class ProgressService(
         premium: Boolean,
         idioma: Idioma,
         filtro: Filtro,
+        exercicios: List<Uuid>,
     ): AppResult<ProgressDto> {
         val existentes = meusProgramas.associateBy { it.id }
 
@@ -257,22 +260,47 @@ class ProgressService(
         if (series.isEmpty()) return vazio.asSuccess()
 
         val comparacao = ProgressPolicy.ultimoVsAnterior(series)
-        // Os tres do grafico saem da JANELA: "mais relevante" tem de significar relevante no
-        // periodo que esta na tela, senao o agachamento de marco apareceria na janela de 8
-        // semanas em que a pessoa nem agachou.
-        val relevantes = if (premium) {
-            ProgressPolicy.maisRelevantes(seriesDosGraficos, EXERCICIOS_NO_GRAFICO)
-        } else {
-            emptyList()
-        }
+        // TODOS os exercicios da janela, em ordem de relevancia — a lista paga (J.4.2). Sai da
+        // JANELA, nao do historico: "mais relevante" tem de significar relevante no periodo que
+        // esta na tela, senao o agachamento de marco apareceria na janela de 8 semanas em que a
+        // pessoa nem agachou.
+        val ordenados = if (premium) ProgressPolicy.porRelevancia(seriesDosGraficos) else emptyList()
+
+        // Quais ganham LINHA. A escolha da pessoa vence o padrao, e o padrao e a cabeca da lista.
+        //
+        // ⚠️ Id que nao esta na janela e DESCARTADO em silencio, nao recusado: ele nao tem ponto
+        // nenhum para plotar, e linha vazia e pior que linha ausente. Diferente do `programId`,
+        // que vira 400 — esse muda QUAL dado responde, a selecao so muda o que e desenhado. O
+        // `strengthTrend` que volta ja diz quais entraram, entao a resposta se autodescreve.
+        val escolhidos = exercicios.filter { it in ordenados }.take(EXERCICIOS_NO_GRAFICO)
+        val relevantes = escolhidos.ifEmpty { ordenados.take(EXERCICIOS_NO_GRAFICO) }
 
         // Um unico par de consultas: leitura crua + traducao na borda, sobre os ids que importam.
-        val idsDeNome = (comparacao?.deltaPorExercicio?.keys.orEmpty() + relevantes).toList()
+        // A lista paga mostra NOME de todos, entao o premium traduz `ordenados` inteiro; o free
+        // continua pagando so pelos ids da comparacao.
+        val idsDeNome = (comparacao?.deltaPorExercicio?.keys.orEmpty() + ordenados + relevantes).toList()
         val idsDeMusculo = if (premium) seriesDosGraficos.map { it.exercicioId }.distinct() else emptyList()
 
         return exercises.paraAnalise((idsDeNome + idsDeMusculo).distinct()).flatMap { catalogo ->
             exercises.nomesTraduzidos(idsDeNome, idioma).map { traduzidos ->
                 fun nome(id: Uuid): String = traduzidos[id] ?: catalogo[id]?.nomePiso.orEmpty()
+
+                /** 1RM estimado por semana, no eixo do recorte (data ou semana do programa). */
+                fun pontosDe(id: Uuid): List<TrendPointDto> = if (inicio != null) {
+                    ProgressPolicy.evolucaoNoPrograma(seriesDosGraficos, id, inicio).map {
+                        TrendPointDto(
+                            weekStart = inicio.plus(DatePeriod(days = (it.semana - 1) * 7)).toString(),
+                            estimated1rm = it.e1rm,
+                            weekNumber = it.semana,
+                        )
+                    }
+                } else {
+                    ProgressPolicy.evolucao(seriesDosGraficos, id).map {
+                        TrendPointDto(it.semana.toString(), it.e1rm)
+                    }
+                }
+
+                val pontosPor = ordenados.associateWith { pontosDe(it) }
 
                 val semanasDaJanela =
                     if (faixa != null) faixa.second - faixa.first + 1 else janela ?: JANELA_PADRAO
@@ -318,26 +346,33 @@ class ProgressService(
                                 .map { WeeklyLoadDto(it.semana.toString(), it.kg) }
                         }
                     },
+                    // Os pontos de cada exercicio saem de `pontosPor`, calculado UMA vez acima:
+                    // o grafico e a lista respondem a mesma pergunta, e calcular duas vezes e
+                    // como ter duas definicoes de "1RM da semana".
                     strengthTrend = if (!premium) null else {
                         relevantes.map { id ->
-                            val pontos = if (inicio != null) {
-                                ProgressPolicy.evolucaoNoPrograma(seriesDosGraficos, id, inicio).map {
-                                    TrendPointDto(
-                                        weekStart = inicio.plus(DatePeriod(days = (it.semana - 1) * 7)).toString(),
-                                        estimated1rm = it.e1rm,
-                                        weekNumber = it.semana,
-                                    )
-                                }
-                            } else {
-                                ProgressPolicy.evolucao(seriesDosGraficos, id).map {
-                                    TrendPointDto(it.semana.toString(), it.e1rm)
-                                }
-                            }
+                            val pontos = pontosPor[id].orEmpty()
                             ExerciseTrendDto(
                                 exerciseId = id.toString(),
                                 name = nome(id),
                                 points = pontos,
                                 changePercent = variacao(pontos.map { it.estimated1rm }),
+                            )
+                        }
+                    },
+                    exerciseSummary = if (!premium) null else {
+                        val contagem = ProgressPolicy.contagemPorExercicio(seriesDosGraficos)
+                        ordenados.map { id ->
+                            val pontos = pontosPor[id].orEmpty()
+                            ExerciseSummaryDto(
+                                exerciseId = id.toString(),
+                                name = nome(id),
+                                // A ULTIMA semana em que apareceu, nao a media do periodo: a
+                                // pergunta e "onde estou hoje".
+                                current1rm = pontos.lastOrNull()?.estimated1rm ?: 0.0,
+                                changePercent = variacao(pontos.map { it.estimated1rm }),
+                                sets = contagem[id] ?: 0,
+                                weeks = pontos.size,
                             )
                         }
                     },

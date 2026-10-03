@@ -77,6 +77,20 @@ data class ProgressDto(
      * semana" numa faixa que termina semanas atras.
      */
     val weeksWindow: Int? = null,
+    /**
+     * TODOS os exercicios do recorte, em ordem de relevancia — nao so os tres desenhados.
+     *
+     * Pago, junto com o [strengthTrend]: e a mesma pergunta que o grafico responde, em forma de
+     * lista. Nulo significa portao (ver [analysisLocked]), nunca "nao treinou".
+     *
+     * ## Por que lista em vez de mais linhas no grafico
+     *
+     * As tres linhas dividem a MESMA escala, que e o que torna a comparacao honesta — e e isso
+     * que quebra com mais linhas: leg press a 200 kg e rosca a 20 kg no mesmo eixo achatam a
+     * rosca numa reta, e ela pode ter subido 30%. A lista responde "como esta o exercicio X"
+     * para as dezenas que a pessoa treina sem desenhar nada.
+     */
+    val exerciseSummary: List<ExerciseSummaryDto>? = null,
 )
 
 /**
@@ -124,6 +138,27 @@ data class TrendPointDto(
  * [unclassified] e o volume de exercicio sem `primary_muscles` no catalogo - aparece para nao
  * sumir em silencio.
  */
+/**
+ * Uma linha da lista de exercicios.
+ *
+ * @param current1rm 1RM estimado da melhor serie da ULTIMA semana em que o exercicio apareceu —
+ *   nao a media do periodo. A pergunta e "onde estou hoje", e media de dez semanas responde outra.
+ * @param changePercent variacao do primeiro ao ultimo ponto, em %. Zero com menos de dois pontos:
+ *   "+0,0 %" ali parece estagnacao medida, quando e falta de historico. O cliente esconde o valor
+ *   quando [weeks] e 1 — mesma regra do grafico.
+ * @param sets series elegiveis no recorte: o que diz se o numero acima tem lastro.
+ * @param weeks em quantas semanas distintas o exercicio apareceu.
+ */
+@Serializable
+data class ExerciseSummaryDto(
+    val exerciseId: String,
+    val name: String,
+    val current1rm: Double,
+    val changePercent: Double,
+    val sets: Int,
+    val weeks: Int,
+)
+
 @Serializable
 data class MuscleVolumeDto(
     val byMuscle: Map<MuscleGroup, Double>,

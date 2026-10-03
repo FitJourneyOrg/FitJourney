@@ -242,6 +242,28 @@ object ProgressPolicy {
             .map { (semana, doGrupo) -> PontoDeEvolucao(semana, doGrupo.maxOf { e1rm(it.kg, it.reps) }) }
             .sortedBy { it.semana }
 
+    /**
+     * Quantas series cada exercicio teve no recorte.
+     *
+     * Mora na politica, e nao num `groupingBy` solto no servico, porque "quantas series" e uma
+     * REGRA: conta serie elegivel (feita, com carga externa), que e o mesmo criterio do resto da
+     * analise. Reimplementar no servico e como ter duas definicoes de serie.
+     */
+    fun contagemPorExercicio(series: List<SerieFeita>): Map<Uuid, Int> =
+        series.groupingBy { it.exercicioId }.eachCount()
+
+    /**
+     * Ordem dos exercicios na lista: tonelagem decrescente, o MESMO criterio do [maisRelevantes].
+     *
+     * ⚠️ Nao ordena por variacao. Delta% ordena bem num mundo onde todo exercicio tem historico;
+     * no real, quem fez uma unica serie pesada numa semana aparece com +40% e lidera a lista
+     * acima do agachamento que a pessoa treina ha dois meses. Ordenar pelo mesmo criterio do
+     * grafico tem um efeito colateral bom: a CABECA da lista e exatamente o que esta desenhado,
+     * entao a pessoa ve de onde vieram as tres linhas.
+     */
+    fun porRelevancia(series: List<SerieFeita>): List<Uuid> =
+        maisRelevantes(series, quantos = Int.MAX_VALUE)
+
     // ---- volume por grupo --------------------------------------------------
 
     /**
