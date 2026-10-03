@@ -40,9 +40,16 @@ import kotlin.uuid.Uuid
  *
  * ## [INV] Free nao recebe o numero pago em campo nenhum
  *
- * Os tres blocos pagos nem sequer sao CALCULADOS para quem e free - nao ha valor a vazar por
- * descuido de serializacao. O `analysisLocked` diz ao cliente que o nulo e portao, nao falta de
- * dado (ver KDoc do [ProgressDto]).
+ * Os blocos pagos nem sequer sao CALCULADOS para quem e free - nao ha valor a vazar por descuido
+ * de serializacao. O `analysisLocked` diz ao cliente que o nulo e portao, nao falta de dado (ver
+ * KDoc do [ProgressDto]).
+ *
+ * ## O que e pago mudou na J.4.1: a PROFUNDIDADE, nao o grafico
+ *
+ * A carga por semana saiu do portao. Ela era 100% paga, o que significava que ninguem free via
+ * oito semanas — e por isso "janela longa" nao vendia nada: nao existia quem visse 8 e quisesse
+ * 26. Agora o free ve a janela curta e paga pela longa (26/52), pelo 1RM estimado e pelo volume
+ * por grupo. Value-first (#23): a tela do free deixou de ser so um paywall.
  */
 class ProgressService(
     private val userService: UserService,
@@ -56,29 +63,57 @@ class ProgressService(
      * faixa preenchida" nao e estado valido, e com parametros soltos ele compila.
      */
     sealed interface Filtro {
-        /** Tudo, eixo de calendario — o que a tela abre. */
-        data object Todos : Filtro
+        /**
+         * Tudo, eixo de calendario — o que a tela abre, com a janela em semanas.
+         *
+         * A janela mora AQUI, e nao num parametro ao lado, porque o recorte tem um eixo de tempo
+         * e so um: em calendario ele e "as ultimas N semanas", no programa e "da semana X a Y". Um
+         * parametro solto permitiria pedir janela de calendario junto com faixa de programa, que
+         * nao e estado valido — e, no cliente, a janela faz parte da chave do cache de graca.
+         */
+        data class Todos(val semanas: Int = JANELA_PADRAO) : Filtro
 
         /** Sessao sem programa, ou de programa que foi apagado. Ver `ProgressDto.hasUnassigned`. */
-        data object Avulsos : Filtro
+        data class Avulsos(val semanas: Int = JANELA_PADRAO) : Filtro
 
-        /** Um programa, com faixa opcional de semanas DELE. */
+        /** Um programa, com faixa opcional de semanas DELE. A faixa E a janela aqui. */
         data class DoPrograma(val programId: Uuid, val de: Int? = null, val ate: Int? = null) : Filtro
     }
 
     companion object {
-        /** Janela da analise. Oito semanas cobrem um mesociclo inteiro com deload. */
-        const val SEMANAS = 8
+        /** Oito semanas cobrem um mesociclo inteiro com deload — e o que a tela abre. */
+        const val JANELA_PADRAO = 8
+
+        /** Teto do plano free. O que se paga e a profundidade, nao o grafico. */
+        const val JANELA_FREE = 8
+
+        /** As janelas oferecidas: 2 meses, 6 meses, 1 ano. Qualquer outro valor cai no padrao. */
+        val JANELAS = listOf(8, 26, 52)
 
         /** Linhas no grafico de evolucao. Mais que tres vira emaranhado em tela de celular. */
         const val EXERCICIOS_NO_GRAFICO = 3
+    }
+
+    /**
+     * A janela que vai valer, dado o que foi pedido e o plano.
+     *
+     * Encaixa em silencio, como a faixa do programa: janela e ajuste de VISUALIZACAO. Valor fora
+     * da lista cai no padrao em vez de virar 400 — cliente velho pedindo 12 nao pode quebrar.
+     *
+     * ⚠️ O free e limitado AQUI, no servidor, mesmo que a tela ja nao deixe escolher: o cliente
+     * nao e autoridade (#16). E o [ProgressDto.weeksWindow] devolve a janela APLICADA, porque
+     * controle dizendo 52 com eixo desenhando 8 e a mesma mentira do rotulo "esta semana".
+     */
+    private fun janelaValida(pedida: Int, premium: Boolean): Int {
+        val naLista = if (pedida in JANELAS) pedida else JANELA_PADRAO
+        return if (premium) naLista else minOf(naLista, JANELA_FREE)
     }
 
     suspend fun forUser(
         firebaseUid: String,
         email: String?,
         idioma: Idioma,
-        filtro: Filtro = Filtro.Todos,
+        filtro: Filtro = Filtro.Todos(),
     ): AppResult<ProgressDto> =
         userService.findOrCreate(firebaseUid, email).flatMap { user ->
             sessions.listByUser(user.id).flatMap { historico ->
@@ -165,6 +200,32 @@ class ProgressService(
             todasAsSeries
         }
 
+        val hoje = clock.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
+
+        // A janela pedida so existe no eixo de calendario: no programa, a faixa E a janela.
+        val janela = when (filtro) {
+            is Filtro.Todos -> janelaValida(filtro.semanas, premium)
+            is Filtro.Avulsos -> janelaValida(filtro.semanas, premium)
+            is Filtro.DoPrograma -> null
+        }
+
+        // ⚠️ DUAS janelas declaradas, de proposito — e a unica razao pela qual elas divergem:
+        //
+        // | bloco | janela |
+        // |---|---|
+        // | totais, "desde", comparacao | TODO o historico do recorte |
+        // | carga/semana, 1RM, series por grupo | a janela escolhida |
+        //
+        // Os totais sao de sempre porque `sinceDate` e a primeira sessao da vida e as conquistas
+        // de carga acumulam; a comparacao e sobre o ULTIMO treino, e janela nenhuma muda qual foi.
+        // O que nao pode acontecer de novo e cada GRAFICO escolher a sua: era o que fazia as
+        // barras mostrarem 2 meses e a linha de 1RM mostrar 2 anos, na mesma tela, sem aviso.
+        val seriesDosGraficos = if (janela == null) {
+            series
+        } else {
+            ProgressPolicy.naJanelaDeCalendario(series, hoje, janela)
+        }
+
         // Treino conta como treino mesmo sem carga: calistenia nao deixa de ser sessao so porque
         // nao entra no grafico. Mesmo criterio do StatsService (ao menos uma serie feita).
         //
@@ -191,26 +252,30 @@ class ProgressService(
             programWeeks = ultimaSemana,
             fromWeek = faixa?.first,
             toWeek = faixa?.second,
+            weeksWindow = janela,
         )
         if (series.isEmpty()) return vazio.asSuccess()
 
         val comparacao = ProgressPolicy.ultimoVsAnterior(series)
+        // Os tres do grafico saem da JANELA: "mais relevante" tem de significar relevante no
+        // periodo que esta na tela, senao o agachamento de marco apareceria na janela de 8
+        // semanas em que a pessoa nem agachou.
         val relevantes = if (premium) {
-            ProgressPolicy.maisRelevantes(series, EXERCICIOS_NO_GRAFICO)
+            ProgressPolicy.maisRelevantes(seriesDosGraficos, EXERCICIOS_NO_GRAFICO)
         } else {
             emptyList()
         }
 
         // Um unico par de consultas: leitura crua + traducao na borda, sobre os ids que importam.
         val idsDeNome = (comparacao?.deltaPorExercicio?.keys.orEmpty() + relevantes).toList()
-        val idsDeMusculo = if (premium) series.map { it.exercicioId }.distinct() else emptyList()
+        val idsDeMusculo = if (premium) seriesDosGraficos.map { it.exercicioId }.distinct() else emptyList()
 
         return exercises.paraAnalise((idsDeNome + idsDeMusculo).distinct()).flatMap { catalogo ->
             exercises.nomesTraduzidos(idsDeNome, idioma).map { traduzidos ->
                 fun nome(id: Uuid): String = traduzidos[id] ?: catalogo[id]?.nomePiso.orEmpty()
 
-                val hoje = clock.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-                val semanasDaJanela = if (faixa != null) faixa.second - faixa.first + 1 else SEMANAS
+                val semanasDaJanela =
+                    if (faixa != null) faixa.second - faixa.first + 1 else janela ?: JANELA_PADRAO
 
                 vazio.copy(
                     totalKg = ProgressPolicy.tonelagem(series),
@@ -234,7 +299,8 @@ class ProgressService(
                                 },
                         )
                     },
-                    weeklyLoad = if (!premium) null else {
+                    // SEM portao desde a J.4.1: o free ve a janela curta e paga pela longa.
+                    weeklyLoad = run {
                         if (faixa != null && inicio != null) {
                             ProgressPolicy.porSemanaDoPrograma(series, inicio, faixa.first, faixa.second)
                                 .map { s ->
@@ -248,14 +314,14 @@ class ProgressService(
                                     )
                                 }
                         } else {
-                            ProgressPolicy.porSemana(series, hoje, SEMANAS)
+                            ProgressPolicy.porSemana(seriesDosGraficos, hoje, janela ?: JANELA_PADRAO)
                                 .map { WeeklyLoadDto(it.semana.toString(), it.kg) }
                         }
                     },
                     strengthTrend = if (!premium) null else {
                         relevantes.map { id ->
                             val pontos = if (inicio != null) {
-                                ProgressPolicy.evolucaoNoPrograma(series, id, inicio).map {
+                                ProgressPolicy.evolucaoNoPrograma(seriesDosGraficos, id, inicio).map {
                                     TrendPointDto(
                                         weekStart = inicio.plus(DatePeriod(days = (it.semana - 1) * 7)).toString(),
                                         estimated1rm = it.e1rm,
@@ -263,7 +329,7 @@ class ProgressService(
                                     )
                                 }
                             } else {
-                                ProgressPolicy.evolucao(series, id).map {
+                                ProgressPolicy.evolucao(seriesDosGraficos, id).map {
                                     TrendPointDto(it.semana.toString(), it.e1rm)
                                 }
                             }
@@ -277,7 +343,7 @@ class ProgressService(
                     },
                     setsByMuscle = if (!premium) null else {
                         val v = ProgressPolicy.seriesPorGrupo(
-                            series = series,
+                            series = seriesDosGraficos,
                             musculos = catalogo.mapValues { (_, e) -> e.musculosPrimarios },
                             // A media acompanha a JANELA: num recorte de 4 semanas, dividir por 8
                             // diria metade do volume real e a pessoa concluiria que treina pouco.

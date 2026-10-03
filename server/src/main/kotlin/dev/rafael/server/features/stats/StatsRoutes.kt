@@ -71,8 +71,13 @@ private const val AVULSOS = "avulsos"
  * coisa, porque muda QUAL dado responde.
  */
 private fun ApplicationCall.filtroPedido(): AppResult<ProgressService.Filtro> {
-    val bruto = request.queryParameters["programId"] ?: return ProgressService.Filtro.Todos.asSuccess()
-    if (bruto == AVULSOS) return ProgressService.Filtro.Avulsos.asSuccess()
+    // Janela fora da lista nao e 400: o servico encaixa no padrao. Janela e VISUALIZACAO, e
+    // cliente velho pedindo 12 nao pode receber erro por isso. Id de programa invalido continua
+    // sendo 400, porque esse muda QUAL dado responde.
+    val semanas = request.queryParameters["semanas"]?.toIntOrNull() ?: ProgressService.JANELA_PADRAO
+    val bruto = request.queryParameters["programId"]
+        ?: return ProgressService.Filtro.Todos(semanas).asSuccess()
+    if (bruto == AVULSOS) return ProgressService.Filtro.Avulsos(semanas).asSuccess()
 
     val id = runCatching { Uuid.parse(bruto) }.getOrNull()
         ?: return AppError.Validation(

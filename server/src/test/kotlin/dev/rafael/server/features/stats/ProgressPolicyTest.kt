@@ -245,6 +245,47 @@ class ProgressPolicyTest {
         assertEquals(500.0, ProgressPolicy.tonelagem(recortado))
     }
 
+    // ---- janela de calendario (J.4.1) --------------------------------------
+
+    /** 2026-10-01 e uma quinta; a segunda dessa semana e 28/09. */
+    private val quinta = LocalDate.parse("2026-10-01")
+
+    @Test
+    fun `a janela comeca na segunda da primeira semana, nao no dia de hoje`() {
+        // Com 8 semanas: 28/09 menos 7 semanas = 10/08. Cortar em "hoje menos 56 dias" daria
+        // 06/08 e colocaria meia semana a mais no grafico.
+        assertEquals(LocalDate.parse("2026-08-10"), ProgressPolicy.primeiraSemanaDaJanela(quinta, 8))
+        assertEquals(LocalDate.parse("2026-04-06"), ProgressPolicy.primeiraSemanaDaJanela(quinta, 26))
+    }
+
+    @Test
+    fun `janela de uma semana e a semana corrente inteira`() {
+        assertEquals(LocalDate.parse("2026-09-28"), ProgressPolicy.primeiraSemanaDaJanela(quinta, 1))
+    }
+
+    /**
+     * ⭐ O corte que faltava: sem ele cada bloco recortava sozinho e os tres discordavam — barras
+     * em 8 semanas, linha de 1RM no historico inteiro, e a media de series dividindo o historico
+     * inteiro por 8.
+     */
+    @Test
+    fun `naJanelaDeCalendario deixa de fora o que e anterior a janela`() {
+        val s = listOf(
+            serie("2026-06-15", 60.0),   // fora da janela de 8, dentro da de 26
+            serie("2026-09-28", 65.0),
+        )
+
+        assertEquals(1, ProgressPolicy.naJanelaDeCalendario(s, quinta, 8).size)
+        assertEquals(2, ProgressPolicy.naJanelaDeCalendario(s, quinta, 26).size)
+    }
+
+    @Test
+    fun `janela zero ou negativa e erro de programacao, nao janela vazia`() {
+        // Devolver lista vazia esconderia a chamada errada e apareceria como "nao treinou".
+        assertFailsWith<IllegalArgumentException> { ProgressPolicy.primeiraSemanaDaJanela(quinta, 0) }
+        assertFailsWith<IllegalArgumentException> { ProgressPolicy.naJanelaDeCalendario(emptyList(), quinta, -1) }
+    }
+
     @Test
     fun `evolucao no programa rotula o ponto pela semana, e pula a que nao teve o exercicio`() {
         val s = listOf(
