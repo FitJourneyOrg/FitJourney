@@ -1557,9 +1557,17 @@
     -->
     <string name="progresso_filtro_todos">Todos</string>
     <string name="progresso_filtro_avulsos">Avulsos</string>
+    <!--
+      Faixa de semanas DO PROGRAMA (J.3.3b). %1$d e a primeira, %2$d a última, ambas 1-based e
+      inclusivas. "Semana" aqui é a do programa, contada a partir do início dele — não é semana
+      do calendário, e a tradução não pode sugerir que seja.
+    -->
+    <string name="progresso_faixa">Semanas %1$d a %2$d</string>
     <string name="progresso_carga_semanal">Carga por semana</string>
     <!-- Eixo do gráfico semanal: só as pontas. Oito datas não cabem na largura de um celular. -->
     <string name="progresso_dia_mes">%1$s/%2$s</string>
+    <!-- Rotulo de eixo quando o recorte e um programa: semana DELE, 1-based. -->
+    <string name="progresso_semana_n">Semana %1$d</string>
     <string name="progresso_semana_atual">esta semana</string>
     <!-- Dica de descoberta: sem ela ninguém adivinha que a barra responde ao toque. -->
     <string name="progresso_toque_semana">toque numa barra para ver a semana</string>

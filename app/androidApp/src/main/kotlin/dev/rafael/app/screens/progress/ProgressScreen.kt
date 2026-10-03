@@ -30,6 +30,7 @@ import dev.rafael.core.designsystem.Chart3
 import org.koin.androidx.compose.koinViewModel
 import java.util.Locale
 import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Progresso — a analise do treino (J.2).
@@ -78,10 +79,15 @@ fun ProgressScreen(
         val analise = state.analise
 
         FiltroDeProgramas(
-            analise = analise,
+            estrutura = state.estrutura,
             programas = state.programas,
             selecionado = state.filtro,
             onSelecionar = viewModel::selecionar,
+        )
+        FaixaDeSemanas(
+            estrutura = state.estrutura,
+            selecionado = state.filtro,
+            onEscolher = viewModel::selecionarFaixa,
         )
 
         Column(Modifier.padding(horizontal = MARGEM)) {
@@ -124,14 +130,14 @@ fun ProgressScreen(
  */
 @Composable
 private fun FiltroDeProgramas(
-    analise: ProgressDto?,
+    estrutura: EstruturaDoFiltro,
     programas: List<Program>,
     selecionado: FiltroDeProgresso,
     onSelecionar: (FiltroDeProgresso) -> Unit,
 ) {
     val porId = programas.mapNotNull { p -> p.id?.let { it to p } }.toMap()
-    val comNome = analise?.availablePrograms.orEmpty().mapNotNull { id -> porId[id]?.let { id to it } }
-    val temAvulsos = analise?.hasUnassigned == true
+    val comNome = estrutura.programas.mapNotNull { id -> porId[id]?.let { id to it } }
+    val temAvulsos = estrutura.temAvulsos
     if (comNome.size + (if (temAvulsos) 1 else 0) < 2) return
 
     Row(
@@ -154,10 +160,15 @@ private fun FiltroDeProgramas(
             onClick = { onSelecionar(FiltroDeProgresso.Todos) },
         )
         comNome.forEach { (id, p) ->
+            val ativo = selecionado is FiltroDeProgresso.DoPrograma && selecionado.programId == id
             Chip(
                 texto = nomeDoPrograma(p.name, p.daysPerWeek, p.split),
-                ativo = selecionado is FiltroDeProgresso.DoPrograma && selecionado.programId == id,
-                onClick = { onSelecionar(FiltroDeProgresso.DoPrograma(id)) },
+                ativo = ativo,
+                // O guarda `!ativo` nao e economia de requisicao — e o que impede tocar no chip
+                // ativo de ZERAR a faixa escolhida, porque `DoPrograma(id)` sem faixa e um
+                // filtro diferente de `DoPrograma(id, 10, 14)`. Trocar DE programa reseta a
+                // faixa de proposito; reafirmar o mesmo programa nao.
+                onClick = { if (!ativo) onSelecionar(FiltroDeProgresso.DoPrograma(id)) },
             )
         }
         if (temAvulsos) {
@@ -178,6 +189,74 @@ private fun Chip(texto: String, ativo: Boolean, onClick: () -> Unit) {
         onClick = onClick,
         label = { Text(texto, maxLines = 1) },
     )
+}
+
+/**
+ * A faixa de semanas DO PROGRAMA (J.3.3b) — "quero ver da semana 10 a 14".
+ *
+ * ## Fica junto dos chips, nao embaixo do grafico
+ *
+ * A faixa recorta o DTO inteiro: tonelagem, comparacao, series por grupo, os tres graficos. Posto
+ * abaixo do grafico semanal, o controle pareceria mexer so naquele grafico enquanto o cartao de
+ * totais acima dele ja estaria obedecendo — o controle mentiria sobre o proprio alcance. Chips e
+ * faixa definem a mesma coisa (o recorte), entao moram no mesmo lugar.
+ *
+ * ## O arraste e LOCAL; so o fim do gesto vai a rede
+ *
+ * Um `RangeSlider` emite a cada pixel, e cada valor e um recorte com chave de cache propria.
+ * Aplicar no `onValueChange` viraria dezenas de requisicoes e dezenas de entradas de cache por
+ * gesto — e o grafico piscaria sob o dedo. O estado do arraste e `remember` local; o filtro muda
+ * no `onValueChangeFinished`.
+ *
+ * ## Some quando nao ha o que escolher
+ *
+ * Sem programa escolhido nao existe "semana do programa" (ARCH #27: programas coexistem, entao a
+ * semana 3 de X e a 11 de Y acontecem no mesmo dia). Com uma semana so, nao ha faixa. Em ambos o
+ * controle nao aparece, em vez de aparecer desabilitado.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FaixaDeSemanas(
+    estrutura: EstruturaDoFiltro,
+    selecionado: FiltroDeProgresso,
+    onEscolher: (Int, Int) -> Unit,
+) {
+    val programa = selecionado as? FiltroDeProgresso.DoPrograma ?: return
+    // A medida tem de ser DESTE programa: durante a troca, a estrutura ainda fala do anterior.
+    if (estrutura.programaMedido != programa.programId) return
+    val total = estrutura.semanas ?: return
+    if (total < 2) return
+
+    // O filtro vem primeiro: logo depois do gesto ele ja carrega a faixa, entao o rotulo nao
+    // espera a resposta do servidor para mostrar o que a pessoa acabou de escolher.
+    val de = (programa.de ?: estrutura.de ?: 1).coerceIn(1, total)
+    val ate = (programa.ate ?: estrutura.ate ?: total).coerceIn(de, total)
+
+    // Chave com o programa E o teto: programa novo, ou programa que cresceu uma semana, recomeca
+    // do que o servidor aplicou — nao do que o dedo deixou no slider anterior.
+    var arraste by remember(programa.programId, total, de, ate) {
+        mutableStateOf(de.toFloat()..ate.toFloat())
+    }
+    val inicio = arraste.start.roundToInt()
+    val fim = arraste.endInclusive.roundToInt()
+
+    Column(Modifier.padding(horizontal = MARGEM)) {
+        Text(
+            stringResource(R.string.progresso_faixa, inicio, fim),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        RangeSlider(
+            value = arraste,
+            onValueChange = { arraste = it },
+            valueRange = 1f..total.toFloat(),
+            // `steps` conta os pontos ENTRE as pontas: 8 semanas sao 8 valores, 6 no meio.
+            // Sem isso o slider e continuo e devolveria 7,3 — semana nao tem fracao.
+            steps = (total - 2).coerceAtLeast(0),
+            onValueChangeFinished = { onEscolher(inicio, fim) },
+        )
+    }
+    Spacer(Modifier.height(4.dp))
 }
 
 /* -------------------------------------------------------------------------- */
@@ -378,7 +457,7 @@ private fun BlocoDeCargaSemanal(semanas: List<WeeklyLoadDto>) {
                 )
             } else {
                 Text(
-                    diaMes(semana.weekStart),
+                    rotuloDaSemana(semana),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -415,17 +494,42 @@ private fun BlocoDeCargaSemanal(semanas: List<WeeklyLoadDto>) {
         Spacer(Modifier.height(6.dp))
         Row(Modifier.fillMaxWidth().padding(start = LARGURA_DA_CALHA)) {
             Text(
-                diaMes(semanas.first().weekStart),
+                rotuloDaSemana(semanas.first()),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.weight(1f))
             Text(
-                stringResource(R.string.progresso_semana_atual),
+                // ⚠️ "esta semana" SO quando a ultima barra e mesmo a desta semana. Com faixa do
+                // programa (J.3.3b) ela pode ser a semana 14 de quem esta na 16 — a frase fixa
+                // viraria rotulo errado, e rotulo errado num grafico e pior que rotulo nenhum,
+                // porque o desenho continua convincente.
+                rotuloDaSemana(semanas.last(), atual = true),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+/**
+ * Como a semana se chama no eixo.
+ *
+ * Num recorte de programa a data nao e a referencia que a pessoa usa — ela pensa "semana 10 do
+ * programa", nao "12/08" (ARCH #27: programas coexistem, entao a mesma data e semana 3 de um e 11
+ * de outro). O `weekNumber` vem do servidor exatamente quando existe essa referencia; nulo
+ * significa recorte por calendario, e ai a data e que localiza.
+ *
+ * @param atual permite "esta semana" no fim do eixo — valido so sem faixa, porque com faixa a
+ *   ultima barra pode estar semanas atras.
+ */
+@Composable
+private fun rotuloDaSemana(semana: WeeklyLoadDto, atual: Boolean = false): String {
+    val n = semana.weekNumber
+    return when {
+        n != null -> stringResource(R.string.progresso_semana_n, n)
+        atual -> stringResource(R.string.progresso_semana_atual)
+        else -> diaMes(semana.weekStart)
     }
 }
 
