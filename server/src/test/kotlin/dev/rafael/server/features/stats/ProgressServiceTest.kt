@@ -1,12 +1,17 @@
 package dev.rafael.server.features.stats
 
 import dev.rafael.contract.i18n.Idioma
+import dev.rafael.contract.error.ErrorCodes
 import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.contract.stats.ProgressDto
+import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asSuccess
 import dev.rafael.server.features.exercise.db.ExerciseRepository
 import dev.rafael.server.features.exercise.db.ExercicioParaAnalise
+import dev.rafael.server.features.program.db.ProgramRepository
+import dev.rafael.server.features.program.models.Program
 import dev.rafael.server.features.session.db.SessionRepository
 import dev.rafael.server.features.session.models.SetLog
 import dev.rafael.server.features.session.models.WorkoutSession
@@ -20,6 +25,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
+import kotlin.test.assertIs as assertIsTipo
 import kotlin.test.assertTrue
 import kotlin.time.Clock
 import kotlin.time.Instant
@@ -33,6 +39,9 @@ class ProgressServiceTest {
 
     private val agachamento = Uuid.parse("00000001-0000-0000-0000-000000000000")
     private val prancha = Uuid.parse("00000002-0000-0000-0000-000000000000")
+    private val supino = Uuid.parse("00000003-0000-0000-0000-000000000000")
+    private val remada = Uuid.parse("00000004-0000-0000-0000-000000000000")
+    private val rosca = Uuid.parse("00000005-0000-0000-0000-000000000000")
 
     /** 2026-10-01, uma quinta. */
     private val relogio: Clock = object : Clock {
@@ -41,7 +50,7 @@ class ProgressServiceTest {
 
     private fun user(premium: Boolean) = User(
         id = Uuid.random(), firebaseUid = "fb", email = null,
-        isPremium = premium, displayName = "Atleta-teste", code = "TESTE234",
+        isPremium = premium, displayName = "Atleta-teste", code = "TESTE234", activeProgramId = null,
     )
 
     private class FakeUserRepo(private val u: User) : UserRepository {
@@ -83,29 +92,71 @@ class ProgressServiceTest {
     private fun serie(ex: Uuid, kg: Double?, reps: Int = 10, done: Boolean = true, ordem: Int = 0) =
         SetLog(ex, ordem, 0, reps, reps, kg, done)
 
-    private fun sessao(dia: Int, treino: String, sets: List<SetLog>) = WorkoutSession(
-        id = Uuid.random(), userId = Uuid.random(), programId = null, workoutId = null,
+    private fun sessao(dia: Int, treino: String, sets: List<SetLog>, programId: Uuid? = null) = WorkoutSession(
+        id = Uuid.random(), userId = Uuid.random(), programId = programId, workoutId = null,
         workoutName = treino,
         startedAt = LocalDateTime(2026, 9, dia, 18, 0),
         finishedAt = LocalDateTime(2026, 9, dia, 19, 0),
         sets = sets,
     )
 
+    /** Sessao em data arbitraria — o [sessao] fixa setembro, e janela de 26 semanas sai do mes. */
+    private fun sessaoEm(
+        iso: String,
+        treino: String,
+        sets: List<SetLog>,
+        programId: Uuid? = null,
+    ) = WorkoutSession(
+        id = Uuid.random(), userId = Uuid.random(), programId = programId, workoutId = null,
+        workoutName = treino,
+        startedAt = LocalDateTime.parse(iso + "T18:00:00"),
+        finishedAt = LocalDateTime.parse(iso + "T19:00:00"),
+        sets = sets,
+    )
+
     private val catalogo = mapOf(
         agachamento to ExercicioParaAnalise("Agachamento Livre com Barra", listOf(MuscleGroup.LEGS)),
         prancha to ExercicioParaAnalise("Prancha Isométrica", emptyList()),
+        supino to ExercicioParaAnalise("Supino Reto com Barra", listOf(MuscleGroup.CHEST)),
+        remada to ExercicioParaAnalise("Remada Curvada", listOf(MuscleGroup.BACK)),
+        rosca to ExercicioParaAnalise("Rosca Direta", listOf(MuscleGroup.BICEPS)),
+    )
+
+    /** Programas que o usuario AINDA tem. O que nao esta aqui conta como apagado (J.3). */
+    private class FakeProgramas(private val lista: List<Program>) : ProgramRepository {
+        override suspend fun findAllByUser(userId: Uuid) = lista.asSuccess()
+        override suspend fun counts(userId: Uuid) = error("não usado")
+        override suspend fun createForUser(userId: Uuid, program: Program) = error("não usado")
+        override suspend fun findByIdForUser(userId: Uuid, programId: Uuid) = error("não usado")
+        override suspend fun rename(userId: Uuid, programId: Uuid, name: String) = error("não usado")
+        override suspend fun delete(userId: Uuid, programId: Uuid) = error("não usado")
+        override suspend fun setSchedule(userId: Uuid, programId: Uuid, schedule: Map<Uuid, Int>) = error("não usado")
+    }
+
+    private fun programa(id: Uuid, inicio: String, semanas: Int = 8) = Program(
+        id = id, userId = Uuid.random(), name = "", origin = WorkoutOrigin.AI,
+        daysPerWeek = 4, split = null, focusMuscles = emptyList(), locked = false,
+        workouts = emptyList(),
+        createdAt = LocalDateTime(2026, 8, 1, 10, 0),
+        updatedAt = LocalDateTime(2026, 8, 1, 10, 0),
+        durationWeeks = semanas,
+        startedAt = LocalDateTime.parse(inicio + "T10:00:00"),
     )
 
     private fun servico(
         premium: Boolean,
         historico: List<WorkoutSession>,
         catalogoFake: FakeCatalogo = FakeCatalogo(catalogo),
+        programas: List<Program> = emptyList(),
     ) = ProgressService(
         userService = UserService(FakeUserRepo(user(premium))),
         sessions = FakeSessions(historico),
         exercises = catalogoFake,
+        programs = FakeProgramas(programas),
         clock = relogio,
     ) to catalogoFake
+
+    private fun <T> ok(r: AppResult<T>): T = assertIsTipo<AppResult.Success<T>>(r).value
 
     private val duasSessoesIguais = listOf(
         sessao(21, "Inferior A", listOf(serie(agachamento, 60.0))),
@@ -114,12 +165,20 @@ class ProgressServiceTest {
 
     // ---- o portao ----------------------------------------------------------
 
+    /**
+     * ⭐ O que e pago e a PROFUNDIDADE, nao o grafico (J.4.1).
+     *
+     * A carga por semana saiu do portao. Antes ela era 100% paga, e por isso "janela longa" nao
+     * vendia nada: nao existia quem visse 8 semanas e quisesse 26. O `analysisLocked` continua
+     * true — ele diz que a ANALISE esta trancada, e o nulo dos outros dois e portao, nao falta
+     * de dado.
+     */
     @Test
-    fun `free nao recebe nenhum dos blocos pagos`() = runBlocking {
+    fun `free recebe a carga por semana, mas nao os blocos pagos`() = runBlocking {
         val (s, _) = servico(premium = false, historico = duasSessoesIguais)
         val dto = assertIs<AppResult.Success<ProgressDto>>(s.forUser("fb", null, Idioma.PADRAO)).value
 
-        assertNull(dto.weeklyLoad)
+        assertEquals(ProgressService.JANELA_FREE, dto.weeklyLoad?.size, "o free perdeu o grafico de novo")
         assertNull(dto.strengthTrend)
         assertNull(dto.setsByMuscle)
         assertTrue(dto.analysisLocked)
@@ -151,10 +210,226 @@ class ProgressServiceTest {
         val (s, _) = servico(premium = true, historico = duasSessoesIguais)
         val dto = assertIs<AppResult.Success<ProgressDto>>(s.forUser("fb", null, Idioma.PADRAO)).value
 
-        assertEquals(ProgressService.SEMANAS, dto.weeklyLoad?.size)
+        assertEquals(ProgressService.JANELA_PADRAO, dto.weeklyLoad?.size)
         assertEquals(1, dto.strengthTrend?.size)
-        assertEquals(1.0 / ProgressService.SEMANAS * 2, dto.setsByMuscle?.byMuscle?.get(MuscleGroup.LEGS))
+        assertEquals(1.0 / ProgressService.JANELA_PADRAO * 2, dto.setsByMuscle?.byMuscle?.get(MuscleGroup.LEGS))
         assertTrue(!dto.analysisLocked)
+    }
+
+    // ---- janela de calendario (J.4.1) --------------------------------------
+
+    /** Relogio em 2026-10-01: janela de 8 comeca em 2026-08-10; a de 26, em 2026-04-06. */
+    private val antesEDepois = listOf(
+        sessaoEm("2026-06-15", "Inferior A", List(4) { serie(agachamento, 60.0, ordem = it) }),
+        sessaoEm("2026-09-28", "Inferior A", List(2) { serie(agachamento, 65.0, ordem = it) }),
+    )
+
+    /**
+     * ⭐ O defeito que a J.4.1 veio consertar.
+     *
+     * `seriesPorGrupo` recebia o historico INTEIRO e dividia por 8. Quem treina ha seis meses
+     * tinha a media semanal inflada — e esse e justamente o bloco cujo trabalho inteiro e ser um
+     * diagnostico. Passou na validacao original porque o seed tem exatamente 8 semanas: o numero
+     * certo por coincidencia.
+     */
+    @Test
+    fun `a media de series divide pela janela, e nao pelo historico inteiro`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = antesEDepois)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.Todos(8)))
+
+        // So as 2 series de 28/09 entram na janela: 2/8. Com o bug eram 6/8.
+        assertEquals(2.0 / 8, dto.setsByMuscle?.byMuscle?.get(MuscleGroup.LEGS))
+        assertEquals(
+            4 * 10 * 60.0 + 2 * 10 * 65.0, dto.totalKg,
+            "o TOTAL e de sempre: 'desde' e a primeira sessao da vida e as conquistas acumulam",
+        )
+    }
+
+    /**
+     * ⭐ O segundo: as barras mostravam 2 meses e a linha de 1RM mostrava o historico inteiro, na
+     * mesma tela, sem nada dizendo isso. `evolucao` nao recortava nada.
+     */
+    @Test
+    fun `a linha de 1RM respeita a mesma janela das barras`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = antesEDepois)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.Todos(8)))
+
+        assertEquals(1, dto.strengthTrend?.first()?.points?.size, "plotou ponto de fora da janela")
+        assertEquals(8, dto.weeklyLoad?.size)
+    }
+
+    @Test
+    fun `janela de 26 alcanca o que a de 8 cortava`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = antesEDepois)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.Todos(26)))
+
+        assertEquals(26, dto.weeksWindow)
+        assertEquals(26, dto.weeklyLoad?.size)
+        assertEquals(2, dto.strengthTrend?.first()?.points?.size, "a sessao de junho tinha de entrar")
+        assertEquals(6.0 / 26, dto.setsByMuscle?.byMuscle?.get(MuscleGroup.LEGS), "6 series em 26 semanas")
+    }
+
+    /**
+     * Caminho de falha do portao: o limite do free e no SERVIDOR.
+     *
+     * A tela nao deixa escolher 52 no free, mas cliente nao e autoridade (#16). E o DTO devolve a
+     * janela APLICADA, nao a pedida — seletor marcando 52 com o eixo desenhando 8 e a mesma
+     * mentira do rotulo "esta semana" numa faixa que terminou semanas atras.
+     */
+    @Test
+    fun `free pedindo 52 semanas recebe 8, e o DTO diz 8`() = runBlocking {
+        val (s, _) = servico(premium = false, historico = antesEDepois)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.Todos(52)))
+
+        assertEquals(8, dto.weeksWindow, "o cliente pediria 52 e a tela mostraria 52 em cima de 8")
+        assertEquals(8, dto.weeklyLoad?.size)
+    }
+
+    /**
+     * Caminho de falha da entrada: janela fora da lista encaixa, nao recusa.
+     *
+     * Janela e ajuste de VISUALIZACAO — mesma decisao da faixa do programa. Cliente velho pedindo
+     * 12 nao pode receber erro. Id de programa invalido continua 400, porque esse muda QUAL dado
+     * responde.
+     */
+    @Test
+    fun `janela fora da lista cai no padrao, e nao em erro`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = antesEDepois)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.Todos(12)))
+
+        assertEquals(ProgressService.JANELA_PADRAO, dto.weeksWindow)
+        assertEquals(ProgressService.JANELA_PADRAO, dto.weeklyLoad?.size)
+    }
+
+    @Test
+    fun `no recorte de programa a janela e a faixa, e weeksWindow vem nulo`() = runBlocking {
+        val (s, _) = servico(
+            premium = true,
+            historico = listOf(sessao(28, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX)),
+            programas = listOf(programa(progX, "2026-09-21")),
+        )
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX)))
+
+        assertNull(dto.weeksWindow, "duas janelas concorrentes no mesmo recorte")
+        assertEquals(1, dto.fromWeek)
+    }
+
+    // ---- lista de exercicios e selecao das linhas (J.4.2) ------------------
+
+    /** Agachamento 1200 kg, supino 500, remada 300 — ordem de relevancia garantida. */
+    private val quatroExercicios = listOf(
+        sessaoEm(
+            "2026-09-28", "Full body",
+            listOf(
+                serie(agachamento, 60.0, ordem = 0),
+                serie(agachamento, 60.0, ordem = 1),
+                serie(supino, 50.0, ordem = 2),
+                serie(remada, 30.0, ordem = 3),
+                serie(rosca, 10.0, ordem = 4),
+            ),
+        ),
+    )
+
+    @Test
+    fun `a lista traz TODOS os exercicios da janela, em ordem de relevancia`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = quatroExercicios)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO))
+
+        assertEquals(
+            listOf(agachamento, supino, remada, rosca).map { it.toString() },
+            dto.exerciseSummary?.map { it.exerciseId },
+        )
+        assertEquals(3, dto.strengthTrend?.size, "o grafico continua com tres linhas")
+        assertEquals("Supino Reto com Barra", dto.exerciseSummary?.get(1)?.name, "nome da lista nao veio")
+        assertEquals(2, dto.exerciseSummary?.first()?.sets, "a contagem de series e por serie, nao por sessao")
+    }
+
+    /** O portao: a lista responde a mesma pergunta do grafico de 1RM, entao e paga junto. */
+    @Test
+    fun `free nao recebe a lista de exercicios`() = runBlocking {
+        val (s, _) = servico(premium = false, historico = quatroExercicios)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO))
+
+        assertNull(dto.exerciseSummary)
+        assertNull(dto.strengthTrend)
+    }
+
+    @Test
+    fun `a escolha da pessoa vence o padrao das tres linhas`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = quatroExercicios)
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, exercicios = listOf(rosca)))
+
+        assertEquals(listOf(rosca.toString()), dto.strengthTrend?.map { it.exerciseId })
+        assertEquals(4, dto.exerciseSummary?.size, "a lista nao muda com a selecao")
+    }
+
+    @Test
+    fun `escolher mais de tres desenha so os tres primeiros`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = quatroExercicios)
+
+        val dto = ok(
+            s.forUser("fb", null, Idioma.PADRAO, exercicios = listOf(rosca, remada, supino, agachamento)),
+        )
+
+        assertEquals(
+            listOf(rosca, remada, supino).map { it.toString() },
+            dto.strengthTrend?.map { it.exerciseId },
+            "o limite de tres e do SERVIDOR tambem: cliente nao e autoridade",
+        )
+    }
+
+    /**
+     * Caminho de falha da selecao: id que nao esta na janela e descartado, nao recusado.
+     *
+     * Ele nao tem ponto nenhum para plotar, e linha vazia e pior que linha ausente. Diferente do
+     * `programId`, que vira 400 — esse muda QUAL dado responde.
+     */
+    @Test
+    fun `id fora da janela e descartado e o grafico cai no padrao`() = runBlocking {
+        val (s, _) = servico(premium = true, historico = quatroExercicios)
+        val nuncaTreinado = Uuid.parse("000000ff-0000-0000-0000-000000000000")
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, exercicios = listOf(nuncaTreinado)))
+
+        assertEquals(
+            listOf(agachamento, supino, remada).map { it.toString() },
+            dto.strengthTrend?.map { it.exerciseId },
+            "selecao vazia depois do descarte tinha de cair no padrao, nao ficar sem grafico",
+        )
+    }
+
+    /**
+     * ⭐ `current1rm` e da ULTIMA semana em que o exercicio apareceu, nao a media do periodo.
+     *
+     * A pergunta da lista e "onde estou hoje". Media de dez semanas responde outra, e responderia
+     * para baixo justamente para quem esta progredindo.
+     */
+    @Test
+    fun `current1rm vem da ultima semana, e a variacao do primeiro ao ultimo ponto`() = runBlocking {
+        val h = listOf(
+            sessaoEm("2026-08-24", "Inferior A", listOf(serie(agachamento, 50.0))),
+            sessaoEm("2026-09-28", "Inferior A", listOf(serie(agachamento, 60.0))),
+        )
+        val (s, _) = servico(premium = true, historico = h)
+
+        val linha = ok(s.forUser("fb", null, Idioma.PADRAO)).exerciseSummary?.first()
+
+        // ⚠️ TOLERANCIA, nao igualdade. Epley divide por 30 e a variacao divide de novo: a
+        // resposta honesta para +20% e 20.000000000000018. Igualdade exata aqui falharia por
+        // motivo nenhum — e seria o TESTE errado, nao a conta. (Foi o que aconteceu: este
+        // assert quebrou na primeira execucao.)
+        assertEquals(60.0 * 4 / 3, linha?.current1rm ?: 0.0, 1e-9)
+        assertEquals(2, linha?.weeks)
+        assertEquals(20.0, linha?.changePercent ?: 0.0, 1e-9, "de 50 para 60 em 1RM estimado e +20%")
     }
 
     // ---- calistenia --------------------------------------------------------
@@ -211,4 +486,330 @@ class ProgressServiceTest {
         val dto = assertIs<AppResult.Success<ProgressDto>>(s.forUser("fb", null, Idioma.PADRAO)).value
         assertNull(dto.lastVsPrevious)
     }
+
+    // ---- filtro por programa e faixa de semanas (J.3) -----------------------
+
+    private val progX = Uuid.parse("0000000a-0000-0000-0000-000000000000")
+    private val progY = Uuid.parse("0000000b-0000-0000-0000-000000000000")
+
+    /** X e Y na MESMA semana: e exatamente o cenario que o grafico de hoje soma sem avisar. */
+    private fun historicoDeDoisProgramas() = listOf(
+        sessao(21, "Inferior X", List(3) { serie(agachamento, 60.0) }, programId = progX),
+        sessao(22, "Inferior Y", List(3) { serie(agachamento, 20.0) }, programId = progY),
+    )
+
+    @Test
+    fun `filtrar por programa deixa de fora a sessao do outro`() = runBlocking {
+        val (s, _) = servico(
+            premium = true,
+            historico = historicoDeDoisProgramas(),
+            programas = listOf(programa(progX, "2026-09-21"), programa(progY, "2026-09-21")),
+        )
+
+        val todos = ok(s.forUser("fb", null, Idioma.PADRAO)).totalKg
+        val soX = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX))).totalKg
+
+        assertEquals(2400.0, todos, "sem filtro, os dois programas somam")
+        assertEquals(1800.0, soX, "com filtro, so o X")
+    }
+
+    @Test
+    fun `avulsos junta sessao sem programa e sessao de programa apagado`() = runBlocking {
+        val apagado = Uuid.parse("0000000c-0000-0000-0000-000000000000")
+        val h = listOf(
+            sessao(21, "Livre", List(2) { serie(agachamento, 50.0) }, programId = null),
+            sessao(22, "Antigo", List(2) { serie(agachamento, 30.0) }, programId = apagado),
+            sessao(23, "Inferior X", List(2) { serie(agachamento, 100.0) }, programId = progX),
+        )
+        // `apagado` NAO esta na lista de programas: foi excluido.
+        val (s, _) = servico(premium = true, historico = h, programas = listOf(programa(progX, "2026-09-21")))
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.Avulsos()))
+
+        assertEquals(1000.0 + 600.0, dto.totalKg, "o apagado conta como avulso, nao some")
+        assertTrue(dto.hasUnassigned)
+        assertEquals(listOf(progX.toString()), dto.availablePrograms, "programa apagado nao vira opcao")
+    }
+
+    @Test
+    fun `programa que nao e meu responde NotFound, e nao analise vazia`() = runBlocking {
+        // Analise vazia diria "voce nao treinou nisso", que e uma afirmacao sobre o programa de
+        // outra pessoa. O findAllByUser ja filtrou por dono, entao ausencia aqui cobre "nao
+        // existe" e "nao e seu" sem distinguir os dois -- mesma decisao do PROGRAMA_NAO_EXISTE.
+        val (s, _) = servico(premium = true, historico = historicoDeDoisProgramas(), programas = emptyList())
+
+        val r = s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX))
+
+        // ⚠️ Terminar em `assertIs` quebraria a CLASSE INTEIRA: corpo de expressao cujo ultimo
+        // valor nao e Unit faz o metodo deixar de ser `void`, e o JUnit recusa a classe na
+        // construcao -- os 15 testes somem do relatorio como UMA falha.
+        val erro = assertIsTipo<AppResult.Failure>(r).error
+        assertEquals(ErrorCodes.PROGRAMA_NAO_EXISTE, assertIsTipo<AppError.NotFound>(erro).code)
+    }
+
+    @Test
+    fun `com programa escolhido o eixo vira semana DELE`() = runBlocking {
+        val (s, _) = servico(
+            premium = true,
+            historico = listOf(sessao(28, "Inferior X", List(3) { serie(agachamento, 60.0) }, programId = progX)),
+            programas = listOf(programa(progX, "2026-09-21")),   // segunda; 28/09 = semana 2
+        )
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX)))
+
+        assertEquals(1, dto.fromWeek)
+        assertEquals(8, dto.toWeek, "sem faixa pedida, a janela inteira do programa")
+        assertEquals(8, dto.weeklyLoad?.size)
+        assertEquals((1..8).toList(), dto.weeklyLoad?.map { it.weekNumber })
+        assertEquals(1800.0, dto.weeklyLoad?.first { it.weekNumber == 2 }?.kg)
+    }
+
+    @Test
+    fun `a faixa recorta, e a media de series acompanha a janela pedida`() = runBlocking {
+        // Duas semanas com treino; pedindo 1..2, a media divide por 2 -- nao por 8.
+        val h = listOf(
+            sessao(21, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX),
+            sessao(28, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX),
+        )
+        val (s, _) = servico(premium = true, historico = h, programas = listOf(programa(progX, "2026-09-21")))
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX, de = 1, ate = 2)))
+
+        assertEquals(1 to 2, dto.fromWeek to dto.toWeek)
+        assertEquals(2, dto.weeklyLoad?.size)
+        assertEquals(2.0, dto.setsByMuscle?.byMuscle?.get(MuscleGroup.LEGS), "4 series em 2 semanas")
+    }
+
+    /**
+     * ⭐ A contagem de treinos obedece a faixa.
+     *
+     * Dois numeros vizinhos no mesmo cartao medindo periodos diferentes e o defeito mais barato
+     * de cometer e o mais caro de notar: ninguem desconfia de "2 treinos", so do grafico.
+     */
+    @Test
+    fun `a contagem de treinos obedece a faixa, nao o programa inteiro`() = runBlocking {
+        val h = listOf(
+            sessao(21, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX),
+            sessao(28, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX),
+        )
+        val (s, _) = servico(premium = true, historico = h, programas = listOf(programa(progX, "2026-09-21")))
+
+        val tudo = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX)))
+        val soSemana2 = ok(
+            s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX, de = 2, ate = 2)),
+        )
+
+        assertEquals(2, tudo.totalSessions)
+        assertEquals(1, soSemana2.totalSessions, "contou o treino da semana 1, que esta fora da faixa")
+        assertEquals(1200.0, soSemana2.totalKg, "a tonelagem ja obedecia — era a contagem que nao")
+    }
+
+    /**
+     * Caminho de falha do criterio: treino de peso corporal DENTRO da faixa continua contando.
+     *
+     * A contagem sai da data, nao das series elegiveis. Derivar de `series` seria mais curto e
+     * apagaria exatamente a sessao de calistenia — que a regra manda contar como treino.
+     */
+    @Test
+    fun `treino sem carga dentro da faixa conta como treino`() = runBlocking {
+        val h = listOf(
+            sessao(28, "Peso do corpo", List(3) { serie(agachamento, null) }, programId = progX),
+        )
+        val (s, _) = servico(premium = true, historico = h, programas = listOf(programa(progX, "2026-09-21")))
+
+        val dto = ok(
+            s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX, de = 2, ate = 2)),
+        )
+
+        assertEquals(1, dto.totalSessions)
+        assertEquals(0.0, dto.totalKg, "sem carga externa nao ha tonelagem")
+    }
+
+    /**
+     * ⭐ O teto da faixa CRESCE com o treino.
+     *
+     * `duration_weeks` e um PLANO, nao um limite: quem programou 8 semanas e continuou treinando
+     * ate a 10 nao pode ver as duas ultimas sumirem do grafico. Por isso o teto e o maior entre a
+     * duracao declarada e a ultima semana com dado.
+     *
+     * O inverso ja esta coberto (`faixa fora da janela e encaixada`): sem dado alem da duracao, o
+     * teto fica nela.
+     */
+    @Test
+    fun `o teto da faixa cresce com o treino, e nao para na duracao declarada`() = runBlocking {
+        // Programa comecou em 27/07 e declara 8 semanas; ha treino em 28/09, que e a semana 10.
+        val h = listOf(
+            sessaoEm("2026-07-27", "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX),
+            sessaoEm("2026-09-28", "Inferior X", List(2) { serie(agachamento, 70.0) }, programId = progX),
+        )
+        val (s, _) = servico(
+            premium = true,
+            historico = h,
+            programas = listOf(programa(progX, "2026-07-27", semanas = 8)),
+        )
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX)))
+
+        assertEquals(10, dto.programWeeks, "o slider pararia na 8 e esconderia as duas ultimas")
+        assertEquals(1 to 10, dto.fromWeek to dto.toWeek, "abriu sem mostrar o periodo inteiro")
+        assertEquals(10, dto.weeklyLoad?.size)
+        assertEquals(1400.0, dto.weeklyLoad?.first { it.weekNumber == 10 }?.kg)
+    }
+
+    /**
+     * Caminho de falha do mesmo teto: pedir alem dele encaixa em silencio.
+     *
+     * Faixa e ajuste de VISUALIZACAO — e quem pediu 1..20 num programa de 10 semanas nao cometeu
+     * erro, so arrastou o slider antes de o teto chegar do servidor.
+     */
+    @Test
+    fun `pedir alem do teto que cresceu encaixa no teto novo`() = runBlocking {
+        val h = listOf(
+            sessaoEm("2026-09-28", "Inferior X", List(2) { serie(agachamento, 70.0) }, programId = progX),
+        )
+        val (s, _) = servico(
+            premium = true,
+            historico = h,
+            programas = listOf(programa(progX, "2026-07-27", semanas = 8)),
+        )
+
+        val dto = ok(
+            s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX, de = 1, ate = 20)),
+        )
+
+        assertEquals(10, dto.toWeek)
+        assertEquals(10, dto.weeklyLoad?.size)
+    }
+
+    @Test
+    fun `faixa fora da janela e encaixada, nao recusada`() = runBlocking {
+        // Faixa e ajuste de VISUALIZACAO: corrigir em silencio ali e o certo. Id errado, nao --
+        // esse muda qual dado responde, e vira 400 na rota.
+        val (s, _) = servico(
+            premium = true,
+            historico = listOf(sessao(28, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX)),
+            programas = listOf(programa(progX, "2026-09-21")),
+        )
+
+        val dto = ok(s.forUser("fb", null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(progX, de = 0, ate = 99)))
+
+        assertEquals(1, dto.fromWeek)
+        assertEquals(8, dto.toWeek)
+    }
+
+    // ---- detalhe de exercicio no programa (J.5) -----------------------------
+
+    /**
+     * ⭐ Tela 100% paga, sem bloco gratis pra misturar numa resposta so (ver KDoc do
+     * ExercicioDetalheDto) — por isso 403, e nao um campo nulo como o resto da analise.
+     */
+    @Test
+    fun `free recebe 403, nao analise vazia`() = runBlocking {
+        val (s, _) = servico(
+            premium = false,
+            historico = listOf(sessao(21, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX)),
+            programas = listOf(programa(progX, "2026-09-21")),
+        )
+
+        val r = s.detalheDoExercicio("fb", null, Idioma.PADRAO, progX, agachamento)
+
+        val erro = assertIsTipo<AppResult.Failure>(r).error
+        assertEquals(ErrorCodes.ENTITLEMENT_REQUIRED, assertIsTipo<AppError.Forbidden>(erro).code)
+    }
+
+    @Test
+    fun `programa que nao e meu responde NotFound`() = runBlocking {
+        val (s, _) = servico(
+            premium = true,
+            historico = listOf(sessao(21, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX)),
+            programas = emptyList(), // progX nao esta na lista -- apagado, ou nunca foi meu
+        )
+
+        val r = s.detalheDoExercicio("fb", null, Idioma.PADRAO, progX, agachamento)
+
+        val erro = assertIsTipo<AppResult.Failure>(r).error
+        assertEquals(ErrorCodes.PROGRAMA_NAO_EXISTE, assertIsTipo<AppError.NotFound>(erro).code)
+    }
+
+    @Test
+    fun `exercicio fora do catalogo responde NotFound`() = runBlocking {
+        val foraDoCatalogo = Uuid.parse("0000000f-0000-0000-0000-000000000000")
+        val (s, _) = servico(
+            premium = true,
+            historico = listOf(sessao(21, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX)),
+            programas = listOf(programa(progX, "2026-09-21")),
+        )
+
+        val r = s.detalheDoExercicio("fb", null, Idioma.PADRAO, progX, foraDoCatalogo)
+
+        val erro = assertIsTipo<AppResult.Failure>(r).error
+        assertEquals(ErrorCodes.EXERCICIO_NAO_EXISTE, assertIsTipo<AppError.NotFound>(erro).code)
+    }
+
+    @Test
+    fun `exercicio do catalogo nunca feito NESSE programa vem com pontos vazios, nao erro`() = runBlocking {
+        // Diferente do programa e do exercicio: esse e so estado vazio. A pessoa escolheu um
+        // exercicio de verdade, so nao treinou ele AQUI -- NotFound diria o contrario.
+        val (s, _) = servico(
+            premium = true,
+            historico = listOf(sessao(21, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX)),
+            programas = listOf(programa(progX, "2026-09-21")),
+        )
+
+        val dto = ok(s.detalheDoExercicio("fb", null, Idioma.PADRAO, progX, supino))
+
+        assertEquals(emptyList(), dto.points)
+    }
+
+    @Test
+    fun `um ponto por sessao, so do programa pedido -- nao de outro, nem avulsa`() = runBlocking {
+        val h = listOf(
+            sessao(21, "Inferior A", listOf(serie(agachamento, 60.0, reps = 8)), programId = progX),
+            sessao(28, "Inferior A", listOf(serie(agachamento, 65.0, reps = 8)), programId = progX),
+            sessao(22, "Inferior B", listOf(serie(agachamento, 999.0)), programId = progY), // outro programa
+            sessao(23, "Livre", listOf(serie(agachamento, 999.0))), // avulsa
+        )
+        val (s, _) = servico(
+            premium = true,
+            historico = h,
+            programas = listOf(programa(progX, "2026-09-21"), programa(progY, "2026-09-21")),
+        )
+
+        val dto = ok(s.detalheDoExercicio("fb", null, Idioma.PADRAO, progX, agachamento))
+
+        assertEquals("Agachamento Livre com Barra", dto.name)
+        assertEquals(2, dto.points.size)
+        assertTrue(dto.points.none { it.kg == 999.0 }, "vazou sessao de outro programa ou avulsa")
+    }
+
+    @Test
+    fun `volumeKg e estimated1rm viajam juntos, e podem discordar`() = runBlocking {
+        val sessaoUnica = Uuid.parse("00000011-0000-0000-0000-000000000000")
+        val h = listOf(
+            WorkoutSession(
+                id = sessaoUnica, userId = Uuid.random(), programId = progX, workoutId = null,
+                workoutName = "Inferior A",
+                startedAt = LocalDateTime.parse("2026-09-21T18:00:00"),
+                finishedAt = LocalDateTime.parse("2026-09-21T19:00:00"),
+                sets = listOf(
+                    serie(agachamento, 60.0, reps = 8),
+                    serie(agachamento, 65.0, reps = 5),
+                ),
+            ),
+        )
+        val (s, _) = servico(
+            premium = true,
+            historico = h,
+            programas = listOf(programa(progX, "2026-09-21")),
+        )
+
+        val dto = ok(s.detalheDoExercicio("fb", null, Idioma.PADRAO, progX, agachamento))
+
+        assertEquals(1, dto.points.size)
+        val p = dto.points.first()
+        assertEquals(60.0 * 8 + 65.0 * 5, p.volumeKg, 1e-9)
+        assertEquals(60.0, p.kg, "a melhor por 1RM estimado, nao a mais pesada em kg bruto")
+        assertEquals(1, p.weekNumber)
+    }
+
 }

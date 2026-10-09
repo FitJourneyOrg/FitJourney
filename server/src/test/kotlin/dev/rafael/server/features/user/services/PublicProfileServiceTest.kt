@@ -29,8 +29,8 @@ import kotlin.uuid.Uuid
  */
 class PublicProfileServiceTest {
 
-    private val eu = User(Uuid.random(), "fb-eu", "eu@x.com", false, "Eu", "AAAA2222")
-    private val outro = User(Uuid.random(), "fb-outro", "outro@x.com", true, "Fulano", "BBBB3333")
+    private val eu = User(Uuid.random(), "fb-eu", "eu@x.com", false, "Eu", "AAAA2222", activeProgramId = null)
+    private val outro = User(Uuid.random(), "fb-outro", "outro@x.com", true, "Fulano", "BBBB3333", activeProgramId = null)
 
     private inner class FakeUsers : UserRepository {
         override suspend fun findByFirebaseUid(firebaseUid: String): AppResult<User?> =

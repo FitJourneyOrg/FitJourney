@@ -175,8 +175,7 @@ object TextosDeErro {
         ErrorCodes.COMENTARIO_INVALIDO -> R.string.erro_comentario_invalido
         ErrorCodes.NOME_DO_LOCAL_LONGO -> R.string.erro_nome_do_local_longo
         ErrorCodes.PRAZO_DA_DENUNCIA -> R.string.erro_prazo_da_denuncia
-        ErrorCodes.LIMITE_DE_IA_GRATIS -> R.string.erro_limite_de_ia_gratis
-        ErrorCodes.LIMITE_DE_MANUAIS_GRATIS -> R.string.erro_limite_de_manuais_gratis
+        ErrorCodes.LIMITE_DE_PROGRAMAS_GRATIS -> R.string.erro_limite_de_programas_gratis
         ErrorCodes.LIMITE_DE_PROGRAMAS_PREMIUM -> R.string.erro_limite_de_programas_premium
         ErrorCodes.DIAS_LIVRES_INSUFICIENTES -> R.string.erro_dias_livres_insuficientes
 
@@ -198,8 +197,7 @@ object TextosDeErro {
         ErrorCodes.COMENTARIO_INVALIDO -> listOf(Limites.Social.MAX_COMENTARIO)
         ErrorCodes.NOME_DO_LOCAL_LONGO -> listOf(Limites.CheckIn.MAX_NOME_DO_LOCAL)
         ErrorCodes.PRAZO_DA_DENUNCIA -> listOf(Limites.Moderacao.PRAZO_EM_DIAS)
-        ErrorCodes.LIMITE_DE_IA_GRATIS -> listOf(Limites.Program.FREE_AI_LIMIT)
-        ErrorCodes.LIMITE_DE_MANUAIS_GRATIS -> listOf(Limites.Program.FREE_MANUAL_LIMIT)
+        ErrorCodes.LIMITE_DE_PROGRAMAS_GRATIS -> listOf(Limites.Program.FREE_TOTAL_LIMIT)
         ErrorCodes.LIMITE_DE_PROGRAMAS_PREMIUM -> listOf(Limites.Program.PREMIUM_TOTAL_LIMIT)
         ErrorCodes.DIAS_POR_SEMANA_INVALIDO ->
             listOf(Limites.Profile.DAYS_PER_WEEK_MIN, Limites.Profile.DAYS_PER_WEEK_MAX)
@@ -234,7 +232,7 @@ object TextosDeErro {
      * > **Antes de inventar o mecanismo, olhe se a base já resolveu isso quatro vezes.**
      *
      * O preço está registrado como débito: doze frases do catálogo dependem de constantes do
-     * servidor que elas não enxergam (`DisplayNamePolicy.MIN`, `ProgramLimits.FREE_AI_LIMIT`, …).
+     * servidor que elas não enxergam (`DisplayNamePolicy.MIN`, `ProgramLimits.FREE_TOTAL_LIMIT`, …).
      * Mudar a constante sem mudar a frase faz o servidor recusar num limite e o app anunciar
      * outro. Cada string carrega no comentário o nome da constante que espelha.
      *

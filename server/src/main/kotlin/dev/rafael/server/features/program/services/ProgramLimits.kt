@@ -13,9 +13,13 @@ import dev.rafael.server.features.program.models.ProgramCounts
  * duplicada dentro das rotas POST /programs/generate e POST /programs; extraída
  * aqui pra ter uma única fonte da regra e ser testável direto.
  *
- * Tetos:
- *  - grátis: 1 gerado por IA + 2 manuais (contados SEPARADAMENTE).
- *  - premium: 10 no total (IA + manual).
+ * Tetos (decisão do Rafael, 2026-10-08 — antes eram 1 IA + 2 manuais no grátis e 10 no premium):
+ *  - grátis: 1 no total, de qualquer tipo (IA ou manual).
+ *  - premium: 3 no total (IA + manual).
+ *  (Histórico: 2026-10-08 caiu de 2/4 para 1/3, na mesma conversa em que o B9 media o N+1.)
+ *
+ * O teto só bloqueia CRIAR: quem já tem mais que o teto mantém o que tem (comparação `>=`), e
+ * nenhum programa é apagado.
  *
  * Bloqueio grátis → Forbidden com código de **portão de plano** (o cliente abre o paywall). Desde a
  * G.2 cada caso tem código próprio, para poder ter texto próprio, e todos estão em
@@ -26,20 +30,12 @@ import dev.rafael.server.features.program.models.ProgramCounts
 object ProgramLimits {
 
     // Fonte real: shared-contract (debitos.md "12 frases cravam constante do servidor").
-    const val FREE_AI_LIMIT = Limites.Program.FREE_AI_LIMIT
-    const val FREE_MANUAL_LIMIT = Limites.Program.FREE_MANUAL_LIMIT
+    const val FREE_TOTAL_LIMIT = Limites.Program.FREE_TOTAL_LIMIT
     const val PREMIUM_TOTAL_LIMIT = Limites.Program.PREMIUM_TOTAL_LIMIT
 
-    enum class Kind { AI, MANUAL }
-
     /** Success(Unit) = pode criar; Failure(Forbidden) = bloqueado (mensagem/code por caso). */
-    fun gate(counts: ProgramCounts, isPremium: Boolean, kind: Kind): AppResult<Unit> {
-        val blocked =
-            if (isPremium) counts.total >= PREMIUM_TOTAL_LIMIT
-            else when (kind) {
-                Kind.AI -> counts.ai >= FREE_AI_LIMIT
-                Kind.MANUAL -> counts.manual >= FREE_MANUAL_LIMIT
-            }
+    fun gate(counts: ProgramCounts, isPremium: Boolean): AppResult<Unit> {
+        val blocked = counts.total >= if (isPremium) PREMIUM_TOTAL_LIMIT else FREE_TOTAL_LIMIT
 
         if (!blocked) return Unit.asSuccess()
 
@@ -52,15 +48,9 @@ object ProgramLimits {
                 ErrorCodes.LIMITE_DE_PROGRAMAS_PREMIUM,
             ).asFailure()
         }
-        return when (kind) {
-            Kind.AI -> AppError.Forbidden(
-                "Gerar treino por IA é limitado a $FREE_AI_LIMIT no plano grátis. Assine o premium pra gerar mais.",
-                ErrorCodes.LIMITE_DE_IA_GRATIS,
-            ).asFailure()
-            Kind.MANUAL -> AppError.Forbidden(
-                "Criar programas é limitado a $FREE_MANUAL_LIMIT no plano grátis. Assine o premium pra criar mais.",
-                ErrorCodes.LIMITE_DE_MANUAIS_GRATIS,
-            ).asFailure()
-        }
+        return AppError.Forbidden(
+            "Limite de programas do plano grátis: $FREE_TOTAL_LIMIT. Assine o premium pra criar mais.",
+            ErrorCodes.LIMITE_DE_PROGRAMAS_GRATIS,
+        ).asFailure()
     }
 }

@@ -13,6 +13,7 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -20,7 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.res.stringResource
 import dev.rafael.app.R
-import dev.rafael.app.ui.ErroInline
+import dev.rafael.app.ui.ErroEmSnackbar
 import dev.rafael.app.ui.ShimmerLine
 import dev.rafael.app.ui.rotulo
 import dev.rafael.app.ui.shimmer
@@ -58,7 +59,12 @@ fun WikiScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    // Falha de sync com o acervo na tela é aviso passageiro (ARCH #31): snackbar, nunca card fixo.
+    val snackbarHost = remember { SnackbarHostState() }
+    ErroEmSnackbar(erro = state.error, host = snackbarHost, onConsumir = viewModel::consumeError)
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHost) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.menu_wiki)) },
@@ -100,12 +106,6 @@ fun WikiScreen(
                     }
                 }
                 Spacer(Modifier.height(12.dp))
-
-                // Falha de sync é aviso, não apagador: o acervo local continua abaixo dela.
-                state.error?.let {
-                    ErroInline(it)
-                    Spacer(Modifier.height(8.dp))
-                }
 
                 Box(Modifier.weight(1f, fill = false).fillMaxWidth()) {
                     when {

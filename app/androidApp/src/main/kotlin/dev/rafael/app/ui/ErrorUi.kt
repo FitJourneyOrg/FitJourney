@@ -496,9 +496,18 @@ fun ErroEmSnackbar(
         // coisas seria dizer o mesmo erro duas vezes, uma delas longe de onde ele aconteceu.
         if (e is AppError.Validation) return@LaunchedEffect
         val visual = e.visual(temRede, contexto, cache)
+        // Recusa por regra (403) diz o MOTIVO no texto ("o plano grátis permite até 2 programas");
+        // o título é só a categoria ("Recurso do plano Premium") e não explica nada. Nos demais
+        // erros o título basta: quem tocou já sabe o que falhou.
+        val mensagem = if (e is AppError.Forbidden) visual.texto.resolver(context)
+        else context.getString(visual.titulo)
         val resultado = host.showSnackbar(
-            message = context.getString(visual.titulo),
-            actionLabel = visual.rotuloDaAcao?.takeIf { onAcao != null }?.let { context.getString(it) },
+            message = mensagem,
+            // VOLTAR não vira botão de snackbar: a pessoa já está onde queria estar, e "Voltar" ao
+            // lado de "Você atingiu o limite de 4 programas" parecia uma ação que não faz nada.
+            actionLabel = visual.rotuloDaAcao
+                ?.takeIf { onAcao != null && visual.acao != ErroAcao.VOLTAR }
+                ?.let { context.getString(it) },
             duration = SnackbarDuration.Short,
         )
         if (resultado == SnackbarResult.ActionPerformed) onAcao?.invoke(visual.acao)
