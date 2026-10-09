@@ -186,6 +186,35 @@ class WikiViewModelTest {
     }
 
     @Test
+    fun `consumir o erro de sync limpa o aviso e preserva o acervo`() = runTest(dispatcher) {
+        val repo = FakeWikiRepository(resultadoRefresh = AppResult.Failure(AppError.Connection()))
+        val vm = WikiViewModel(repo)
+        advanceUntilIdle()
+        repo.locais.value = listOf(artigo("a"), artigo("b"))
+        advanceUntilIdle()
+        assertTrue(vm.state.value.error is AppError.Connection)
+
+        vm.consumeError()
+
+        assertNull(vm.state.value.error)
+        assertEquals(listOf("a", "b"), vm.state.value.artigos.map { it.slug })
+    }
+
+    @Test
+    fun `um refresh que da certo depois da falha nao deixa erro velho`() = runTest(dispatcher) {
+        val repo = FakeWikiRepository(resultadoRefresh = AppResult.Failure(AppError.Connection()))
+        val vm = WikiViewModel(repo)
+        advanceUntilIdle()
+        assertTrue(vm.state.value.error is AppError.Connection)
+
+        repo.resultadoRefresh = AppResult.Success(Unit)
+        vm.onEvent(WikiListEvent.Refresh)
+        advanceUntilIdle()
+
+        assertNull(vm.state.value.error)
+    }
+
+    @Test
     fun `pull-to-refresh forca, o sync de abertura nao`() = runTest(dispatcher) {
         val repo = FakeWikiRepository()
         val vm = WikiViewModel(repo)

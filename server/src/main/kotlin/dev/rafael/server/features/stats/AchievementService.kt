@@ -4,9 +4,9 @@ import dev.rafael.contract.stats.AchievementDto
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.flatMap
 import dev.rafael.core.result.map
+import dev.rafael.server.error.Falhas
 import dev.rafael.server.features.stats.db.AchievementRepository
 import dev.rafael.server.features.user.services.UserService
-import org.slf4j.LoggerFactory
 import kotlin.uuid.Uuid
 
 /**
@@ -29,12 +29,11 @@ class AchievementService(
     private val userService: UserService,
     private val stats: ProgressoDeStats,
     private val repository: AchievementRepository,
+    private val falhas: Falhas,
     // Porta estreita para o push: `stats` não importa `notificacao`. Default não faz nada — o
     // grafo funciona sem notificação, mesmo padrão do FriendshipService/SocialService/ModeracaoService.
     private val avisarDesbloqueio: suspend (destinatario: Uuid, achievementId: String) -> Unit = { _, _ -> },
 ) {
-    private val log = LoggerFactory.getLogger(AchievementService::class.java)
-
     suspend fun forUser(firebaseUid: String, email: String?): AppResult<List<AchievementDto>> =
         avaliarEConceder(firebaseUid, email).map { montarCatalogo(it.progresso, it.concedidas) }
 
@@ -52,10 +51,10 @@ class AchievementService(
                 is AppResult.Success -> r.value.novas.forEach { conquista ->
                     avisarDesbloqueio(r.value.userId, conquista.name)
                 }
-                is AppResult.Failure -> log.warn("Não avaliei conquistas após sessão: {}", r.error)
+                is AppResult.Failure -> falhas.registrar("Não avaliei conquistas após sessão", r.error)
             }
         }.onFailure { e ->
-            log.warn("Avaliação de conquistas após sessão lançou: {}", e.toString())
+            falhas.registrar("Avaliação de conquistas após sessão lançou", e)
         }
     }
 

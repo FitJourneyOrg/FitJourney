@@ -18,8 +18,10 @@ import dev.rafael.core.result.asSuccess
 import dev.rafael.features.program.domain.model.PendenciaDeSync
 import dev.rafael.features.program.domain.model.Program
 import dev.rafael.features.program.domain.model.ProgramScheduleEntry
+import dev.rafael.features.program.domain.repository.PlanoDoUsuario
 import dev.rafael.features.program.domain.repository.ProgramRepository
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.json.Json
 import kotlin.time.Clock
@@ -43,6 +45,8 @@ class ProgramRepositoryImpl(
      * lógica — o servidor reescreve este campo no próximo sync.
      */
     private val clock: Clock,
+    /** Plano em cache, para recusar a criação acima do teto ANTES de gravar (ver [TetoDeProgramas]). */
+    private val plano: PlanoDoUsuario,
 ) : ProgramRepository {
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -184,6 +188,7 @@ class ProgramRepositoryImpl(
      * idempotente: resposta perdida na rede → reenvio com o mesmo id → nenhum programa duplicado.
      */
     override suspend fun createManual(name: String): AppResult<Program> {
+        recusaPorTeto()?.let { return it.asFailure() }
         val id = Uuid.random().toString()
         val agora = clock.now().toString()
         val dto = ProgramDto(
@@ -198,6 +203,23 @@ class ProgramRepositoryImpl(
         local.criarPrograma(dto)
         enfileirar(TipoOperacao.CRIAR_PROGRAMA, id, json.encodeToString(ProgramDto.serializer(), dto))
         return dto.toDomain().asSuccess()
+    }
+
+    /**
+     * Cópia otimista do teto: sem isto o servidor recusa só DEPOIS, pela fila, e o programa fica
+     * na lista como "pendente" para sempre. Quem falhou em definitivo na fila não conta: é um
+     * fantasma que a pessoa ainda não descartou, não um programa dela.
+     *
+     * Se o plano em cache disser "grátis" e o teto estourar, confirma no `/me` antes de recusar:
+     * quem assinou há pouco não pode levar um "não" de cache velho. Offline cai no cache.
+     */
+    private suspend fun recusaPorTeto(): AppError? {
+        val fantasmas = outbox.observar().first()
+            .filter { it.erroPermanente != null }.map { it.alvoId }.toSet()
+        val total = local.read().count { it.id !in fantasmas }
+        val inicial = TetoDeProgramas.recusa(total, plano.ehPremium())
+        if (inicial == null) return null
+        return TetoDeProgramas.recusa(total, plano.ehPremium(atualizar = true))
     }
 
     override suspend fun rename(id: String, name: String): AppResult<Program> {

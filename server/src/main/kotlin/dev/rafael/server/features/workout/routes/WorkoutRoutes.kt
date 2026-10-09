@@ -11,6 +11,7 @@ import dev.rafael.server.error.respondResult
 import dev.rafael.server.features.profile.services.ProfileService
 import dev.rafael.server.features.program.services.ProgramService
 import dev.rafael.server.features.user.services.UserService
+import dev.rafael.server.features.workout.models.comOrigem
 import dev.rafael.server.features.workout.services.WorkoutService
 import dev.rafael.server.plugins.FIREBASE_AUTH
 import io.ktor.server.application.ApplicationCall
@@ -48,6 +49,7 @@ fun Route.workoutRoutes(
                         // G.2: usa o dia escolhido (dto.dayOfWeek) validando colisão, ou 1º dia livre.
                         programService.resolveNewWorkoutDay(user.id, programId, dto.dayOfWeek).flatMap { day ->
                             service.create(p.uid, p.email, dto, programId, dayOfWeek = day)
+                                .flatMap { programService.completarOrigem(user.id, it) }
                         }
                     }
                 }
@@ -73,7 +75,7 @@ fun Route.workoutRoutes(
                     // Treino avulso (sem programa) não tem trava de entitlement.
                     if (pid == null) treino.asSuccess()
                     else programService.requireReadable(user.id, pid, id, user.isPremium)
-                        .flatMap { treino.asSuccess() }
+                        .flatMap { programService.completarOrigem(user.id, treino) }
                 }
             }
             call.respondResult(result)
@@ -93,6 +95,7 @@ fun Route.workoutRoutes(
                     } else {
                         programService.requireEditable(user.id, pid, user.isPremium).flatMap {
                             service.update(p.uid, p.email, id, dto).notFoundIfNull()
+                                .flatMap { programService.completarOrigem(user.id, it) }
                         }
                     }
                 }
@@ -121,6 +124,13 @@ fun Route.workoutRoutes(
             call.respondResult(result)
         }
     }
+}
+
+/** Completa `origin` com a do programa pai (ver [comOrigem]). Falha de leitura propaga. */
+private suspend fun ProgramService.completarOrigem(userId: Uuid, dto: WorkoutDto): AppResult<WorkoutDto> {
+    val pid = dto.programId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
+        ?: return dto.asSuccess()
+    return originOf(userId, pid).flatMap { dto.comOrigem(it).asSuccess() }
 }
 
 private fun ApplicationCall.workoutIdParam(): Uuid? =

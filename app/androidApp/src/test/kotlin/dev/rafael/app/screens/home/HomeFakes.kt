@@ -2,6 +2,8 @@ package dev.rafael.app.screens.home
 
 import dev.rafael.features.session.domain.HistoricoDeSessoes
 import dev.rafael.features.session.domain.SessaoLocal
+import dev.rafael.features.stats.domain.FiltroDeProgresso
+import dev.rafael.features.stats.domain.SelecaoDeExercicios
 import dev.rafael.features.stats.domain.Progresso
 import dev.rafael.features.stats.domain.Stats
 import dev.rafael.contract.session.WorkoutSessionDto
@@ -60,15 +62,44 @@ class FakeStats : Stats {
     }
 }
 
-/** A analise da J.2. Mesma forma do [FakeStats]: cache observavel + contador de sync. */
+/**
+ * A analise da J.2/J.3.
+ *
+ * ⚠️ O cache e simulado **por filtro**, como no repositorio real: cada recorte tem o seu fluxo.
+ * Um `MutableStateFlow` unico faria o teste passar com um ViewModel que ignora o filtro, que e
+ * exatamente o defeito a vigiar.
+ */
 class FakeProgresso : Progresso {
-    val valores = MutableStateFlow<ProgressDto?>(null)
-    var sincronizacoes = 0
+    private val porFiltro = mutableMapOf<String, MutableStateFlow<ProgressDto?>>()
+
+    /** Os recortes pedidos, na ordem. */
+    val sincronizados = mutableListOf<FiltroDeProgresso>()
     var forcadas = 0
 
-    override fun observar(): Flow<ProgressDto?> = valores
-    override suspend fun sincronizar(forcar: Boolean) {
-        sincronizacoes++
+    val sincronizacoes: Int get() = sincronizados.size
+
+    /** Os recortes pedidos vem em pares (filtro, selecao): a chave do cache real soma os dois. */
+    val selecionados = mutableListOf<SelecaoDeExercicios>()
+
+    fun fluxo(
+        filtro: FiltroDeProgresso,
+        selecao: SelecaoDeExercicios = SelecaoDeExercicios.PADRAO,
+    ): MutableStateFlow<ProgressDto?> =
+        porFiltro.getOrPut("${filtro.chave}|${selecao.chave}") { MutableStateFlow(null) }
+
+    /** Atalho para o recorte padrao — a maioria dos testes so se importa com ele. */
+    val valores: MutableStateFlow<ProgressDto?> get() = fluxo(FiltroDeProgresso.Todos())
+
+    override fun observar(filtro: FiltroDeProgresso, selecao: SelecaoDeExercicios): Flow<ProgressDto?> =
+        fluxo(filtro, selecao)
+
+    override suspend fun sincronizar(
+        filtro: FiltroDeProgresso,
+        selecao: SelecaoDeExercicios,
+        forcar: Boolean,
+    ) {
+        sincronizados += filtro
+        selecionados += selecao
         if (forcar) forcadas++
     }
 }

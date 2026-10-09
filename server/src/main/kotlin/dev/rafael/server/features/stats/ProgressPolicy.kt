@@ -85,9 +85,40 @@ object ProgressPolicy {
      * semana que a pessoa faltou - e omiti-la faria o grafico mentir sobre a continuidade,
      * encostando duas semanas que nao sao vizinhas.
      */
-    fun porSemana(series: List<SerieFeita>, hoje: LocalDate, semanas: Int = 8): List<CargaDaSemana> {
+    /**
+     * Segunda-feira da primeira semana de uma janela de [semanas] que termina na semana de [hoje].
+     *
+     * Existe como funcao propria porque DOIS lugares precisam do mesmo corte: o agrupamento das
+     * barras e o recorte das series que alimentam os graficos. Calcular o corte duas vezes e como
+     * dois blocos discordarem sobre onde a janela comeca — foi exatamente o defeito que a J.4.1
+     * veio consertar.
+     */
+    fun primeiraSemanaDaJanela(hoje: LocalDate, semanas: Int): LocalDate {
         require(semanas > 0) { "semanas tem de ser positivo" }
-        val primeira = segundaDaSemana(hoje).minus(DatePeriod(days = 7 * (semanas - 1)))
+        return segundaDaSemana(hoje).minus(DatePeriod(days = 7 * (semanas - 1)))
+    }
+
+    /**
+     * So as series que caem na janela de calendario — o espelho do [naFaixaDoPrograma].
+     *
+     * ## Por que precisou existir
+     *
+     * No recorte de programa todos os blocos usam UM recorte. No de calendario cada bloco
+     * recortava sozinho, e os tres discordavam: as barras filtravam 8 semanas por dentro, a linha
+     * de 1RM plotava o historico inteiro, e a media de series dividia o historico inteiro por 8 —
+     * inflando o volume semanal de quem treina ha mais de dois meses. Uma funcao, um corte.
+     */
+    fun naJanelaDeCalendario(
+        series: List<SerieFeita>,
+        hoje: LocalDate,
+        semanas: Int,
+    ): List<SerieFeita> {
+        val primeira = primeiraSemanaDaJanela(hoje, semanas)
+        return series.filter { it.data >= primeira }
+    }
+
+    fun porSemana(series: List<SerieFeita>, hoje: LocalDate, semanas: Int = 8): List<CargaDaSemana> {
+        val primeira = primeiraSemanaDaJanela(hoje, semanas)
         val porInicio = series
             .filter { it.data >= primeira }
             .groupBy { segundaDaSemana(it.data) }
@@ -97,6 +128,84 @@ object ProgressPolicy {
             CargaDaSemana(inicio, porInicio[inicio] ?: 0.0)
         }
     }
+
+    // ---- semanas DO PROGRAMA (J.3) -----------------------------------------
+
+    /**
+     * Em que semana do programa (1-based) [data] caiu, dado o [inicio] dele.
+     *
+     * ## Conta por DIAS corridos, nao por semana ISO
+     *
+     * Semana 1 e o periodo de 7 dias a partir do `started_at`, mesmo que ele caia numa quarta.
+     * Usar a segunda-feira ISO faria a "semana 1" durar as vezes dois dias — quem comecou na
+     * sexta veria a primeira semana acabar no domingo seguinte, com um treino dentro, e
+     * concluiria que o programa esta errado.
+     *
+     * > **A semana do programa pertence ao programa, nao ao calendario.** O eixo de calendario
+     * > continua existindo para quando nenhum programa esta selecionado — sao duas reguas, e
+     * > misturar as duas e o que faz "semana 10" nao significar nada.
+     *
+     * Data ANTES do inicio devolve numero <= 0. Nao e erro: sessao mais antiga que o programa
+     * existe (o programa foi criado depois), e quem chama a descarta pela faixa.
+     */
+    fun semanaDoPrograma(data: LocalDate, inicio: LocalDate): Int {
+        // `floorDiv`, e nao `/`: divisao de Int em Kotlin trunca em direcao a ZERO, entao um dia
+        // ANTES do inicio (-3 dias) daria semana 1 em vez de 0, misturando o que veio antes do
+        // programa com a primeira semana dele.
+        val dias = (data.toEpochDays() - inicio.toEpochDays()).toInt()
+        return Math.floorDiv(dias, 7) + 1
+    }
+
+    data class CargaDaSemanaDoPrograma(val semana: Int, val kg: Double)
+
+    /**
+     * Carga por semana DO PROGRAMA, de [de] ate [ate], sempre com uma posicao por semana.
+     *
+     * Mesma regra do [porSemana]: semana sem treino vem com `0.0` em vez de sumir. Aqui ela pesa
+     * ainda mais — numa faixa escolhida a mao ("semana 10 a 14"), uma semana ausente deixaria a
+     * faixa com menos barras do que a pessoa pediu, e ela leria isso como dado faltando.
+     */
+    fun porSemanaDoPrograma(
+        series: List<SerieFeita>,
+        inicio: LocalDate,
+        de: Int,
+        ate: Int,
+    ): List<CargaDaSemanaDoPrograma> {
+        require(de >= 1 && ate >= de) { "faixa invalida: $de..$ate" }
+        val porNumero = series
+            .groupBy { semanaDoPrograma(it.data, inicio) }
+            .mapValues { (_, s) -> tonelagem(s) }
+        return (de..ate).map { CargaDaSemanaDoPrograma(it, porNumero[it] ?: 0.0) }
+    }
+
+    /**
+     * So as series que caem na faixa [de]..[ate] do programa.
+     *
+     * Existe como funcao propria porque TODOS os blocos usam a mesma faixa: tonelagem, evolucao,
+     * volume por grupo e a comparacao. Recortar em cada um separadamente e como quatro recortes
+     * discordam sobre o que e "a faixa".
+     */
+    fun naFaixaDoPrograma(
+        series: List<SerieFeita>,
+        inicio: LocalDate,
+        de: Int,
+        ate: Int,
+    ): List<SerieFeita> = series.filter { semanaDoPrograma(it.data, inicio) in de..ate }
+
+    /** [evolucao], mas com o ponto rotulado pela semana do programa em vez da data. */
+    fun evolucaoNoPrograma(
+        series: List<SerieFeita>,
+        exercicioId: Uuid,
+        inicio: LocalDate,
+    ): List<PontoNoPrograma> =
+        series.filter { it.exercicioId == exercicioId }
+            .groupBy { semanaDoPrograma(it.data, inicio) }
+            .map { (semana, doGrupo) ->
+                PontoNoPrograma(semana, doGrupo.maxOf { e1rm(it.kg, it.reps) })
+            }
+            .sortedBy { it.semana }
+
+    data class PontoNoPrograma(val semana: Int, val e1rm: Double)
 
     // ---- carga estimada ----------------------------------------------------
 
@@ -132,6 +241,77 @@ object ProgressPolicy {
             .groupBy { segundaDaSemana(it.data) }
             .map { (semana, doGrupo) -> PontoDeEvolucao(semana, doGrupo.maxOf { e1rm(it.kg, it.reps) }) }
             .sortedBy { it.semana }
+
+    /**
+     * UM ponto por SESSAO (nao por semana) — o detalhe de um exercicio dentro de um programa
+     * (J.5). Agrupa por [SerieFeita.sessaoId], nao por data: duas sessoes no mesmo dia (caso raro,
+     * mas possivel) nao podem virar um ponto so, porque [volumeKg] somaria o trabalho de dois
+     * treinos como se fosse um.
+     *
+     * [e1rm] e [volumeKg] respondem perguntas DIFERENTES da mesma sessao: o primeiro e
+     * intensidade maxima estimada (a melhor serie), o segundo e quantidade de trabalho (soma de
+     * TODAS as series do exercicio naquela sessao). Forca subindo com volume caindo e treino de
+     * pico, nao contradicao — por isso os dois viajam juntos, nao um substituindo o outro.
+     *
+     * [kg]/[reps] sao da MESMA serie que gerou o [e1rm] (a melhor) — servem so de legenda ao
+     * tocar no ponto, nunca de eixo: peso bruto sem reps ao lado mente (70kg x5 parece "pior" que
+     * 65kg x10, quando pesa mais em 1RM estimado).
+     */
+    data class PontoDeSessao(
+        val sessaoId: Uuid,
+        val data: LocalDate,
+        val semana: Int,
+        val e1rm: Double,
+        val volumeKg: Double,
+        val kg: Double,
+        val reps: Int,
+        val series: Int,
+    )
+
+    /** [evolucao], mas por SESSAO em vez de semana, no eixo do programa — ver [PontoDeSessao]. */
+    fun evolucaoPorSessaoNoPrograma(
+        series: List<SerieFeita>,
+        exercicioId: Uuid,
+        inicio: LocalDate,
+    ): List<PontoDeSessao> =
+        series.filter { it.exercicioId == exercicioId }
+            .groupBy { it.sessaoId }
+            .map { (sessaoId, doGrupo) ->
+                val melhor = doGrupo.maxBy { e1rm(it.kg, it.reps) }
+                PontoDeSessao(
+                    sessaoId = sessaoId,
+                    data = melhor.data,
+                    semana = semanaDoPrograma(melhor.data, inicio),
+                    e1rm = e1rm(melhor.kg, melhor.reps),
+                    volumeKg = doGrupo.sumOf { cargaDaSerie(it) },
+                    kg = melhor.kg,
+                    reps = melhor.reps,
+                    series = doGrupo.size,
+                )
+            }
+            .sortedBy { it.data }
+
+    /**
+     * Quantas series cada exercicio teve no recorte.
+     *
+     * Mora na politica, e nao num `groupingBy` solto no servico, porque "quantas series" e uma
+     * REGRA: conta serie elegivel (feita, com carga externa), que e o mesmo criterio do resto da
+     * analise. Reimplementar no servico e como ter duas definicoes de serie.
+     */
+    fun contagemPorExercicio(series: List<SerieFeita>): Map<Uuid, Int> =
+        series.groupingBy { it.exercicioId }.eachCount()
+
+    /**
+     * Ordem dos exercicios na lista: tonelagem decrescente, o MESMO criterio do [maisRelevantes].
+     *
+     * ⚠️ Nao ordena por variacao. Delta% ordena bem num mundo onde todo exercicio tem historico;
+     * no real, quem fez uma unica serie pesada numa semana aparece com +40% e lidera a lista
+     * acima do agachamento que a pessoa treina ha dois meses. Ordenar pelo mesmo criterio do
+     * grafico tem um efeito colateral bom: a CABECA da lista e exatamente o que esta desenhado,
+     * entao a pessoa ve de onde vieram as tres linhas.
+     */
+    fun porRelevancia(series: List<SerieFeita>): List<Uuid> =
+        maisRelevantes(series, quantos = Int.MAX_VALUE)
 
     // ---- volume por grupo --------------------------------------------------
 

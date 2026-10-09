@@ -71,7 +71,7 @@ fun Route.programRoutes(
                         } else {
                             // 2. GATE POR TETO (ARCH #27) — política pura (ProgramLimits).
                             programService.counts(user.id).flatMap { c ->
-                                ProgramLimits.gate(c, user.isPremium, ProgramLimits.Kind.AI)
+                                ProgramLimits.gate(c, user.isPremium)
                                     .flatMap { programService.generate(user.id, profile) }
                                     // ARCH #23: blur do value-first (Dia 1 livre, resto trancado p/ não-premium).
                                     .map { ProgramBlur.apply(it, user.isPremium) }
@@ -119,7 +119,7 @@ fun Route.programRoutes(
             val result = userService.findOrCreate(principal.uid, principal.email).flatMap { user ->
                 // GATE POR TETO (ARCH #27) — política pura (ProgramLimits).
                 programService.counts(user.id).flatMap { c ->
-                    ProgramLimits.gate(c, user.isPremium, ProgramLimits.Kind.MANUAL)
+                    ProgramLimits.gate(c, user.isPremium)
                         .flatMap { programService.createManual(user.id, body.name, body.id) }
                 }
             }
