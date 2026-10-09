@@ -111,6 +111,7 @@ class SocialServiceTest {
             isPremium = false,
             displayName = "Atleta",
             code = id.toString().filter { it.isLetterOrDigit() }.take(8).uppercase(),
+            activeProgramId = null,
         )
     }
 

@@ -53,5 +53,5 @@ data class User(
      * nenhum está ativo. Exclusivo — só 1 por vez. Não mexe em sessão/histórico, é só destaque
      * de UI resolvido no servidor. Ver `ProgramService.activate`.
      */
-    val activeProgramId: Uuid? = null,
+    val activeProgramId: Uuid?,
 )

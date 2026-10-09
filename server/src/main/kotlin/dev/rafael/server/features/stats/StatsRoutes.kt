@@ -54,6 +54,22 @@ fun Route.statsRoutes(
                 )
             }
         }
+
+        /**
+         * Detalhe de UM exercicio dentro de UM programa (J.5) — "ver detalhado" na lista de
+         * exercicios. Tela 100% paga: free recebe 403, nao um `/me/progress` com campo nulo.
+         */
+        get("/me/progress/exercicio") {
+            val p = call.principal<FirebaseUser>()!!
+            when (val r = call.detalheDePedido()) {
+                is AppResult.Failure -> call.respondResult(r)
+                is AppResult.Success -> call.respondResult(
+                    progress.detalheDoExercicio(
+                        p.uid, p.email, call.idiomaPedido(), r.value.first, r.value.second,
+                    ),
+                )
+            }
+        }
     }
 }
 
@@ -114,3 +130,26 @@ private fun ApplicationCall.filtroPedido(): AppResult<ProgressService.Filtro> {
 /** Mesmo contrato das demais rotas que exibem catalogo: `?locale=`, nunca cabecalho (REGRA G.1). */
 private fun ApplicationCall.idiomaPedido(): Idioma =
     IdiomaPolicy.de(request.queryParameters["locale"])
+
+/**
+ * `?programId=&exercicioId=` da tela de detalhe (J.5). Os DOIS mudam QUAL dado responde —
+ * diferente do `?exercicios=` de `/me/progress`, aqui nao ha grafico nenhum sem eles. Ausente
+ * ou malformado vira 400, cada um com o proprio codigo.
+ */
+private fun ApplicationCall.detalheDePedido(): AppResult<Pair<Uuid, Uuid>> {
+    val programId = request.queryParameters["programId"]
+        ?.let { runCatching { Uuid.parse(it) }.getOrNull() }
+        ?: return AppError.Validation(
+            message = "Identificador de programa inválido.",
+            code = ErrorCodes.ID_DE_PROGRAMA_INVALIDO,
+        ).asFailure()
+
+    val exercicioId = request.queryParameters["exercicioId"]
+        ?.let { runCatching { Uuid.parse(it) }.getOrNull() }
+        ?: return AppError.Validation(
+            message = "Identificador de exercício inválido.",
+            code = ErrorCodes.ID_DE_EXERCICIO_INVALIDO,
+        ).asFailure()
+
+    return (programId to exercicioId).asSuccess()
+}

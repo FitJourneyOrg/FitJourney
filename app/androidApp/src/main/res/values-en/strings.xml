@@ -631,9 +631,9 @@
     <string name="programa_gerar_gerando">Generating your program…</string>
     <string name="programa_gerar_acao">Generate program</string>
     <string name="programa_gerar_limite_titulo">Free program limit</string>
-    <string name="programa_gerar_limite_texto">You\'ve hit the limit of generated programs on the free plan. Subscribe to premium to generate more.</string>
+    <string name="programa_gerar_limite_texto">You\'ve hit the limit of programs on the free plan. Subscribe to premium to create more.</string>
     <string name="programa_gerar_saude_titulo">Health screening</string>
-    <string name="programa_gerar_saude_texto">Complete the health screening in your profile before generating workouts with AI.</string>
+    <string name="programa_gerar_saude_texto">Your health screening is incomplete, so AI workouts can\'t be generated right now. You can still build your program manually.</string>
 
 
     <!-- ============================ Program detail ============================ -->
@@ -820,6 +820,23 @@
     <string name="menu_wiki">Learn</string>
     <string name="menu_duvidas">FAQ</string>
 
+    <string name="duvidas_checkin_pergunta">How does check-in work?</string>
+    <string name="duvidas_checkin_resposta">It counts right away, the moment you log it, with no voting. The server only checks the structural part, like whether the group requires a photo and location. If someone thinks it is not truthful, they can report it within 7 days, and the check-in keeps counting while the group admin reviews it.</string>
+    <string name="duvidas_contestar_pergunta">Can I report someone else\'s check-in?</string>
+    <string name="duvidas_contestar_resposta">Yes, within 7 days, through the group admin, except your own, which you cannot report. The check-in keeps counting during the review and is only invalidated if the report is upheld.</string>
+    <string name="duvidas_localizacao_pergunta">Is my location shared when I check in?</string>
+    <string name="duvidas_localizacao_resposta">Not by default. Sharing your location is optional, and that data is kept separate from the rest of your information.</string>
+    <string name="duvidas_premium_pergunta">What does Premium unlock?</string>
+    <string name="duvidas_premium_resposta">Generating a program with AI, creating and editing unlimited manual programs, swapping exercises, editing sets and reps, rescheduling your training days, the full exercise library, AI-distributed rest days, and the complete progress analysis, with up to 52 weeks of history.</string>
+    <string name="duvidas_xp_pergunta">How do XP, level, and achievements work?</string>
+    <string name="duvidas_xp_resposta">They belong to your individual profile. You earn them by training, regardless of being in a group or showing up on a ranking.</string>
+    <string name="duvidas_ranking_pergunta">Is the group ranking based on XP?</string>
+    <string name="duvidas_ranking_resposta">No. The group ranking counts only valid check-ins. XP is individual; the group rewards its own achievements, separate from your profile.</string>
+    <string name="duvidas_multiplos_programas_pergunta">Can I have more than one training program at the same time?</string>
+    <string name="duvidas_multiplos_programas_resposta">On the free plan, only one program at a time. On Premium, you can keep several programs and switch between them whenever you want.</string>
+    <string name="duvidas_relogio_pergunta">Can my XP, load, or 1RM numbers go wrong if I change my phone\'s clock?</string>
+    <string name="duvidas_relogio_resposta">No. Those calculations happen and are validated on the server, never on the device\'s clock.</string>
+
     <string name="preparando_perfil">Loading your profile</string>
     <string name="preparando_programas">Getting your workouts ready</string>
     <string name="preparando_progresso">Fetching your progress</string>
@@ -977,6 +994,14 @@
     <string name="progresso_ver_menos">Show less</string>
     <string name="progresso_series_contagem">%1$d sets</string>
     <string name="progresso_toque_exercicio">tap an exercise to add or remove it from the chart</string>
+    <string name="progresso_ver_detalhe">view details</string>
+    <!-- J.5: per-exercise-within-a-program detail screen. -->
+    <string name="progresso_detalhe_1rm_titulo">Estimated 1RM per session</string>
+    <string name="progresso_detalhe_volume_titulo">Volume per session</string>
+    <string name="progresso_detalhe_pr">PR: %1$s · %2$s</string>
+    <string name="progresso_detalhe_vazio">You haven\'t logged this exercise in this program yet.</string>
+    <string name="progresso_detalhe_toque_sessao">tap a bar to see the session</string>
+    <string name="progresso_detalhe_arraste_sessao">drag and tap to see each session</string>
     <string name="progresso_volume">Weekly sets per muscle group</string>
     <string name="progresso_volume_nota">Sets, not kilos: load does not compare between machine and dumbbell.</string>
     <string name="progresso_nao_classificado">No group</string>
@@ -1100,6 +1125,10 @@
     <string name="amigos_copiar_codigo">Copy code</string>
     <string name="amigos_gerar_codigo">Generate a new code</string>
     <string name="amigos_pedidos_vazio">No requests right now.</string>
+    <plurals name="amigos_pedidos_novos">
+        <item quantity="one">%1$d new request. Tap to view</item>
+        <item quantity="other">%1$d new requests. Tap to view</item>
+    </plurals>
     <string name="amigos_gerar_pergunta">Generate a new code?</string>
     <string name="amigos_gerar_texto">The current code stops working immediately. Anyone who has the old one won\'t be able to find you.</string>
     <string name="amigos_gerar_confirmar">Generate new</string>
@@ -1150,7 +1179,6 @@
     <!-- ============================ Navigation and screens to come ============================ -->
 
     <string name="nav_abrir_menu">Open menu</string>
-    <string name="nav_duvidas_descricao">The most common questions about the app and the workouts.</string>
     <string name="em_breve">Coming soon</string>
 
 
@@ -1214,8 +1242,7 @@
     <string name="erro_comentario_invalido">Write something, up to %1$d characters.</string>
     <string name="erro_nome_do_local_longo">Use up to %1$d characters.</string>
     <string name="erro_prazo_da_denuncia">Reports are only valid up to %1$d days after the check-in.</string>
-    <string name="erro_limite_de_ia_gratis">The free plan generates %1$d program with AI. Subscribe to premium to generate more.</string>
-    <string name="erro_limite_de_manuais_gratis">The free plan creates up to %1$d programs. Subscribe to premium to create more.</string>
+    <string name="erro_limite_de_programas_gratis">Free plan program limit: %1$d. Subscribe to premium to create more.</string>
     <string name="erro_limite_de_programas_premium">You have reached the limit of %1$d programs.</string>
     <string name="erro_dias_livres_insuficientes">You marked too many rest days to train that often.</string>
 

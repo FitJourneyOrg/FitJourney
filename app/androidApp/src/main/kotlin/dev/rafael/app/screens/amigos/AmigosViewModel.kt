@@ -19,17 +19,50 @@ data class AmigosState(
     val amigos: List<PersonDto> = emptyList(),
     val pedidos: List<FriendRequestDto> = emptyList(),
     val carregando: Boolean = true,
+    /** Puxar-para-atualizar em curso (F.2). SEPARADO de [carregando] pela mesma razão das Notificações. */
+    val atualizando: Boolean = false,
     val ocupado: Boolean = false,
     val erro: AppError? = null,
+
+    /**
+     * Falha de um PULL (F.2). Vai para um snackbar, não para [erro]: quem puxou fez um gesto e
+     * espera uma resposta efêmera, e a entrada na tela offline com dado local continua silenciosa
+     * (ARCH #31). Consumido uma vez por [AmigosViewModel.consumirErroDoPull].
+     */
+    val erroDoPull: AppError? = null,
 
     /** O perfil achado pelo código, que a tela usa para navegar. Consumido uma vez. */
     val achado: String? = null,
     val buscando: Boolean = false,
     val erroDaBusca: AppError? = null,
+
+    /**
+     * A lista de pedidos que um PUSH trouxe e que ainda NÃO está na tela (B5). `null` = nada
+     * esperando. A lista visível não muda sozinha: ver [AmigosViewModel.aoChegarPush].
+     */
+    val aguardando: List<FriendRequestDto>? = null,
 ) {
-    /** O contador é o `size`, não uma rota de contagem — duas fontes da mesma verdade divergem. */
-    val pendentes: Int get() = pedidos.size
+    /**
+     * O contador é o `size`, não uma rota de contagem — duas fontes da mesma verdade divergem.
+     *
+     * Conta também o que está AGUARDANDO: o selo da aba diz a verdade na hora, mesmo enquanto a
+     * lista espera o toque da pessoa para mostrar as linhas novas.
+     */
+    val pendentes: Int get() = (aguardando ?: pedidos).size
+
+    /** Quantos pedidos chegaram e ainda não estão na lista visível. É o número do aviso. */
+    val pedidosNovos: Int get() = aguardando?.let { pedidosNovos(pedidos, it) } ?: 0
 }
+
+/**
+ * Quantos de [chegados] não aparecem em [visiveis], comparando pelo remetente.
+ *
+ * Só conta o que ENTROU. Um pedido que sumiu (o outro cancelou) fica na tela até a próxima
+ * recarga: o servidor valida o "Aceitar" de qualquer jeito, e tirar uma linha de baixo do dedo é
+ * exatamente o defeito que esta função existe para evitar.
+ */
+internal fun pedidosNovos(visiveis: List<FriendRequestDto>, chegados: List<FriendRequestDto>): Int =
+    chegados.count { c -> visiveis.none { it.from.userId == c.from.userId } }
 
 /**
  * Amigos e pedidos (ARCH #35).
@@ -61,26 +94,83 @@ class AmigosViewModel(
         }
     }
 
-    fun carregar() {
+    /** Entrada na tela e depois de cada ação: liga o spinner de carga. */
+    fun carregar() = sincronizar(puxando = false)
+
+    /**
+     * Puxar-para-atualizar (F.2). É um GESTO da pessoa, então trocar a lista é permitido: o defeito
+     * que o `aguardando` evita (linha que se move debaixo do dedo) vem de atualização que a pessoa
+     * NÃO pediu. Um pull por vez.
+     */
+    fun atualizar() = sincronizar(puxando = true)
+
+    private fun sincronizar(puxando: Boolean) {
+        if (puxando && _state.value.atualizando) return
         viewModelScope.launch {
-            _state.update { it.copy(carregando = true) }
+            _state.update { if (puxando) it.copy(atualizando = true) else it.copy(carregando = true) }
 
             me.sincronizar()
 
             val a = amizades.amigos()
             val p = amizades.pedidosRecebidos()
 
+            val falha = (a as? AppResult.Failure)?.error ?: (p as? AppResult.Failure)?.error
+
             _state.update { s ->
                 s.copy(
                     amigos = (a as? AppResult.Success)?.value ?: s.amigos,
                     pedidos = (p as? AppResult.Success)?.value ?: s.pedidos,
+                    // Recarga completa (entrada na tela, ou depois de uma ação) mostra a verdade
+                    // inteira: o que estava aguardando passa a estar na lista.
+                    aguardando = null,
                     carregando = false,
+                    atualizando = false,
                     // O primeiro erro que aparecer. As duas listas falham juntas na prática (é a
                     // mesma conexão), e mostrar dois avisos do mesmo problema é ruído.
-                    erro = (a as? AppResult.Failure)?.error ?: (p as? AppResult.Failure)?.error,
+                    erro = if (puxando) s.erro else falha,
+                    erroDoPull = if (puxando) falha else s.erroDoPull,
                 )
             }
         }
+    }
+
+    /**
+     * Um push chegou com a tela aberta (B5).
+     *
+     * Só `PEDIDO_DE_AMIZADE` interessa: antes, QUALQUER push (comentário, conquista, denúncia...)
+     * recarregava amigos, pedidos e `/me` inteiros e ligava o `carregando`.
+     *
+     * ## Por que não recarregar a lista visível
+     *
+     * Um pedido novo entra no meio das linhas e desloca os botões no instante em que a pessoa
+     * ia tocar: "toquei em Aceitar e aceitei o pedido errado". Aqui dado velho vira AÇÃO errada
+     * (ver o KDoc da classe), então a lista que a pessoa está olhando NÃO se move. O que chegou
+     * vai para [AmigosState.aguardando] e a tela oferece "N pedido(s) novo(s)"; a lista só troca
+     * quando a pessoa toca ([mostrarPedidosNovos]).
+     *
+     * Exceção: lista vazia. Sem linha, não há botão para ser deslocado, e o pedido aparece direto.
+     * Falhar aqui é silencioso: o `ON_START` e o contador da barra cobrem o resto, e um aviso de
+     * erro por um push seria barulho.
+     */
+    fun aoChegarPush(tipo: String) {
+        if (tipo != TIPO_PEDIDO_DE_AMIZADE) return
+        viewModelScope.launch {
+            val chegados = (amizades.pedidosRecebidos() as? AppResult.Success)?.value ?: return@launch
+            _state.update { s ->
+                when {
+                    s.pedidos.isEmpty() -> s.copy(pedidos = chegados, aguardando = null)
+                    pedidosNovos(s.pedidos, chegados) > 0 -> s.copy(aguardando = chegados)
+                    else -> s
+                }
+            }
+        }
+    }
+
+    fun consumirErroDoPull() = _state.update { it.copy(erroDoPull = null) }
+
+    /** A pessoa tocou no aviso: agora sim a lista troca. */
+    fun mostrarPedidosNovos() = _state.update { s ->
+        s.aguardando?.let { s.copy(pedidos = it, aguardando = null) } ?: s
     }
 
     fun aceitar(userId: String) = agir { amizades.aceitar(userId) }
@@ -152,5 +242,10 @@ class AmigosViewModel(
                 is AppResult.Failure -> _state.update { it.copy(ocupado = false, erro = r.error) }
             }
         }
+    }
+
+    companion object {
+        /** O `tipo` do push de pedido novo. Espelha `ChaveDeAviso.TIPO_PEDIDO_DE_AMIZADE`, no servidor. */
+        const val TIPO_PEDIDO_DE_AMIZADE = "PEDIDO_DE_AMIZADE"
     }
 }

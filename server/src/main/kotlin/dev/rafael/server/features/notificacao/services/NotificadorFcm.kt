@@ -5,6 +5,7 @@ import com.google.firebase.messaging.MessagingErrorCode
 import com.google.firebase.messaging.MulticastMessage
 import com.google.firebase.messaging.Notification
 import dev.rafael.core.result.AppResult
+import dev.rafael.server.error.Falhas
 import dev.rafael.server.features.notificacao.db.DeviceTokenRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -28,16 +29,18 @@ import kotlin.uuid.Uuid
  */
 class NotificadorFcm(
     private val tokens: DeviceTokenRepository,
+    private val falhas: Falhas,
     private val fcm: () -> FirebaseMessaging = { FirebaseMessaging.getInstance() },
 ) : Notificador {
 
+    // Só `info` (token apagado). Falha de verdade passa por `falhas`.
     private val log = LoggerFactory.getLogger(NotificadorFcm::class.java)
 
     override suspend fun notificar(destinatario: Uuid, aviso: AvisoRenderizado) {
         val alvos = when (val r = tokens.doUsuario(destinatario)) {
             is AppResult.Success -> r.value
             is AppResult.Failure -> {
-                log.warn("Push: não consegui ler os tokens de {}: {}", destinatario, r.error)
+                falhas.registrar("Push: não consegui ler os tokens de $destinatario", r.error)
                 return
             }
         }
@@ -49,7 +52,7 @@ class NotificadorFcm(
             .onFailure {
                 // NUNCA propaga: o pedido de amizade já foi criado, e derrubá-lo porque o Google
                 // está fora seria trocar um problema pequeno por um grande.
-                log.warn("Push para {} falhou inteiro: {}", destinatario, it.message)
+                falhas.registrar("Push para $destinatario falhou inteiro", it)
             }
     }
 
@@ -106,7 +109,7 @@ class NotificadorFcm(
                 // Sem cast: `it` já é `FirebaseMessagingException`, e o compilador avisava. Não é
                 // meu, é anterior a esta fatia, mas fica num arquivo que acabei de tocar e passaria
                 // a parecer que era.
-                log.warn("Push falhou num aparelho ({}): {}", it.messagingErrorCode, it.message)
+                falhas.registrar("Push falhou num aparelho (${it.messagingErrorCode})", it)
             }
     }
 }

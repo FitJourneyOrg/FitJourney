@@ -15,18 +15,18 @@ data class Exercise(
     val thumbRef: String,
 
     // --- taxonomia (V8) — null nos 542 não-curados ---
-    val modality: Modality? = null,
-    val movementPattern: MovementPattern? = null,
-    val secondaryPattern: MovementPattern? = null,
-    val isCompound: Boolean? = null,
-    val equipment: String? = null,
-    val primaryMuscles: List<MuscleGroup> = emptyList(),
-    val secondaryMuscles: List<MuscleGroup> = emptyList(),
-    val unilateral: Boolean? = null,
-    val prescriptionType: PrescriptionType? = null,
-    val level: Level? = null,
-    val contraindications: List<BodyLimitation> = emptyList(),
+    val modality: Modality?,
+    val movementPattern: MovementPattern?,
+    val secondaryPattern: MovementPattern?,
+    val isCompound: Boolean?,
+    val equipment: String?,
+    val primaryMuscles: List<MuscleGroup>,
+    val secondaryMuscles: List<MuscleGroup>,
+    val unilateral: Boolean?,
+    val prescriptionType: PrescriptionType?,
+    val level: Level?,
+    val contraindications: List<BodyLimitation>,
 
     // --- V16: principal (base) vs variação. Motor escolhe base primeiro. ---
-    val isBase: Boolean = false,
+    val isBase: Boolean,
 )

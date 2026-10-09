@@ -50,7 +50,7 @@ class ProgressServiceTest {
 
     private fun user(premium: Boolean) = User(
         id = Uuid.random(), firebaseUid = "fb", email = null,
-        isPremium = premium, displayName = "Atleta-teste", code = "TESTE234",
+        isPremium = premium, displayName = "Atleta-teste", code = "TESTE234", activeProgramId = null,
     )
 
     private class FakeUserRepo(private val u: User) : UserRepository {
@@ -695,6 +695,121 @@ class ProgressServiceTest {
 
         assertEquals(1, dto.fromWeek)
         assertEquals(8, dto.toWeek)
+    }
+
+    // ---- detalhe de exercicio no programa (J.5) -----------------------------
+
+    /**
+     * ⭐ Tela 100% paga, sem bloco gratis pra misturar numa resposta so (ver KDoc do
+     * ExercicioDetalheDto) — por isso 403, e nao um campo nulo como o resto da analise.
+     */
+    @Test
+    fun `free recebe 403, nao analise vazia`() = runBlocking {
+        val (s, _) = servico(
+            premium = false,
+            historico = listOf(sessao(21, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX)),
+            programas = listOf(programa(progX, "2026-09-21")),
+        )
+
+        val r = s.detalheDoExercicio("fb", null, Idioma.PADRAO, progX, agachamento)
+
+        val erro = assertIsTipo<AppResult.Failure>(r).error
+        assertEquals(ErrorCodes.ENTITLEMENT_REQUIRED, assertIsTipo<AppError.Forbidden>(erro).code)
+    }
+
+    @Test
+    fun `programa que nao e meu responde NotFound`() = runBlocking {
+        val (s, _) = servico(
+            premium = true,
+            historico = listOf(sessao(21, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX)),
+            programas = emptyList(), // progX nao esta na lista -- apagado, ou nunca foi meu
+        )
+
+        val r = s.detalheDoExercicio("fb", null, Idioma.PADRAO, progX, agachamento)
+
+        val erro = assertIsTipo<AppResult.Failure>(r).error
+        assertEquals(ErrorCodes.PROGRAMA_NAO_EXISTE, assertIsTipo<AppError.NotFound>(erro).code)
+    }
+
+    @Test
+    fun `exercicio fora do catalogo responde NotFound`() = runBlocking {
+        val foraDoCatalogo = Uuid.parse("0000000f-0000-0000-0000-000000000000")
+        val (s, _) = servico(
+            premium = true,
+            historico = listOf(sessao(21, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX)),
+            programas = listOf(programa(progX, "2026-09-21")),
+        )
+
+        val r = s.detalheDoExercicio("fb", null, Idioma.PADRAO, progX, foraDoCatalogo)
+
+        val erro = assertIsTipo<AppResult.Failure>(r).error
+        assertEquals(ErrorCodes.EXERCICIO_NAO_EXISTE, assertIsTipo<AppError.NotFound>(erro).code)
+    }
+
+    @Test
+    fun `exercicio do catalogo nunca feito NESSE programa vem com pontos vazios, nao erro`() = runBlocking {
+        // Diferente do programa e do exercicio: esse e so estado vazio. A pessoa escolheu um
+        // exercicio de verdade, so nao treinou ele AQUI -- NotFound diria o contrario.
+        val (s, _) = servico(
+            premium = true,
+            historico = listOf(sessao(21, "Inferior X", List(2) { serie(agachamento, 60.0) }, programId = progX)),
+            programas = listOf(programa(progX, "2026-09-21")),
+        )
+
+        val dto = ok(s.detalheDoExercicio("fb", null, Idioma.PADRAO, progX, supino))
+
+        assertEquals(emptyList(), dto.points)
+    }
+
+    @Test
+    fun `um ponto por sessao, so do programa pedido -- nao de outro, nem avulsa`() = runBlocking {
+        val h = listOf(
+            sessao(21, "Inferior A", listOf(serie(agachamento, 60.0, reps = 8)), programId = progX),
+            sessao(28, "Inferior A", listOf(serie(agachamento, 65.0, reps = 8)), programId = progX),
+            sessao(22, "Inferior B", listOf(serie(agachamento, 999.0)), programId = progY), // outro programa
+            sessao(23, "Livre", listOf(serie(agachamento, 999.0))), // avulsa
+        )
+        val (s, _) = servico(
+            premium = true,
+            historico = h,
+            programas = listOf(programa(progX, "2026-09-21"), programa(progY, "2026-09-21")),
+        )
+
+        val dto = ok(s.detalheDoExercicio("fb", null, Idioma.PADRAO, progX, agachamento))
+
+        assertEquals("Agachamento Livre com Barra", dto.name)
+        assertEquals(2, dto.points.size)
+        assertTrue(dto.points.none { it.kg == 999.0 }, "vazou sessao de outro programa ou avulsa")
+    }
+
+    @Test
+    fun `volumeKg e estimated1rm viajam juntos, e podem discordar`() = runBlocking {
+        val sessaoUnica = Uuid.parse("00000011-0000-0000-0000-000000000000")
+        val h = listOf(
+            WorkoutSession(
+                id = sessaoUnica, userId = Uuid.random(), programId = progX, workoutId = null,
+                workoutName = "Inferior A",
+                startedAt = LocalDateTime.parse("2026-09-21T18:00:00"),
+                finishedAt = LocalDateTime.parse("2026-09-21T19:00:00"),
+                sets = listOf(
+                    serie(agachamento, 60.0, reps = 8),
+                    serie(agachamento, 65.0, reps = 5),
+                ),
+            ),
+        )
+        val (s, _) = servico(
+            premium = true,
+            historico = h,
+            programas = listOf(programa(progX, "2026-09-21")),
+        )
+
+        val dto = ok(s.detalheDoExercicio("fb", null, Idioma.PADRAO, progX, agachamento))
+
+        assertEquals(1, dto.points.size)
+        val p = dto.points.first()
+        assertEquals(60.0 * 8 + 65.0 * 5, p.volumeKg, 1e-9)
+        assertEquals(60.0, p.kg, "a melhor por 1RM estimado, nao a mais pesada em kg bruto")
+        assertEquals(1, p.weekNumber)
     }
 
 }

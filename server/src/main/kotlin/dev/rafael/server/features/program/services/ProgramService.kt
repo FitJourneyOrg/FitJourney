@@ -78,7 +78,7 @@ class ProgramService(
     /** Cria um programa vazio (sem motor) só pra abrigar treino avulso. Não conta no teto. */
     /** @param id opcional — vem do outbox do cliente (ARCH #30) e torna a criação idempotente. */
     suspend fun createManual(userId: Uuid, name: String, id: String? = null): AppResult<ProgramDto> {
-        if (name.isBlank()) return AppError.Validation("Nome do programa é obrigatório", mapOf(ErrorFields.NAME to "Nome do programa é obrigatório"), code = ErrorCodes.NOME_DE_PROGRAMA_VAZIO).asFailure()
+        if (name.isBlank()) return AppError.Validation("Nome do programa é obrigatório", mapOf(ErrorFields.NAME to ErrorCodes.NOME_DE_PROGRAMA_VAZIO), code = ErrorCodes.NOME_DE_PROGRAMA_VAZIO).asFailure()
         val ts = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
         val idDoCliente = id?.let { runCatching { Uuid.parse(it) }.getOrNull() } ?: Uuid.NIL
         val shell = Program(
@@ -94,7 +94,7 @@ class ProgramService(
         repository.findAllByUser(userId).flatMap { it.map { p -> p.toDto() }.asSuccess() }
 
     suspend fun rename(userId: Uuid, programId: Uuid, name: String): AppResult<ProgramDto> {
-        if (name.isBlank()) return AppError.Validation("Nome do programa é obrigatório", mapOf(ErrorFields.NAME to "Nome do programa é obrigatório"), code = ErrorCodes.NOME_DE_PROGRAMA_VAZIO).asFailure()
+        if (name.isBlank()) return AppError.Validation("Nome do programa é obrigatório", mapOf(ErrorFields.NAME to ErrorCodes.NOME_DE_PROGRAMA_VAZIO), code = ErrorCodes.NOME_DE_PROGRAMA_VAZIO).asFailure()
         return repository.rename(userId, programId, name).flatMap { updated ->
             if (updated == null) AppError.NotFound("Programa não encontrado", code = ErrorCodes.PROGRAMA_NAO_EXISTE).asFailure()
             else updated.toDto().asSuccess()

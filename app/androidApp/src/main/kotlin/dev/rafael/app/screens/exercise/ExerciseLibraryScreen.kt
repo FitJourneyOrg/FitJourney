@@ -31,7 +31,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
-import dev.rafael.app.ui.ErroInline
+import dev.rafael.app.ui.ErroEmSnackbar
 import dev.rafael.app.ui.rotulo
 import dev.rafael.app.ui.NetworkImage
 import dev.rafael.app.ui.ShimmerLine
@@ -112,7 +112,12 @@ fun ExerciseLibraryScreen(
     // campo aberto por cima de outra coisa. Só intercepta enquanto está aberta.
     BackHandler(enabled = buscaAberta) { fecharBusca() }
 
+    // Falha de sync com a Biblioteca na tela é aviso passageiro (ARCH #31): snackbar, nunca card fixo.
+    val snackbarHost = remember { SnackbarHostState() }
+    ErroEmSnackbar(erro = state.error, host = snackbarHost, onConsumir = { viewModel.consumeError() })
+
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHost) },
         topBar = {
             TopAppBar(
                 title = {
@@ -329,11 +334,6 @@ fun ExerciseListContent(
             }
         }
         Spacer(Modifier.height(12.dp))
-
-        state.error?.let {
-            ErroInline(it)
-            Spacer(Modifier.height(8.dp))
-        }
 
         Box(Modifier.weight(1f, fill = false).fillMaxWidth()) {
             when {

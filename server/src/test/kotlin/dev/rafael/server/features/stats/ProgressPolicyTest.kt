@@ -22,6 +22,11 @@ class ProgressPolicyTest {
     private val supino = id(2)
     private val prancha = id(3)
 
+    // `id(n)` so aceita um digito (o template "0000000$n" estoura o grupo com 2+). As sessoes
+    // do bloco de evolucao por sessao (J.5) precisam de dois ids distintos, entao sao literais.
+    private val sessaoDez = Uuid.parse("00000010-0000-0000-0000-000000000000")
+    private val sessaoOnze = Uuid.parse("00000011-0000-0000-0000-000000000000")
+
     private fun serie(
         dia: String, kg: Double, reps: Int = 10,
         ex: Uuid = agachamento, treino: String = "Inferior A", sessao: Uuid = id(9),
@@ -330,6 +335,73 @@ class ProgressPolicyTest {
 
         assertEquals(listOf(1, 5), pontos.map { it.semana })
         assertTrue(pontos[0].e1rm < pontos[1].e1rm)
+    }
+
+    // ---- evolucao por sessao (J.5) ------------------------------------------
+
+    @Test
+    fun `evolucao por sessao faz UM ponto por sessao, nao por semana`() {
+        val s = listOf(
+            serie("2026-08-05", 60.0, reps = 8, sessao = sessaoDez),   // semana 1, segunda
+            serie("2026-08-07", 62.5, reps = 8, sessao = sessaoOnze),   // semana 1, quarta — outra sessao
+        )
+        val pontos = ProgressPolicy.evolucaoPorSessaoNoPrograma(s, agachamento, inicio)
+
+        // `evolucaoNoPrograma` fundiria as duas na semana 1; aqui sao sessoes distintas.
+        assertEquals(2, pontos.size)
+        assertEquals(listOf(1, 1), pontos.map { it.semana })
+    }
+
+    @Test
+    fun `duas sessoes no mesmo dia nao se fundem num ponto so`() {
+        val s = listOf(
+            serie("2026-08-05", 60.0, reps = 8, sessao = sessaoDez),
+            serie("2026-08-05", 20.0, reps = 12, sessao = sessaoOnze), // outra sessao, mesma data
+        )
+        val pontos = ProgressPolicy.evolucaoPorSessaoNoPrograma(s, agachamento, inicio)
+
+        assertEquals(2, pontos.size)
+        assertEquals(setOf(sessaoDez, sessaoOnze), pontos.map { it.sessaoId }.toSet())
+    }
+
+    @Test
+    fun `volumeKg soma TODAS as series da sessao, mas e1rm e kg vem so da melhor`() {
+        val sessao = sessaoDez
+        val s = listOf(
+            serie("2026-08-05", 60.0, reps = 8, sessao = sessao),   // e1rm 76,0  — a melhor
+            serie("2026-08-05", 65.0, reps = 5, sessao = sessao),   // e1rm 75,83 — mais pesada em kg, mas NAO a melhor
+            serie("2026-08-05", 50.0, reps = 10, sessao = sessao),  // e1rm 66,67
+        )
+        val pontos = ProgressPolicy.evolucaoPorSessaoNoPrograma(s, agachamento, inicio)
+
+        assertEquals(1, pontos.size)
+        val p = pontos.first()
+        assertEquals(3, p.series)
+        assertEquals(60.0 * 8 + 65.0 * 5 + 50.0 * 10, p.volumeKg, 1e-9)
+        // A melhor por 1RM ESTIMADO, nao a mais pesada em kg bruto — e justamente o caso que
+        // prova que o criterio nao e "maior carga".
+        assertEquals(60.0, p.kg)
+        assertEquals(8, p.reps)
+    }
+
+    @Test
+    fun `pontos saem ordenados por data, nao pela ordem das series de entrada`() {
+        val s = listOf(
+            serie("2026-09-02", 65.0, reps = 8, sessao = sessaoOnze),
+            serie("2026-08-05", 60.0, reps = 8, sessao = sessaoDez),
+        )
+        val pontos = ProgressPolicy.evolucaoPorSessaoNoPrograma(s, agachamento, inicio)
+
+        assertEquals(
+            listOf(LocalDate.parse("2026-08-05"), LocalDate.parse("2026-09-02")),
+            pontos.map { it.data },
+        )
+    }
+
+    @Test
+    fun `exercicio nunca treinado no programa vem com lista vazia`() {
+        val s = listOf(serie("2026-08-05", 60.0, sessao = sessaoDez))
+        assertEquals(emptyList(), ProgressPolicy.evolucaoPorSessaoNoPrograma(s, supino, inicio))
     }
 
 }

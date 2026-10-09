@@ -28,7 +28,7 @@ private val grafoCompleto = module { includes(todosOsModulosDoApp) }
  * - `Context::class`: os únicos `single { }` cujo construtor pede `Context` direto (via
  *   `androidContext()`) são `RegistroDePush`, `Localizador` e `SyncScheduler`, em `AppModule.kt`
  *   — o Koin android injeta isso por fora do grafo normal, e o `verify()` não vê sozinho.
- * - `Function1::class`: `SyncStamps` e `Outbox` recebem `uidAtual: suspend () -> String?` no
+ * - `Function1::class`: `SyncStampsImpl` e `Outbox` recebem `uidAtual: suspend () -> String?` no
  *   construtor, montado à mão em `AppModule.kt` (`uidAtual = { get<TokenProvider>().currentUid() }`)
  *   — não é `get()` direto, é uma lambda que só por dentro chama `get<TokenProvider>()`. O
  *   `verify()` não executa a lambda pra ver isso: só reflete sobre o TIPO do parâmetro
