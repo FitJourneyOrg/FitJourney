@@ -1031,10 +1031,10 @@
     <string name="programa_gerar_acao">Gerar programa</string>
     <!-- Portão de plano: bateu o teto de programas gerados no grátis. -->
     <string name="programa_gerar_limite_titulo">Limite de programas gratuitos</string>
-    <string name="programa_gerar_limite_texto">Você atingiu o limite de programas gerados no plano grátis. Assine o premium pra gerar mais.</string>
+    <string name="programa_gerar_limite_texto">Você atingiu o limite de programas do plano grátis. Assine o premium pra criar mais.</string>
     <!-- Portão de saúde (ARCH #23): a triagem do quiz precisa estar respondida. -->
     <string name="programa_gerar_saude_titulo">Avaliação de saúde</string>
-    <string name="programa_gerar_saude_texto">Complete a avaliação de saúde do seu perfil antes de gerar treinos com IA.</string>
+    <string name="programa_gerar_saude_texto">A avaliação de saúde do seu perfil está incompleta, por isso não dá para gerar treinos com IA agora. Você pode montar seu programa manualmente.</string>
 
     <!-- ============================ Detalhe do programa ============================ -->
 
@@ -1326,11 +1326,31 @@
     <string name="menu_meu_perfil">Meu perfil</string>
     <!-- Item da gaveta lateral que leva à wiki de exercícios. Também é o título da tela. -->
     <string name="menu_wiki">Aprender</string>
-    <!--
-      Selo do item que ainda não existe. Diz em que FASE do roadmap ele entra — o item não vira
-      promessa vazia, e quem toca já sabe que vai cair num "em breve". ~10 caracteres.
-    -->
+    <!-- Item da gaveta lateral que leva à tela de dúvidas frequentes. Também é o título da tela. -->
     <string name="menu_duvidas">Dúvidas frequentes</string>
+
+    <!--
+      Tela de dúvidas frequentes (lista estática, sem servidor). Cada pergunta é um item de
+      lista expansível: toca e a resposta abre embaixo, sem navegação nova. Conteúdo fechado
+      com o Rafael em 2026-10-03: respostas batem com as regras já implementadas (check-in #17,
+      gamificação individual #16, grupo por contagem #17, autoridade do servidor).
+    -->
+    <string name="duvidas_checkin_pergunta">Como funciona o check-in?</string>
+    <string name="duvidas_checkin_resposta">Conta na hora, assim que você registra, sem votação. O servidor só confere o estrutural, como se o grupo exige foto e localização. Se alguém achar que não é verdade, pode denunciar em até 7 dias, e o check-in continua valendo enquanto o admin do grupo analisa.</string>
+    <string name="duvidas_contestar_pergunta">Posso denunciar o check-in de outra pessoa?</string>
+    <string name="duvidas_contestar_resposta">Sim, em até 7 dias, pelo admin do grupo, menos o seu próprio, que você não pode denunciar. O check-in continua contando durante a análise e só é invalidado se a denúncia for aceita.</string>
+    <string name="duvidas_localizacao_pergunta">Minha localização é compartilhada quando faço check-in?</string>
+    <string name="duvidas_localizacao_resposta">Não por padrão. Compartilhar a localização é opcional, e esse dado fica separado do resto das suas informações.</string>
+    <string name="duvidas_premium_pergunta">O que o Premium libera?</string>
+    <string name="duvidas_premium_resposta">Gerar programa com IA, criar e editar programas manuais sem limite, trocar exercícios, editar séries e repetições, reagendar os dias da semana, a biblioteca completa de exercícios, descanso distribuído pela IA e a análise completa de progresso, com até 52 semanas de histórico.</string>
+    <string name="duvidas_xp_pergunta">Como funcionam XP, nível e conquistas?</string>
+    <string name="duvidas_xp_resposta">São do seu perfil individual. Você ganha treinando, independente de participar de algum grupo ou aparecer no ranking.</string>
+    <string name="duvidas_ranking_pergunta">O ranking do grupo é baseado em XP?</string>
+    <string name="duvidas_ranking_resposta">Não. O ranking do grupo conta só a quantidade de check-ins válidos. XP é individual; o grupo premia com conquistas próprias, separadas do seu perfil.</string>
+    <string name="duvidas_multiplos_programas_pergunta">Posso ter mais de um programa de treino ao mesmo tempo?</string>
+    <string name="duvidas_multiplos_programas_resposta">No plano grátis, só um programa por vez. No Premium, você pode manter vários programas e alternar entre eles quando quiser.</string>
+    <string name="duvidas_relogio_pergunta">Os números de XP, carga e 1RM podem ficar errados se eu mudar a hora do celular?</string>
+    <string name="duvidas_relogio_resposta">Não. Esses cálculos acontecem e são validados no servidor, nunca no relógio do aparelho.</string>
 
     <!-- Tela "Aprender" (Fase 8). O título reusa menu_wiki: a mesma palavra no menu e na tela,
          de propósito, porque é o mesmo destino. Categorias em enum_wiki_*. -->
@@ -1584,6 +1604,19 @@
     <string name="progresso_ver_menos">Ver menos</string>
     <string name="progresso_series_contagem">%1$d séries</string>
     <string name="progresso_toque_exercicio">toque num exercício para pôr ou tirar do gráfico</string>
+    <string name="progresso_ver_detalhe">ver detalhado</string>
+    <!--
+      Tela de detalhe de UM exercicio dentro de UM programa (J.5), aberta por "ver detalhado"
+      acima. No PR, %1$s e o valor ja formatado com unidade (ex.: "92,5 kg") e %2$s e a data
+      "dd/MM": os dois compostos fora do template, como o resto do catalogo de Progresso faz.
+    -->
+    <string name="progresso_detalhe_1rm_titulo">1RM estimado por sessão</string>
+    <string name="progresso_detalhe_volume_titulo">Volume por sessão</string>
+    <string name="progresso_detalhe_pr">PR: %1$s · %2$s</string>
+    <string name="progresso_detalhe_vazio">Você ainda não registrou esse exercício nesse programa.</string>
+    <string name="progresso_detalhe_toque_sessao">toque numa barra para ver a sessão</string>
+    <string name="progresso_detalhe_arraste_sessao">arraste e toque para ver cada sessão</string>
+    <!-- Volume por GRUPO MUSCULAR, por semana: bloco diferente do volume por sessão acima. -->
     <string name="progresso_volume">Séries por grupo, por semana</string>
     <!--
       Rodapé do gráfico de volume: explica por que ele conta SÉRIES e não quilos. Sem isso a
@@ -1770,6 +1803,12 @@
     <string name="amigos_copiar_codigo">Copiar código</string>
     <string name="amigos_gerar_codigo">Gerar código novo</string>
     <string name="amigos_pedidos_vazio">Nenhum pedido no momento.</string>
+    <!-- Aviso flutuante sobre a lista de pedidos quando chega pedido novo com a tela aberta (B5).
+         A lista NÃO se mexe sozinha: o toque aqui é que a atualiza. ~32 caracteres. -->
+    <plurals name="amigos_pedidos_novos">
+        <item quantity="one">%1$d pedido novo. Toque para ver</item>
+        <item quantity="other">%1$d pedidos novos. Toque para ver</item>
+    </plurals>
     <!-- Diálogo de regeneração: o código antigo morre na hora, e isso surpreende. -->
     <string name="amigos_gerar_pergunta">Gerar um código novo?</string>
     <string name="amigos_gerar_texto">O código atual para de funcionar na hora. Quem já tem o antigo não vai conseguir te encontrar.</string>
@@ -1847,9 +1886,7 @@
 
     <!-- Descrição do ícone que abre a gaveta lateral. Nunca visível. -->
     <string name="nav_abrir_menu">Abrir menu</string>
-    <!-- Explicações das duas telas que ainda não existem. Ver `EmBreveScreen`. -->
-    <string name="nav_duvidas_descricao">As perguntas mais comuns sobre o app e os treinos.</string>
-    <!-- Selo da tela ainda não implementada. ~14 caracteres. -->
+    <!-- Selo da tela que ainda não existe, quando alguma entrar aqui de novo. ~14 caracteres. -->
     <string name="em_breve">Em breve</string>
 
     <!-- ============================ Biblioteca de exercícios ============================ -->
@@ -1976,10 +2013,8 @@
     <string name="erro_nome_do_local_longo">Use até %1$d caracteres.</string>
     <!-- Denúncia fora do prazo. `Limites.Moderacao.PRAZO_EM_DIAS`. -->
     <string name="erro_prazo_da_denuncia">Denúncias só valem até %1$d dias depois do check-in.</string>
-    <!-- Teto de geração por IA no grátis. `Limites.Program.FREE_AI_LIMIT`. -->
-    <string name="erro_limite_de_ia_gratis">O plano grátis gera %1$d programa com IA. Assine o premium para gerar mais.</string>
-    <!-- Teto de programas manuais no grátis. `Limites.Program.FREE_MANUAL_LIMIT`. -->
-    <string name="erro_limite_de_manuais_gratis">O plano grátis cria até %1$d programas. Assine o premium para criar mais.</string>
+    <!-- Teto de programas no grátis (IA ou manual). `Limites.Program.FREE_TOTAL_LIMIT`. -->
+    <string name="erro_limite_de_programas_gratis">Limite de programas do plano grátis: %1$d. Assine o premium para criar mais.</string>
     <!-- Teto total, já no premium. `Limites.Program.PREMIUM_TOTAL_LIMIT`. -->
     <string name="erro_limite_de_programas_premium">Você atingiu o limite de %1$d programas.</string>
 

@@ -243,6 +243,55 @@ object ProgressPolicy {
             .sortedBy { it.semana }
 
     /**
+     * UM ponto por SESSAO (nao por semana) — o detalhe de um exercicio dentro de um programa
+     * (J.5). Agrupa por [SerieFeita.sessaoId], nao por data: duas sessoes no mesmo dia (caso raro,
+     * mas possivel) nao podem virar um ponto so, porque [volumeKg] somaria o trabalho de dois
+     * treinos como se fosse um.
+     *
+     * [e1rm] e [volumeKg] respondem perguntas DIFERENTES da mesma sessao: o primeiro e
+     * intensidade maxima estimada (a melhor serie), o segundo e quantidade de trabalho (soma de
+     * TODAS as series do exercicio naquela sessao). Forca subindo com volume caindo e treino de
+     * pico, nao contradicao — por isso os dois viajam juntos, nao um substituindo o outro.
+     *
+     * [kg]/[reps] sao da MESMA serie que gerou o [e1rm] (a melhor) — servem so de legenda ao
+     * tocar no ponto, nunca de eixo: peso bruto sem reps ao lado mente (70kg x5 parece "pior" que
+     * 65kg x10, quando pesa mais em 1RM estimado).
+     */
+    data class PontoDeSessao(
+        val sessaoId: Uuid,
+        val data: LocalDate,
+        val semana: Int,
+        val e1rm: Double,
+        val volumeKg: Double,
+        val kg: Double,
+        val reps: Int,
+        val series: Int,
+    )
+
+    /** [evolucao], mas por SESSAO em vez de semana, no eixo do programa — ver [PontoDeSessao]. */
+    fun evolucaoPorSessaoNoPrograma(
+        series: List<SerieFeita>,
+        exercicioId: Uuid,
+        inicio: LocalDate,
+    ): List<PontoDeSessao> =
+        series.filter { it.exercicioId == exercicioId }
+            .groupBy { it.sessaoId }
+            .map { (sessaoId, doGrupo) ->
+                val melhor = doGrupo.maxBy { e1rm(it.kg, it.reps) }
+                PontoDeSessao(
+                    sessaoId = sessaoId,
+                    data = melhor.data,
+                    semana = semanaDoPrograma(melhor.data, inicio),
+                    e1rm = e1rm(melhor.kg, melhor.reps),
+                    volumeKg = doGrupo.sumOf { cargaDaSerie(it) },
+                    kg = melhor.kg,
+                    reps = melhor.reps,
+                    series = doGrupo.size,
+                )
+            }
+            .sortedBy { it.data }
+
+    /**
      * Quantas series cada exercicio teve no recorte.
      *
      * Mora na politica, e nao num `groupingBy` solto no servico, porque "quantas series" e uma

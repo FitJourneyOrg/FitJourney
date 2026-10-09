@@ -34,10 +34,17 @@ class SlotFillerTest {
         description = null,
         videoRef = "",
         thumbRef = "",
-        isCompound = compound,
+        modality = null,
         movementPattern = pattern,
+        secondaryPattern = null,
+        isCompound = compound,
+        equipment = null,
         primaryMuscles = primary,
+        secondaryMuscles = emptyList(),
+        unilateral = null,
+        prescriptionType = null,
         level = level,
+        contraindications = emptyList(),
         isBase = base,
     )
 

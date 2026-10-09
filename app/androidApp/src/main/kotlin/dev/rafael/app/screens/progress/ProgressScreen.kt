@@ -7,6 +7,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -63,6 +64,7 @@ import kotlin.math.roundToInt
 @Composable
 fun ProgressScreen(
     onOpenPaywall: () -> Unit = {},
+    onAbrirDetalheDeExercicio: (programId: String, exercicioId: String) -> Unit = { _, _ -> },
     viewModel: ProgressViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -127,7 +129,19 @@ fun ProgressScreen(
             when {
                 state.semCarga -> CartaoSemCarga()
                 analise != null -> {
-                    BlocosDaAnalise(analise, state.trancado, onOpenPaywall, viewModel::alternarExercicio)
+                    // So existe "detalhe de exercicio" dentro de um PROGRAMA: e o programId que
+                    // a rota nova exige. No eixo de calendario nao ha referente -- o botao some,
+                    // nao aparece desabilitado (ver LinhaDeExercicio).
+                    val programIdAtual = (state.filtro as? FiltroDeProgresso.DoPrograma)?.programId
+                    BlocosDaAnalise(
+                        analise = analise,
+                        trancado = state.trancado,
+                        onOpenPaywall = onOpenPaywall,
+                        onAlternarExercicio = viewModel::alternarExercicio,
+                        onAbrirDetalhe = programIdAtual?.let { pid ->
+                            { exercicioId: String -> onAbrirDetalheDeExercicio(pid, exercicioId) }
+                        },
+                    )
                 }
             }
         }
@@ -460,6 +474,8 @@ private fun BlocosDaAnalise(
     trancado: Boolean,
     onOpenPaywall: () -> Unit,
     onAlternarExercicio: (String, List<String>) -> Unit,
+    /** Ver [LinhaDeExercicio] -- nulo fora do recorte de programa. */
+    onAbrirDetalhe: ((String) -> Unit)?,
 ) {
     // Gratis desde a J.4.1 — e por isso vem ANTES do cartao de assinatura: o que se vende e a
     // profundidade, e mostrar a janela curta primeiro e o argumento.
@@ -479,6 +495,7 @@ private fun BlocosDaAnalise(
             regua = analise.weeklyLoad.orEmpty().map { s -> s.weekStart },
             resumo = analise.exerciseSummary.orEmpty(),
             onAlternar = onAlternarExercicio,
+            onAbrirDetalhe = onAbrirDetalhe,
         )
         Spacer(Modifier.height(10.dp))
     }
@@ -610,7 +627,7 @@ private fun BlocoDeCargaSemanal(semanas: List<WeeklyLoadDto>) {
                 LaunchedEffect(rolagem.maxValue) { rolagem.scrollTo(rolagem.maxValue) }
                 Row(Modifier.weight(1f).horizontalScroll(rolagem)) {
                     GraficoDeBarras(valores, selecionada ?: indiceDoPico, Chart1,
-                        Modifier.width(LARGURA_POR_BARRA * semanas.size).height(120.dp), alternar)
+                        Modifier.width(LARGURA_POR_SEMANA * semanas.size).height(120.dp), alternar)
                 }
             }
         }
@@ -689,7 +706,7 @@ private fun rotuloDaSemana(semana: WeeklyLoadDto, atual: Boolean = false): Strin
 
 /** "dd/MM" a partir de uma data ISO, sem API de data: a ordem dos campos e do idioma. */
 @Composable
-private fun diaMes(iso: String): String {
+internal fun diaMes(iso: String): String {
     val p = iso.split("-")
     return if (p.size == 3) stringResource(R.string.progresso_dia_mes, p[2], p[1]) else iso
 }
@@ -700,6 +717,7 @@ private fun BlocoDeEvolucao(
     regua: List<String>,
     resumo: List<ExerciseSummaryDto>,
     onAlternar: (String, List<String>) -> Unit,
+    onAbrirDetalhe: ((String) -> Unit)?,
 ) {
     // Escala COMPARTILHADA pelas tres linhas: cada uma na sua escala faria subidas de tamanhos
     // diferentes parecerem iguais — a mentira mais comum em grafico de linha.
@@ -727,6 +745,14 @@ private fun BlocoDeEvolucao(
     }
     val cores = listOf(Chart1, Chart2, Chart3)
 
+    // Mesma decisao e mesmo limiar das barras, pelo mesmo motivo: numa janela de 26/52 semanas
+    // com pouco historico real, a linha fica espremida num canto do cartao — area vazia lendo
+    // como grafico quebrado, nao como "ainda nao ha mais dado". Largura fixa por semana + scroll
+    // resolve sem tocar na regua: ela continua sendo a janela inteira, so o espaco que ela ocupa
+    // na tela deixa de ser fixo. Rola de forma INDEPENDENTE do cartao de barras (nao compartilha
+    // `ScrollState`) — e a dificuldade deliberadamente adiada: ver `debitos.md`.
+    val rola = semanas.size > SEMANAS_QUE_CABEM
+
     CartaoDeGrafico(stringResource(R.string.progresso_evolucao)) {
         Row {
             // Em quilos, nao em toneladas: aqui o numero e carga estimada de UMA serie.
@@ -738,23 +764,46 @@ private fun BlocoDeEvolucao(
                 ),
                 altura = 140.dp,
             )
-            GraficoDeLinhas(
-                linhas = trend.mapIndexed { i, ex ->
-                    LinhaDoGrafico(
-                        nome = ex.name,
-                        cor = cores[i % cores.size],
-                        // `mapNotNull`: ponto fora da regua e DESCARTADO, nao encaixado na
-                        // ponta. Por construcao nao acontece (as duas listas saem do mesmo
-                        // recorte, com a mesma conta de semana), e e justamente por isso que
-                        // encaixar seria pior: esconderia a divergencia em vez de some-la.
-                        pontos = ex.points.mapNotNull { p ->
-                            val x = posicaoNaRegua(p.weekStart, semanas) ?: return@mapNotNull null
-                            val y = if (semVariacao) 0.5 else (p.estimated1rm - minimo) / amplitude
-                            x to y.toFloat()
-                        },
+            val linhas = trend.mapIndexed { i, ex ->
+                LinhaDoGrafico(
+                    nome = ex.name,
+                    cor = cores[i % cores.size],
+                    // `mapNotNull`: ponto fora da regua e DESCARTADO, nao encaixado na
+                    // ponta. Por construcao nao acontece (as duas listas saem do mesmo
+                    // recorte, com a mesma conta de semana), e e justamente por isso que
+                    // encaixar seria pior: esconderia a divergencia em vez de some-la.
+                    pontos = ex.points.mapNotNull { p ->
+                        val x = posicaoNaRegua(p.weekStart, semanas) ?: return@mapNotNull null
+                        val y = if (semVariacao) 0.5 else (p.estimated1rm - minimo) / amplitude
+                        x to y.toFloat()
+                    },
+                )
+            }
+            if (!rola) {
+                GraficoDeLinhas(linhas, Modifier.weight(1f).height(140.dp))
+            } else {
+                // ⚠️ Mesma regra das barras: a CALHA DO Y fica fora do scroll (irma deste
+                // `else`, no mesmo `Row`) — escala que rola junto com o desenho deixa de ser
+                // escala.
+                val rolagem = rememberScrollState()
+                // Comeca no FIM, pelo mesmo motivo das barras: a pergunta padrao e "como estou
+                // agora", nao "como eu estava ha um ano".
+                LaunchedEffect(rolagem.maxValue) { rolagem.scrollTo(rolagem.maxValue) }
+                Row(Modifier.weight(1f).horizontalScroll(rolagem)) {
+                    GraficoDeLinhas(
+                        linhas,
+                        Modifier.width(LARGURA_POR_SEMANA * semanas.size).height(140.dp),
                     )
-                },
-                modifier = Modifier.weight(1f).height(140.dp),
+                }
+            }
+        }
+        if (rola) {
+            Spacer(Modifier.height(6.dp))
+            Text(
+                stringResource(R.string.progresso_arraste_semana),
+                Modifier.padding(start = LARGURA_DA_CALHA),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Spacer(Modifier.height(12.dp))
@@ -777,6 +826,7 @@ private fun BlocoDeEvolucao(
             desenhados = trend.map { it.exerciseId },
             cores = cores,
             onAlternar = onAlternar,
+            onAbrirDetalhe = onAbrirDetalhe,
         )
     }
 }
@@ -808,6 +858,7 @@ private fun ListaDeExercicios(
     desenhados: List<String>,
     cores: List<Color>,
     onAlternar: (String, List<String>) -> Unit,
+    onAbrirDetalhe: ((String) -> Unit)?,
 ) {
     if (resumo.isEmpty()) return
     // `remember(resumo.size)`: trocar de recorte recolhe a lista. Manter aberta uma lista de 27
@@ -829,6 +880,7 @@ private fun ListaDeExercicios(
             item = item,
             cor = if (i >= 0) cores[i % cores.size] else null,
             onClick = { onAlternar(item.exerciseId, desenhados) },
+            onAbrirDetalhe = onAbrirDetalhe?.let { f -> { f(item.exerciseId) } },
         )
     }
 
@@ -851,7 +903,20 @@ private fun ListaDeExercicios(
 }
 
 @Composable
-private fun LinhaDeExercicio(item: ExerciseSummaryDto, cor: Color?, onClick: () -> Unit) {
+private fun LinhaDeExercicio(
+    item: ExerciseSummaryDto,
+    cor: Color?,
+    onClick: () -> Unit,
+    /**
+     * Abre a tela cheia do exercicio DENTRO DESTE PROGRAMA (J.5) -- nulo fora do recorte de
+     * programa, onde "ver detalhado" nao tem o que detalhar.
+     *
+     * Alvo de toque PROPRIO, separado do `onClick` da linha: o toque na linha alterna o
+     * exercicio no grafico (J.4.4), e os dois gestos nao podem disputar a mesma area -- senao
+     * tocar pra ver o detalhe tambem mexeria nas tres linhas do grafico por engano.
+     */
+    onAbrirDetalhe: (() -> Unit)?,
+) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -891,6 +956,15 @@ private fun LinhaDeExercicio(item: ExerciseSummaryDto, cor: Color?, onClick: () 
                 style = MaterialTheme.typography.bodySmall,
                 color = corDoDelta(item.changePercent),
             )
+        }
+        if (onAbrirDetalhe != null) {
+            IconButton(onClick = onAbrirDetalhe, modifier = Modifier.size(28.dp)) {
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.progresso_ver_detalhe),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
     }
 }
@@ -937,7 +1011,7 @@ private val LARGURA_DA_CALHA = 34.dp
  * o tamanho de fonte do sistema e nao chega ao leitor de tela.
  */
 @Composable
-private fun CalhaDoEixo(de_cima_para_baixo: List<String>, altura: androidx.compose.ui.unit.Dp) {
+internal fun CalhaDoEixo(de_cima_para_baixo: List<String>, altura: androidx.compose.ui.unit.Dp) {
     Column(
         Modifier.width(LARGURA_DA_CALHA).height(altura),
         verticalArrangement = Arrangement.SpaceBetween,
@@ -953,7 +1027,7 @@ private fun CalhaDoEixo(de_cima_para_baixo: List<String>, altura: androidx.compo
 }
 
 @Composable
-private fun CartaoDeGrafico(titulo: String, conteudo: @Composable ColumnScope.() -> Unit) {
+internal fun CartaoDeGrafico(titulo: String, conteudo: @Composable ColumnScope.() -> Unit) {
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp)) {
             Text(
@@ -983,10 +1057,10 @@ private val AMOSTRA_DO_PAYWALL = listOf(
 )
 
 /**
- * Largura de cada barra quando o grafico rola. Alvo de toque confortavel; abaixo de ~16dp a
- * barra vira alvo ruim antes de virar grafico ruim.
+ * Largura de cada semana quando um grafico rola (barras ou linha). Alvo de toque confortavel;
+ * abaixo de ~16dp a barra vira alvo ruim antes de virar grafico ruim.
  */
-private val LARGURA_POR_BARRA = 22.dp
+private val LARGURA_POR_SEMANA = 22.dp
 
 /** Acima disto o grafico rola. Oito cabem com folga, vinte e seis nao cabem em celular nenhum. */
 private const val SEMANAS_QUE_CABEM = 12

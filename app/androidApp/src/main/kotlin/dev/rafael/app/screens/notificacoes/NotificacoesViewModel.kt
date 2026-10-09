@@ -16,7 +16,14 @@ import kotlinx.coroutines.launch
 data class NotificacoesState(
     val itens: List<NotificacaoDto> = emptyList(),
     val carregando: Boolean = true,
+    /**
+     * Puxar-para-atualizar em curso (F.2). SEPARADO de [carregando]: reusar o mesmo campo faria o
+     * indicador do pull aparecer junto com o spinner da primeira carga.
+     */
+    val atualizando: Boolean = false,
     val erro: AppError? = null,
+    /** Falha de um PULL (F.2): vai para um snackbar, não para o [erro] inline. Consumido uma vez. */
+    val erroDoPull: AppError? = null,
 )
 
 /**
@@ -39,13 +46,22 @@ class NotificacoesViewModel(
     private val _state = MutableStateFlow(NotificacoesState())
     val state: StateFlow<NotificacoesState> = _state.asStateFlow()
 
-    fun carregar() {
+    /** Entrada na tela: liga o spinner de carga. */
+    fun carregar() = sincronizar(puxando = false)
+
+    /** Puxar-para-atualizar: liga só [NotificacoesState.atualizando]; um pull por vez. */
+    fun atualizar() = sincronizar(puxando = true)
+
+    fun consumirErroDoPull() = _state.update { it.copy(erroDoPull = null) }
+
+    private fun sincronizar(puxando: Boolean) {
+        if (puxando && _state.value.atualizando) return
         viewModelScope.launch {
-            _state.update { it.copy(carregando = true) }
+            _state.update { if (puxando) it.copy(atualizando = true) else it.copy(carregando = true) }
 
             when (val r = notificacoes.listar()) {
                 is AppResult.Success -> {
-                    _state.update { it.copy(itens = r.value, carregando = false, erro = null) }
+                    _state.update { it.copy(itens = r.value, carregando = false, atualizando = false, erro = null) }
 
                     // Marca DEPOIS de ter a lista na mão: o snapshot que a tela mostra preserva o
                     // `readAt = null` dos itens novos, e é ele que desenha o destaque.
@@ -55,7 +71,14 @@ class NotificacoesViewModel(
                     }
                 }
                 // Preserva o que já estava na tela — falhar ao recarregar não apaga conteúdo.
-                is AppResult.Failure -> _state.update { it.copy(carregando = false, erro = r.error) }
+                is AppResult.Failure -> _state.update {
+                    it.copy(
+                        carregando = false,
+                        atualizando = false,
+                        erro = if (puxando) it.erro else r.error,
+                        erroDoPull = if (puxando) r.error else it.erroDoPull,
+                    )
+                }
             }
         }
     }

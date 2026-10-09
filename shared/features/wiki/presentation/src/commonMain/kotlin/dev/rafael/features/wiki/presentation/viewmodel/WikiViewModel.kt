@@ -51,6 +51,12 @@ class WikiViewModel(private val repository: WikiRepository) : ViewModel() {
         }
     }
 
+    /**
+     * A tela mostrou a falha (snackbar) e a descarta. Sem limpar o erro no state o aviso
+     * reapareceria a cada recomposição. Não mexe no acervo: só o aviso some.
+     */
+    fun consumeError() = _state.update { it.copy(error = null) }
+
     private fun refresh(forcar: Boolean) {
         _state.update { it.copy(isRefreshing = true, error = null) }
         viewModelScope.launch {

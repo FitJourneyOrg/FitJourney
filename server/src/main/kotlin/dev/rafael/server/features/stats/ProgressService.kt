@@ -6,6 +6,8 @@ import dev.rafael.contract.stats.ExerciseSummaryDto
 import dev.rafael.contract.stats.JanelasDeProgresso
 import dev.rafael.contract.stats.ExerciseTrendDto
 import dev.rafael.contract.stats.MuscleVolumeDto
+import dev.rafael.contract.stats.ExercicioDetalheDto
+import dev.rafael.contract.stats.PontoDeSessaoDto
 import dev.rafael.contract.stats.ProgressDto
 import dev.rafael.contract.stats.TrendPointDto
 import dev.rafael.contract.stats.WeeklyLoadDto
@@ -117,7 +119,7 @@ class ProgressService(
     ): AppResult<ProgressDto> =
         userService.findOrCreate(firebaseUid, email).flatMap { user ->
             sessions.listByUser(user.id).flatMap { historico ->
-                // Os programas do usuario sao no maximo 10 (ProgramLimits.PREMIUM_TOTAL_LIMIT),
+                // Os programas do usuario sao no maximo 3 (ProgramLimits.PREMIUM_TOTAL_LIMIT),
                 // entao uma consulta resolve as tres perguntas: quais existem (para separar o
                 // apagado do avulso), qual o started_at do filtrado, e o que oferecer no filtro.
                 programs.findAllByUser(user.id).flatMap { meusProgramas ->
@@ -125,6 +127,106 @@ class ProgressService(
                 }
             }
         }
+
+    /**
+     * Detalhe de UM exercicio dentro de UM programa (J.5) — a tela que "ver detalhado" abre a
+     * partir da lista de exercicios do recorte de programa. Ver KDoc do [ExercicioDetalheDto]
+     * para o porque do 403 em vez de campo nulo, e do programa INTEIRO sem faixa.
+     */
+    suspend fun detalheDoExercicio(
+        firebaseUid: String,
+        email: String?,
+        idioma: Idioma,
+        programId: Uuid,
+        exercicioId: Uuid,
+    ): AppResult<ExercicioDetalheDto> =
+        userService.findOrCreate(firebaseUid, email).flatMap { user ->
+            sessions.listByUser(user.id).flatMap { historico ->
+                programs.findAllByUser(user.id).flatMap { meusProgramas ->
+                    montarDetalhe(user.isPremium, idioma, programId, exercicioId, historico, meusProgramas)
+                }
+            }
+        }
+
+    private suspend fun montarDetalhe(
+        premium: Boolean,
+        idioma: Idioma,
+        programId: Uuid,
+        exercicioId: Uuid,
+        historico: List<WorkoutSession>,
+        meusProgramas: List<Program>,
+    ): AppResult<ExercicioDetalheDto> {
+        // Autoridade do servidor (#16): o cliente so chega aqui vindo de uma lista que ja e
+        // paga, mas quem decide de verdade e o backend. Tela 100% paga, sem bloco gratis pra
+        // misturar numa resposta so — por isso 403, nao campo nulo.
+        if (!premium) {
+            return AppError.Forbidden(
+                "Veja a evolução detalhada de cada exercício assinando o premium.",
+                ErrorCodes.ENTITLEMENT_REQUIRED,
+            ).asFailure()
+        }
+
+        // `findAllByUser` ja filtrou por dono — "nao esta aqui" cobre "nao existe" e "nao e seu",
+        // mesma decisao do resto da fatia (ver `montar`).
+        val programa = meusProgramas.firstOrNull { it.id == programId }
+            ?: return AppError.NotFound(
+                "Programa não encontrado.",
+                ErrorCodes.PROGRAMA_NAO_EXISTE,
+            ).asFailure()
+
+        return exercises.paraAnalise(listOf(exercicioId)).flatMap { catalogo ->
+            val doCatalogo = catalogo[exercicioId]
+                ?: return@flatMap AppError.NotFound(
+                    "Exercício não encontrado.",
+                    ErrorCodes.EXERCICIO_NAO_EXISTE,
+                ).asFailure()
+
+            exercises.nomesTraduzidos(listOf(exercicioId), idioma).map { traduzidos ->
+                val nome = traduzidos[exercicioId] ?: doCatalogo.nomePiso
+
+                // Mesmo achatamento do `montar`, so que recortado pelo PROGRAMA direto — sem
+                // faixa, sem janela: a tela pede o historico inteiro dele.
+                val series = historico
+                    .filter { it.programId == programId }
+                    .flatMap { sessao ->
+                        sessao.sets.mapNotNull { set ->
+                            val kg = set.weightKg ?: return@mapNotNull null
+                            if (!ProgressPolicy.elegivel(set.done, kg)) return@mapNotNull null
+                            ProgressPolicy.SerieFeita(
+                                sessaoId = sessao.id,
+                                data = sessao.finishedAt.date,
+                                nomeDoTreino = sessao.workoutName,
+                                exercicioId = set.exerciseId,
+                                reps = set.repsDone,
+                                kg = kg,
+                            )
+                        }
+                    }
+
+                val pontos = ProgressPolicy.evolucaoPorSessaoNoPrograma(
+                    series,
+                    exercicioId,
+                    programa.startedAt.date,
+                )
+
+                ExercicioDetalheDto(
+                    exerciseId = exercicioId.toString(),
+                    name = nome,
+                    points = pontos.map {
+                        PontoDeSessaoDto(
+                            date = it.data.toString(),
+                            weekNumber = it.semana,
+                            estimated1rm = it.e1rm,
+                            volumeKg = it.volumeKg,
+                            kg = it.kg,
+                            reps = it.reps,
+                            sets = it.series,
+                        )
+                    },
+                )
+            }
+        }
+    }
 
     private suspend fun montar(
         historico: List<WorkoutSession>,

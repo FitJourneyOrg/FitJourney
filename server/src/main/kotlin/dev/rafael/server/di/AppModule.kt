@@ -3,6 +3,8 @@ package dev.rafael.server.di
 import com.google.firebase.auth.FirebaseAuth
 import dev.rafael.server.auth.FirebaseTokenDecoder
 import dev.rafael.server.auth.TokenDecoder
+import dev.rafael.server.error.Falhas
+import dev.rafael.server.error.FalhasSlf4j
 import dev.rafael.server.features.profile.db.ProfileRepository
 import dev.rafael.server.features.profile.db.ProfileRepositoryImpl
 import dev.rafael.server.features.profile.services.ProfileService
@@ -90,11 +92,14 @@ val appModule = module {
     // Singleton de propósito: a contagem de tentativas vive em MEMÓRIA (ver KDoc do limitador).
     single { LimitadorDeResgate() }
 
+    // Falhas engolidas de propósito (C9). Uma só, compartilhada.
+    single<Falhas> { FalhasSlf4j() }
+
     // ---- Notificação (F.1) ----
     single<DeviceTokenRepository> { DeviceTokenRepositoryImpl() }
     single<NotificationRepository> { NotificationRepositoryImpl() }
-    single<Notificador> { NotificadorFcm(get()) }
-    single { NotificacaoService(get(), get(), get()) }
+    single<Notificador> { NotificadorFcm(get(), get()) }
+    single { NotificacaoService(get(), get(), get(), get()) }
 
     // ---- laço diário do grupo (fatia F: 10.6 + as duas emendas de 2026-09-07) ----
     //
@@ -184,6 +189,7 @@ val appModule = module {
             userService = get(),
             stats = get<StatsService>(),
             repository = get(),
+            falhas = get(),
             // Porta estreita para o push (débito fechado em 2026-09-24): `stats` não importa
             // `notificacao` diretamente — mesmo padrão do Friendship/Social/Moderacao.
             avisarDesbloqueio = { destinatario, achievementId ->
