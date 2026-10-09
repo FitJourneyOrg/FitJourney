@@ -3,7 +3,6 @@ package dev.rafael.app.di
 import dev.rafael.app.data.me.Me
 import dev.rafael.app.data.me.MeApi
 import dev.rafael.app.data.me.MeRepository
-import dev.rafael.app.data.me.PlanoDoUsuarioDoMe
 import dev.rafael.app.data.groups.Groups
 import dev.rafael.app.data.groups.GroupsApi
 import dev.rafael.app.data.groups.GroupsRepository
@@ -24,7 +23,6 @@ import dev.rafael.features.session.presentation.di.sessionPresentationModule
 import dev.rafael.features.profile.data.di.profileDataModule
 import dev.rafael.features.profile.presentation.di.profilePresentationModule
 import dev.rafael.features.program.data.di.programDataModule
-import dev.rafael.features.program.domain.repository.PlanoDoUsuario
 import dev.rafael.features.program.presentation.di.programPresentationModule
 import dev.rafael.features.workout.data.di.workoutDataModule
 import dev.rafael.features.workout.presentation.di.workoutPresentationModule
@@ -45,7 +43,6 @@ import dev.rafael.app.screens.perfil.PerfilPublicoViewModel
 import dev.rafael.app.screens.perfil.PerfilViewModel
 import dev.rafael.app.data.sync.SyncScheduler
 import dev.rafael.core.database.SyncStamps
-import dev.rafael.core.database.SyncStampsImpl
 import dev.rafael.core.database.outbox.AgendadorDeSync
 import dev.rafael.core.database.outbox.ExecutorDeOperacao
 import dev.rafael.core.database.outbox.FilaDeSaida
@@ -60,7 +57,6 @@ import dev.rafael.core.network.TokenProvider
 import org.koin.android.ext.koin.androidContext
 import dev.rafael.app.screens.home.HomeViewModel
 import dev.rafael.app.screens.historico.HistoricoViewModel
-import dev.rafael.app.screens.progress.ExercicioDetalheViewModel
 import dev.rafael.app.screens.progress.ProgressViewModel
 import dev.rafael.app.screens.paywall.PaywallViewModel
 import dev.rafael.app.screens.reveal.ProgramRevealViewModel
@@ -106,11 +102,7 @@ val appModule = module {
     // porque é o único ponto que vê ao mesmo tempo o banco (core:database) e o TokenProvider
     // (core:network). Passar o uid como lambda evita core:database depender de core:network,
     // o que seria persistência dependendo de rede.
-    //
-    // Registrado pelo TIPO da interface (B2): os repositórios pedem `SyncStamps`, e é a interface
-    // que os testes substituem por um fake.
-    single<PlanoDoUsuario> { PlanoDoUsuarioDoMe(get()) }   // plano p/ o teto de programas (ARCH #27)
-    single<SyncStamps> { SyncStampsImpl(db = get(), uidAtual = { get<TokenProvider>().currentUid() }) }
+    single { SyncStamps(db = get(), uidAtual = { get<TokenProvider>().currentUid() }) }
 
     // FILA DE ESCRITAS pendentes (ARCH #30, fatia B.2). Mesmo motivo do SyncStamps para
     // morar aqui: é o único ponto que vê o banco e o TokenProvider ao mesmo tempo.
@@ -236,7 +228,6 @@ val appModule = module {
     // 49 membros que não podem abri-la, e escondê-la faria a barra mudar conforme o papel.
     viewModelOf(::ModeracaoViewModel)
     viewModelOf(::ProgressViewModel)  // métricas do cache + flush das sessões pendentes
-    viewModelOf(::ExercicioDetalheViewModel)  // "ver detalhado" de um exercicio no programa (J.5)
     viewModelOf(::HistoricoViewModel) // histórico offline-first (saiu do Progresso em 2026-10-01)
     viewModelOf(::ProgramRevealViewModel)   // injeta ProgramRepository (revelação)
     viewModelOf(::PaywallViewModel)          // injeta Billing (página de assinatura)

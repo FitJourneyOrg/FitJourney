@@ -9,9 +9,6 @@ import dev.rafael.app.screens.home.FakeProgramas
 import dev.rafael.app.screens.home.FakeStats
 import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.user.UserDto
-import dev.rafael.contract.profile.Goal
-import dev.rafael.contract.profile.Level
-import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.exercise.domain.model.Exercise
 import dev.rafael.features.exercise.domain.model.FiltroDeExercicios
@@ -28,7 +25,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.StandardTestDispatcher
-import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
@@ -264,94 +260,4 @@ class SplashViewModelTest {
 
         fundo.cancel()
     }
-
-    // ---- o gate Login / Onboarding / Home (cold start) ----
-    //
-    // A assimetria do gate (ARCH #30) é o que estes testes travam: `true` cacheado é confiável e
-    // dispensa a rede; `false` e `null` NÃO são, porque pular o onboarding por engano é pior do
-    // que esperar. O ponto de entrada do onboarding é [AppRoute.Nome].
-
-    private fun perfilNoServidor(onboardingCompleted: Boolean) = Profile(
-        goal = Goal.GAIN_MUSCLE, level = Level.BEGINNER, daysPerWeek = 3,
-        focusAreas = emptyList(), weightKg = null, heightCm = null,
-        onboardingCompleted = onboardingCompleted,
-    )
-
-    private fun TestScope.decidirNoColdStart(cenario: Cenario): SplashState {
-        val fundo = CoroutineScope(dispatcher)
-        val vm = cenario.vm(fundo)
-        vm.iniciar(posLogin = false)
-        advanceUntilIdle()
-        fundo.cancel()
-        return vm.state.value
-    }
-
-    @Test
-    fun `sem cadastro no servidor e sem cache vai pro onboarding`() = runTest(dispatcher) {
-        // Default do FakePerfil: a rede responde NotFound (cadastro que ainda não existe).
-        val cenario = Cenario(perfil = FakePerfil(onboardingCacheado = null))
-
-        assertEquals(SplashState.Decided(AppRoute.Nome), decidirNoColdStart(cenario))
-        assertEquals(1, cenario.perfil.buscas, "decidiu sem perguntar ao servidor")
-    }
-
-    @Test
-    fun `perfil do servidor com onboarding incompleto vai pro onboarding`() = runTest(dispatcher) {
-        val cenario = Cenario(
-            perfil = FakePerfil(
-                resultadoGetProfile = AppResult.Success(perfilNoServidor(onboardingCompleted = false)),
-                onboardingCacheado = false,
-            ),
-        )
-
-        assertEquals(SplashState.Decided(AppRoute.Nome), decidirNoColdStart(cenario))
-    }
-
-    @Test
-    fun `perfil do servidor com onboarding concluido vai pra Home mesmo sem cache`() =
-        runTest(dispatcher) {
-            val cenario = Cenario(
-                perfil = FakePerfil(
-                    resultadoGetProfile = AppResult.Success(perfilNoServidor(onboardingCompleted = true)),
-                    onboardingCacheado = null,
-                ),
-            )
-
-            assertEquals(SplashState.Decided(AppRoute.Home), decidirNoColdStart(cenario))
-        }
-
-    @Test
-    fun `cache de onboarding concluido decide Home sem esperar a rede`() = runTest(dispatcher) {
-        // Rede que nunca responde: se o gate esperasse por ela, o estado ficaria em Loading.
-        val cenario = Cenario(perfil = FakePerfil(onboardingCacheado = true, travarGetProfile = true))
-
-        assertEquals(SplashState.Decided(AppRoute.Home), decidirNoColdStart(cenario))
-    }
-
-    @Test
-    fun `rede caiu com cache dizendo onboarding incompleto continua no onboarding`() =
-        runTest(dispatcher) {
-            val cenario = Cenario(
-                perfil = FakePerfil(
-                    resultadoGetProfile = AppResult.Failure(AppError.Connection()),
-                    onboardingCacheado = false,
-                ),
-            )
-
-            assertEquals(
-                SplashState.Decided(AppRoute.Nome), decidirNoColdStart(cenario),
-                "falha de rede com `false` cacheado pulou o onboarding",
-            )
-        }
-
-    @Test
-    fun `rede travada estoura o teto do perfil e cai no cache em vez de prender`() =
-        runTest(dispatcher) {
-            val cenario = Cenario(perfil = FakePerfil(onboardingCacheado = false, travarGetProfile = true))
-
-            assertEquals(
-                SplashState.Decided(AppRoute.Nome), decidirNoColdStart(cenario),
-                "o gate ficou preso esperando uma rede que não responde",
-            )
-        }
 }

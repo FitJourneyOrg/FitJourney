@@ -5,13 +5,11 @@ import dev.rafael.app.data.notificacoes.Notificacoes
 import dev.rafael.contract.notificacao.NotificacaoDto
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlin.test.AfterTest
@@ -55,16 +53,7 @@ class NotificacoesViewModelTest {
     /** Registra as chamadas: é como se verifica QUANDO a marcação sai — e quando ela não sai. */
     private class FakeNotificacoes(var resposta: AppResult<List<NotificacaoDto>>) : Notificacoes {
         var marcacoes = 0
-        var consultas = 0
-
-        /** Quando não-nulo, `listar()` espera por ele: é como se observa o estado NO MEIO da carga. */
-        var portao: CompletableDeferred<Unit>? = null
-
-        override suspend fun listar(): AppResult<List<NotificacaoDto>> {
-            consultas++
-            portao?.await()
-            return resposta
-        }
+        override suspend fun listar() = resposta
         override suspend fun marcarComoLidas(): AppResult<Unit> {
             marcacoes++
             return AppResult.Success(Unit)
@@ -156,7 +145,6 @@ class NotificacoesViewModelTest {
         val s = vm.state.value
         assertEquals(1, s.itens.size, "o conteúdo antigo continua verdadeiro, só não é o mais novo")
         assertTrue(s.erro is AppError.Connection)
-        assertNull(s.erroDoPull, "entrar na tela offline não dispara snackbar — só o gesto de puxar")
         assertFalse(s.carregando, "carregando tem que DESLIGAR na falha — senão gira para sempre")
     }
 
@@ -173,68 +161,5 @@ class NotificacoesViewModelTest {
 
         assertEquals(marcacoesAntes, fonte.marcacoes)
         assertEquals(1, contador.quantidade.value, "o badge segue aceso — nada foi visto")
-    }
-
-    // ---- F.2: puxar para atualizar ----
-
-    /**
-     * [INVARIANTE] O pull liga `atualizando` e NÃO liga `carregando`. Reusar o campo da primeira
-     * carga faria o indicador do pull aparecer junto com o spinner de tela cheia.
-     */
-    @Test
-    fun `puxar para atualizar liga atualizando sem ligar carregando`() = runTest(dispatcher) {
-        val (vm, fonte, _) = cenario(AppResult.Success(listOf(nota("1", lida = true))))
-        vm.carregar()
-        advanceUntilIdle()
-
-        fonte.resposta = AppResult.Success(listOf(nota("2", lida = true), nota("1", lida = true)))
-        fonte.portao = CompletableDeferred()
-        vm.atualizar()
-        runCurrent()
-
-        assertTrue(vm.state.value.atualizando)
-        assertFalse(vm.state.value.carregando, "o spinner de tela cheia é só da primeira carga")
-        assertEquals(1, vm.state.value.itens.size, "a lista antiga fica na tela enquanto atualiza")
-
-        fonte.portao!!.complete(Unit)
-        advanceUntilIdle()
-
-        assertFalse(vm.state.value.atualizando)
-        assertEquals(2, vm.state.value.itens.size)
-    }
-
-    @Test
-    fun `falha ao puxar desliga atualizando e preserva a lista`() = runTest(dispatcher) {
-        val (vm, fonte, _) = cenario(AppResult.Success(listOf(nota("1", lida = true))))
-        vm.carregar()
-        advanceUntilIdle()
-
-        fonte.resposta = AppResult.Failure(AppError.Connection())
-        vm.atualizar()
-        advanceUntilIdle()
-
-        val s = vm.state.value
-        assertFalse(s.atualizando, "senão o indicador do pull gira para sempre")
-        assertTrue(s.erroDoPull is AppError.Connection, "o pull offline precisa avisar (snackbar)")
-        assertNull(s.erro, "o pull não vira erro permanente da tela")
-        assertEquals(1, s.itens.size)
-    }
-
-    @Test
-    fun `segundo pull durante um pull em curso e ignorado`() = runTest(dispatcher) {
-        val (vm, fonte, _) = cenario(AppResult.Success(listOf(nota("1", lida = true))))
-        vm.carregar()
-        advanceUntilIdle()
-        val antes = fonte.consultas
-
-        fonte.portao = CompletableDeferred()
-        vm.atualizar()
-        runCurrent()
-        vm.atualizar()
-        runCurrent()
-        fonte.portao!!.complete(Unit)
-        advanceUntilIdle()
-
-        assertEquals(antes + 1, fonte.consultas)
     }
 }

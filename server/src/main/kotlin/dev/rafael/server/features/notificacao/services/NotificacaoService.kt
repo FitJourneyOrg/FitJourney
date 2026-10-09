@@ -4,7 +4,6 @@ import dev.rafael.contract.i18n.Idioma
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.flatMap
 import dev.rafael.core.result.map
-import dev.rafael.server.error.Falhas
 import dev.rafael.server.features.notificacao.db.NotificationRepository
 import dev.rafael.server.features.notificacao.models.Notificacao
 import dev.rafael.server.features.user.services.UserService
@@ -30,7 +29,6 @@ class NotificacaoService(
     private val userService: UserService,
     private val repository: NotificationRepository,
     private val notificador: Notificador,
-    private val falhas: Falhas,
     private val clock: Clock = Clock.System,
 ) {
 
@@ -75,7 +73,7 @@ class NotificacaoService(
             is AppResult.Failure -> {
                 // Gravar falhou: o push sai MESMO ASSIM. É a única chance de a pessoa saber, e
                 // uma notificação efêmera é melhor que nenhuma.
-                falhas.registrar("Não gravei a notificação de $destinatario. Tentando só o push", r.error)
+                log.warn("Não gravei a notificação de {}: {}. Tentando só o push.", destinatario, r.error)
                 notificador.notificar(destinatario, renderizado)
             }
         }
@@ -107,9 +105,11 @@ class NotificacaoService(
         val idioma = when (val r = userService.porId(destinatario)) {
             is AppResult.Success -> r.value?.idioma ?: Idioma.PADRAO
             is AppResult.Failure -> {
-                falhas.registrar(
-                    "Não li o idioma de $destinatario. Avisando em ${Idioma.PADRAO.tag}",
+                log.warn(
+                    "Não li o idioma de {}: {}. Avisando em {}.",
+                    destinatario,
                     r.error,
+                    Idioma.PADRAO.tag,
                 )
                 Idioma.PADRAO
             }
@@ -153,7 +153,7 @@ class NotificacaoService(
                 r.value
             }
             is AppResult.Failure -> {
-                falhas.registrar("Purga de notificações falhou", r.error)
+                log.warn("Purga de notificações falhou: {}", r.error)
                 0
             }
         }

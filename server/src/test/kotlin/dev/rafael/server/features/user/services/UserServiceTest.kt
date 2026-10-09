@@ -24,7 +24,6 @@ class UserServiceTest {
             isPremium = false,
             displayName = "Atleta-abc123",
             code = "ABCD2345",
-            activeProgramId = null,
         )
         var setPremiumCalledWith: Boolean? = null
         var criadoCom: String? = null

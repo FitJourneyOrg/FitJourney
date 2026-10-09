@@ -1,8 +1,6 @@
 package dev.rafael.app.screens.notificacoes
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,14 +27,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,7 +40,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import dev.rafael.app.ui.ErroEmSnackbar
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.contract.notificacao.NotificacaoDto
 import org.koin.androidx.compose.koinViewModel
@@ -75,17 +68,7 @@ fun NotificacoesScreen(
 
     LifecycleEventEffect(Lifecycle.Event.ON_START) { viewModel.carregar() }
 
-    // Falha de PULL = snackbar (nível 3 do ARCH #31): "sem internet" tem de aparecer também com a
-    // lista vazia, onde não há onde pendurar um erro inline.
-    val snackbarHost = remember { SnackbarHostState() }
-    ErroEmSnackbar(
-        erro = state.erroDoPull,
-        host = snackbarHost,
-        onConsumir = viewModel::consumirErroDoPull,
-    )
-
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHost) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.comum_notificacoes)) },
@@ -101,41 +84,27 @@ fun NotificacoesScreen(
         },
     ) { padding ->
         if (state.itens.isEmpty() && !state.carregando) {
-            // Vazio TAMBÉM puxa para atualizar (F.2): é onde a pessoa mais duvida do que vê. O
-            // `verticalScroll` é o que faz o Box entregar o gesto ao PullToRefreshBox.
-            PullToRefreshBox(
-                isRefreshing = state.atualizando,
-                onRefresh = viewModel::atualizar,
-                modifier = Modifier.padding(padding),
+            Box(
+                Modifier.fillMaxSize().padding(padding).padding(32.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        stringResource(R.string.notificacoes_vazio),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
+                Text(
+                    stringResource(R.string.notificacoes_vazio),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             return@Scaffold
         }
 
-        PullToRefreshBox(
-            isRefreshing = state.atualizando,
-            onRefresh = viewModel::atualizar,
-            modifier = Modifier.padding(padding),
+        LazyColumn(
+            Modifier.fillMaxSize().padding(padding),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            LazyColumn(
-                Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                state.erro?.let { item { ErroInline(it, Modifier.padding(bottom = 8.dp)) } }
+            state.erro?.let { item { ErroInline(it, Modifier.padding(bottom = 8.dp)) } }
 
-                items(state.itens, key = { it.id }) { n -> Item(n) { onAbrir(n) } }
-            }
+            items(state.itens, key = { it.id }) { n -> Item(n) { onAbrir(n) } }
         }
     }
 }

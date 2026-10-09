@@ -213,7 +213,7 @@ class FakeUserRepository(usuarios: List<User> = emptyList()) : UserRepository {
         displayName: String,
         code: String,
     ): AppResult<User> {
-        val u = User(id, firebaseUid, email, isPremium = false, displayName = displayName, code = code, activeProgramId = null)
+        val u = User(id, firebaseUid, email, isPremium = false, displayName = displayName, code = code)
         porUid[firebaseUid] = u
         return u.asSuccess()
     }
@@ -255,5 +255,4 @@ fun usuario(uid: String, id: Uuid = Uuid.random()) =
         // Derivado do uid para ser ESTÁVEL entre execuções: código aleatório aqui faria um teste
         // que dependesse dele falhar de vez em quando, e falha intermitente é a pior de depurar.
         code = uid.uppercase().filter { it.isLetterOrDigit() }.padEnd(8, 'X').take(8),
-        activeProgramId = null,
     )

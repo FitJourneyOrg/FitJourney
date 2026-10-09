@@ -27,18 +27,6 @@
 > `UP-TO-DATE` e devolvem `BUILD SUCCESSFUL` sem executar nada. Testcontainers em menos
 > de 30s é sinal de que não rodou.
 
-> ⚠️ **Rode os quatro, mesmo que a fatia pareça ser de um só.** `src/test` e
-> `src/integrationTest` são **dois source sets**: fechar com `:server:test` verde não diz
-> nada sobre o segundo, e quem mexe em construtor de serviço quebra o segundo sem o
-> primeiro reclamar. Já aconteceu — o `programs` do `ProgressService` passou quatro commits
-> com o `integrationTest` sem compilar. O `testAndroidHostTest` **sem prefixo de módulo**
-> existe pelo mesmo motivo: ele compila os 14 módulos (ainda que só 5 tenham teste), e foi
-> o que pegou o `videoRef` que já estava no CI.
-
-> ⚠️ **Confira a CONTAGEM no XML, não o "BUILD SUCCESSFUL".** Uma classe recusada pelo
-> JUnit (`InvalidTestClassError`) reporta "1 falha" enquanto 15 testes não rodam. Os
-> relatórios ficam em `<módulo>/build/test-results/<task>/*.xml`.
-
 **No aparelho** — o que teste nenhum responde:
 
 <!-- Liste os passos. Vários defeitos desta base foram achados olhando a tela, não
@@ -71,9 +59,7 @@
 ## Checklist
 
 - [ ] Build verde (`:server:build` e/ou `:app:build`)
-- [ ] Testes verdes, e **executados** — contagem conferida no XML (ver os avisos acima)
-- [ ] Os **quatro** comandos rodados, não só o da camada que mudou — e se mexeu em
-      construtor de serviço, o `:server:integrationTest` **compilou**
+- [ ] Testes verdes, e **executados** (ver o aviso acima)
 - [ ] Migration criada e aplicada no boot (se mexeu no schema)
 - [ ] Contrato atualizado (se mudou DTO/rota) — shared-contract é a fonte única
 - [ ] Koin wiring registrado (se adicionou classe injetável) — não esquecer, crasha o boot

@@ -2,7 +2,6 @@ package dev.rafael.server.features.workout.models
 
 import dev.rafael.contract.workout.WorkoutDto
 import dev.rafael.contract.workout.WorkoutExerciseDto
-import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.contract.workout.WorkoutSetDto
 import dev.rafael.contract.workout.WorkoutSummaryDto
 import kotlin.uuid.Uuid
@@ -39,15 +38,6 @@ fun WorkoutSummary.toDto(isActive: Boolean = false): WorkoutSummaryDto = Workout
 )
 
 
-
-/**
- * A origem de um treino é a do PROGRAMA a que ele pertence (`programs.origin`), nunca do
- * próprio treino: a coluna `workouts.origin` (V7) foi removida na V62 por ser cópia que
- * nada lia. [Workout.toDto] não conhece o programa, então a rota completa o DTO aqui.
- * `origin == null` (treino avulso ou programa inexistente) mantém o default MANUAL.
- */
-fun WorkoutDto.comOrigem(origin: WorkoutOrigin?): WorkoutDto =
-    if (origin == null) this else copy(origin = origin)
 
 // ---- domínio -> DTO (resposta) ----
 fun Workout.toDto(): WorkoutDto = WorkoutDto(

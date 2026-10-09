@@ -30,19 +30,13 @@ import kotlin.time.Clock
  * programas — e o app sabe a diferença entre "não baixei ainda" e "você não tem nada".
  *
  * [REGRA] `chave` identifica O QUE foi sincronizado, nunca o usuário. O uid é acrescentado
- * pela implementação. Dado global (catálogo de exercícios) usa [Escopo.GLOBAL] e fica fora do uid.
- *
- * ## Por que é interface (B2 de 2026-10-07)
- *
- * Era classe concreta e exigia [FitJourneyDatabase]. Todo repositório do cliente que a recebe
- * ficava impossível de construir num teste de unidade, e o offline-first só podia ser provado no
- * ViewModel contra um repositório falso (ver a decisão (a) do plano da Fase 8). Agora o
- * repositório recebe esta interface, e o teste passa um fake escrito à mão.
- *
- * A implementação com SQLDelight é [SyncStampsImpl]. O [Escopo] e as chaves ficam AQUI, na
- * interface, para quem usa `SyncStamps.PROGRAMAS` ou `SyncStamps.Escopo.GLOBAL` não mudar.
+ * aqui. Dado global (catálogo de exercícios) usa [Escopo.GLOBAL] e fica fora do uid.
  */
-interface SyncStamps {
+class SyncStamps(
+    db: FitJourneyDatabase,
+    private val uidAtual: suspend () -> String?,
+) {
+    private val cache = db.cacheQueries
 
     /** O carimbo pertence a um usuário ou ao aparelho? */
     enum class Escopo {
@@ -53,24 +47,47 @@ interface SyncStamps {
         GLOBAL,
     }
 
+    private suspend fun chaveCompleta(chave: String, escopo: Escopo): String = when (escopo) {
+        Escopo.GLOBAL -> "sync:$chave"
+        Escopo.USUARIO -> "sync:$chave:${uidAtual() ?: ""}"
+    }
+
     /**
      * Sincronizou há menos de [ttlMs]? Falso quando nunca sincronizou — que é diferente de
      * "sincronizou e não veio nada", distinção que a UI usa para não dizer "você não tem
      * programas" a quem só não baixou ainda.
      */
-    suspend fun fresco(chave: String, ttlMs: Long, escopo: Escopo = Escopo.USUARIO): Boolean
+    suspend fun fresco(chave: String, ttlMs: Long, escopo: Escopo = Escopo.USUARIO): Boolean {
+        val quando = lerCarimbo(chave, escopo) ?: return false
+        return Clock.System.now().toEpochMilliseconds() - quando < ttlMs
+    }
 
     /** Já sincronizou alguma vez neste aparelho, com esta conta? (ignora o TTL) */
-    suspend fun jaSincronizou(chave: String, escopo: Escopo = Escopo.USUARIO): Boolean
+    suspend fun jaSincronizou(chave: String, escopo: Escopo = Escopo.USUARIO): Boolean =
+        lerCarimbo(chave, escopo) != null
 
     /** Chame após um sync bem-sucedido. */
-    suspend fun marcar(chave: String, escopo: Escopo = Escopo.USUARIO)
+    suspend fun marcar(chave: String, escopo: Escopo = Escopo.USUARIO) {
+        val k = chaveCompleta(chave, escopo)
+        val agora = Clock.System.now().toEpochMilliseconds()
+        withContext(Dispatchers.Default) { cache.put(k, agora.toString()) }
+    }
 
     /**
      * Apaga o carimbo: o próximo `fresco()` devolve falso e o repositório vai à rede.
      * Use depois de MUTAÇÃO — aí não é aposta, você sabe que mudou.
      */
-    suspend fun invalidar(chave: String, escopo: Escopo = Escopo.USUARIO)
+    suspend fun invalidar(chave: String, escopo: Escopo = Escopo.USUARIO) {
+        val k = chaveCompleta(chave, escopo)
+        withContext(Dispatchers.Default) { cache.deleteKey(k) }
+    }
+
+    private suspend fun lerCarimbo(chave: String, escopo: Escopo): Long? {
+        val k = chaveCompleta(chave, escopo)
+        return withContext(Dispatchers.Default) {
+            cache.get(k).executeAsOneOrNull()?.toLongOrNull()
+        }
+    }
 
     companion object {
         // Nomes do que é sincronizado. Constantes para não haver typo silencioso entre o
@@ -105,48 +122,5 @@ interface SyncStamps {
 
         /** Carimbo de um treino específico. */
         fun treino(id: String) = "workout:$id"
-    }
-}
-
-/**
- * A implementação de produção: grava o instante no `kv_cache` do SQLDelight, com o uid na chave.
- * O motivo de o uid vir como lambda está no `AppModule` (`core:database` não pode depender de
- * `core:network`).
- */
-class SyncStampsImpl(
-    db: FitJourneyDatabase,
-    private val uidAtual: suspend () -> String?,
-) : SyncStamps {
-    private val cache = db.cacheQueries
-
-    private suspend fun chaveCompleta(chave: String, escopo: SyncStamps.Escopo): String = when (escopo) {
-        SyncStamps.Escopo.GLOBAL -> "sync:$chave"
-        SyncStamps.Escopo.USUARIO -> "sync:$chave:${uidAtual() ?: ""}"
-    }
-
-    override suspend fun fresco(chave: String, ttlMs: Long, escopo: SyncStamps.Escopo): Boolean {
-        val quando = lerCarimbo(chave, escopo) ?: return false
-        return Clock.System.now().toEpochMilliseconds() - quando < ttlMs
-    }
-
-    override suspend fun jaSincronizou(chave: String, escopo: SyncStamps.Escopo): Boolean =
-        lerCarimbo(chave, escopo) != null
-
-    override suspend fun marcar(chave: String, escopo: SyncStamps.Escopo) {
-        val k = chaveCompleta(chave, escopo)
-        val agora = Clock.System.now().toEpochMilliseconds()
-        withContext(Dispatchers.Default) { cache.put(k, agora.toString()) }
-    }
-
-    override suspend fun invalidar(chave: String, escopo: SyncStamps.Escopo) {
-        val k = chaveCompleta(chave, escopo)
-        withContext(Dispatchers.Default) { cache.deleteKey(k) }
-    }
-
-    private suspend fun lerCarimbo(chave: String, escopo: SyncStamps.Escopo): Long? {
-        val k = chaveCompleta(chave, escopo)
-        return withContext(Dispatchers.Default) {
-            cache.get(k).executeAsOneOrNull()?.toLongOrNull()
-        }
     }
 }

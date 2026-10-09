@@ -38,9 +38,8 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
-import dev.rafael.app.screens.duvidas.DuvidasScreen
+import dev.rafael.app.screens.placeholder.EmBreveScreen
 import dev.rafael.app.screens.achievements.AchievementsScreen
-import dev.rafael.app.screens.progress.ExercicioDetalheScreen
 import dev.rafael.app.screens.progress.ProgressScreen
 import dev.rafael.core.network.SessionExpiryBus
 import dev.rafael.features.auth.domain.repository.AuthRepository
@@ -48,7 +47,6 @@ import dev.rafael.features.program.domain.repository.ProgramRepository
 import org.koin.compose.koinInject
 import dev.rafael.app.screens.authentication.LoginScreen
 import dev.rafael.app.push.DestinoDePush
-import dev.rafael.app.push.pilhaDoPush
 import dev.rafael.app.screens.comentarios.ComentariosScreen
 import dev.rafael.app.screens.moderacao.ModeracaoScreen
 import dev.rafael.app.screens.idioma.IdiomaScreen
@@ -57,6 +55,7 @@ import dev.rafael.app.screens.exercise.ExerciseDetailScreen
 import dev.rafael.app.screens.exercise.ExerciseLibraryScreen
 import dev.rafael.app.screens.grupos.EntrarScreen
 import dev.rafael.app.screens.checkin.CheckInScreen
+import dev.rafael.app.screens.grupos.AbasDoGrupo
 import dev.rafael.app.screens.grupos.GrupoDetalheScreen
 import dev.rafael.app.screens.grupos.GrupoFormScreen
 import dev.rafael.app.screens.grupos.GruposScreen
@@ -149,18 +148,13 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
 
     // O contador acompanha a NAVEGAÇÃO em vez de fazer polling: trocar de tela-raiz é o momento
     // em que a pessoa olha para a barra, e pedido de amizade não é feed para justificar polling.
-    //
-    // B4: SÓ com sessão. Na Splash e no Login o GET não pode dar certo (não há token), e a chave
-    // `uidAtual` rearma o efeito quando a sessão aparece, que é quando a pergunta passa a valer.
-    LaunchedEffect(entry?.destination?.route, uidAtual) {
-        if (uidAtual != null) contador.atualizar()
-    }
+    LaunchedEffect(entry?.destination?.route) { contador.atualizar() }
 
     // ...e o push, que é o outro momento em que o número muda sem a pessoa fazer nada. Sem isto,
     // a notificação chega na bandeja e o badge da barra continua no número velho até a próxima
     // navegação — foi o que a bateria da F.1 pegou.
     val avisos: AvisosDePush = koinInject()
-    LaunchedEffect(Unit) { avisos.eventos.collect { contador.atualizar(aposEvento = true) } }
+    LaunchedEffect(Unit) { avisos.eventos.collect { contador.atualizar() } }
 
     /*
      * DEEP LINK do push (F.1).
@@ -206,11 +200,51 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
     LaunchedEffect(destino, naEntrada) {
         if (destino == null || naEntrada) return@LaunchedEffect
 
-        // Cada tipo leva ONDE SE AGE — a tradução tipo → pilha vive em `pilhaDoPush` (testada, sem
-        // Compose). O comentário empilha o grupo antes da conversa, para o voltar não cair na Home.
-        val grupoAberto = entry?.takeIf { it.destination.hasRoute(AppRoute.GrupoDetalhe::class) }
-            ?.toRoute<AppRoute.GrupoDetalhe>()?.id
-        pilhaDoPush(destino ?: return@LaunchedEffect, grupoAberto).forEach { nav.navigate(it) }
+        // Cada tipo leva ONDE SE AGE — o critério da F.1, agora com destino específico (fatia F).
+        //
+        // O `?:` depois de cada rota que depende de id não é paranoia: o `data` do push é um
+        // `Map<String,String>` sem contrato de compilação, e uma versão do servidor que mandasse o
+        // tipo sem o `groupId` faria a tela abrir vazia. **Cair na central é sempre melhor que
+        // abrir um grupo que não existe.**
+        val rota = when (destino?.tipo) {
+            "PEDIDO_DE_AMIZADE" -> AppRoute.Amigos
+
+            // Comentário abre a CONVERSA daquele check-in, não o grupo: quem recebe "alguém
+            // comentou" quer ler o comentário, e cair no feed a faria procurar o card.
+            "COMENTARIO_NO_CHECKIN" -> {
+                val g = destino?.groupId
+                val c = destino?.checkInId
+                if (g != null && c != null) AppRoute.Comentarios(g, c) else AppRoute.Notificacoes
+            }
+
+            // A fila é onde o admin AGE. Os outros dois levam ao grupo, que é onde o conteúdo
+            // está — o denunciado e o invalidado precisam ver o próprio card, não uma fila que
+            // eles nem podem abrir.
+            "DENUNCIA_NO_GRUPO", "FILA_PARADA" ->
+                destino?.groupId?.let { AppRoute.Moderacao(it) } ?: AppRoute.Notificacoes
+
+            // Os três levam ao grupo, mas **em abas diferentes** — levar ao grupo certo na aba
+            // errada é meio caminho. O card denunciado/invalidado está em POSTS; quem entrou no
+            // desafio está em MEMBROS.
+            "DENUNCIA_CONTRA_MIM", "CHECK_IN_INVALIDADO" ->
+                destino?.groupId?.let { AppRoute.GrupoDetalhe(it, AbasDoGrupo.POSTS) }
+                    ?: AppRoute.Notificacoes
+
+            "ENTRADAS_DO_DIA" ->
+                destino?.groupId?.let { AppRoute.GrupoDetalhe(it, AbasDoGrupo.MEMBROS) }
+                    ?: AppRoute.Notificacoes
+
+            // G.6 (débito fechado em 2026-09-24): abre Conquistas com destaque na medalha. Sem
+            // `?:` para central — diferente dos grupos, `achievementId` ausente não é erro, é só
+            // "servidor não mandou" (versão antiga); a tela abre normal, sem diálogo.
+            "CONQUISTA_DESBLOQUEADA" -> AppRoute.Conquistas(destaque = destino?.achievementId)
+
+            // Tipo que este app não conhece — vindo de uma versão mais nova do servidor. Abre a
+            // central, que sabe mostrar qualquer notificação. Melhor um destino genérico que
+            // funciona do que nenhum.
+            else -> AppRoute.Notificacoes
+        }
+        nav.navigate(rota)
         // Consome DEPOIS de navegar. Sem isto, voltar da tela reexecutaria o efeito e a pessoa
         // ficaria presa em Amigos.
         (destinoDoPush as? MutableStateFlow)?.value = null
@@ -503,7 +537,6 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
             ProgramListScreen(
                 onOpenProgram = { id -> nav.navigate(AppRoute.ProgramDetail(id)) },
                 onGenerateWithAI = { nav.navigate(AppRoute.ProgramGenerate) },
-                onOpenPaywall = { nav.navigate(AppRoute.Paywall()) },
             )
         }
         composable<AppRoute.ProgramDetail> { entry ->
@@ -645,20 +678,7 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
         }
 
         composable<AppRoute.Progresso> {
-            ProgressScreen(
-                onOpenPaywall = { nav.navigate(AppRoute.Paywall()) },
-                onAbrirDetalheDeExercicio = { programId, exercicioId ->
-                    nav.navigate(AppRoute.ExercicioDetalhe(programId, exercicioId))
-                },
-            )
-        }
-        composable<AppRoute.ExercicioDetalhe> { entry ->
-            val rota: AppRoute.ExercicioDetalhe = entry.toRoute()
-            ExercicioDetalheScreen(
-                programId = rota.programId,
-                exercicioId = rota.exercicioId,
-                onBack = { nav.popBackStack() },
-            )
+            ProgressScreen(onOpenPaywall = { nav.navigate(AppRoute.Paywall()) })
         }
         composable<AppRoute.Historico> {
             HistoricoScreen(onBack = { nav.popBackStack() })
@@ -768,7 +788,10 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
             WikiArticleScreen(slug = rota.slug, onBack = { nav.popBackStack() })
         }
         composable<AppRoute.Duvidas> {
-            DuvidasScreen(onBack = { nav.popBackStack() })
+            EmBreveScreen(
+                stringResource(R.string.menu_duvidas),
+                stringResource(R.string.nav_duvidas_descricao),
+            )
         }
     }
     }

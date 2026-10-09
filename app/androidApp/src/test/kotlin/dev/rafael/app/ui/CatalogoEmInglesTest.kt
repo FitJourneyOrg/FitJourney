@@ -219,9 +219,6 @@ class CatalogoEmInglesTest {
             // `kg`. Traduzir para `ton` seria trocar a unidade padrão por uma abreviação ambígua
             // (a ton curta americana tem 907 kg) — num número que o servidor manda em quilos.
             "progresso_unidade_tonelada",
-            // `PR` (personal record / recorde pessoal) é a mesma sigla nas duas línguas na
-            // cultura de treino — igual "RIR" acima. O resto da frase é só os dois placeholders.
-            "progresso_detalhe_pr",
         )
 
         val porChaveEn = en.entradas.associate { it.chave to it.valor }

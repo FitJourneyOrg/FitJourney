@@ -91,13 +91,6 @@ sealed interface AppRoute {
     @Serializable data object Progresso : AppRoute
 
     /**
-     * Detalhe de UM exercicio dentro de UM programa (J.5) -- "ver detalhado" na lista de
-     * exercicios do Progresso, so quando o recorte e [dev.rafael.features.stats.domain.FiltroDeProgresso.DoPrograma]
-     * (e dali que vem o [programId]).
-     */
-    @Serializable data class ExercicioDetalhe(val programId: String, val exercicioId: String) : AppRoute
-
-    /**
      * Histórico de treinos. Tela própria desde o desmembramento do Progresso (2026-10-01):
      * é CONSULTA, alcançada pelo drawer, não rotina que mereça aba.
      */
@@ -162,7 +155,7 @@ sealed interface AppRoute {
      */
     @Serializable data class WikiArticle(val slug: String) : AppRoute
 
-    /** Dúvidas frequentes: lista estática, sem servidor. Alcançada só pelo menu lateral. */
+    /** Item do menu que ainda não existe — abre EmBreve com o selo da fase. */
     @Serializable data object Duvidas : AppRoute
 
     // ARCH #27: "Meus treinos" (lista plana) virou "Meus Programas" (programas com

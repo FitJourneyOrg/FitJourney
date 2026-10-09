@@ -4,15 +4,12 @@ import dev.rafael.contract.checkin.CheckInStatus
 import dev.rafael.server.features.checkin.db.CheckInsTable
 import dev.rafael.server.features.group.db.GroupMembersTable
 import dev.rafael.server.features.group.db.GroupsTable
-import dev.rafael.server.features.program.models.ProgramsTable
 import dev.rafael.server.features.exercise.db.ExercisesTable
 import dev.rafael.server.features.session.db.SessionSetLogsTable
 import dev.rafael.server.features.session.db.WorkoutSessionsTable
 import dev.rafael.server.features.user.db.UsersTable
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
-import org.jetbrains.exposed.v1.core.eq
-import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import kotlin.uuid.Uuid
@@ -168,49 +165,11 @@ object Semear {
      * `kg` nulo e peso corporal (V20) - o caso que a analise de progressao exclui, e que so
      * contra Postgres prova que a coluna nullable volta nula do driver.
      */
-    /**
-     * Um programa do usuario. O [id] e parametro para o teste poder apagar a LINHA depois e
-     * deixar a sessao orfa — o caso que so existe no Postgres, porque
-     * `workout_sessions.program_id` nao tem FK (V20, snapshot autocontido).
-     */
-    fun programa(
-        usuario: Uuid,
-        nome: String,
-        inicio: LocalDate,
-        semanas: Int = 8,
-        id: Uuid = Uuid.random(),
-    ): Uuid {
-        val agora = LocalDateTime(inicio.year, inicio.month, inicio.day, 10, 0)
-        transaction {
-            ProgramsTable.insert {
-                it[ProgramsTable.id] = id
-                it[userId] = usuario
-                it[name] = nome
-                it[origin] = "MANUAL"
-                it[daysPerWeek] = 2
-                it[split] = null
-                it[focusMuscles] = null
-                it[locked] = false
-                it[createdAt] = agora
-                it[updatedAt] = agora
-                it[durationWeeks] = semanas
-                it[startedAt] = agora
-            }
-        }
-        return id
-    }
-
-    /** Apaga a LINHA do programa, deixando as sessoes dele apontando para o nada. */
-    fun apagarPrograma(id: Uuid) {
-        transaction { ProgramsTable.deleteWhere { ProgramsTable.id eq id } }
-    }
-
     fun sessao(
         usuario: Uuid,
         treino: String,
         dia: LocalDate,
         series: List<Quadrupla>,
-        programa: Uuid? = null,
     ): Uuid {
         val id = Uuid.random()
         val fim = LocalDateTime(dia.year, dia.month, dia.day, 19, 0)
@@ -218,7 +177,6 @@ object Semear {
             WorkoutSessionsTable.insert {
                 it[WorkoutSessionsTable.id] = id
                 it[userId] = usuario
-                it[programId] = programa
                 it[workoutName] = treino
                 it[startedAt] = LocalDateTime(dia.year, dia.month, dia.day, 18, 0)
                 it[finishedAt] = fim

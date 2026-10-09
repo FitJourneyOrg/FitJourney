@@ -1,8 +1,6 @@
 package dev.rafael.app.screens.amigos
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -35,10 +33,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -63,7 +57,6 @@ import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import dev.rafael.app.push.AvisosDePush
 import dev.rafael.app.ui.AvatarInicial
-import dev.rafael.app.ui.ErroEmSnackbar
 import dev.rafael.app.ui.ErroInline
 import dev.rafael.contract.friendship.FriendRequestDto
 import dev.rafael.contract.friendship.PersonDto
@@ -71,7 +64,6 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
 import dev.rafael.app.R
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 
 private enum class Aba(@androidx.annotation.StringRes val titulo: Int) {
@@ -110,10 +102,7 @@ fun AmigosScreen(
     // Fica na TELA e não no ViewModel pelo mesmo motivo do `LifecycleEventEffect` acima: os dois
     // são eventos de plataforma dizendo "agora", e o ViewModel só precisa saber recarregar.
     val avisos: AvisosDePush = koinInject()
-    //
-    // B5: o ViewModel decide o que fazer com cada tipo, e NÃO recarrega a lista que a pessoa está
-    // olhando (ver `aoChegarPush`).
-    LaunchedEffect(Unit) { avisos.eventos.collect { viewModel.aoChegarPush(it) } }
+    LaunchedEffect(Unit) { avisos.eventos.collect { viewModel.carregar() } }
 
     // A busca por código abre o PERFIL ([REGRA] #35) — nunca manda pedido direto.
     LaunchedEffect(state.achado) {
@@ -146,17 +135,7 @@ fun AmigosScreen(
         )
     }
 
-    // Falha de PULL = snackbar (nível 3 do ARCH #31): "sem internet" tem de aparecer também com a
-    // lista vazia, onde não há onde pendurar um erro inline.
-    val snackbarHost = remember { SnackbarHostState() }
-    ErroEmSnackbar(
-        erro = state.erroDoPull,
-        host = snackbarHost,
-        onConsumir = viewModel::consumirErroDoPull,
-    )
-
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHost) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.comum_amigos)) },
@@ -192,14 +171,7 @@ fun AmigosScreen(
 
             // `weight(1f)` e não `fillMaxSize()`: dentro de uma Column, preencher tudo empurraria
             // as abas para fora da tela. Mesma armadilha do detalhe do grupo.
-            // Puxar-para-atualizar (F.2) envolve o pager inteiro: vale para as duas abas, que
-            // mudam por ação de terceiros (pedido novo, amigo removido).
-            PullToRefreshBox(
-                isRefreshing = state.atualizando,
-                onRefresh = viewModel::atualizar,
-                modifier = Modifier.weight(1f),
-            ) {
-            HorizontalPager(state = pager, modifier = Modifier.fillMaxSize()) { pagina ->
+            HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { pagina ->
                 when (Aba.entries[pagina]) {
                     Aba.AMIGOS -> AbaDeAmigos(
                         state = state,
@@ -211,8 +183,6 @@ fun AmigosScreen(
 
                     Aba.PEDIDOS -> AbaDePedidos(
                         pedidos = state.pedidos,
-                        pedidosNovos = state.pedidosNovos,
-                        onMostrarNovos = viewModel::mostrarPedidosNovos,
                         carregando = state.carregando,
                         ocupado = state.ocupado,
                         onAbrirPerfil = onAbrirPerfil,
@@ -220,7 +190,6 @@ fun AmigosScreen(
                         onRecusar = viewModel::recusar,
                     )
                 }
-            }
             }
         }
     }
@@ -367,8 +336,6 @@ private fun MeuCodigo(codigo: String, onRegenerar: () -> Unit) {
 @Composable
 private fun AbaDePedidos(
     pedidos: List<FriendRequestDto>,
-    pedidosNovos: Int,
-    onMostrarNovos: () -> Unit,
     carregando: Boolean,
     ocupado: Boolean,
     onAbrirPerfil: (String) -> Unit,
@@ -376,12 +343,7 @@ private fun AbaDePedidos(
     onRecusar: (String) -> Unit,
 ) {
     if (pedidos.isEmpty() && !carregando) {
-        // `verticalScroll`: sem ele o Box não entrega o gesto ao PullToRefreshBox, e o vazio é
-        // justamente onde a pessoa puxa para ver se chegou pedido.
-        Box(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(32.dp),
-            contentAlignment = Alignment.Center,
-        ) {
+        Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
             Text(
                 stringResource(R.string.amigos_pedidos_vazio),
                 style = MaterialTheme.typography.bodyMedium,
@@ -391,57 +353,33 @@ private fun AbaDePedidos(
         return
     }
 
-    // O aviso é uma SOBREPOSIÇÃO no rodapé, não uma linha acima da lista: inserir qualquer coisa
-    // em cima deslocaria os botões de Aceitar, que é o defeito que ele existe para evitar.
-    Box(Modifier.fillMaxSize()) {
-        LazyColumn(
-            Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = if (pedidosNovos > 0) 88.dp else 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            items(pedidos, key = { it.from.userId }) { pedido ->
-                Column(
-                    Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(12.dp),
-                ) {
-                    LinhaDePessoa(pedido.from, onClick = { onAbrirPerfil(pedido.from.userId) })
-                    Spacer(Modifier.height(10.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(
-                            onClick = { onAceitar(pedido.from.userId) },
-                            enabled = !ocupado,
-                            modifier = Modifier.weight(1f),
-                        ) { Text(stringResource(R.string.comum_aceitar)) }
-                        OutlinedButton(
-                            onClick = { onRecusar(pedido.from.userId) },
-                            enabled = !ocupado,
-                            modifier = Modifier.weight(1f),
-                        ) { Text(stringResource(R.string.comum_recusar)) }
-                    }
-                }
-            }
-        }
-
-        if (pedidosNovos > 0) {
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                shadowElevation = 4.dp,
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(16.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .clickable(onClick = onMostrarNovos),
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        items(pedidos, key = { it.from.userId }) { pedido ->
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .padding(12.dp),
             ) {
-                Text(
-                    pluralStringResource(R.plurals.amigos_pedidos_novos, pedidosNovos, pedidosNovos),
-                    style = MaterialTheme.typography.labelLarge,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                )
+                LinhaDePessoa(pedido.from, onClick = { onAbrirPerfil(pedido.from.userId) })
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { onAceitar(pedido.from.userId) },
+                        enabled = !ocupado,
+                        modifier = Modifier.weight(1f),
+                    ) { Text(stringResource(R.string.comum_aceitar)) }
+                    OutlinedButton(
+                        onClick = { onRecusar(pedido.from.userId) },
+                        enabled = !ocupado,
+                        modifier = Modifier.weight(1f),
+                    ) { Text(stringResource(R.string.comum_recusar)) }
+                }
             }
         }
     }

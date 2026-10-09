@@ -63,7 +63,6 @@ class UserRepositoryImpl : UserRepository {
                 displayName = displayName,
                 code = code,
                 idioma = Idioma.PADRAO,
-                activeProgramId = null,
             )
         }
 

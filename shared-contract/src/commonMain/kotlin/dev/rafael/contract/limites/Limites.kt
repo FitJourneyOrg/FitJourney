@@ -46,9 +46,9 @@ object Limites {
 
     /** Espelha `ProgramLimits` (servidor: `features/program/services`). */
     object Program {
-        /** Grátis: 1 programa no total, de qualquer tipo (IA ou manual). */
-        const val FREE_TOTAL_LIMIT = 1
-        const val PREMIUM_TOTAL_LIMIT = 3
+        const val FREE_AI_LIMIT = 1
+        const val FREE_MANUAL_LIMIT = 2
+        const val PREMIUM_TOTAL_LIMIT = 10
     }
 
     /** Espelha `SocialPolicy` (servidor: `features/checkin/services`). */

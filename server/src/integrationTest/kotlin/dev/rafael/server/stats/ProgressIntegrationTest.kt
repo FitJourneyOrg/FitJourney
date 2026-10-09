@@ -2,13 +2,10 @@ package dev.rafael.server.stats
 
 import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.profile.MuscleGroup
-import dev.rafael.contract.error.ErrorCodes
-import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.server.BancoDeTeste
 import dev.rafael.server.Semear
 import dev.rafael.server.features.exercise.db.ExerciseRepositoryImpl
-import dev.rafael.server.features.program.db.ProgramRepositoryImpl
 import dev.rafael.server.features.session.db.SessionRepositoryImpl
 import dev.rafael.server.features.stats.ProgressService
 import dev.rafael.server.features.user.db.UserRepositoryImpl
@@ -45,14 +42,10 @@ class ProgressIntegrationTest {
     private val exercicios = ExerciseRepositoryImpl()
     private val sessoes = SessionRepositoryImpl()
     private val usuarios = UserRepositoryImpl()
-    private val programas = ProgramRepositoryImpl()
     private val progresso = ProgressService(
         userService = UserService(usuarios),
         sessions = sessoes,
         exercises = exercicios,
-        // Repositorio REAL, e e esse o ponto do Tier 3: o caso "programa apagado com sessao
-        // orfa" so existe no Postgres, porque workout_sessions.program_id nao tem FK (V20).
-        programs = programas,
         clock = object : Clock { override fun now() = Instant.parse("2026-10-01T10:00:00Z") },
     )
 
@@ -104,95 +97,6 @@ class ProgressIntegrationTest {
         assertTrue(ok(exercicios.paraAnalise(emptyList())).isEmpty())
     }
 
-    // ---- filtro por programa, contra o banco (J.3.4) -----------------------
-
-    /**
-     * ⭐ Este e o caso que SO existe no Postgres: sessao apontando para um programa APAGADO.
-     *
-     * `workout_sessions.program_id` nao tem FK (V20: a sessao e um snapshot autocontido, e apagar
-     * o programa nao pode apagar o historico de quem treinou). Teste de unidade nao PRODUZ esse
-     * estado — ele o simula, montando uma lista em que o id nao esta. Aqui o banco produz de
-     * verdade: a linha do programa some e a sessao fica apontando para o nada.
-     *
-     * Se um dia alguem acrescentar a FK "para arrumar", este teste quebra — e e exatamente o
-     * aviso que se quer, porque a FK apagaria historico de treino em cascata.
-     */
-    @Test
-    fun `sessao de programa APAGADO cai nos avulsos, e o programa nao vira opcao`() = runBlocking {
-        val usuario = Semear.usuario()
-        val exercicio = Semear.exercicio("Agachamento ${Uuid.random()}", listOf("LEGS"))
-        ok(usuarios.setPremium(usuario, true))
-        val inicio = LocalDate.parse("2026-09-21")
-
-        val vivo = Semear.programa(usuario, "Programa A", inicio)
-        val apagado = Semear.programa(usuario, "Programa B", inicio)
-        Semear.sessao(usuario, "Inferior A", inicio, listOf(Semear.Quadrupla(exercicio, 10, 60.0)), vivo)
-        Semear.sessao(usuario, "Inferior B", inicio, listOf(Semear.Quadrupla(exercicio, 10, 30.0)), apagado)
-        Semear.sessao(usuario, "Livre", inicio, listOf(Semear.Quadrupla(exercicio, 10, 20.0)))
-        Semear.apagarPrograma(apagado)
-
-        val todos = ok(progresso.forUser(uid(usuario), null, Idioma.PADRAO))
-        val avulsos = ok(
-            progresso.forUser(uid(usuario), null, Idioma.PADRAO, ProgressService.Filtro.Avulsos()),
-        )
-
-        assertEquals(1100.0, todos.totalKg, "sem filtro, os tres somam")
-        assertEquals(
-            listOf(vivo.toString()), todos.availablePrograms,
-            "o programa apagado virou opcao de filtro — e o nome dele e DERIVADO, nao existe mais",
-        )
-        assertTrue(todos.hasUnassigned)
-        assertEquals(
-            300.0 + 200.0, avulsos.totalKg,
-            "a sessao do programa apagado nao caiu no balde dos avulsos, entao sumiu da analise",
-        )
-        assertEquals(2, avulsos.totalSessions)
-    }
-
-    @Test
-    fun `filtrar por programa deixa de fora a sessao do outro, com o started_at do banco`() = runBlocking {
-        val usuario = Semear.usuario()
-        val exercicio = Semear.exercicio("Agachamento ${Uuid.random()}", listOf("LEGS"))
-        ok(usuarios.setPremium(usuario, true))
-        val inicio = LocalDate.parse("2026-09-21")
-
-        val a = Semear.programa(usuario, "Programa A", inicio)
-        val b = Semear.programa(usuario, "Programa B", inicio)
-        // MESMA semana nos dois: e o cenario que o filtro conserta — programas COEXISTEM (#27) e
-        // o grafico somava os dois sem avisar.
-        Semear.sessao(usuario, "Inferior A", inicio, listOf(Semear.Quadrupla(exercicio, 10, 60.0)), a)
-        Semear.sessao(
-            usuario, "Inferior B", LocalDate.parse("2026-09-28"),
-            listOf(Semear.Quadrupla(exercicio, 10, 50.0)), b,
-        )
-
-        val soA = ok(
-            progresso.forUser(uid(usuario), null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(a)),
-        )
-
-        assertEquals(600.0, soA.totalKg)
-        assertEquals(1, soA.totalSessions)
-        // A semana do programa sai do `started_at` LIDO DO BANCO, nao de um valor montado no teste.
-        assertEquals(1, soA.fromWeek)
-        assertEquals(8, soA.toWeek, "teto = duracao declarada, porque nao ha dado alem dela")
-        assertEquals(600.0, soA.weeklyLoad?.first { it.weekNumber == 1 }?.kg)
-    }
-
-    /** Caminho de falha: programa que nao e meu responde NotFound, e nao analise vazia. */
-    @Test
-    fun `programa de outro usuario responde NotFound`() = runBlocking {
-        val meu = Semear.usuario()
-        val alheio = Semear.usuario()
-        val doOutro = Semear.programa(alheio, "Programa do outro", LocalDate.parse("2026-09-21"))
-
-        val r = progresso.forUser(uid(meu), null, Idioma.PADRAO, ProgressService.Filtro.DoPrograma(doOutro))
-
-        // ⚠️ Nao terminar em `assertIs`: corpo de expressao cujo ultimo valor nao e Unit faz o
-        // metodo deixar de ser `void`, e o JUnit recusa a CLASSE inteira na construcao.
-        val erro = (r as AppResult.Failure).error
-        assertEquals(ErrorCodes.PROGRAMA_NAO_EXISTE, (erro as AppError.NotFound).code)
-    }
-
     // ---- o portao, lendo is_premium do banco -------------------------------
 
     private fun cenario(premium: Boolean): Pair<Uuid, Uuid> {
@@ -211,7 +115,7 @@ class ProgressIntegrationTest {
     }
 
     @Test
-    fun `free recebe a carga por semana e NENHUM bloco pago`() = runBlocking {
+    fun `free recebe o que e gratis e NENHUM bloco pago`() = runBlocking {
         val (usuario, _) = cenario(premium = false)
 
         val dto = ok(progresso.forUser(uid(usuario), null, Idioma.PADRAO))
@@ -219,26 +123,10 @@ class ProgressIntegrationTest {
         assertEquals(3600.0, dto.totalKg)          // 2 sessões x 3 séries x 10 reps x 60 kg
         assertEquals(2, dto.totalSessions)
         assertNotNull(dto.lastVsPrevious)
-        // J.4.1: a carga por semana saiu do portao — o free ve a janela curta e paga pela longa.
-        assertEquals(ProgressService.JANELA_FREE, dto.weeklyLoad?.size)
-        assertEquals(ProgressService.JANELA_FREE, dto.weeksWindow)
+        assertNull(dto.weeklyLoad)
         assertNull(dto.strengthTrend)
         assertNull(dto.setsByMuscle)
         assertTrue(dto.analysisLocked)
-    }
-
-    /**
-     * ⭐ O limite do free e aplicado contra o `is_premium` do BANCO, nao contra um booleano
-     * montado no teste — e e no servidor, porque o cliente nao e autoridade (#16).
-     */
-    @Test
-    fun `free pedindo janela de 52 recebe 8, lendo o plano do banco`() = runBlocking {
-        val (usuario, _) = cenario(premium = false)
-
-        val dto = ok(progresso.forUser(uid(usuario), null, Idioma.PADRAO, ProgressService.Filtro.Todos(52)))
-
-        assertEquals(8, dto.weeksWindow)
-        assertEquals(8, dto.weeklyLoad?.size)
     }
 
     @Test
@@ -247,7 +135,7 @@ class ProgressIntegrationTest {
 
         val dto = ok(progresso.forUser(uid(usuario), null, Idioma.PADRAO))
 
-        assertEquals(ProgressService.JANELA_PADRAO, dto.weeklyLoad?.size)
+        assertEquals(ProgressService.SEMANAS, dto.weeklyLoad?.size)
         assertEquals(1, dto.strengthTrend?.size)
         assertNotNull(dto.setsByMuscle?.byMuscle?.get(MuscleGroup.LEGS))
         assertEquals(0.0, dto.setsByMuscle?.unclassified)

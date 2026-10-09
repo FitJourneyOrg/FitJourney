@@ -26,18 +26,8 @@ import kotlinx.coroutines.flow.Flow
  */
 interface Progresso {
 
-    /**
-     * Ultima analise conhecida DAQUELE recorte (cache local). Nunca falha; null antes do
-     * primeiro sync dele.
-     *
-     * ⚠️ O cache e POR FILTRO, entao offline so existe o que ja foi olhado. [FiltroDeProgresso.Todos]
-     * e o unico sempre presente depois do primeiro uso, porque e o que a tela abre — os recortes
-     * sao best-effort, e a tela precisa dizer isso em vez de mostrar grafico vazio.
-     */
-    fun observar(
-        filtro: FiltroDeProgresso = FiltroDeProgresso.Todos(),
-        selecao: SelecaoDeExercicios = SelecaoDeExercicios.PADRAO,
-    ): Flow<ProgressDto?>
+    /** Ultima analise conhecida (cache local). Nunca falha; null antes do primeiro sync. */
+    fun observar(): Flow<ProgressDto?>
 
     /**
      * Busca no servidor e grava no cache; o Flow re-emite. Offline: nao faz nada, sem erro.
@@ -45,9 +35,5 @@ interface Progresso {
      * @param forcar ignora o TTL. Use depois de subir sessao pendente — e o unico momento em que
      *   os numeros mudam de verdade.
      */
-    suspend fun sincronizar(
-        filtro: FiltroDeProgresso = FiltroDeProgresso.Todos(),
-        selecao: SelecaoDeExercicios = SelecaoDeExercicios.PADRAO,
-        forcar: Boolean = false,
-    )
+    suspend fun sincronizar(forcar: Boolean = false)
 }

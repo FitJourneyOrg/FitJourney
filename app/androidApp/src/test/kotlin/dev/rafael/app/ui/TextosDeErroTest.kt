@@ -244,7 +244,8 @@ class TextosDeErroTest {
             ErrorCodes.COMENTARIO_INVALIDO to listOf(Limites.Social.MAX_COMENTARIO),
             ErrorCodes.NOME_DO_LOCAL_LONGO to listOf(Limites.CheckIn.MAX_NOME_DO_LOCAL),
             ErrorCodes.PRAZO_DA_DENUNCIA to listOf(Limites.Moderacao.PRAZO_EM_DIAS),
-            ErrorCodes.LIMITE_DE_PROGRAMAS_GRATIS to listOf(Limites.Program.FREE_TOTAL_LIMIT),
+            ErrorCodes.LIMITE_DE_IA_GRATIS to listOf(Limites.Program.FREE_AI_LIMIT),
+            ErrorCodes.LIMITE_DE_MANUAIS_GRATIS to listOf(Limites.Program.FREE_MANUAL_LIMIT),
             ErrorCodes.LIMITE_DE_PROGRAMAS_PREMIUM to listOf(Limites.Program.PREMIUM_TOTAL_LIMIT),
             ErrorCodes.DIAS_POR_SEMANA_INVALIDO to
                 listOf(Limites.Profile.DAYS_PER_WEEK_MIN, Limites.Profile.DAYS_PER_WEEK_MAX),

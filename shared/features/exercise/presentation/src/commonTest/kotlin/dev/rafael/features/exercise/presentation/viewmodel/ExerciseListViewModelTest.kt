@@ -142,22 +142,6 @@ class ExerciseListViewModelTest {
     }
 
     @Test
-    fun `consumir o erro de sync limpa o aviso e preserva a lista e o filtro`() = runTest(dispatcher) {
-        val repo = FakeRepo(refreshResult = AppResult.Failure(AppError.Connection()))
-        val vm = ExerciseListViewModel(repo)
-        advanceUntilIdle()
-        vm.onEvent(ExerciseListEvent.CategorySelected(ExerciseCategory.CROSSFIT))
-        advanceUntilIdle()
-        assertIs<AppError.Connection>(vm.state.value.error)
-
-        vm.consumeError()
-
-        assertNull(vm.state.value.error)
-        assertEquals(ExerciseCategory.CROSSFIT, vm.state.value.selectedCategory)
-        assertEquals(listOf("ex-1"), vm.state.value.exercises.map { it.id })
-    }
-
-    @Test
     fun `digitar tres letras seguidas gera UMA consulta, com o texto final`() = runTest(dispatcher) {
         val repo = FakeRepo()
         val vm = ExerciseListViewModel(repo)

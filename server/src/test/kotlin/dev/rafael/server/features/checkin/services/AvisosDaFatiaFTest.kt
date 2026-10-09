@@ -104,7 +104,6 @@ class AvisosDaFatiaFTest {
             isPremium = false,
             displayName = "Atleta $id",
             code = id.toString().filter { it.isLetterOrDigit() }.take(8).uppercase(),
-            activeProgramId = null,
         )
     }
 

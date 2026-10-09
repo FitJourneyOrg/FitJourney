@@ -4,7 +4,6 @@ import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.stats.MuscleVolumeDto
 import dev.rafael.contract.stats.ProgressDto
 import dev.rafael.contract.stats.TrendPointDto
-import dev.rafael.contract.stats.ExerciseSummaryDto
 import dev.rafael.contract.stats.ExerciseTrendDto
 import dev.rafael.contract.stats.WeeklyLoadDto
 import io.ktor.serialization.kotlinx.json.DefaultJson
@@ -34,11 +33,6 @@ class ProgressDtoSerializacaoTest {
             unclassified = 1.5,
         ),
         analysisLocked = false,
-        weeksWindow = 26,
-        exerciseSummary = listOf(
-            ExerciseSummaryDto("abc", "Agachamento", 88.7, 16.7, sets = 24, weeks = 8),
-            ExerciseSummaryDto("def", "Rosca Direta", 26.7, -3.2, sets = 9, weeks = 4),
-        ),
     )
 
     @Test
@@ -49,21 +43,6 @@ class ProgressDtoSerializacaoTest {
         assertEquals(15.8, volta.setsByMuscle?.byMuscle?.get(MuscleGroup.LEGS))
         assertEquals(7.0, volta.setsByMuscle?.byMuscle?.get(MuscleGroup.CHEST))
         assertEquals(1.5, volta.setsByMuscle?.unclassified)
-    }
-
-    /**
-     * A lista paga (J.4.2) no fio, incluindo variacao NEGATIVA — o sinal e o que a tela colore,
-     * e um `-3.2` que voltasse como `3.2` pintaria queda de verde.
-     */
-    @Test
-    fun `a lista de exercicios sobrevive a ida e volta, com o sinal da variacao`() {
-        val texto = DefaultJson.encodeToString(ProgressDto.serializer(), pago)
-        val volta = DefaultJson.decodeFromString(ProgressDto.serializer(), texto)
-
-        assertEquals(2, volta.exerciseSummary?.size)
-        assertEquals(-3.2, volta.exerciseSummary?.get(1)?.changePercent)
-        assertEquals(24, volta.exerciseSummary?.first()?.sets)
-        assertEquals(26, volta.weeksWindow)
     }
 
     @Test

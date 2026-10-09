@@ -25,7 +25,6 @@ import dev.rafael.features.program.presentation.state.ProgramListEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramListViewModel
 import dev.rafael.app.ui.DescartarPendenciaDialog
 import dev.rafael.app.ui.ErroDeTela
-import dev.rafael.app.ui.ErroAcao
 import dev.rafael.app.ui.ErroEmSnackbar
 import dev.rafael.app.ui.SeloDeSync
 import dev.rafael.app.ui.ShimmerList
@@ -48,7 +47,6 @@ import org.koin.androidx.compose.koinViewModel
 fun ProgramListScreen(
     onOpenProgram: (String) -> Unit,
     onGenerateWithAI: () -> Unit,
-    onOpenPaywall: () -> Unit = {},
     viewModel: ProgramListViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -65,12 +63,6 @@ fun ProgramListScreen(
         onOpenProgram(id)
     }
 
-    // Recusa por teto (403) não é erro de campo: o diálogo fecha para o snackbar com o motivo
-    // aparecer, em vez de ficar atrás do diálogo aberto.
-    LaunchedEffect(state.error) {
-        if (state.error is AppError.Forbidden) showCreateDialog = false
-    }
-
     if (showCreateDialog) {
         CreateProgramDialog(
             erro = state.error,
@@ -85,12 +77,7 @@ fun ProgramListScreen(
         erro = state.error,
         host = snackbarHost,
         onConsumir = viewModel::consumeError,
-        onAcao = { acao ->
-            when (acao) {
-                ErroAcao.VER_PLANOS -> onOpenPaywall()
-                else -> viewModel.onEvent(ProgramListEvent.Retry)
-            }
-        },
+        onAcao = { viewModel.onEvent(ProgramListEvent.Retry) },
     )
 
     Scaffold(

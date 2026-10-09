@@ -21,7 +21,7 @@ enum class SlotRole { COMPOSTO_PESADO, COMPOSTO_ACESSORIO, ISOLAMENTO }
 /**
  * Faixa etária → calibragem do motor (ARCH #24). Além do gate de menor, a idade é VARIÁVEL do
  * motor: a capacidade de recuperação cai com a idade. <40 normal · 40–59 leve · 60+ conservador.
- * Idade nula (não informada) não penaliza. Números ratificados em 2026-10-08 (ARCH #24).
+ * Idade nula (não informada) não penaliza. [PROPOSTA] nos números.
  */
 enum class AgeBand { YOUNG, ADULT, SENIOR }
 

@@ -23,13 +23,5 @@ kotlin {
         commonTest.dependencies {
             implementation(kotlin("test"))
         }
-        // Paridade `Exercise` x `ExerciseRef` (B12) contra SQLite real. `sqlite-driver` é JVM puro,
-        // por isso fica fora de `commonTest` (mesmo motivo do módulo program:data). `core:catalog`
-        // entra SÓ no teste: o código de produção deste módulo continua sem enxergá-lo.
-        androidHostTest.dependencies {
-            implementation(libs.sqldelight.sqliteDriver)
-            implementation(libs.kotlinx.coroutines.test)
-            implementation(projects.shared.core.catalog)
-        }
     }
 }

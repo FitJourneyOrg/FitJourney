@@ -27,7 +27,6 @@ class SessionServiceTest {
         isPremium = false,
         displayName = "Atleta-teste",
         code = "TESTE234",
-        activeProgramId = null,
     )
 
     private inner class FakeUserRepo : UserRepository {

@@ -6,7 +6,6 @@ import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
-import dev.rafael.server.error.FalhasFake
 import dev.rafael.server.features.stats.db.AchievementRepository
 import dev.rafael.server.features.user.db.UserRepository
 import dev.rafael.server.features.user.models.User
@@ -35,10 +34,7 @@ class AchievementServiceTest {
         isPremium = false,
         displayName = "Atleta-teste",
         code = "TESTE234",
-        activeProgramId = null,
     )
-
-    private val falhas = FalhasFake()
 
     private inner class FakeUserRepo : UserRepository {
         override suspend fun findByFirebaseUid(firebaseUid: String) = AppResult.Success<User?>(user)
@@ -87,7 +83,6 @@ class AchievementServiceTest {
         val service = AchievementService(
             userService = UserService(FakeUserRepo()),
             stats = statsQueDaProgresso(sessoes = 1),
-            falhas = falhas,
             repository = FakeAchievementRepo(),
             avisarDesbloqueio = { destinatario, id -> avisos.add(destinatario to id) },
         )
@@ -103,7 +98,6 @@ class AchievementServiceTest {
         val service = AchievementService(
             userService = UserService(FakeUserRepo()),
             stats = statsQueDaProgresso(sessoes = 1),   // continua batendo só PRIMEIRO_TREINO
-            falhas = falhas,
             repository = FakeAchievementRepo(concedidasIniciais = setOf("PRIMEIRO_TREINO")),
             avisarDesbloqueio = { destinatario, id -> avisos.add(destinatario to id) },
         )
@@ -121,7 +115,6 @@ class AchievementServiceTest {
         val service = AchievementService(
             userService = UserService(FakeUserRepo()),
             stats = statsQueDaProgresso(sessoes = 50),
-            falhas = falhas,
             repository = FakeAchievementRepo(),
             avisarDesbloqueio = { destinatario, id -> avisos.add(destinatario to id) },
         )
@@ -141,7 +134,6 @@ class AchievementServiceTest {
         val service = AchievementService(
             userService = UserService(FakeUserRepo()),
             stats = statsQueFalha,
-            falhas = falhas,
             repository = FakeAchievementRepo(),
             avisarDesbloqueio = { destinatario, id -> avisos.add(destinatario to id) },
         )
@@ -149,38 +141,5 @@ class AchievementServiceTest {
         service.avaliarAposSessao("fb", null)   // não pode lançar
 
         assertTrue(avisos.isEmpty(), "sem progresso, não há como saber o que é novo — não avisa nada")
-        assertEquals(1, falhas.registradas.size, "engolir sem registrar seria falha silenciosa")
-        assertTrue(falhas.registradas.single().second is AppError)
-    }
-
-    @Test
-    fun `avaliarAposSessao registra a excecao do aviso e nao propaga`() = runBlocking {
-        val boom = IllegalStateException("push fora")
-        val service = AchievementService(
-            userService = UserService(FakeUserRepo()),
-            stats = statsQueDaProgresso(sessoes = 1),
-            falhas = falhas,
-            repository = FakeAchievementRepo(),
-            avisarDesbloqueio = { _, _ -> throw boom },
-        )
-
-        service.avaliarAposSessao("fb", null)   // não pode lançar
-
-        assertEquals(listOf<Any?>(boom), falhas.registradas.map { it.second })
-    }
-
-    @Test
-    fun `avaliarAposSessao feliz nao registra falha`() = runBlocking {
-        val service = AchievementService(
-            userService = UserService(FakeUserRepo()),
-            stats = statsQueDaProgresso(sessoes = 1),
-            falhas = falhas,
-            repository = FakeAchievementRepo(),
-            avisarDesbloqueio = { _, _ -> },
-        )
-
-        service.avaliarAposSessao("fb", null)
-
-        assertTrue(falhas.registradas.isEmpty())
     }
 }
