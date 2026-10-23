@@ -8,16 +8,28 @@ import kotlin.test.assertTrue
 
 /**
  * Testa o mapa equipamento→ambiente (ARCH #28) — puro.
- * Academia vê tudo (sem filtro); Casa restringe a halter + corporal + elástico.
+ * Academia vê tudo (sem filtro); Casa restringe a halter + corporal + elástico + hand grip.
  */
 class EquipmentEnvironmentMapTest {
 
     @Test
-    fun `casa restringe a halter corporal e elastico`() {
+    fun `casa restringe a halter corporal elastico e hand grip`() {
         assertEquals(
-            setOf("DUMBBELL", "BODYWEIGHT", "BAND"),
+            setOf("DUMBBELL", "BODYWEIGHT", "BAND", "HAND_GRIP"),
             EquipmentEnvironmentMap.equipmentsFor(TrainingEnvironment.CASA),
         )
+    }
+
+    /**
+     * O `HAND_GRIP` entrou em 21/10 porque o conjunto discordava da coluna `ambiente` da V65, e
+     * um exercício da lista principal pagava: o **Hand Grip (Flexor de Mão)**, curado como
+     * `ambiente = CASA`, era recusado pela academia (pelo ambiente) e pela casa (por este
+     * conjunto) — não era alcançável por perfil nenhum. Quem prova a ausência do buraco é o
+     * `AcessoriosIntegrationTest`, contra o catálogo real; aqui fica só a trava do conjunto.
+     */
+    @Test
+    fun `hand grip roda em casa`() {
+        assertTrue(TrainingEnvironment.CASA in EquipmentEnvironmentMap.environmentsFor("HAND_GRIP"))
     }
 
     @Test

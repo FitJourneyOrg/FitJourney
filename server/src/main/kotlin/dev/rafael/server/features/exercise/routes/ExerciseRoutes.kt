@@ -1,5 +1,6 @@
 package dev.rafael.server.features.exercise.routes
 
+import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.exercise.ExerciseCategory
 import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.i18n.IdiomaPolicy
@@ -59,7 +60,7 @@ fun Route.exerciseRoutes(service: ExerciseService, profileService: ProfileServic
             call.respondResult(result)
         }
 
-        // Alternativas de mesmo tipo pra troca (usa ambiente/nível/limitações do perfil).
+        // Alternativas de mesmo tipo pra troca (usa ambiente, nível e acessórios do perfil).
         get("/exercises/{id}/alternatives") {
             val principal = call.principal<FirebaseUser>()!!
             val id = call.parameters["id"]?.let { runCatching { Uuid.parse(it) }.getOrNull() }
@@ -69,7 +70,8 @@ fun Route.exerciseRoutes(service: ExerciseService, profileService: ProfileServic
                 profileService.getProfile(principal.uid, principal.email).flatMap { p ->
                     val env = p.environment
                     if (env == null) AppError.Validation("Ambiente de treino não definido", code = ErrorCodes.AMBIENTE_NAO_DEFINIDO).asFailure()
-                    else service.alternatives(id, env, p.level, p.limitations, call.idiomaPedido())
+                    else service.alternatives(id, env, p.level,
+                        Accessory.paraAmbiente(env, p.accessories ?: emptyList()), call.idiomaPedido())
                 }
             }
             call.respondResult(result)

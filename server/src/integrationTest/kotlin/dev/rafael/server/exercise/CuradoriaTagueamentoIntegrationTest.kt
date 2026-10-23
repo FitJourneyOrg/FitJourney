@@ -116,7 +116,8 @@ class CuradoriaTagueamentoIntegrationTest {
             "Crucifixo Inverso Curvado no Cabo",              // estava BACK (categoria TRAPEZIUS)
             "Crucifixo Inverso Curvado com Halteres",         // já estava SHOULDERS
             "Face Pull (Puxada para o Rosto)",                // estava TRAPEZIUS -> invisível
-            "Face Pull Ajoelhado",                            // estava BACK
+            // "Face Pull Ajoelhado" saiu do catálogo na V65: duplicado do Face Pull com Cabos
+            // Cruzados (mesmo movimento, muda só o apoio do joelho).
             "Face Pull com Cabos Cruzados",                   // estava BACK
         ).forEach { nome ->
             val (prim, _) = musculosDe(nome) ?: error("exercício sumiu do catálogo: $nome")

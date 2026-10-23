@@ -83,13 +83,13 @@ class CaminhosDeMidiaIntegrationTest {
      * válida; o catálogo inteiro subiu pra 924 (ver `o catalogo tem 924 exercicios`).
      */
     @Test
-    fun `exatamente 921 caminhos usam a chave em snake_case`() {
+    fun `exatamente 892 caminhos usam a chave em snake_case`() {
         val noFormatoNovo = refs().filter { (_, video, thumb) ->
             padraoVideo.matches(video) && padraoThumb.matches(thumb)
         }
 
         assertEquals(
-            921,
+            892,
             noFormatoNovo.size,
             "as mídias foram renomeadas sem a migration, ou o mapa da V50/V55 está desatualizado",
         )
@@ -136,11 +136,14 @@ class CaminhosDeMidiaIntegrationTest {
     /**
      * 923 + 1 (`Prancha`, V58, sem mídia por decisão deliberada -- ver teste acima) - 2 (V63:
      * os dois Terra Romeno, unidos ao Stiff; os dois tinham `chave`, então o balde do formato novo
-     * também cai de 923 para 921).
+     * também cai de 923 para 921) - 29 (V65: a curadoria do catálogo tirou 28 duplicados e a
+     * Plataforma Vibratória, um aparelho passivo). 922 - 29 = 893, e o balde do formato novo cai
+     * de 921 para 892 — todos os 29 tinham `chave`, e quem continua fora do padrão é só a
+     * `Prancha`, como antes.
      */
     @Test
-    fun `o catalogo tem 922 exercicios`() {
-        assertEquals(922, refs().size)
+    fun `o catalogo tem 893 exercicios`() {
+        assertEquals(893, refs().size)
     }
 
     /**

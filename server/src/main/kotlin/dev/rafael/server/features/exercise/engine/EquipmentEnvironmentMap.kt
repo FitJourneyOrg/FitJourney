@@ -14,8 +14,19 @@ import dev.rafael.contract.profile.TrainingEnvironment
  */
 object EquipmentEnvironmentMap {
 
-    /** Equipamentos executáveis em casa: halter + corporal + elástico. */
-    val HOME_EQUIPMENT: Set<String> = setOf("DUMBBELL", "BODYWEIGHT", "BAND")
+    /**
+     * Equipamentos executáveis em casa: halter + corporal + elástico + hand grip.
+     *
+     * O `HAND_GRIP` entrou em 21/10, depois de o `AcessoriosIntegrationTest` mostrar que o **Hand
+     * Grip (Flexor de Mão)** não era alcançável por perfil nenhum: a curadoria o marcou
+     * `ambiente = CASA` (é um aparelho de mão, de gaveta), a academia o recusava pelo ambiente e a
+     * casa o recusava aqui, por equipamento. Ficava na lista principal, com alvo FOREARMS, sem o
+     * motor jamais poder escolhê-lo.
+     *
+     * > **Duas fontes de verdade sobre "onde isso roda" — a coluna `ambiente`, curada, e este
+     * > mapa, em código — só convivem enquanto um teste prova que não se contradizem.**
+     */
+    val HOME_EQUIPMENT: Set<String> = setOf("DUMBBELL", "BODYWEIGHT", "BAND", "HAND_GRIP")
 
     /** Ambientes onde o equipamento roda. Academia sempre; casa só o subconjunto caseiro. */
     fun environmentsFor(equipment: String): Set<TrainingEnvironment> =
