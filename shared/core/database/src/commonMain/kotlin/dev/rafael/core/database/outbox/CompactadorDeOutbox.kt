@@ -9,6 +9,14 @@ enum class TipoOperacao {
     RENOMEAR_PROGRAMA,
     EXCLUIR_PROGRAMA,
     DEFINIR_AGENDA,
+
+    /**
+     * Marcação GLOBAL (um POST sem id, "marquei tudo como lido") -- não é criação nem
+     * exclusão, então cai no `else -> ultima` do [CompactadorDeOutbox.resolver]: marcar duas
+     * vezes offline colapsa numa só, de graça, sem mudar o compactador (fatia
+     * "notificações offline", 2026-10-22).
+     */
+    MARCAR_NOTIFICACAO_LIDA,
     ;
 
     val ehCriacao: Boolean get() = this == CRIAR_TREINO || this == CRIAR_PROGRAMA

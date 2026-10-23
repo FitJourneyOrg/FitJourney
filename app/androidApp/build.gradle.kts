@@ -96,6 +96,9 @@ dependencies {
     // Grafo do Koin verificado por reflexao, sem instanciar nada e sem emulador (debito P2).
     testImplementation(libs.koin.test)
     testImplementation(libs.kotlin.reflect)
+    // Driver JDBC in-memory p/ testar NotificacaoLocalDataSourceImpl contra SQL real (mesmo
+    // padrão de shared/features/program/data: fake de query troca bug de SQL por falso-verde).
+    testImplementation(libs.sqldelight.sqliteDriver)
     // Features (o app agrega os módulos Koin e usa o ViewModel)
     implementation(projects.shared.features.auth.domain)
     implementation(projects.shared.features.auth.presentation)

@@ -1,5 +1,6 @@
 package dev.rafael.server.features.profile.models
 
+import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.HealthScreening
@@ -25,5 +26,7 @@ data class Profile(
     val environment: TrainingEnvironment?,   // <- novo
     val health: HealthScreening?,            // <- novo
     val limitations: List<BodyLimitation>,
+    /** V66: acessórios declarados. null = nunca perguntado. Vazio na academia — lá o motor assume os seis. */
+    val accessories: List<Accessory>?,
     val onboardingCompleted: Boolean,
 )

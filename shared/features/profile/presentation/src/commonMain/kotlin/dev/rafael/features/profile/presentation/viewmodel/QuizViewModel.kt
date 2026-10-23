@@ -2,10 +2,11 @@ package dev.rafael.features.profile.presentation.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dev.rafael.contract.profile.Accessory
+import dev.rafael.contract.profile.HealthScreening
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
-import dev.rafael.features.profile.domain.model.Profile
 import dev.rafael.features.profile.domain.repository.ProfileRepository
 import dev.rafael.features.profile.presentation.state.QuizEvent
 import dev.rafael.features.profile.presentation.state.QuizState
@@ -44,12 +45,57 @@ class QuizViewModel(
                 val cur = s.limitations
                 s.copy(limitations = if (event.limitation in cur) cur - event.limitation else cur + event.limitation)
             }
+            is QuizEvent.AccessoryToggled -> _state.update { s ->
+                val cur = s.accessories
+                s.copy(accessories = if (event.accessory in cur) cur - event.accessory else cur + event.accessory)
+            }
             QuizEvent.AcknowledgedRiskToggled ->
                 _state.update { it.copy(health = it.health.copy(acknowledgedRisk = !it.health.acknowledgedRisk)) }
+            QuizEvent.StartEditing -> startEditing()
             QuizEvent.Next -> next()
             QuizEvent.Back -> back()
         }
     }
+    /**
+     * Modo edição: busca o perfil já salvo e substitui o estado inteiro por ele, começando do
+     * primeiro passo. `accessories` nulo (ambiente != CASA, nunca perguntado) vira o mesmo
+     * default do onboarding -- se o usuário trocar pra CASA durante a edição, a tela de
+     * acessórios precisa abrir com algo marcado, não em branco.
+     */
+    private fun startEditing() {
+        _state.update { it.copy(isEditing = true, isLoadingExisting = true, error = null) }
+        viewModelScope.launch {
+            when (val result = repository.getProfile()) {
+                is AppResult.Success -> {
+                    val p = result.value
+                    _state.update {
+                        QuizState(
+                            step = QuizStep.GOAL,
+                            goal = p.goal,
+                            level = p.level,
+                            daysPerWeek = p.daysPerWeek,
+                            splitPreference = p.splitPreference,
+                            unavailableDays = p.unavailableDays,
+                            focusAreas = p.focusAreas,
+                            weightKg = p.weightKg,
+                            heightCm = p.heightCm,
+                            age = p.age,
+                            minorSupervised = p.minorSupervised,
+                            environment = p.environment,
+                            accessories = p.accessories ?: listOf(Accessory.ELEVATED_SURFACE),
+                            limitations = p.limitations,
+                            health = p.health ?: HealthScreening(),
+                            isEditing = true,
+                            isLoadingExisting = false,
+                        )
+                    }
+                }
+                is AppResult.Failure ->
+                    _state.update { it.copy(isLoadingExisting = false, error = result.error) }
+            }
+        }
+    }
+
     private fun toggleHealth(field: QuizEvent.HealthField) {
         _state.update { s ->
             val h = s.health
@@ -96,31 +142,15 @@ class QuizViewModel(
 
     private fun submit() {
         val s = _state.value
-        // obrigatórios garantidos pelo canAdvance de cada passo; checagem defensiva:
-        val goal = s.goal; val level = s.level; val days = s.daysPerWeek
-        if (goal == null || level == null || days == null) {
+        // obrigatórios garantidos pelo canAdvance de cada passo; `toProfileOrNull` é a checagem
+        // defensiva, e é pura de propósito -- ver KDoc dela no QuizState (C2 tier 2).
+        val profile = s.toProfileOrNull()
+        if (profile == null) {
             _state.update { it.copy(error = AppError.Validation("Responda as perguntas obrigatórias.")) }
             return
         }
-        println("QUIZ SUBMIT: limitations=${s.limitations}")
         _state.update { it.copy(isSubmitting = true, error = null) }
         viewModelScope.launch {
-            val profile = Profile(
-                goal = goal,
-                level = level,
-                daysPerWeek = days,
-                splitPreference = s.splitPreference,   // ARCH #29 (null = recomendado)
-                unavailableDays = s.unavailableDays,   // Estágio 2: dias que não quer treinar
-                focusAreas = if (s.focusEligible) s.focusAreas else emptyList(),   // iniciante/saúde geral não focam
-                weightKg = s.weightKg,
-                heightCm = s.heightCm,
-                age = s.age,                       // #24
-                minorSupervised = s.minorSupervised,   // #24
-                environment = s.environment,   // <- novo
-                limitations = s.limitations,
-                health = s.health,             // <- novo
-                onboardingCompleted = false,   // server deriva
-            )
             when (val result = repository.saveProfile(profile)) {
                 is AppResult.Success ->
                     _state.update { it.copy(isSubmitting = false, completed = true) }

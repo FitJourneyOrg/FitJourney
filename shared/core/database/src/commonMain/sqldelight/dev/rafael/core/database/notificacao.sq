@@ -1,0 +1,20 @@
+-- Central de notificações (F.1 + cache-first, 2026-10-22).
+-- Schema: 9.sqm (nesta pasta). Aqui só ficam as QUERIES.
+-- [REGRA] toda query filtra por uid.
+
+listarTudo:
+SELECT * FROM notificacao WHERE uid = ? ORDER BY createdAt DESC;
+
+-- Limpeza SEM exceção de propósito: notificação nunca nasce offline (é sempre o servidor que
+-- cria), então não existe id "pendente de criar" que precise sobreviver a um replace -- ao
+-- contrário de `program`/`workout`. A única mutação do cliente é `marcarTodasComoLidas`, abaixo,
+-- aplicada DEPOIS do replace quando há marcação pendente no outbox (ver NotificacoesRepositoryImpl).
+limparTudo:
+DELETE FROM notificacao WHERE uid = ?;
+
+salvar:
+INSERT OR REPLACE INTO notificacao(id, uid, tipo, titulo, corpo, dados, readAt, createdAt)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+
+marcarTodasComoLidas:
+UPDATE notificacao SET readAt = ? WHERE uid = ? AND readAt IS NULL;

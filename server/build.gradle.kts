@@ -68,6 +68,10 @@ testing {
             dependencies {
                 implementation(project())
                 implementation(project(":shared-contract"))   // ProfileDto/ProgramDto e enums (server usa como implementation, não api)
+                // Json.decodeFromString direto (AcessoriosPersistenciaIntegrationTest): mesmo
+                // caso do shared-contract acima, kotlinx-serialization-json é `implementation`
+                // no server principal e não vaza pra cá sozinho.
+                implementation(libs.kotlinx.serialization.json)
                 // AppResult/AppError: o server usa como `implementation`, então não vaza para
                 // os testes. Necessário desde que o teste passou a assertar o retorno dos
                 // repositórios direto (idempotência do POST — ARCH #30).

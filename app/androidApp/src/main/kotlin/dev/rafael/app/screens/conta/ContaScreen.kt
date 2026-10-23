@@ -58,6 +58,7 @@ fun ContaScreen(
     onSaiu: () -> Unit,
     onVerBloqueados: () -> Unit,
     onIdioma: () -> Unit,
+    onEditarPerfilDeTreino: () -> Unit,
     viewModel: ContaViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -194,6 +195,15 @@ fun ContaScreen(
              * ícone de globo. Esta aqui é a que serve a quem procura onde ficam os ajustes.
              */
             TextButton(onClick = onIdioma) { Text(stringResource(R.string.comum_idioma)) }
+
+            /*
+             * Perfil de TREINO (objetivo, nível, ambiente, acessórios...) é editado aqui, não em
+             * "Perfil" (que é a vitrine pública, ARCH #34) -- mesma lógica de BLOQUEADOS/IDIOMA
+             * acima: é configuração, não vitrine.
+             */
+            TextButton(onClick = onEditarPerfilDeTreino) {
+                Text(stringResource(R.string.conta_editar_perfil_treino))
+            }
 
             TextButton(onClick = { confirmarSaida = true }) {
                 Text(stringResource(R.string.conta_sair), color = MaterialTheme.colorScheme.error)

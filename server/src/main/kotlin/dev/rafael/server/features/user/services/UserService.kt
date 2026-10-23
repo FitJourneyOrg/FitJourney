@@ -25,9 +25,12 @@ class UserService(private val repository: UserRepository) {
                 if (existing != null) {
                     AppResult.Success(existing)
                 } else {
-                    // Não existe -> cria. Corrida (2 requests do mesmo uid novo): o UNIQUE
-                    // em firebase_uid faz o 2o insert falhar -> cai em Unexpected. Tratamento
-                    // robusto (reler no conflito) fica como refino se a corrida aparecer.
+                    // Não existe -> cria. Corrida (2 requests do mesmo uid novo, ex.: GET /me +
+                    // POST /me/devices + GET /me/notifications do mesmo login, quase simultâneos):
+                    // o UNIQUE em firebase_uid faz o 2o insert falhar. Antes isso subia como
+                    // Unexpected (500) pro perdedor da corrida; agora ele relê e acha a linha que
+                    // o vencedor acabou de criar. Só propaga a falha se a releitura também não
+                    // achar nada — nesse caso é erro de banco de verdade, não corrida.
                     //
                     // O NOME nasce aqui, não no onboarding (V35, #33). Este método roda no
                     // `GET /me` do splash, ANTES do quiz: se o nome esperasse o fim do
@@ -38,13 +41,20 @@ class UserService(private val repository: UserRepository) {
                     // coluna é NOT NULL, e gerá-lo "quando alguém precisar" exigiria que ela
                     // fosse nullable — o que a A.0 já pagou para evitar.
                     val id = Uuid.random()
-                    repository.create(
+                    val criado = repository.create(
                         id = id,
                         firebaseUid = firebaseUid,
                         email = email,
                         displayName = DisplayNamePolicy.inicial(email, id),
                         code = UserCodePolicy.gerar(),
                     )
+                    when (criado) {
+                        is AppResult.Success -> criado
+                        is AppResult.Failure -> when (val relido = repository.findByFirebaseUid(firebaseUid)) {
+                            is AppResult.Success -> relido.value?.let { AppResult.Success(it) } ?: criado
+                            is AppResult.Failure -> criado
+                        }
+                    }
                 }
             }
         }

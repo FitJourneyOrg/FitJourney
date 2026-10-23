@@ -1,6 +1,7 @@
 package dev.rafael.server.features.exercise.models
 
 import dev.rafael.contract.exercise.ExerciseCategory
+import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
@@ -28,5 +29,17 @@ data class Exercise(
     val contraindications: List<BodyLimitation>,
 
     // --- V16: principal (base) vs variação. Motor escolhe base primeiro. ---
+    // Substituída por `relevancia` (três níveis); cai junto com a reescrita do SlotFiller.
     val isBase: Boolean,
+
+    // --- V64/V65: seleção do motor. Null fora da lista principal. ---
+    val volumeTarget: String?,
+    val prioridade: Int?,
+    val relevancia: Int?,
+    val nivelMaximo: Level?,
+    val ambiente: Ambiente?,
+
+    // --- V65: catálogo inteiro ---
+    val familia: String?,
+    val acessorios: Set<Accessory>,
 )

@@ -13,3 +13,9 @@ enum class MovementPattern {
 }
 
 enum class PrescriptionType { REPS, TIME, DISTANCE }
+
+/** V65. Onde o exercício é feito. Academia recebe ACADEMIA + AMBOS; casa recebe CASA + AMBOS. */
+enum class Ambiente { ACADEMIA, CASA, AMBOS }
+
+// O acessório exigido pelo exercício usa `Accessory`, do contrato — o MESMO enum que o perfil
+// declara. Dois enums para o mesmo conceito é garantia de que um dia discordem.

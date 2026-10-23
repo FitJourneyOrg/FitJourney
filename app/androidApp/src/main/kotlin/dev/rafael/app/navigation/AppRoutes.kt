@@ -127,6 +127,14 @@ sealed interface AppRoute {
     @Serializable data object Conta : AppRoute
 
     /**
+     * Editar perfil de treino pós-onboarding (fatia "acessórios no onboarding", passo 4).
+     *
+     * Reaproveita o `QuizScreen` em modo edição em vez de uma tela própria -- até ontem o único
+     * jeito de mudar ACADEMIA -> CASA era desinstalar o app. Alcançada só por `Conta`.
+     */
+    @Serializable data object EditarPerfil : AppRoute
+
+    /**
      * Escolha do idioma da interface (G.4, ARCH #37).
      *
      * Alcançada pela gaveta E por Conta, de propósito: quem não lê o idioma atual vai procurar um

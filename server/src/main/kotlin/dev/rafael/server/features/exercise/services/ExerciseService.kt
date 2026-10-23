@@ -1,9 +1,9 @@
 package dev.rafael.server.features.exercise.services
 
+import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.exercise.ExerciseCategory
 import dev.rafael.contract.exercise.ExerciseDto
 import dev.rafael.contract.i18n.Idioma
-import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.TrainingEnvironment
 import dev.rafael.core.result.AppError
@@ -58,14 +58,14 @@ class ExerciseService(
         exerciseId: Uuid,
         environment: TrainingEnvironment,
         level: Level,
-        limitations: List<BodyLimitation>,
+        accessories: Set<Accessory>,
         idioma: Idioma,
     ): AppResult<List<ExerciseDto>> =
         repository.findById(exerciseId, idioma).flatMap { target ->
             if (target == null) {
                 AppError.NotFound("Exercício não encontrado", code = ErrorCodes.EXERCICIO_NAO_EXISTE).asFailure()
             } else {
-                val pool = preFilter.poolFor(environment, limitations, level)
+                val pool = preFilter.poolFor(environment, level, accessories)
                 val alternativas = pool.filter { c ->
                     c.id != exerciseId &&
                         c.movementPattern == target.movementPattern &&

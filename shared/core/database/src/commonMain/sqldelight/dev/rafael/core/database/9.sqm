@@ -1,0 +1,22 @@
+-- Migration 9: central de notificações offline (cache-first, ARCH #30 estendido, 2026-10-22).
+--
+-- Antes só existia em memória -- `NotificacoesViewModel` ia à rede a cada abertura da tela, e
+-- offline ela ficava vazia. Mesmo padrão de `program`/`workout`: id do servidor como PK (já é
+-- único, UUID), uid em coluna + índice -- não é par (uid, id) porque não precisa.
+--
+-- `dados` é o `data: Map<String, String>` do `NotificacaoDto` em JSON -- sempre lido em bloco,
+-- nunca consultado por dentro (mesmo raciocínio do `exercisesJson` de `workout`).
+--
+-- `readAt` fica NULLABLE: é ele que desenha o destaque de "novo" na tela, e a ausência dele é
+-- informação (nunca lida), não "esqueceram de preencher".
+CREATE TABLE notificacao (
+    id        TEXT NOT NULL PRIMARY KEY,
+    uid       TEXT NOT NULL DEFAULT '',
+    tipo      TEXT NOT NULL,
+    titulo    TEXT NOT NULL,
+    corpo     TEXT NOT NULL,
+    dados     TEXT NOT NULL,
+    readAt    TEXT,
+    createdAt TEXT NOT NULL
+);
+CREATE INDEX notificacao_uid ON notificacao(uid);

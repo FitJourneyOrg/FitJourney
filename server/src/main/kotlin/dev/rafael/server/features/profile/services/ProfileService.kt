@@ -101,6 +101,7 @@ class ProfileService(
                 environment = dto.environment,
                 health = dto.health,
                 limitations = dto.limitations,
+                accessories = dto.accessories,
                 onboardingCompleted = true,
             )
             repository.upsert(profile).map { it.toDto() }

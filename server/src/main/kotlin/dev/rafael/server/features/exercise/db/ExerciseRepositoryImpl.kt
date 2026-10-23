@@ -2,6 +2,7 @@ package dev.rafael.server.features.exercise.db
 
 import dev.rafael.contract.exercise.ExerciseCategory
 import dev.rafael.contract.i18n.Idioma
+import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
@@ -9,6 +10,7 @@ import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
+import dev.rafael.server.features.exercise.models.Ambiente
 import dev.rafael.server.features.exercise.models.Exercise
 import dev.rafael.server.features.exercise.models.Modality
 import dev.rafael.server.features.exercise.models.MovementPattern
@@ -154,4 +156,18 @@ internal fun ResultRow.toExercise(nomeTraduzido: String? = null): Exercise = Exe
     level = this[ExercisesTable.level]?.let { runCatching { Level.valueOf(it) }.getOrNull() },
     contraindications = this[ExercisesTable.contraindications].orEmpty().mapNotNull { runCatching { BodyLimitation.valueOf(it) }.getOrNull() },
     isBase = this[ExercisesTable.isBase],
+    volumeTarget = this[ExercisesTable.volumeTarget],
+    prioridade = this[ExercisesTable.prioridade]?.toInt(),
+    relevancia = this[ExercisesTable.relevancia]?.toInt(),
+    nivelMaximo = this[ExercisesTable.nivelMaximo]?.let { runCatching { Level.valueOf(it) }.getOrNull() },
+    ambiente = this[ExercisesTable.ambiente]?.let { runCatching { Ambiente.valueOf(it) }.getOrNull() },
+    familia = this[ExercisesTable.familia],
+    acessorios = buildSet {
+        if (this@toExercise[ExercisesTable.requiresBench]) add(Accessory.BENCH)
+        if (this@toExercise[ExercisesTable.requiresElevatedSurface]) add(Accessory.ELEVATED_SURFACE)
+        if (this@toExercise[ExercisesTable.requiresPullupBar]) add(Accessory.PULLUP_BAR)
+        if (this@toExercise[ExercisesTable.requiresDipStation]) add(Accessory.DIP_STATION)
+        if (this@toExercise[ExercisesTable.requiresStep]) add(Accessory.STEP)
+        if (this@toExercise[ExercisesTable.requiresAnchorPoint]) add(Accessory.ANCHOR_POINT)
+    },
 )

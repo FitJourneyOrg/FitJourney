@@ -3,6 +3,7 @@ package dev.rafael.server.features.user.services
 import dev.rafael.contract.i18n.Idioma
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
+import dev.rafael.core.result.asFailure
 import dev.rafael.server.features.user.db.UserRepository
 import dev.rafael.server.features.user.models.User
 import kotlinx.coroutines.runBlocking
@@ -16,7 +17,13 @@ import kotlin.uuid.Uuid
 class UserServiceTest {
 
     /** `jaExiste = false` simula o PRIMEIRO acesso — o caminho em que o nome nasce. */
-    private class FakeRepo(private val jaExiste: Boolean = true) : UserRepository {
+    private class FakeRepo(
+        private val jaExiste: Boolean = true,
+        /** `create` sempre falha — simula a corrida: o UNIQUE em firebase_uid rejeitou o 2o insert. */
+        private val criarFalha: Boolean = false,
+        /** Na releitura após a falha, se acha o usuário — simula que a OUTRA requisição venceu a corrida. */
+        private val achaDepoisDaCorrida: Boolean = false,
+    ) : UserRepository {
         val user = User(
             id = Uuid.random(),
             firebaseUid = "fb-uid",
@@ -38,8 +45,13 @@ class UserServiceTest {
          */
         var idiomaGravado: Idioma? = null
 
-        override suspend fun findByFirebaseUid(firebaseUid: String) =
-            AppResult.Success(if (jaExiste) user else null)
+        private var jaBuscouUmaVez = false
+
+        override suspend fun findByFirebaseUid(firebaseUid: String): AppResult<User?> {
+            val achou = jaExiste || (jaBuscouUmaVez && achaDepoisDaCorrida)
+            jaBuscouUmaVez = true
+            return AppResult.Success(if (achou) user else null)
+        }
 
         override suspend fun findById(userId: Uuid): AppResult<User?> =
             AppResult.Success(if (jaExiste && userId == user.id) user else null)
@@ -59,6 +71,12 @@ class UserServiceTest {
             displayName: String,
             code: String,
         ): AppResult<User> {
+            if (criarFalha) {
+                return AppError.Unexpected(
+                    "Erro de banco",
+                    RuntimeException("duplicate key value violates unique constraint \"users_firebase_uid_key\""),
+                ).asFailure()
+            }
             criadoCom = displayName
             criadoComCodigo = code
             return AppResult.Success(user.copy(id = id, email = email, displayName = displayName, code = code))
@@ -112,6 +130,28 @@ class UserServiceTest {
             repo.criadoCom!!.startsWith("Atleta-"),
             "sem e-mail o nome vem do id — nunca vazio, senão o NOT NULL estoura",
         )
+    }
+
+    @Test
+    fun `findOrCreate relê ao perder a corrida de criação e devolve quem venceu`() = runBlocking {
+        // GET /me, POST /me/devices e GET /me/notifications do mesmo login novo podem rodar
+        // quase juntos; o 2o INSERT na mesma firebase_uid bate no UNIQUE. Isso não deve
+        // mais virar 500 pro perdedor -- ele relê e acha a linha que o outro criou.
+        val repo = FakeRepo(jaExiste = false, criarFalha = true, achaDepoisDaCorrida = true)
+        val r = UserService(repo).findOrCreate("fb-uid", null)
+
+        assertTrue(r is AppResult.Success && r.value.id == repo.user.id, "relê e acha o usuário da corrida")
+        assertNull(repo.criadoCom, "o create falhou -- nada foi gravado por esta chamada")
+    }
+
+    @Test
+    fun `findOrCreate propaga erro real quando a releitura tambem nao acha ninguem`() = runBlocking {
+        // Sem "achaDepoisDaCorrida": a releitura continua vazia, então o create falhou por
+        // outro motivo (erro de banco de verdade), não por corrida -- tem que subir o erro.
+        val repo = FakeRepo(jaExiste = false, criarFalha = true, achaDepoisDaCorrida = false)
+        val r = UserService(repo).findOrCreate("fb-uid", null)
+
+        assertTrue(r is AppResult.Failure, "sem usuário nem na releitura, a falha é real")
     }
 
     @Test

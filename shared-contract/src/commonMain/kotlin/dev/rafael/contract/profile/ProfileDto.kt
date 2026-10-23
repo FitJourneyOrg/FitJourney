@@ -22,5 +22,9 @@ data class ProfileDto(
     val environment: TrainingEnvironment? = null,
     val health: HealthScreening? = null,
     val limitations: List<BodyLimitation> = emptyList(),
+    // V66: o que o usuário tem além da carga. Só perguntado quando environment = CASA;
+    // na academia o server assume os seis. null = nunca perguntado; lista vazia = perguntado e
+    // nada declarado. Distinção vive de ponta a ponta (DTO -> Profile -> coluna nullable).
+    val accessories: List<Accessory>? = null,
     val onboardingCompleted: Boolean = false,
 )

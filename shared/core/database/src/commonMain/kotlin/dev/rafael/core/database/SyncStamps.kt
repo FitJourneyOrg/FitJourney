@@ -96,6 +96,9 @@ interface SyncStamps {
         const val CONQUISTAS = "achievements"
         const val HISTORICO = "sessions"
 
+        /** Central de notificações, cache-first desde 2026-10-22 (antes era só-rede). */
+        const val NOTIFICACOES = "notifications"
+
         /**
          * Analise de progressao (J.2). Mesma janela do [STATS], e pelo mesmo motivo: os dois
          * numeros saem das MESMAS sessoes, entao mudam juntos. Carimbos diferentes fariam a

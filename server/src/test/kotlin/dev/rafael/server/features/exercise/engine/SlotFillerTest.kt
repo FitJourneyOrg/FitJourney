@@ -46,6 +46,13 @@ class SlotFillerTest {
         level = level,
         contraindications = emptyList(),
         isBase = base,
+        volumeTarget = null,
+        prioridade = null,
+        relevancia = null,
+        nivelMaximo = null,
+        ambiente = null,
+        familia = null,
+        acessorios = emptySet(),
     )
 
     private fun slot(

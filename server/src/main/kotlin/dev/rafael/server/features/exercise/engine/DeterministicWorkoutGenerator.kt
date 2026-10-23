@@ -1,5 +1,6 @@
 package dev.rafael.server.features.exercise.engine
 
+import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.ProfileDto
 import dev.rafael.contract.profile.TrainingEnvironment
@@ -50,8 +51,12 @@ class DeterministicWorkoutGenerator(
             age = profile.age,                           // ARCH #24: idade calibra volume + modo conservador
         )
 
-        // 2. POOL (F.3) — ambiente + limitações + nível.
-        val pool: List<Exercise> = preFilter.poolFor(environment, profile.limitations, profile.level)
+        // 2. POOL (F.3) — ambiente, acessórios e nível. Contraindicação saiu do filtro (V65).
+        // `environment` vem do chamador e pode diferir de profile.environment (geração avulsa num
+        // ambiente escolhido na hora); os acessórios seguem esse mesmo ambiente, não o do perfil.
+        val pool: List<Exercise> = preFilter.poolFor(
+            environment, profile.level, Accessory.paraAmbiente(environment, profile.accessories ?: emptyList()),
+        )
 
         // 3. PREENCHER (F.4) — pontuação + rotação, sem repetir no programa.
         val filler = SlotFiller(seed)
