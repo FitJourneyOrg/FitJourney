@@ -11,6 +11,7 @@ import dev.rafael.contract.group.GroupRule
 import dev.rafael.contract.group.GroupState
 import dev.rafael.contract.group.JoinBlock
 import dev.rafael.contract.limites.Limites
+import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
@@ -355,6 +356,21 @@ fun BodyLimitation.rotulo(): Int = when (this) {
     BodyLimitation.LUMBAR -> R.string.enum_limitacao_lumbar
     BodyLimitation.WRIST -> R.string.enum_limitacao_wrist
     BodyLimitation.IMPACT -> R.string.enum_limitacao_impact
+}
+
+/**
+ * O que cada acessório destrava (V66). Rótulo entre parênteses nos dois que podem confundir --
+ * `ELEVATED_SURFACE` precisa dizer que cadeira/sofá/mesa contam, senão ninguém marca a opção que
+ * quase todo mundo de casa satisfaz; `ANCHOR_POINT` precisa dizer que é pro elástico.
+ */
+@StringRes
+fun Accessory.rotulo(): Int = when (this) {
+    Accessory.BENCH -> R.string.enum_acessorio_bench
+    Accessory.ELEVATED_SURFACE -> R.string.enum_acessorio_elevated_surface
+    Accessory.STEP -> R.string.enum_acessorio_step
+    Accessory.PULLUP_BAR -> R.string.enum_acessorio_pullup_bar
+    Accessory.ANCHOR_POINT -> R.string.enum_acessorio_anchor_point
+    Accessory.DIP_STATION -> R.string.enum_acessorio_dip_station
 }
 
 /**

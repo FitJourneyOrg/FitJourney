@@ -932,6 +932,17 @@
     <!-- Passo AMBIENTE. As opções são `enum_ambiente_*_descricao`. -->
     <string name="quiz_ambiente_titulo">Onde você treina?</string>
 
+    <!-- Passo ACESSÓRIOS (V66). Só aparece quando o ambiente escolhido é CASA; na academia o
+         servidor assume os seis. Os rótulos das opções são `enum_acessorio_*`. -->
+    <string name="quiz_acessorios_titulo">O que você tem em casa?</string>
+    <string name="quiz_acessorios_ajuda">Além do peso, isso libera mais exercícios pro seu treino. Pode deixar sem marcar nada.</string>
+    <string name="enum_acessorio_bench">Banco ajustável</string>
+    <string name="enum_acessorio_elevated_surface">Apoio firme (cadeira, sofá ou mesa)</string>
+    <string name="enum_acessorio_step">Step ou caixa</string>
+    <string name="enum_acessorio_pullup_bar">Barra fixa</string>
+    <string name="enum_acessorio_anchor_point">Ponto de ancoragem (para elástico)</string>
+    <string name="enum_acessorio_dip_station">Paralelas</string>
+
     <!-- Passo SPLIT (ARCH #29). %1$d é o número de dias que a pessoa escolheu no passo anterior. -->
     <string name="quiz_split_titulo">Qual modelo de treino?</string>
     <string name="quiz_split_ajuda">Montamos com base nos seus %1$d dias. O recomendado já vem marcado. Mantenha ou troque.</string>
@@ -953,7 +964,7 @@
 
     <!-- Passo LIMITAÇÕES. Os rótulos das opções são `enum_limitacao_*`. -->
     <string name="quiz_limitacoes_titulo">Alguma limitação?</string>
-    <string name="quiz_limitacoes_ajuda">Vamos evitar exercícios que forcem essas regiões. Pode deixar em branco.</string>
+    <string name="quiz_limitacoes_ajuda">Isso não muda os exercícios sugeridos. Se você sente dor ou tem lesão, procure um profissional de saúde antes de treinar. Pode deixar em branco.</string>
 
 
     <!-- ============================ Comum (acrescentado na área de Programas e treino) ============================ -->
@@ -1317,6 +1328,8 @@
     <!-- Rótulos da coluna esquerda das linhas de informação. Curtos: ~14 caracteres. -->
     <string name="conta_email">E-mail</string>
     <string name="conta_plano">Plano</string>
+    <!-- Abre o QuizScreen em modo edição (fatia "acessórios no onboarding", passo 4). -->
+    <string name="conta_editar_perfil_treino">Editar perfil de treino</string>
     <!-- Encerra a sessão neste aparelho. Item destrutivo, ~20 caracteres. -->
     <string name="conta_sair">Sair da conta</string>
 

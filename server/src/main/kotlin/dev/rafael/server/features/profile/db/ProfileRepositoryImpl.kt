@@ -48,6 +48,11 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[environment] = profile.environment?.name
                     it[healthScreening] = profile.health?.toJson()
                     it[limitations] = profile.limitations.limitationsToJson()
+                    // V66: null = "não mudou a resposta nesta chamada", nunca apaga o que já
+                    // estava gravado. Cliente antigo que não manda o campo cai no default null
+                    // do DTO e não deve sobrescrever um "[]" (perguntado, nada declarado) ou uma
+                    // lista real com NULL de volta.
+                    profile.accessories?.let { acc -> it[accessories] = acc.accessoriesToJson() }
                     it[splitPreference] = profile.splitPreference?.name
                     it[unavailableDays] = profile.unavailableDays.daysToJson()
                     it[onboardingCompleted] = profile.onboardingCompleted
@@ -66,6 +71,8 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[environment] = profile.environment?.name
                     it[healthScreening] = profile.health?.toJson()
                     it[limitations] = profile.limitations.limitationsToJson()
+                    // Primeira linha do perfil: null aqui É o estado correto (nunca perguntado).
+                    it[accessories] = profile.accessories?.accessoriesToJson()
                     it[splitPreference] = profile.splitPreference?.name
                     it[unavailableDays] = profile.unavailableDays.daysToJson()
                     it[onboardingCompleted] = profile.onboardingCompleted
@@ -96,6 +103,7 @@ private fun ResultRow.toProfile(): Profile = Profile(
     environment = this[ProfilesTable.environment]?.let { TrainingEnvironment.valueOf(it) },
     health = this[ProfilesTable.healthScreening]?.toHealthScreening(),
     limitations = this[ProfilesTable.limitations]?.toLimitations() ?: emptyList(),
+    accessories = this[ProfilesTable.accessories]?.toAccessories(),
     splitPreference = this[ProfilesTable.splitPreference]?.let { SplitType.valueOf(it) },
     unavailableDays = this[ProfilesTable.unavailableDays]?.toDays() ?: emptyList(),
     onboardingCompleted = this[ProfilesTable.onboardingCompleted],

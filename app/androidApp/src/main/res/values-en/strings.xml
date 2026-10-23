@@ -569,6 +569,15 @@
 
     <string name="quiz_ambiente_titulo">Where do you train?</string>
 
+    <string name="quiz_acessorios_titulo">What do you have at home?</string>
+    <string name="quiz_acessorios_ajuda">Besides weight, this unlocks more exercises for your workout. You can leave everything unchecked.</string>
+    <string name="enum_acessorio_bench">Adjustable bench</string>
+    <string name="enum_acessorio_elevated_surface">Sturdy support (chair, couch or table)</string>
+    <string name="enum_acessorio_step">Step or box</string>
+    <string name="enum_acessorio_pullup_bar">Pull-up bar</string>
+    <string name="enum_acessorio_anchor_point">Anchor point (for a resistance band)</string>
+    <string name="enum_acessorio_dip_station">Dip station</string>
+
     <string name="quiz_split_titulo">Which training model?</string>
     <string name="quiz_split_ajuda">Built around your %1$d days. The recommended one is already selected. Keep it or change it.</string>
     <string name="quiz_split_recomendado">★ Recommended</string>
@@ -582,7 +591,7 @@
     <string name="quiz_saude_ciente">I understand that I should see a doctor before training.</string>
 
     <string name="quiz_limitacoes_titulo">Any limitations?</string>
-    <string name="quiz_limitacoes_ajuda">We\'ll avoid exercises that strain those areas. You can leave this blank.</string>
+    <string name="quiz_limitacoes_ajuda">This won\'t change the suggested exercises. If you\'re in pain or have an injury, see a health professional before training. You can leave this blank.</string>
 
 
     <!-- ============================ Common (programs and workouts) ============================ -->
@@ -811,6 +820,7 @@
     <string name="conta_nome_ajuda">How other people will see you in groups.</string>
     <string name="conta_email">Email</string>
     <string name="conta_plano">Plan</string>
+    <string name="conta_editar_perfil_treino">Edit training profile</string>
     <string name="conta_sair">Log out of your account</string>
 
 

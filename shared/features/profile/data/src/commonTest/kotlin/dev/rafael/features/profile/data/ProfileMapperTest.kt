@@ -1,5 +1,6 @@
 package dev.rafael.features.profile.data
 
+import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
@@ -53,5 +54,26 @@ class ProfileMapperTest {
     @Test
     fun `splitPreference nula (recomendado) sobrevive`() {
         assertNull(dto().copy(splitPreference = null).toDomain().splitPreference)
+    }
+
+    // ---- V66: accessories, a distinção null (nunca perguntado) x [] (perguntado, nada) ----
+
+    @Test
+    fun `accessories declarados sobrevivem ao round-trip`() {
+        val declarados = listOf(Accessory.BENCH, Accessory.ANCHOR_POINT)
+        val rt = dto().copy(accessories = declarados).toDomain().toDto()
+        assertEquals(declarados, rt.accessories)
+    }
+
+    @Test
+    fun `accessories vazia nao vira nula no round-trip`() {
+        val rt = dto().copy(accessories = emptyList()).toDomain().toDto()
+        assertEquals(emptyList<Accessory>(), rt.accessories)
+    }
+
+    /** Caminho de falha: o default é nulo -- quem não passa nada não pode acabar com `[]`. */
+    @Test
+    fun `accessories nao informado fica nulo, nao vazio`() {
+        assertNull(dto().toDomain().accessories)
     }
 }

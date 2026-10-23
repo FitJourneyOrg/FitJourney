@@ -1,8 +1,11 @@
 package dev.rafael.app.screens.onboarding
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -16,6 +19,8 @@ import org.koin.androidx.compose.koinViewModel
 @Composable
 fun QuizScreen(
     onCompleted: () -> Unit,
+    editing: Boolean = false,          // true = edição pós-onboarding (ContaScreen), não onboarding
+    onCancel: (() -> Unit)? = null,    // só faz sentido junto de `editing` -- onboarding não se abandona
     viewModel: QuizViewModel = koinViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -24,14 +29,38 @@ fun QuizScreen(
     LaunchedEffect(state.completed) {
         if (state.completed) onCompleted()
     }
+    // dispara só na entrada -- `editing` vem fixo da rota, não muda durante a vida da tela
+    LaunchedEffect(Unit) {
+        if (editing) viewModel.onEvent(QuizEvent.StartEditing)
+    }
 
     val steps = state.visibleSteps          // iniciante/saúde geral não veem o passo de FOCO (#26/#24)
     val stepIndex = steps.indexOf(state.step)
 
-    // `Scaffold` sem barra nenhuma: ele existe aqui SÓ para aplicar os insets. Ver a [REGRA]
-    // no KDoc do `AppNavHost` -- o Scaffold de lá não reserva inset para si, então tela sem
-    // Scaffold próprio desenha por baixo da status bar.
-    Scaffold { insetsDaTela ->
+    // `Scaffold` sem barra nenhuma no onboarding: ele existe aqui SÓ para aplicar os insets. Ver
+    // a [REGRA] no KDoc do `AppNavHost` -- o Scaffold de lá não reserva inset para si, então tela
+    // sem Scaffold próprio desenha por baixo da status bar. Em edição ganha uma barra com "fechar"
+    // -- diferente do onboarding, dá pra sair no meio sem terminar.
+    Scaffold(
+        topBar = {
+            if (editing) {
+                TopAppBar(
+                    title = {},
+                    navigationIcon = {
+                        IconButton(onClick = { onCancel?.invoke() }) {
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.comum_cancelar))
+                        }
+                    },
+                )
+            }
+        },
+    ) { insetsDaTela ->
+        if (state.isLoadingExisting) {
+            Box(Modifier.fillMaxSize().padding(insetsDaTela), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+            return@Scaffold
+        }
         Column(
             modifier = Modifier.fillMaxSize().padding(insetsDaTela).padding(24.dp),
         ) {
@@ -66,6 +95,9 @@ fun QuizScreen(
                     )
                     QuizStep.FOCUS -> FocusStep(state.focusAreas) { viewModel.onEvent(QuizEvent.FocusToggled(it)) }
                     QuizStep.ENVIRONMENT -> EnvironmentStep(state.environment) { viewModel.onEvent(QuizEvent.EnvironmentSelected(it)) }
+                    QuizStep.ACCESSORIES -> AccessoriesStep(state.accessories) {
+                        viewModel.onEvent(QuizEvent.AccessoryToggled(it))
+                    }
                     QuizStep.SPLIT -> SplitStep(
                         daysPerWeek = state.daysPerWeek ?: 3,
                         selected = state.splitPreference,
@@ -108,8 +140,11 @@ fun QuizScreen(
                     } else {
                         Text(
                             stringResource(
-                                if (stepIndex == steps.lastIndex) R.string.quiz_concluir
-                                else R.string.comum_continuar,
+                                when {
+                                    stepIndex != steps.lastIndex -> R.string.comum_continuar
+                                    editing -> R.string.comum_salvar
+                                    else -> R.string.quiz_concluir
+                                },
                             ),
                         )
                     }

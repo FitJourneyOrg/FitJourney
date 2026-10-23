@@ -13,6 +13,7 @@ import dev.rafael.app.R
 import dev.rafael.app.ui.descricao
 import dev.rafael.app.ui.rotulo
 import dev.rafael.app.ui.rotuloDoDiaDaSemana
+import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.HealthScreening
@@ -266,6 +267,28 @@ fun EnvironmentStep(
                 // `env.name` como fallback era rótulo derivado do identificador — o defeito que
                 // esta fatia já achou duas vezes. Agora o catálogo é exaustivo e não há fallback.
                 Text(stringResource(env.descricao()))
+            }
+        }
+    }
+}
+
+@Composable
+fun AccessoriesStep(selected: List<Accessory>, onToggle: (Accessory) -> Unit) {
+    Column {
+        Text(stringResource(R.string.quiz_acessorios_titulo), style = MaterialTheme.typography.titleLarge)
+        Text(
+            stringResource(R.string.quiz_acessorios_ajuda),
+            style = MaterialTheme.typography.bodyMedium,
+        )
+        Spacer(Modifier.height(16.dp))
+        Accessory.entries.forEach { acc ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onToggle(acc) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Checkbox(checked = acc in selected, onCheckedChange = { onToggle(acc) })
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(acc.rotulo()))
             }
         }
     }

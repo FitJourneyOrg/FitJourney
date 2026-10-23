@@ -1,5 +1,6 @@
 package dev.rafael.features.profile.domain.model
 
+import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.HealthScreening
@@ -22,5 +23,8 @@ data class Profile(
     val environment: TrainingEnvironment? = null,
     val limitations: List<BodyLimitation> = emptyList(),
     val health: HealthScreening? = null,
+    // V66: null = ambiente não é CASA (pergunta nem aparece). Lista (mesmo vazia) = CASA e
+    // respondeu.
+    val accessories: List<Accessory>? = null,
     val onboardingCompleted: Boolean,
 )

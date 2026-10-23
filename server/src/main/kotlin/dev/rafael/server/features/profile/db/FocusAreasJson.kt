@@ -1,5 +1,6 @@
 package dev.rafael.server.features.profile.db
 
+import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.HealthScreening
 import dev.rafael.contract.profile.MuscleGroup
@@ -23,6 +24,13 @@ fun String.toHealthScreening(): HealthScreening? =
 fun List<BodyLimitation>.limitationsToJson(): String = json.encodeToString(this)
 
 fun String.toLimitations(): List<BodyLimitation> =
+    if (isBlank()) emptyList() else json.decodeFromString(this)
+
+
+/** Acessórios <-> JSON (coluna accessories TEXT, V66). */
+fun List<Accessory>.accessoriesToJson(): String = json.encodeToString(this)
+
+fun String.toAccessories(): List<Accessory> =
     if (isBlank()) emptyList() else json.decodeFromString(this)
 
 
