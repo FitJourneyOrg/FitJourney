@@ -143,10 +143,15 @@ val appModule = module {
     // binding do `T`). Mesmo caso do `FilaDeSaida` acima: o `bind` soma o tipo, não troca.
     single { ExecutorDeTreino(get(), get()) } bind ExecutorDeOperacao::class
     single { ExecutorDePrograma(get()) } bind ExecutorDeOperacao::class
+    single { dev.rafael.app.data.notificacoes.ExecutorDeNotificacao(get()) } bind ExecutorDeOperacao::class
     single {
         ProcessadorDeOutbox(
             outbox = get<Outbox>(),
-            executores = listOf(get<ExecutorDeTreino>(), get<ExecutorDePrograma>()),
+            executores = listOf(
+                get<ExecutorDeTreino>(),
+                get<ExecutorDePrograma>(),
+                get<dev.rafael.app.data.notificacoes.ExecutorDeNotificacao>(),
+            ),
         )
     }
 
@@ -179,9 +184,29 @@ val appModule = module {
     // Amizades (#35): online-only, sem repositório de cache. Ver KDoc de `Amizades`.
     single<dev.rafael.app.data.amizades.Amizades> { dev.rafael.app.data.amizades.AmizadesApi(get()) }
 
-    // Notificações e push (F.1).
-    single<dev.rafael.app.data.notificacoes.Notificacoes> {
+    // Notificações e push (F.1). Cache-first desde 2026-10-22 (fatia "notificações offline"):
+    // `Notificacoes` continua a MESMA interface de sempre (listar()/marcarComoLidas() one-shot) --
+    // só o que está atrás dela mudou. `NotificacoesRemota` isola as chamadas de rede puras
+    // (mesmo corpo que antes), e o repositório decide cache vs. rede/outbox.
+    single<dev.rafael.app.data.notificacoes.NotificacoesRemota> {
         dev.rafael.app.data.notificacoes.NotificacoesApi(get())
+    }
+    single<dev.rafael.app.data.notificacoes.NotificacaoLocalDataSource> {
+        dev.rafael.app.data.notificacoes.NotificacaoLocalDataSourceImpl(
+            db = get(),
+            tokenProvider = get(),
+            clock = get(),
+        )
+    }
+    single<dev.rafael.app.data.notificacoes.Notificacoes> {
+        dev.rafael.app.data.notificacoes.NotificacoesRepositoryImpl(
+            remote = get(),
+            local = get(),
+            stamps = get(),
+            outbox = get(),
+            agendador = get(),
+            processador = get(),
+        )
     }
     single { dev.rafael.app.push.RegistroDePush(androidContext(), get()) }
     // Bus de push: liga "chegou notificação" a "recarregue a tela". Sem ele, o badge só sobe

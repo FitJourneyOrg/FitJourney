@@ -150,10 +150,17 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
     // O contador acompanha a NAVEGAÇÃO em vez de fazer polling: trocar de tela-raiz é o momento
     // em que a pessoa olha para a barra, e pedido de amizade não é feed para justificar polling.
     //
+    // A chave tinha sido `entry?.destination?.route` -- a rota EXATA, não a aba. Isso refazia a
+    // pergunta em QUALQUER navegação (Perfil, EditarPerfil, Library, detalhe de treino...), não só
+    // ao trocar de aba, porque cada tela de detalhe é uma rota diferente da raiz. `abaAtual` é o
+    // mesmo cálculo de `mostrarAbas` acima: só muda ao entrar/saltar entre as 4 raízes, e fica
+    // `null` em qualquer tela de detalhe -- onde a barra nem aparece para alguém olhar o número.
+    //
     // B4: SÓ com sessão. Na Splash e no Login o GET não pode dar certo (não há token), e a chave
     // `uidAtual` rearma o efeito quando a sessão aparece, que é quando a pergunta passa a valer.
-    LaunchedEffect(entry?.destination?.route, uidAtual) {
-        if (uidAtual != null) contador.atualizar()
+    val abaAtual = BottomTab.entries.firstOrNull { tab -> entry?.destination?.hasRoute(tab.routeClass) == true }
+    LaunchedEffect(abaAtual, uidAtual) {
+        if (uidAtual != null && abaAtual != null) contador.atualizar()
     }
 
     // ...e o push, que é o outro momento em que o número muda sem a pessoa fazer nada. Sem isto,
@@ -738,11 +745,20 @@ fun AppNavHost(destinoDoPush: StateFlow<DestinoDePush?> = MutableStateFlow(null)
             IdiomaScreen(onBack = { nav.popBackStack() })
         }
 
+        composable<AppRoute.EditarPerfil> {
+            QuizScreen(
+                editing = true,
+                onCancel = { nav.popBackStack() },
+                onCompleted = { nav.popBackStack() },
+            )
+        }
+
         composable<AppRoute.Conta> {
             ContaScreen(
                 onBack = { nav.popBackStack() },
                 onVerBloqueados = { nav.navigate(AppRoute.Bloqueados) },
                 onIdioma = { nav.navigate(AppRoute.IdiomaDaInterface) },
+                onEditarPerfilDeTreino = { nav.navigate(AppRoute.EditarPerfil) },
                 onSaiu = {
                     // Fecha o menu junto: sair com o drawer aberto deixava um painel sem dono
                     // por cima da tela de login.

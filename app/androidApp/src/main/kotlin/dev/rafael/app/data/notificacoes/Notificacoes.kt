@@ -17,10 +17,15 @@ import io.ktor.http.contentType
 /**
  * A central de notificações e o registro de aparelho (F.1).
  *
- * Online-only, como o resto da Fase 6 — mas aqui há um motivo a mais e ele é decisivo: **a
- * notificação não-lida é um estado do SERVIDOR**, e o contador do ícone precisa refletir o que
- * está lá, não o que este aparelho viu por último. Alguém que marca tudo como lido no tablet
- * espera o celular concordar.
+ * CACHE-FIRST desde 2026-10-22 (fatia "notificações offline") -- este CONTRATO não mudou uma
+ * letra, só a implementação por trás dele: era [NotificacoesApi] ligada direto na rede, agora é
+ * [NotificacoesRepositoryImpl]. É por isso que [ContadorDeNaoLidas] e [NotificacoesViewModel]
+ * não precisaram mudar: eles já pediam exatamente isto, e não precisam saber que existe um
+ * banco local por trás.
+ *
+ * `listar()`: offline com sincronização anterior, devolve o último estado conhecido em vez de
+ * falhar -- é o que resolve "modo avião some a lista". `marcarComoLidas()`: grava local na hora
+ * e enfileira o envio -- é o que resolve "marcar como lida offline".
  */
 interface Notificacoes {
     suspend fun listar(): AppResult<List<NotificacaoDto>>
@@ -32,7 +37,22 @@ interface Notificacoes {
     suspend fun darBaixaNoDispositivo(token: String): AppResult<Unit>
 }
 
-class NotificacoesApi(private val client: HttpClient) : Notificacoes {
+/**
+ * Acesso cru à rede (ARCH #30: todo repositório cache-first separa REMOTO de LOCAL). Quem
+ * monta a experiência cache-first é [NotificacoesRepositoryImpl], que usa isto por dentro.
+ *
+ * `marcarComoLidas()` é GLOBAL por desenho do servidor -- um POST sem id, "marque tudo". É por
+ * isso que a marcação no outbox usa um alvo fixo por conta, não por notificação (ver
+ * [NotificacoesRepositoryImpl.ALVO_MARCAR_LIDAS]).
+ */
+interface NotificacoesRemota {
+    suspend fun listar(): AppResult<List<NotificacaoDto>>
+    suspend fun marcarComoLidas(): AppResult<Unit>
+    suspend fun registrarDispositivo(token: String): AppResult<Unit>
+    suspend fun darBaixaNoDispositivo(token: String): AppResult<Unit>
+}
+
+class NotificacoesApi(private val client: HttpClient) : NotificacoesRemota {
 
     private val base = HttpClientFactory.BASE_URL
 
