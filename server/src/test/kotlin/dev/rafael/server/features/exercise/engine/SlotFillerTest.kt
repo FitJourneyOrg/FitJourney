@@ -53,6 +53,7 @@ class SlotFillerTest {
         ambiente = null,
         familia = null,
         acessorios = emptySet(),
+        rirMinimoSeguranca = false,
     )
 
     private fun slot(
