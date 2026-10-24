@@ -170,4 +170,5 @@ internal fun ResultRow.toExercise(nomeTraduzido: String? = null): Exercise = Exe
         if (this@toExercise[ExercisesTable.requiresStep]) add(Accessory.STEP)
         if (this@toExercise[ExercisesTable.requiresAnchorPoint]) add(Accessory.ANCHOR_POINT)
     },
+    rirMinimoSeguranca = this[ExercisesTable.rirMinimoSeguranca],
 )
