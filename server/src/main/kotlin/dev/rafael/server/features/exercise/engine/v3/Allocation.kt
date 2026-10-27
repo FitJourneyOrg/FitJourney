@@ -16,28 +16,49 @@ import kotlin.math.floor
  */
 object PriorityAllocation {
 
-    /** "Como alocamos" — ordem de sacrifício declarada na especificação. */
-    val ORDEM_SACRIFICIO: List<TargetMuscle> = listOf(
-        TargetMuscle.FOREARMS, TargetMuscle.CALVES, TargetMuscle.CORE, TargetMuscle.GLUTES,
-        TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.SHOULDERS,
-    )
-
     /**
-     * Peso do excedente proporcional (especificação + `spec_v3.py`). Músculos fora de
-     * `ORDEM_SACRIFICIO` (CHEST, BACK, QUADS, POSTERIOR) nunca são rebaixados nem sacrificados —
-     * ficam protegidos no piso mesmo quando ele, por si só, excede a capacidade (ver
-     * `alocacao sob escassez extrema nao garante caber na capacidade` no teste).
+     * Peso do excedente proporcional (especificação + `spec_v3.py`). Fonte única: também é a
+     * partir deste peso que `ORDEM_SACRIFICIO`, abaixo, é derivada — nunca o contrário.
      */
     val PESO_PRIORIDADE: Map<TargetMuscle, Double> = mapOf(
         TargetMuscle.CHEST to 1.0, TargetMuscle.BACK to 1.1, TargetMuscle.SHOULDERS to 0.9,
         TargetMuscle.QUADS to 1.0, TargetMuscle.POSTERIOR to 0.9, TargetMuscle.GLUTES to 0.7,
         TargetMuscle.BICEPS to 0.5, TargetMuscle.TRICEPS to 0.55, TargetMuscle.FOREARMS to 0.2,
-        TargetMuscle.CALVES to 0.4, TargetMuscle.CORE to 0.5,
+        TargetMuscle.CALVES to 0.4,
     )
+
+    /**
+     * Fronteira do conjunto protegido (Fatia 8, decisão "fronteira A", 2026-10-24, medida contra
+     * a "fronteira B" = +SHOULDERS: B zera POSTERIOR em 12/720 perfis, contra a decisão (d) da
+     * mesma fatia — descartada). Estes 4 nunca são rebaixados nem sacrificados — ficam
+     * protegidos no piso mesmo quando ele, por si só, excede a capacidade (ver
+     * `corte proporcional pode remover um dos 4 intocaveis` no teste); só o corte proporcional
+     * os alcança, quando sacrificar todo o resto (`ORDEM_SACRIFICIO`) não basta.
+     */
+    val PROTEGIDOS_ALOCACAO: Set<TargetMuscle> = setOf(
+        TargetMuscle.CHEST, TargetMuscle.BACK, TargetMuscle.QUADS, TargetMuscle.POSTERIOR,
+    )
+
+    /**
+     * "Como alocamos" — ordem de sacrifício. **`[INV]` fonte única** (2026-10-24): SEMPRE
+     * derivada de `PESO_PRIORIDADE` (peso crescente — quem pesa menos sacrifica primeiro), nunca
+     * mantida à mão — as duas nunca podem discordar, por construção. Desempate: `ordinal`
+     * ascendente, mesmo critério de `prioridade` em `alocar()` abaixo. Até hoje era lista fixa e
+     * discordava do peso em GLUTES (protegido demais, sacrificado tarde demais) e BICEPS (leve
+     * demais, sacrificado cedo demais) — achado da bateria de coerência da Fatia 8. Medido nos
+     * 720 perfis (oráculo, script descartável): a correção NÃO muda nenhum dos 156 eventos de
+     * zeramento da Fatia 8 — nesses perfis o laço de sacrifício nunca é alcançado (a soma dos
+     * pisos de base, antes de qualquer sacrifício, já cabe na capacidade). A `[INV]` vale pela
+     * consistência interna, não por ter corrigido esse sintoma — ver
+     * `docs/historico/motor-v3-fatia-8.md`.
+     */
+    val ORDEM_SACRIFICIO: List<TargetMuscle> = TargetMuscle.entries
+        .filter { it !in PROTEGIDOS_ALOCACAO }
+        .sortedWith(compareBy<TargetMuscle> { PESO_PRIORIDADE.getValue(it) }.thenBy { it.ordinal })
 
     private val SO_ISOLAMENTO = setOf(
         TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS,
-        TargetMuscle.CALVES, TargetMuscle.CORE,
+        TargetMuscle.CALVES,
     )
 
     /** Piso de séries do primeiro papel: 3 no composto, 2 num músculo só-isolamento. */

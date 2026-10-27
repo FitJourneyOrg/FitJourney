@@ -13,12 +13,18 @@ import kotlin.test.assertTrue
  */
 class AllocationTest {
 
-    // alvo avançado − indireto avançado (Fatia 1), FOREARMS e CORE ficam em zero.
+    // ENTRADAS HISTÓRICAS, não a contabilidade de hoje: eram alvo avançado − indireto avançado
+    // da Fatia 1, quando o antebraço recebia 12 de indireto e ficava com 0 de demanda direta.
+    // Depois de 2026-10-27 (pares `→ antebraço` removidos por falta de fonte) esse estado não
+    // acontece mais. Mantidas de propósito: são entradas VÁLIDAS de `alocar()`, e o que este
+    // arquivo testa é o comportamento dele sob escassez (ordem de sacrifício, rebaixamento,
+    // corte proporcional) — refazer o cenário mudaria todos os esperados sem testar mais nada.
+    // Débito registrado em `fontes/debitos.md`: atualizar o cenário quando o piso direto entrar.
     private val direta = mapOf(
         TargetMuscle.CHEST to 18.0, TargetMuscle.BACK to 20.0, TargetMuscle.SHOULDERS to 16.0,
         TargetMuscle.BICEPS to 7.0, TargetMuscle.TRICEPS to 6.0, TargetMuscle.FOREARMS to 0.0,
         TargetMuscle.QUADS to 16.0, TargetMuscle.POSTERIOR to 14.0, TargetMuscle.CALVES to 12.0,
-        TargetMuscle.GLUTES to 4.0, TargetMuscle.CORE to 0.0,
+        TargetMuscle.GLUTES to 4.0,
     )
     private val indireto = mapOf(
         TargetMuscle.BICEPS to 8.0, TargetMuscle.TRICEPS to 10.0, TargetMuscle.FOREARMS to 12.0,
@@ -130,14 +136,29 @@ class AllocationTest {
     }
 
     @Test
-    fun `ordem de sacrificio e a declarada na especificacao`() {
+    fun `ordem de sacrificio e derivada do peso, nao mais lista fixa`() {
+        // Fatia 8, 2026-10-24: GLUTES (peso 0,7) e BICEPS (peso 0,5) trocaram de posicao em
+        // relacao a lista antiga -- a ordem agora bate com PESO_PRIORIDADE crescente, por
+        // construcao (fonte unica).
         assertEquals(
             listOf(
-                TargetMuscle.FOREARMS, TargetMuscle.CALVES, TargetMuscle.CORE, TargetMuscle.GLUTES,
-                TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.SHOULDERS,
+                TargetMuscle.FOREARMS, TargetMuscle.CALVES, TargetMuscle.BICEPS,
+                TargetMuscle.TRICEPS, TargetMuscle.GLUTES, TargetMuscle.SHOULDERS,
             ),
             PriorityAllocation.ORDEM_SACRIFICIO,
         )
+    }
+
+    @Test
+    fun `invariante -- ORDEM_SACRIFICIO nunca discorda de PESO_PRIORIDADE`() {
+        // `[INV]` fonte unica (Fatia 8): a ordem e SEMPRE ascendente em peso, com desempate por
+        // ordinal -- nao e so um valor fixo que calha de bater hoje, e uma propriedade que vale
+        // para qualquer PESO_PRIORIDADE que o futuro venha a ter.
+        val pesos = PriorityAllocation.ORDEM_SACRIFICIO.map { PriorityAllocation.PESO_PRIORIDADE.getValue(it) }
+        assertEquals(pesos.sorted(), pesos)
+        for (musculo in PriorityAllocation.ORDEM_SACRIFICIO) {
+            assertTrue(musculo !in PriorityAllocation.PROTEGIDOS_ALOCACAO)
+        }
     }
 
     @Test

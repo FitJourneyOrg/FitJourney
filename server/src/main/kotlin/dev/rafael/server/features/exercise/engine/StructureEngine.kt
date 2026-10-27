@@ -155,7 +155,7 @@ class StructureEngine {
     /** Posição do exercício dentro do músculo → papel. */
     private fun roleFor(target: TargetMuscle, index: Int): SlotRole = when (target) {
         // Isolamento puro (não tem composto-âncora confiável no nosso modelo).
-        TargetMuscle.CALVES, TargetMuscle.CORE,
+        TargetMuscle.CALVES,
         TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS -> SlotRole.ISOLAMENTO
         else -> when (index) {
             0 -> SlotRole.COMPOSTO_PESADO
@@ -195,7 +195,7 @@ class StructureEngine {
 
     // ---- grupos de músculos por tipo de dia ----
     private val UPPER = setOf(TargetMuscle.CHEST, TargetMuscle.BACK, TargetMuscle.SHOULDERS, TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS)
-    private val LOWER = setOf(TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.CALVES, TargetMuscle.GLUTES, TargetMuscle.CORE)
+    private val LOWER = setOf(TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.CALVES, TargetMuscle.GLUTES)
     private val PUSH = setOf(TargetMuscle.CHEST, TargetMuscle.SHOULDERS, TargetMuscle.TRICEPS)
     private val PULL = setOf(TargetMuscle.BACK, TargetMuscle.BICEPS, TargetMuscle.FOREARMS)
     private val LEGS = setOf(TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.CALVES, TargetMuscle.GLUTES)
@@ -208,7 +208,7 @@ class StructureEngine {
         TargetMuscle.CHEST, TargetMuscle.BACK, TargetMuscle.SHOULDERS,
         TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.GLUTES,
         TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS,
-        TargetMuscle.CALVES, TargetMuscle.CORE,
+        TargetMuscle.CALVES,
     )
 
     // Prioridade quando o dia estoura o teto: compostos grandes sempre; pequenos rotacionam.
@@ -218,6 +218,6 @@ class StructureEngine {
     )
     private val smallMuscles = listOf(
         TargetMuscle.GLUTES, TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS,
-        TargetMuscle.CALVES, TargetMuscle.CORE,
+        TargetMuscle.CALVES,
     )
 }

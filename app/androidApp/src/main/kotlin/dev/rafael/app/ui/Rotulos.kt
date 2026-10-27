@@ -55,7 +55,6 @@ fun MuscleGroup.rotulo(): Int = when (this) {
     MuscleGroup.SHOULDERS -> R.string.enum_musculo_shoulders
     MuscleGroup.LEGS -> R.string.enum_musculo_legs
     MuscleGroup.GLUTES -> R.string.enum_musculo_glutes
-    MuscleGroup.CORE -> R.string.enum_musculo_core
 }
 
 @StringRes

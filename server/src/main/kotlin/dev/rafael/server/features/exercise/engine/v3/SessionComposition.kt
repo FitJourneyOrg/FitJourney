@@ -25,7 +25,7 @@ object SessionComposition {
 
     private val SO_ISOLAMENTO = setOf(
         TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS,
-        TargetMuscle.CALVES, TargetMuscle.CORE,
+        TargetMuscle.CALVES,
     )
     private const val PISO_COMPOSTO = 3
     private const val PISO_ACESSORIO = 3

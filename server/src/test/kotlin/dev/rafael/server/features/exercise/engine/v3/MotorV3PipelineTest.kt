@@ -39,37 +39,44 @@ class MotorV3PipelineTest {
         assertEquals(4, resultado.iteracoes)
         assertEquals(
             mapOf(
-                TargetMuscle.BACK to 14, TargetMuscle.BICEPS to 3, TargetMuscle.CALVES to 6,
-                TargetMuscle.CHEST to 12, TargetMuscle.GLUTES to 1, TargetMuscle.POSTERIOR to 9,
-                TargetMuscle.QUADS to 10, TargetMuscle.SHOULDERS to 9, TargetMuscle.TRICEPS to 1,
+                TargetMuscle.BACK to 13, TargetMuscle.BICEPS to 3, TargetMuscle.CALVES to 6,
+                TargetMuscle.CHEST to 11, TargetMuscle.FOREARMS to 3, TargetMuscle.GLUTES to 2,
+                TargetMuscle.POSTERIOR to 8, TargetMuscle.QUADS to 9, TargetMuscle.SHOULDERS to 9,
+                TargetMuscle.TRICEPS to 1,
             ),
             resultado.estado.alocado,
         )
         assertEquals(
             mapOf(
-                TargetMuscle.BACK to 14, TargetMuscle.BICEPS to 3, TargetMuscle.CALVES to 6,
-                TargetMuscle.CHEST to 12, TargetMuscle.GLUTES to 2, TargetMuscle.POSTERIOR to 9,
-                TargetMuscle.QUADS to 10, TargetMuscle.SHOULDERS to 9, TargetMuscle.TRICEPS to 2,
+                TargetMuscle.BACK to 13, TargetMuscle.BICEPS to 3, TargetMuscle.CALVES to 6,
+                TargetMuscle.CHEST to 11, TargetMuscle.FOREARMS to 3, TargetMuscle.GLUTES to 2,
+                TargetMuscle.POSTERIOR to 8, TargetMuscle.QUADS to 9, TargetMuscle.SHOULDERS to 9,
+                TargetMuscle.TRICEPS to 2,
             ),
             resultado.estado.entregue,
         )
         assertEquals(
             mapOf(
-                TargetMuscle.BACK to 8, TargetMuscle.CHEST to 8, TargetMuscle.POSTERIOR to 7,
-                TargetMuscle.QUADS to 6, TargetMuscle.SHOULDERS to 7,
+                TargetMuscle.BACK to 8, TargetMuscle.CHEST to 7, TargetMuscle.POSTERIOR to 8,
+                TargetMuscle.QUADS to 7, TargetMuscle.SHOULDERS to 7,
             ),
             resultado.estado.compostosSemana,
         )
         assertEquals(
             mapOf(
                 TargetMuscle.BACK to 0.0, TargetMuscle.BICEPS to 4.0, TargetMuscle.CALVES to 0.0,
-                TargetMuscle.CHEST to 0.0, TargetMuscle.CORE to 0.0, TargetMuscle.FOREARMS to 7.5,
-                TargetMuscle.GLUTES to 6.5, TargetMuscle.POSTERIOR to 0.0, TargetMuscle.QUADS to 0.0,
-                TargetMuscle.SHOULDERS to 0.0, TargetMuscle.TRICEPS to 7.5,
+                TargetMuscle.CHEST to 0.0, TargetMuscle.FOREARMS to 0.0,
+                TargetMuscle.GLUTES to 7.5, TargetMuscle.POSTERIOR to 0.0, TargetMuscle.QUADS to 0.0,
+                TargetMuscle.SHOULDERS to 0.0, TargetMuscle.TRICEPS to 7.0,
             ),
             resultado.indireto,
         )
-        assertEquals(mapOf("escassez" to 1, "sobe_ao_piso_do_isolamento" to 2), resultado.disparos)
+        // PROVISÓRIO — medido em 2026-10-27, ANTES DO PISO DIRETO. Reproduzido no oráculo com
+        // este mesmo catálogo sintético (`equipamento = MACHINE`, o default de `exercicioV3`).
+        // O antebraço aparece em `alocado`/`entregue` pela primeira vez (3 séries): os dois pares
+        // `→ antebraço` saíram da tabela de indireto por falta de fonte, então o alvo dele virou
+        // demanda direta de verdade.
+        assertEquals(mapOf("escassez" to 1, "sobe_ao_piso_do_isolamento" to 1), resultado.disparos)
         assertEquals(emptyList(), resultado.estado.vagasVazias)
     }
 }

@@ -52,7 +52,7 @@ class SlotFiller(seed: Long) {
         TargetMuscle.CHEST -> MuscleGroup.CHEST in ex.primaryMuscles
         TargetMuscle.BACK -> MuscleGroup.BACK in ex.primaryMuscles
         TargetMuscle.SHOULDERS -> MuscleGroup.SHOULDERS in ex.primaryMuscles
-        // Braço desmembrado (Fatia B): casa por category (como CALVES/CORE), não por primary.
+        // Braço desmembrado (Fatia B): casa por category (como CALVES), não por primary.
         TargetMuscle.BICEPS -> ex.category == ExerciseCategory.BICEPS
         TargetMuscle.TRICEPS -> ex.category == ExerciseCategory.TRICEPS
         TargetMuscle.FOREARMS -> ex.category == ExerciseCategory.FOREARMS
@@ -62,7 +62,6 @@ class SlotFiller(seed: Long) {
         TargetMuscle.CALVES -> ex.category == ExerciseCategory.CALVES
         // Glúteo: só primário GLUTES (removido o fallback HINGE que roubava o hip thrust do posterior).
         TargetMuscle.GLUTES -> MuscleGroup.GLUTES in ex.primaryMuscles
-        TargetMuscle.CORE -> MuscleGroup.CORE in ex.primaryMuscles || ex.category == ExerciseCategory.CORE
     }
 
     private fun pickBest(

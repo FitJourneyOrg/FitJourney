@@ -13,5 +13,4 @@ enum class MuscleGroup {
     @SerialName("SHOULDERS") SHOULDERS,
     @SerialName("LEGS") LEGS,
     @SerialName("GLUTES") GLUTES,
-    @SerialName("CORE") CORE,
 }
