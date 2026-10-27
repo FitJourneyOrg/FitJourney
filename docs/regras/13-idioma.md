@@ -1,0 +1,17 @@
+# Idioma (fatia G, ARCH #37)
+
+> Índice: `docs/regras/README.md` · Marcadores: [REGRA] imutável · [INV] invariante · [PROPOSTA] lacuna não ratificada.
+
+## Idioma (fatia G, ARCH #37)
+
+- **[REGRA]** **Texto que o usuário lê vive em UM lugar: o `strings.xml` do cliente.** O servidor manda dados, códigos e chaves, nunca prosa. Duas fontes de tradução divergem na primeira que alguém esquecer de atualizar; um catálogo só significa **uma** verificação só, e no cliente ela é o `MissingTranslation` do Lint, que é erro de build.
+- **[REGRA]** **Exceção única: a notificação.** O push tem de chegar com título e corpo prontos, porque mensagem só-dados **não aparece com o app fechado ou dormindo**, que é exatamente quando a notificação importa (já decidido no #36). Por isso o servidor tem um catálogo, e só um: os ~14 textos dos 7 avisos.
+- **[REGRA]** **Conteúdo de usuário não se traduz.** Título de desafio, comentário e motivo de denúncia ficam como foram escritos. Traduzir automaticamente seria **inventar palavras na boca de alguém**, e num grupo de conhecidos atribuir a uma pessoa uma frase que ela não disse é pior que a barreira de idioma.
+- **[REGRA]** O idioma mora no servidor (`users.locale`, V47), com `CHECK` de vocabulário fechado. Guardar só no aparelho seria mais barato e deixaria todo push em português para quem escolheu inglês. > **Metade do app traduzida é pior que nada**: a pessoa não conclui "falta traduzir", conclui que está quebrado.
+- **[REGRA]** **Ninguém tem o idioma trocado por uma atualização.** Quem já usa continua em pt-BR mesmo com o celular em inglês; o inglês passa a existir na tela de Conta, por escolha explícita. > **Recurso que muda a experiência de quem não pediu nada precisa de um gesto da pessoa.**
+- **[REGRA]** O idioma também pode ser trocado pelas **configurações do Android**, e isso é o comportamento certo. A sincronização com o servidor lê a locale ativa do app, não o que a nossa tela gravou: uma tela que fosse a única fonte da verdade dessincronizaria no primeiro usuário que usasse o caminho do sistema, e o sintoma seria só o push chegando no idioma antigo.
+- **[INV]** A cadeia de fallback é **exato → só a língua, ignorando a região → piso `pt-BR`**. Escrita e testada com dois idiomas justamente porque adicionar o terceiro só funciona se ela já existir. > **Idioma que não existe precisa cair em algum lugar decidido, ou cai onde der.**
+- **[INV]** **Entrada de sistema tolera, entrada de usuário recusa.** A coluna do banco e a locale do aparelho caem no padrão; uma tag inválida no `PATCH /me` é **400**. Quem pede `es` e recebe `200 OK` acredita que escolheu espanhol e atribui a falta de tradução a um defeito do app.
+- **[INV]** **A central não retraduz.** Notificação gravada nunca muda de texto (#36): quem troca de idioma continua vendo as antigas em português. É o invariante funcionando, e é o oposto do `rationale` do programa, que **é** derivado e sai no idioma atual. > **Notificação é registro; rationale é descrição.**
+- **[REGRA]** **Sem travessão** (`—`, `–`) em texto de usuário, em nenhum idioma, nem na documentação. Verificado por teste, não combinado, porque quem traduzir o sétimo idioma não vai ler o ADR.
+- **[PROPOSTA]** Nome de exercício continua em português até a fatia H. **É pré-requisito para declarar "100% traduzido"** — não implementar nada que dependa da decisão entre coluna `name_en` e tabela `exercise_translations` sem ratificação.
