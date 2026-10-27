@@ -156,7 +156,7 @@ class SessionCompositionTest {
 
     @Test
     fun `papeisPara isolamento puro para musculos SO_ISOLAMENTO, mesmo com muitas series`() {
-        assertEquals(listOf(Papel.ISOLAMENTO, Papel.ISOLAMENTO, Papel.ISOLAMENTO), SessionComposition.papeisPara(TargetMuscle.CORE, 10))
+        assertEquals(listOf(Papel.ISOLAMENTO, Papel.ISOLAMENTO, Papel.ISOLAMENTO), SessionComposition.papeisPara(TargetMuscle.BICEPS, 10))
         assertEquals(listOf(Papel.ISOLAMENTO), SessionComposition.papeisPara(TargetMuscle.CALVES, 3))
     }
 }

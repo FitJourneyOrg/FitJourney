@@ -40,12 +40,14 @@ object MotorV3Pipeline {
         val indireto: Map<TargetMuscle, Double>,
         val disparos: Map<String, Int>,
         val iteracoes: Int,
+        /** Etapa [7]: o que cada músculo de fato recebeu, e se basta. Ver [ProgramAudit]. */
+        val auditoria: Map<TargetMuscle, ProgramAudit.Musculo>,
     )
 
     fun gerar(entrada: Entrada, catalogoCompleto: List<Exercise>): Resultado {
         val (divisao, dias) = WeekStructure.divisao(entrada.dias)
         val alvo = TargetMuscle.entries.associateWith {
-            VolumeTargets.weeklySets(it, entrada.nivel, entrada.objetivo).toDouble()
+            VolumeTargets.weeklySets(it, entrada.nivel, entrada.objetivo)
         }
         val teto = CapacityModel.tetoDaSessao(
             minutos = entrada.minutos, dias = entrada.dias, nivel = entrada.nivel,
@@ -80,7 +82,15 @@ object MotorV3Pipeline {
             Triple(Estado(alocado, preenchidas, entregue, compostos, vazias), novo, disparos)
         }
 
-        return Resultado(divisao, capacidade, resultado.estado, resultado.indireto, resultado.disparos, resultado.iteracoes)
+        return Resultado(
+            divisao, capacidade, resultado.estado, resultado.indireto, resultado.disparos,
+            resultado.iteracoes,
+            auditoria = ProgramAudit.auditar(
+                alvo = alvo, entregue = resultado.estado.entregue,
+                indireto = resultado.indireto, treinaveis = treinaveis,
+                objetivo = entrada.objetivo,
+            ),
+        )
     }
 
     /** Espelha `motor_v3.py::medir_entregue()` — mede sobre o exercício REAL escolhido, nunca

@@ -23,7 +23,7 @@ object WeekStructure {
     )
     private val LOWER = setOf(
         TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.CALVES,
-        TargetMuscle.GLUTES, TargetMuscle.CORE,
+        TargetMuscle.GLUTES,
     )
     private val PUSH = setOf(TargetMuscle.CHEST, TargetMuscle.SHOULDERS, TargetMuscle.TRICEPS)
     private val PULL = setOf(TargetMuscle.BACK, TargetMuscle.BICEPS, TargetMuscle.FOREARMS)

@@ -32,20 +32,50 @@ object VolumeTargets {
         TargetMuscle.QUADS to V(6, 12, 16, 20),
         TargetMuscle.POSTERIOR to V(6, 10, 14, 18),
         TargetMuscle.CALVES to V(5, 9, 12, 16),
-        TargetMuscle.GLUTES to V(4, 8, 12, 16),
-        // Abdômen foi a zero (seu item 28): reservar capacidade que o catálogo não enche.
-        TargetMuscle.CORE to V(0, 0, 0, null),
+        // Glúteo 4/8/12 → **8/10/12** (2026-10-27). Mesma construção do *item 20* nos braços:
+        // alvo = indireto recebido + direto desejado. Medido, o glúteo recebe indireto **6/7/8**
+        // — quase plano, porque depende de quanto composto de quadríceps/posterior entra, não do
+        // nível —, então 8/10/12 entrega direto **2/3/4** e o ADVANCED fica **intocado** em 12.
+        //
+        // **Natureza do motivo: é decisão de PRODUTO, não inferência da literatura.** A isenção
+        // do iniciante no híbrido (no BEGINNER o indireto conta para o MEV) continua valendo como
+        // **regra geral**, sustentada por Iversen et al. 2021 e Gentil — essas fontes embasam a
+        // regra geral e **não** esta exceção. O glúteo é **exceção declarada** neste app porque é
+        // prioridade de mercado e zero exercício direto lê como programa incompleto.
+        //
+        // Descartado: 8/9/10 (o mínimo aritmético para cruzar o piso em cada nível) — derrubava o
+        // ADVANCED de 12 para 10, contra a premissa de volume crescente com o nível.
+        TargetMuscle.GLUTES to V(8, 10, 12, 16),
     )
 
-    /** Alvo semanal por músculo/nível. GENERAL_HEALTH usa o piso (MEV), igual ao motor antigo. */
-    fun weeklySets(muscle: TargetMuscle, level: Level, goal: Goal): Int {
+    /**
+     * Fator de objetivo sobre o ALVO SEMANAL (especificação, "Como as outras variáveis modulam"):
+     * ganhar 1,0 · perder 1,0 · **manter 0,6** · saúde geral usa o piso. Espelha
+     * `spec_v3.py::FATOR_OBJETIVO_ALVO`.
+     *
+     * **Não confundir com [CapacityModel.fatorObjetivo]**, que é o mesmo 0,6 aplicado ao teto da
+     * SESSÃO. A especificação manda aplicar nos dois ("esses fatores agora multiplicam também o
+     * teto da sessão, não só o alvo semanal") — e até 2026-10-27 este aqui faltava, o que dava a
+     * todo perfil `MAINTAIN` um alvo 67% maior que o do oráculo, em 180 dos 720 perfis. Defeito
+     * registrado como E10 em `docs/trabalho/motor-v3-fatia-8.md`.
+     */
+    fun fatorObjetivoAlvo(goal: Goal): Double = if (goal == Goal.MAINTAIN) 0.6 else 1.0
+
+    /**
+     * Alvo semanal por músculo/nível/objetivo. GENERAL_HEALTH usa o piso (MEV); os demais usam a
+     * coluna do nível vezes [fatorObjetivoAlvo], limitada ao MRV. Espelha `motor_v3.py::alvos()`
+     * termo a termo: `min(coluna × fator, teto)`.
+     */
+    fun weeklySets(muscle: TargetMuscle, level: Level, goal: Goal): Double {
         val v = table.getValue(muscle)
-        if (goal == Goal.GENERAL_HEALTH) return v.ini
-        return when (level) {
+        if (goal == Goal.GENERAL_HEALTH) return v.ini.toDouble()
+        val coluna = when (level) {
             Level.BEGINNER -> v.ini
             Level.INTERMEDIATE -> v.inter
             Level.ADVANCED -> v.adv
         }
+        val alvo = coluna * fatorObjetivoAlvo(goal)
+        return if (v.mrv != null) minOf(alvo, v.mrv.toDouble()) else alvo
     }
 
     /** Teto (MRV). `null` = sem teto definido ainda (abdômen, até o catálogo ter exercícios). */
@@ -56,23 +86,59 @@ object VolumeTargets {
      * a alocação sob escassez usa (Fatia 3): `min(direta, max(0, piso − indireto))`.
      */
     fun piso(muscle: TargetMuscle): Int = table.getValue(muscle).ini
+
+    /**
+     * Volume de MANUTENÇÃO (MV): o mínimo para **não perder**, que é menor que o MEV — o mínimo
+     * para **crescer** ([piso], a coluna do iniciante). São grandezas distintas na literatura (a
+     * RP publica as duas: bíceps MV ≈ 4 contra MEV ≈ 8) e a nossa tabela só tinha uma.
+     *
+     * `[PROPOSTA]` 2026-10-27: o fator é **derivado**, não tabela ratificada — reaproveita o
+     * fator de "manter", que já passou por revisão, aplicado ao piso. A derivação fecha com a
+     * decisão já tomada: para o iniciante, o alvo de `MAINTAIN` (0,6 × coluna do iniciante) É
+     * exatamente o MV, então "manter" passa a significar "treinar no volume de manutenção".
+     * Trocar por uma tabela revisada é trocar esta função.
+     */
+    fun minimoEfetivo(muscle: TargetMuscle, goal: Goal): Double =
+        piso(muscle) * fatorObjetivoAlvo(goal)
 }
 
 /**
  * Volume indireto: o motor conta meia série para o sinergista a cada série de composto do
- * doador. Duas exceções documentadas na especificação — ombro não entra como doador (o alvo
- * "ombro" é o deltoide inteiro, descontar subserviria lateral/posterior) e glúteo→posterior é
- * 0,2, não 0,5 (elevação pélvica/abdução treinam isquiotibial pouco).
+ * doador. Ombro não entra como doador (o alvo "ombro" é o deltoide inteiro, descontar
+ * subserviria lateral/posterior).
+ *
+ * **`[INV]` (2026-10-27): nenhum coeficiente aqui sem fonte registrada.** Três pares foram
+ * **removidos** nesta rodada por não ter nenhuma — `costas → antebraço` 0,5,
+ * `posterior → antebraço` 0,5 e `glúteo → posterior` 0,2. Eram eles que causavam o
+ * double-counting do antebraço (recebia 6/7/12 contra alvo 3/6/9, ficando com **zero** trabalho
+ * direto em todo nível) e o do posterior. Ver D-1/D-2 em
+ * `docs/propostas/volume-efetivo-PROPOSTA.md`.
+ *
+ * Fonte de cada par sobrevivente:
+ * - **peito/ombro → tríceps** — Pelland et al. 2025 (*Sports Medicine*, 67 estudos): entre
+ *   contar a série indireta como 0, 0,5 ou 1, a quantificação **fracionada** foi a de evidência
+ *   mais forte. Confiança **alta**.
+ * - **costas → bíceps** — Pelland et al. 2025, idem; Mannarino et al. 2021 mediu rosca +11,06%
+ *   contra remada +5,16% na espessura dos flexores do cotovelo, razão coerente com 0,5.
+ *   Confiança **alta**.
+ * - **quadríceps → glúteo** — Kubo et al. 2019: glúteo +6,7% só com agachamento. Confiança
+ *   **alta**.
+ * - **posterior → glúteo** — **extensão por analogia** do par irmão acima: a dobradiça também é
+ *   extensão de quadril (Kubo 2019). Confiança **média**. Zerá-lo contradiria a biomecânica que
+ *   sustenta o par do agachamento.
+ *
+ * Ressalvas que valem para todos: 0,5 é o melhor de **três valores testados**, não estimativa
+ * contínua, e os estudos são majoritariamente de não treinados jovens do sexo masculino. É
+ * heurística calibrável, não verdade.
  */
 object VolumeIndirectTable {
     /** doador -> (recipiente -> coeficiente). */
     private val coefficients: Map<TargetMuscle, Map<TargetMuscle, Double>> = mapOf(
         TargetMuscle.CHEST to mapOf(TargetMuscle.TRICEPS to 0.5),
         TargetMuscle.SHOULDERS to mapOf(TargetMuscle.TRICEPS to 0.5),
-        TargetMuscle.BACK to mapOf(TargetMuscle.BICEPS to 0.5, TargetMuscle.FOREARMS to 0.5),
-        TargetMuscle.POSTERIOR to mapOf(TargetMuscle.GLUTES to 0.5, TargetMuscle.FOREARMS to 0.5),
+        TargetMuscle.BACK to mapOf(TargetMuscle.BICEPS to 0.5),
+        TargetMuscle.POSTERIOR to mapOf(TargetMuscle.GLUTES to 0.5),
         TargetMuscle.QUADS to mapOf(TargetMuscle.GLUTES to 0.5),
-        TargetMuscle.GLUTES to mapOf(TargetMuscle.POSTERIOR to 0.2),
     )
 
     /**
