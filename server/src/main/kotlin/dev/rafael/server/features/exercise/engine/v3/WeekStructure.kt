@@ -89,10 +89,16 @@ object WeekStructure {
             val diasM = dias.indices.filter { musculo in dias[it].musculos }
             if (diasM.isEmpty()) continue
 
-            var total = totalOriginal
-            if (total < PISO_ISOLAMENTO) {
-                total = PISO_ISOLAMENTO
-                disparos["sobe_ao_piso_do_isolamento"] = (disparos["sobe_ao_piso_do_isolamento"] ?: 0) + 1
+            // `[INV]` (Fatia 8, 2026-10-27): aqui já não se sobe nada. Subir o total nesta etapa
+            // era aumentar volume DEPOIS de o orçamento fechar, e era a causa de
+            // `entregue > capacidade` em 167/720 perfis. A decisão migrou inteira para a etapa
+            // [3] ([PriorityAllocation.pisoPrescritivel]), que financia o piso dentro do
+            // orçamento ou zera o músculo. O que era mutação virou armadilha: se um total abaixo
+            // do piso chegar até aqui, a etapa [3] deixou passar e o programa está errado.
+            val total = totalOriginal
+            require(total >= PISO_ISOLAMENTO) {
+                "[INV] $musculo chegou à etapa [4] com $total série(s), abaixo do piso " +
+                    "prescritível ($PISO_ISOLAMENTO) — a etapa [3] deveria ter subido ou zerado"
             }
 
             var freq = maxOf(1, minOf(diasM.size, total / PriorityAllocation.pisoDoPapel(musculo)))

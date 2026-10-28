@@ -223,3 +223,99 @@ indireta" — a (iii) não está certa como está pra estes dois. A causa aponta
 sobra em `alocar()`: proporcional ao `PESO_PRIORIDADE` puro, sem levar em conta a demanda
 restante (`direta[m] − alocado[m]`) de cada músculo além de usá-la só como teto (`minOf`).
 Decisão pendente do Rafael sobre essa fórmula antes de fechar a Fatia 8.
+
+## Três medições que mudaram o tamanho do problema
+
+### A auditoria completa: o problema era 36× maior do que eu media (2026-10-26)
+
+Até aqui eu auditava apenas os músculos **zerados pelo mecanismo novo** (a opção (iii)) — 58
+eventos abaixo do mínimo. Ao conferir se o plano cobria as recomendações do relatório, medi o que
+nunca tinha medido: **todos os músculos de todos os 720 perfis**, com o motor como estava.
+
+**2.079 pares (perfil, músculo)** entregavam total (direto + indireto) abaixo de `VOLUME[m][0]`.
+Não 58. E atingia os protegidos: `SHOULDERS` em 279/720, pior razão **0,00**, com **204 perfis sem
+nenhuma série direta** de ombro.
+
+> **O escopo da medição definia o tamanho do problema.** Medir só o que o mecanismo novo tocava
+> fazia o defeito parecer ser do mecanismo — e sugeria consertar o mecanismo. O defeito era do
+> motor, e maior.
+
+### Item 8: o débito que eu mesmo escrevi estava mal diagnosticado
+
+**26/10, por mim:** o pool de CASA/BEGINNER tem 1 composto de costas e nenhum isolamento, logo
+**faltam exercícios no catálogo** — débito de curadoria, 63 pares.
+
+**27/10, medido:** os exercícios **existem**. O que os tira do pool é o **acessório** (ancoragem,
+banco, superfície elevada), e a matriz dos 720 simula CASA com **zero acessório declarado**.
+
+| cenário (360 perfis de CASA) | vagas vazias |
+|---|---|
+| sem acessório (a matriz) | **239** |
+| com **um banco** | **0** |
+
+E o conserto de produto já existia: a **V66 (22/10)** deu ao perfil onde guardar acessórios, e a
+fatia de onboarding fechou no mesmo dia.
+
+> **Débito escrito a partir da lista, sem medir a causa, aponta para a área errada.** Este mandava
+> curar catálogo; a causa era fixture de teste, e a solução estava em produção havia cinco dias.
+
+### Os dois achados do P0 (2026-10-27)
+
+**I1 — o catálogo injeta indireto que a prescrição não planejou.** `papel_trocado` dispara em
+**312/720** perfis, e no sentido **inverso** do que eu supunha: não é perder crédito, é **ganhar**
+crédito não previsto — `BICEPS` **+398 séries**, `FOREARMS` **+526** no somatório dos 720. A
+cadeia inteira passa por fora de qualquer decisão: *o catálogo não tem isolamento de costas → o
+motor põe um composto na vaga → o composto credita bíceps → o bíceps perde demanda direta → o
+bíceps é zerado.* Uma **lacuna de curadoria vira decisão de prescrição** sem passar por ninguém.
+Creditar pelo exercício real segue certo (Fatia 5); o que falta é o motor medir **o que a troca
+custou** — hoje ele conta que trocou, nunca o efeito. Débito aberto.
+
+**E9 — o alvo podia nascer abaixo do próprio piso.** `FATOR_OBJETIVO_ALVO` multiplicava o alvo
+**sem respeitar o piso**: em `MAINTAIN`/`BEGINNER` (fator 0,6 sobre a coluna do iniciante, que
+**é** o piso) os 10 músculos nasciam abaixo dele — peito 4,8 contra piso 8 —, **660 pares**.
+Não era bug de implementação: o código fazia o que a especificação mandava. Era **lacuna da
+especificação**, que declarava a coluna do iniciante como piso, declarava um multiplicador de
+objetivo, e nunca disse qual dos dois vence. Resolvido comparando contra o **MV ao lado do MEV**,
+em vez de arbitrar na etapa [1].
+
+> **A auditoria não arbitra.** Ela expõe os dois fatos (o status mede contra o alvo,
+> `atingiu_minimo` mede contra o piso) e deixa a decisão de prescrição fora do código. Arbitrar
+> ali seria enterrar uma decisão de produto dentro de uma peça de motor.
+
+## As duas lições da fatia (2026-10-27)
+
+### 1. O estouro de capacidade nunca foi excesso de volume
+
+Era **aumento de volume acontecendo fora do orçamento**. É a mesma frase para os três lugares onde
+o defeito morava, e é por isso que os números caíram em degraus em vez de de uma vez:
+
+| | `entregue > capacidade` | o que foi corrigido |
+|---|---|---|
+| Antes | **167/720** | o piso condicional subia o músculo depois do orçamento fechado |
+| Depois da etapa [3] | **27/720** | `piso_prescritivel()` passou a financiar o piso **dentro** do orçamento |
+| Depois da generalização | **0/720** | panturrilha e antebraço ainda subiam por fora na etapa [4] |
+
+Os **167 → 27 → 0 são a mesma correção aplicada em três lugares**, não três correções
+diferentes. O `sobe_ao_piso_do_isolamento` da etapa [4], que era o mecanismo original, hoje é um
+`[INV]` que falha alto e dispara **0 vez** nos 720 — a lógica migrou inteira para a etapa [3], que
+é onde o orçamento existe. Quando um número cai em degraus assim, vale perguntar se os degraus são
+problemas distintos ou o mesmo problema visto de três ângulos; aqui eram o mesmo, e tratá-los como
+distintos teria produzido três remendos em vez de uma mudança de lugar.
+
+### 2. Piso honrado em menos da metade dos casos não é garantia, é aspiração
+
+A regra de decisão entre o piso de 2 e o de 4 foi **fixada antes da medição**, de propósito: 4 é o
+número da literatura (MV da RP, Iversen 2021) e seria adotado se não aumentasse
+`entregue > capacidade` nem levasse músculo protegido abaixo do MEV. A medição deu
+**324/480 contra 228/480** de pagabilidade nos perfis INTER/ADV.
+
+**Piso honrado em menos da metade dos casos elegíveis não é garantia, é aspiração** — e declará-lo
+seria **repor exatamente a desonestidade que esta rodada removeu**. A rodada inteira foi sobre
+isso: tirar da tabela coeficientes sem fonte que fabricavam cobertura, trocar o zeramento cego
+pelo rótulo `MANUTENCAO`, marcar `pisoDiretoNegado` em vez de criar um status que escondesse a
+pergunta. Adotar um piso de 4 que a capacidade não paga em 52% dos casos seria escrever no
+contrato uma promessa que o motor não cumpre — a mesma classe de defeito, num campo novo.
+
+O corolário prático, que vale para a próxima fatia: **número de regra se escolhe pela
+pagabilidade medida, não pelo prestígio da fonte.** A literatura diz qual é o alvo desejável; o
+orçamento diz qual é declarável.

@@ -100,6 +100,38 @@ object VolumeTargets {
      */
     fun minimoEfetivo(muscle: TargetMuscle, goal: Goal): Double =
         piso(muscle) * fatorObjetivoAlvo(goal)
+
+    /**
+     * Piso DIRETO (`[REGRA]`, Fatia 8 / D-1, decisão do Rafael 2026-10-27): séries **diretas**
+     * por semana garantidas nos músculos que recebem crédito indireto sancionado.
+     *
+     * Não é para completar volume — esses casos já saem [ProgramAudit.Status.ATENDIDO] pelo
+     * efetivo. É para garantir ESTÍMULO DIRETO onde o composto não alcança: Brandão et al. 2020
+     * mediu a cabeça longa do tríceps crescendo +2,1% só com supino contra +17,5% com extensão.
+     *
+     * **2, não 4**, medido antes de decidir (regra de decisão fixada pelo Rafael antes da
+     * medição): o piso de 4 era honrado em 228/480 casos elegíveis contra 324/480 do piso de 2 —
+     * piso honrado em menos da metade dos casos não é garantia, é aspiração.
+     *
+     * Iniciante fica **isento** (regra geral do híbrido, Iversen 2021/Gentil): ele cresce com o
+     * composto, e o orçamento dele é o mais apertado. Preço medido da isenção: 57 pares
+     * BEGINNER/TRICEPS saem ATENDIDO com zero série direta.
+     *
+     * Financiado SEMPRE dentro do orçamento, nunca por fora
+     * (ver [PriorityAllocation.pisoPrescritivel]).
+     */
+    const val PISO_DIRETO = 2
+
+    /** Os três que recebem crédito indireto sancionado — ver [VolumeIndirectTable]. */
+    val PISO_DIRETO_MUSCULOS: Set<TargetMuscle> = setOf(
+        TargetMuscle.TRICEPS, TargetMuscle.BICEPS, TargetMuscle.GLUTES,
+    )
+
+    val PISO_DIRETO_NIVEIS: Set<Level> = setOf(Level.INTERMEDIATE, Level.ADVANCED)
+
+    /** Espelha `motor_v3.py::piso_direto()`. */
+    fun pisoDireto(muscle: TargetMuscle, level: Level): Int =
+        if (level in PISO_DIRETO_NIVEIS && muscle in PISO_DIRETO_MUSCULOS) PISO_DIRETO else 0
 }
 
 /**
@@ -140,6 +172,16 @@ object VolumeIndirectTable {
         TargetMuscle.POSTERIOR to mapOf(TargetMuscle.GLUTES to 0.5),
         TargetMuscle.QUADS to mapOf(TargetMuscle.GLUTES to 0.5),
     )
+
+    /**
+     * Os músculos que RECEBEM crédito indireto de algum doador.
+     *
+     * Exposto de propósito — e só isto, não a tabela — para o `[INV]` que amarra esta tabela ao
+     * piso de trabalho direto ([VolumeTargets.PISO_DIRETO_MUSCULOS]): o piso existe PARA compensar
+     * o crédito indireto, então um recebedor novo aqui obriga uma decisão lá (entrar na lista, ou
+     * a exclusão ser decidida e registrada). Ver `VolumeTargetsTest`.
+     */
+    val recebedoresDeCredito: Set<TargetMuscle> = coefficients.values.flatMap { it.keys }.toSet()
 
     /**
      * Indireto recebido por músculo, a partir das séries de composto por semana de cada doador.

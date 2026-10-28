@@ -105,7 +105,9 @@ específica, suspenda a C2 só naquela fatia.)
   `tools/curadoria/` é pipeline — **nenhum dos dois se limpa ao fechar fatia**.
 - **Leia trecho, não arquivo.** `offset`/`limit`, `grep -C`. Arquivo inteiro só quando o assunto
   for o arquivo inteiro.
-- **Peça saída filtrada** ao me mandar rodar Gradle (`--console=plain -q`, últimas 30 linhas).
+- **Peça saída filtrada** ao me mandar rodar Gradle (`--console=plain -q`, últimas 30 linhas). **O shell dele é PowerShell, não bash: `tail` não existe lá.** A forma certa é
+  `| Select-Object -Last 30`. Mandar `| tail -30` custa uma volta inteira — aconteceu em
+  2026-10-27.
 - **Uma fatia por sessão.** Assunto novo e não relacionado → peça sessão nova.
 - **Não repita no chat o que já está no código.** Se o KDoc explica, aponte para ele em uma linha.
 - **Subagente custa ~15x.** Só quando a exploração for ampla e o resultado couber num resumo.

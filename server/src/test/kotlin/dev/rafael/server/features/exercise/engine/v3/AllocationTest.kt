@@ -13,6 +13,53 @@ import kotlin.test.assertTrue
  */
 class AllocationTest {
 
+    // ----------------------------------------------------------------- piso prescritível (F8)
+
+    @Test
+    fun `piso prescritivel zera quem nao cabe no orcamento em vez de estourar`() {
+        // Caminho de FALHA do piso: orçamento de 6 com CHEST em 4 e dois pendentes de 1. CHEST
+        // está decidido (>= piso), BICEPS sobe a 2 e fecha os 6; FOREARMS não cabe e é ZERADO.
+        val disparos = mutableMapOf<String, Int>()
+        val saida = PriorityAllocation.pisoPrescritivel(
+            mapOf(TargetMuscle.CHEST to 4, TargetMuscle.BICEPS to 1, TargetMuscle.FOREARMS to 1),
+            listOf(TargetMuscle.CHEST, TargetMuscle.BICEPS, TargetMuscle.FOREARMS),
+            6.0, disparos,
+        )
+        assertEquals(mapOf(TargetMuscle.CHEST to 4, TargetMuscle.BICEPS to 2), saida)
+        assertEquals(1, disparos["sobe_ao_piso_dentro_do_orcamento"])
+        assertEquals(1, disparos["zerado_por_nao_caber_no_piso"])
+    }
+
+    @Test
+    fun `piso prescritivel nao inverte a prioridade - o gluteo nao perde a vaga para o triceps`() {
+        // Regressão medida (2026-10-27, oráculo): medindo o orçamento contra a FRAÇÃO dos
+        // pendentes, a série do tríceps ocupava a vaga na vez do glúteo, o glúteo era zerado e o
+        // tríceps subia com o que ele liberou — 18 vezes nos 720, contra a decisão de produto que
+        // põe o glúteo (peso 0,7) acima do tríceps (0,55).
+        val disparos = mutableMapOf<String, Int>()
+        val saida = PriorityAllocation.pisoPrescritivel(
+            mapOf(TargetMuscle.QUADS to 6, TargetMuscle.GLUTES to 1, TargetMuscle.TRICEPS to 1),
+            listOf(TargetMuscle.QUADS, TargetMuscle.GLUTES, TargetMuscle.TRICEPS),
+            8.0, disparos,
+        )
+        assertEquals(mapOf(TargetMuscle.QUADS to 6, TargetMuscle.GLUTES to 2), saida)
+        assertEquals(8, saida.values.sum(), "nunca por fora do orçamento")
+    }
+
+    @Test
+    fun `piso prescritivel com capacidade infinita sobe todo mundo`() {
+        // O perfil de REFERÊNCIA chega com capacidade infinita — `floor(inf).toInt()` não é
+        // representável, e o oráculo estourava `OverflowError` no caminho equivalente.
+        val disparos = mutableMapOf<String, Int>()
+        val saida = PriorityAllocation.pisoPrescritivel(
+            mapOf(TargetMuscle.CHEST to 1, TargetMuscle.FOREARMS to 1),
+            listOf(TargetMuscle.CHEST, TargetMuscle.FOREARMS),
+            Double.POSITIVE_INFINITY, disparos,
+        )
+        assertEquals(mapOf(TargetMuscle.CHEST to 2, TargetMuscle.FOREARMS to 2), saida)
+        assertEquals(null, disparos["zerado_por_nao_caber_no_piso"])
+    }
+
     // ENTRADAS HISTÓRICAS, não a contabilidade de hoje: eram alvo avançado − indireto avançado
     // da Fatia 1, quando o antebraço recebia 12 de indireto e ficava com 0 de demanda direta.
     // Depois de 2026-10-27 (pares `→ antebraço` removidos por falta de fonte) esse estado não
@@ -54,15 +101,26 @@ class AllocationTest {
         val disparos = mutableMapOf<String, Int>()
         val alocado = PriorityAllocation.alocar(direta, indireto, treinaveis, capacidade = 65.0 + 1.0 / 3, disparos)
 
+        // Fatia 8, piso prescritível (2026-10-27): TRICEPS e BICEPS saíam daqui com 1 série —
+        // fração que não se prescreve. Hoje TRICEPS SOBE ao piso do papel (2, só-isolamento)
+        // porque a sobra do orçamento paga, e BICEPS, que viria depois e não cabia, é ZERADO.
+        // Conferido contra o oráculo com estas mesmas entradas: saída idêntica.
         assertEquals(
             mapOf(
                 TargetMuscle.BACK to 14, TargetMuscle.CHEST to 12, TargetMuscle.QUADS to 10,
                 TargetMuscle.SHOULDERS to 10, TargetMuscle.POSTERIOR to 9, TargetMuscle.CALVES to 6,
-                TargetMuscle.TRICEPS to 1, TargetMuscle.BICEPS to 1, TargetMuscle.GLUTES to 2,
+                TargetMuscle.TRICEPS to 2, TargetMuscle.GLUTES to 2,
             ),
             alocado,
         )
-        assertEquals(mapOf("escassez" to 1), disparos)
+        assertEquals(
+            mapOf(
+                "escassez" to 1,
+                "sobe_ao_piso_dentro_do_orcamento" to 1,
+                "zerado_por_nao_caber_no_piso" to 1,
+            ),
+            disparos,
+        )
         assertEquals(65, alocado.values.sum())
     }
 
@@ -124,12 +182,18 @@ class AllocationTest {
         val disparos = mutableMapOf<String, Int>()
         val alocado = PriorityAllocation.alocar(direta, indireto, treinaveis, capacidade = 5.0, disparos)
 
-        assertEquals(mapOf(TargetMuscle.BACK to 4, TargetMuscle.CHEST to 1), alocado)
-        assertEquals(5, alocado.values.sum())
+        // Fatia 8, piso prescritível (2026-10-27): CHEST sobrava com 1 série e foi ZERADO —
+        // subi-lo ao piso do papel (3, tem composto) não caberia nos 5. **A soma cai de 5 para
+        // 4: sobra 1 série de capacidade sem uso, deliberadamente.** É o preço declarado da
+        // `[REGRA]`: orçamento ocioso é preferível a prescrição que não se executa. Conferido
+        // contra o oráculo com estas mesmas entradas: saída idêntica, soma 4.
+        assertEquals(mapOf(TargetMuscle.BACK to 4), alocado)
+        assertEquals(4, alocado.values.sum())
         assertEquals(
             mapOf(
                 "escassez" to 1, "rebaixamento" to 2, "sacrificio" to 5,
                 "sacrificio_proporcional" to 2, "corte_proporcional" to 1,
+                "zerado_por_nao_caber_no_piso" to 1,
             ),
             disparos,
         )

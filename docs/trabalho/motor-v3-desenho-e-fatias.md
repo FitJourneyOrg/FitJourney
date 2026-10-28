@@ -484,6 +484,8 @@ desta fatia existir.
 ### Fatia 9 — medição e invariantes
 Etapa [7] e [8], parte 2. Peça nova, e é a que fecha o padrão 1.
 
+> **Primeiro item da abertura desta fatia (decisão do Rafael, 2026-10-27): decidir onde mora o `tools/motor_sim/`.** Ele é o **oráculo** desta fatia — é contra ele que a varredura dos 720 em Kotlin compara. Em 2026-10-27 ele foi **recortado do `/tools/*` ignorado** no `.gitignore` (sem `__pycache__/`, `_to_delete/`, `_tmp*`), porque perdê-lo custa mais que o espaço que economiza. A **opção 2 ficou agendada para cá**: avaliar mover o oráculo para fora de `tools/` (que é bancada de script e pipeline de curadoria, não código de produto) para um lugar versionado por direito — candidato óbvio é ao lado do módulo que ele espelha. Decidir **antes** de começar a varredura, não depois.
+
 - `ProgramAudit`: indireto, atendimento, cobertura e duração, **todos sobre `entregue`**.
 - Invariantes como teste automatizado.
 - Aviso de honestidade: gatilho é músculo grande abaixo do piso, com texto acionável.
