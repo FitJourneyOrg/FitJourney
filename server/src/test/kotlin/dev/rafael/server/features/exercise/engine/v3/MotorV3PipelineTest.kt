@@ -37,28 +37,23 @@ class MotorV3PipelineTest {
         assertEquals("UPPER_LOWER", resultado.divisao)
         assertEquals(65.33333333333333, resultado.capacidade, absoluteTolerance = 1e-9)
         assertEquals(4, resultado.iteracoes)
-        assertEquals(
-            mapOf(
-                TargetMuscle.BACK to 13, TargetMuscle.BICEPS to 3, TargetMuscle.CALVES to 6,
-                TargetMuscle.CHEST to 11, TargetMuscle.FOREARMS to 3, TargetMuscle.GLUTES to 2,
-                TargetMuscle.POSTERIOR to 8, TargetMuscle.QUADS to 9, TargetMuscle.SHOULDERS to 9,
-                TargetMuscle.TRICEPS to 1,
-            ),
-            resultado.estado.alocado,
+        // ⭐ `alocado == entregue` é o fecho da Fatia 8. Este fixture ERA um dos 167 estouros:
+        // TRICEPS saía da etapa [3] com 1 série e a etapa [4] o subia a 2, levando o entregue a
+        // 66 séries contra capacidade 65,33. Agora o piso direto (2) entra na demanda ANTES da
+        // alocação, o tríceps sai com 3 e o total fecha em 65 — dentro do orçamento.
+        val esperado = mapOf(
+            TargetMuscle.BACK to 13, TargetMuscle.BICEPS to 3, TargetMuscle.CALVES to 5,
+            TargetMuscle.CHEST to 11, TargetMuscle.FOREARMS to 3, TargetMuscle.GLUTES to 2,
+            TargetMuscle.POSTERIOR to 8, TargetMuscle.QUADS to 9, TargetMuscle.SHOULDERS to 8,
+            TargetMuscle.TRICEPS to 3,
         )
-        assertEquals(
-            mapOf(
-                TargetMuscle.BACK to 13, TargetMuscle.BICEPS to 3, TargetMuscle.CALVES to 6,
-                TargetMuscle.CHEST to 11, TargetMuscle.FOREARMS to 3, TargetMuscle.GLUTES to 2,
-                TargetMuscle.POSTERIOR to 8, TargetMuscle.QUADS to 9, TargetMuscle.SHOULDERS to 9,
-                TargetMuscle.TRICEPS to 2,
-            ),
-            resultado.estado.entregue,
-        )
+        assertEquals(esperado, resultado.estado.alocado)
+        assertEquals(esperado, resultado.estado.entregue)
+        assertEquals(65, resultado.estado.entregue.values.sum(), "dentro da capacidade (65,33)")
         assertEquals(
             mapOf(
                 TargetMuscle.BACK to 8, TargetMuscle.CHEST to 7, TargetMuscle.POSTERIOR to 8,
-                TargetMuscle.QUADS to 7, TargetMuscle.SHOULDERS to 7,
+                TargetMuscle.QUADS to 7, TargetMuscle.SHOULDERS to 8,
             ),
             resultado.estado.compostosSemana,
         )
@@ -67,17 +62,24 @@ class MotorV3PipelineTest {
                 TargetMuscle.BACK to 0.0, TargetMuscle.BICEPS to 4.0, TargetMuscle.CALVES to 0.0,
                 TargetMuscle.CHEST to 0.0, TargetMuscle.FOREARMS to 0.0,
                 TargetMuscle.GLUTES to 7.5, TargetMuscle.POSTERIOR to 0.0, TargetMuscle.QUADS to 0.0,
-                TargetMuscle.SHOULDERS to 0.0, TargetMuscle.TRICEPS to 7.0,
+                TargetMuscle.SHOULDERS to 0.0, TargetMuscle.TRICEPS to 7.5,
             ),
             resultado.indireto,
         )
-        // PROVISÓRIO — medido em 2026-10-27, ANTES DO PISO DIRETO. Reproduzido no oráculo com
-        // este mesmo catálogo sintético (`equipamento = MACHINE`, o default de `exercicioV3`).
-        // O antebraço aparece em `alocado`/`entregue` pela primeira vez (3 séries): os dois pares
-        // `→ antebraço` saíram da tabela de indireto por falta de fonte, então o alvo dele virou
-        // demanda direta de verdade.
-        assertEquals(mapOf("escassez" to 1, "sobe_ao_piso_do_isolamento" to 1), resultado.disparos)
+        // Medido em 2026-10-27 com a Fatia 8 fechada. Reproduzido no oráculo com este mesmo
+        // catálogo sintético (`equipamento = MACHINE`, o default de `exercicioV3`).
+        //
+        // `sobe_ao_piso_do_isolamento` SAIU da lista: era a etapa [4] subindo volume depois de o
+        // orçamento fechar, e virou `[INV]` que falha alto. Nenhum
+        // `sobe_ao_piso_dentro_do_orcamento` no lugar dele — aqui o piso direto já resolve pela
+        // demanda, antes de a etapa [3] precisar corrigir nada.
+        assertEquals(mapOf("escassez" to 1), resultado.disparos)
         assertEquals(emptyList(), resultado.estado.vagasVazias)
+        assertEquals(
+            emptyList(),
+            resultado.auditoria.values.filter { it.pisoDiretoNegado }.map { it.musculo },
+            "com catálogo completo o piso direto cabe nos três",
+        )
     }
 }
 

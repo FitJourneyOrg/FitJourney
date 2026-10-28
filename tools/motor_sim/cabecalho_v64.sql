@@ -1,0 +1,61 @@
+-- V64 -- alvo de volume do motor: um exercicio, um alvo (motor v3, fatia 0, 2026-10-14).
+--
+-- GERADO por tools/motor_sim/gerar_v64.py a partir de tools/motor_sim/alvo_canonico.csv.
+-- Nao editar a mao; mudanca de alvo depois de aplicada e migration nova.
+--
+-- REGERADA em 2026-10-21, antes de ser aplicada em qualquer banco: a tabela canonica passou de 79
+-- para 147 nomes, saida da curadoria do catalogo (tools/curadoria_oficial/, aprovada pelo Rafael
+-- grupo a grupo). A versao de 79 esta em tools/motor_sim/historico/alvo_canonico_79.csv.
+--
+-- ============================================================================
+-- O DEFEITO
+-- ============================================================================
+-- O SlotFiller casava musculo com exercicio por DOIS criterios que se sobrepoem: QUADS e
+-- POSTERIOR por movement_pattern, GLUTES/CHEST/BACK/SHOULDERS por etiqueta em primary_muscles
+-- (um ARRAY). Medido na lista principal de entao (79): 5 casavam em dois alvos -- Agachamento
+-- Livre com Barra e os dois Afundos (QUADS+GLUTES), Levantamento Terra (POSTERIOR+GLUTES),
+-- Pullover com Halter (CHEST+BACK). Quem ficava com eles dependia da ordem de preenchimento e do
+-- score; o Afundo virava a ancora de gluteo com 10 series/semana no avancado. Nenhuma medicao do
+-- motor valia enquanto isso fosse verdade.
+--
+-- ============================================================================
+-- A DECISAO (ADR em docs/arch/, [REGRA] em docs/regras/01-motor-de-geracao.md)
+-- ============================================================================
+-- Coluna propria, de VALOR UNICO, so do servidor, no vocabulario de TargetMuscle (VolumeModel.kt).
+-- "Exatamente um alvo" passa a ser propriedade do schema, nao da ordem dos `if`.
+--   * Nao e MuscleGroup: aquele e o vocabulario do USUARIO (quiz de foco, filtro da biblioteca,
+--     progresso), esta no contrato e em ~60 arquivos, e e um array -- [LEGS, GLUTES] continuaria
+--     casando em dois.
+--   * Nao e heuristica por padrao: a proposta "GLUTES por HIP_THRUST/ABDUCTION" usava padroes que
+--     nao existem em MovementPattern; a Elevacao Pelvica e HINGE. O gluteo ficaria sem candidato.
+--   * primary_muscles continua como esta e serve ao catalogo, a UI e ao bonus de foco. volume_target
+--     serve a contabilidade de volume do motor. Sao papeis diferentes, de proposito.
+--
+-- Casos decididos (o resto e o unico alvo que o criterio antigo ja dava):
+--   Agachamento Livre com Barra, Afundo com Halteres, Afundo com Barra -> QUADS
+--   Levantamento Terra -> POSTERIOR
+--   Pullover com Halter -> CHEST (segue a category curada)
+--   Crucifixo Inverso Apoiado no Banco Inclinado -> SHOULDERS (deltoide posterior: a regra do
+--     ombro do v3 tira dele o segundo isolamento; o banco ja dizia SHOULDERS, so a planilha dizia BACK)
+--   Cadeira Adutora -> POSTERIOR (entrou na revisao de 21/10; nao existe alvo de adutor, e o
+--     criterio anatomico mais proximo e o posterior de coxa)
+--
+-- ============================================================================
+-- A REVISAO DE 21/10 (79 -> 147)
+-- ============================================================================
+-- A lista de 79 deixava perfis sem exercicio: quem treina em casa, quem e iniciante na academia e
+-- os grupos pequenos. A revisao foi feita grupo a grupo, com exercicios ja curados no catalogo,
+-- consolidados e de equipamento comum -- nenhum exercicio novo foi criado. Por alvo:
+--   CHEST 23, BACK 21, SHOULDERS 17, BICEPS 13, TRICEPS 13, FOREARMS 8,
+--   QUADS 15, POSTERIOR 11, CALVES 10, GLUTES 16.
+-- Os tres ultimos (Agachamento Sissy, Agachamento Sissy Ajoelhado e Extensao de Ombro com Faixa
+-- Elastica) entraram depois da simulacao do motor, que mostrou vaga de isolamento sem candidato
+-- em casa: quadriceps e costas so tinham isolado de maquina e de cabo.
+-- Os atributos que decidem QUAL dos 23 supinos entra na vaga (prioridade, relevancia, nivel
+-- maximo, ambiente, familia e os acessorios) vem na V65, com a taxonomia do catalogo inteiro.
+--
+-- NULL = fora da contabilidade do motor. So a lista principal recebe alvo nesta migration.
+-- Por NOME EXATO, conferido contra uma replica do banco (V1..V63 aplicadas em Postgres 16 limpo,
+-- 922 exercicios, 147 nomes casando uma linha cada). Nenhum dos 147 esta entre os 29 que a V65
+-- remove do catalogo.
+-- Tabela inteira validada por profissional com CREF.

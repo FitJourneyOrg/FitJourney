@@ -67,13 +67,19 @@ object MotorV3Pipeline {
             mesocicloAtual = entrada.mesocicloAtual,
         )
 
+        val pisoDiretoDe = TargetMuscle.entries.associateWith { VolumeTargets.pisoDireto(it, entrada.nivel) }
+
         val resultado = PontoFixoIndireto.iterar<Estado> { indireto ->
             val disparos = mutableMapOf<String, Int>()
             if (modoConservador) disparos["modo_conservador_ativo"] = 1
             val vazias = mutableListOf<Triple<String, TargetMuscle, SessionComposition.Papel>>()
 
-            val direta = TargetMuscle.entries.associateWith { m -> demandaDireta(alvo.getValue(m), indireto[m] ?: 0.0) }
-            val alocado = PriorityAllocation.alocar(direta, indireto, treinaveis, capacidade, disparos)
+            // Piso direto (Fatia 8 / D-1): entra na demanda ANTES da alocação, para que o
+            // orçamento seja disputado com ele dentro — nunca somado depois.
+            val direta = TargetMuscle.entries.associateWith { m ->
+                maxOf(pisoDiretoDe.getValue(m).toDouble(), demandaDireta(alvo.getValue(m), indireto[m] ?: 0.0))
+            }
+            val alocado = PriorityAllocation.alocar(direta, indireto, treinaveis, capacidade, disparos, pisoDiretoDe)
             val semana = WeekStructure.distribuirPelosDias(alocado, dias, disparos)
             val sessoesVagas = dias.zip(semana).map { (dia, series) -> dia.rotulo to SessionComposition.comporSessao(series, disparos) }
             val preenchidas = CatalogFiller.preencher(sessoesVagas, candidatos, disparos, vazias, modoConservador)
@@ -88,7 +94,7 @@ object MotorV3Pipeline {
             auditoria = ProgramAudit.auditar(
                 alvo = alvo, entregue = resultado.estado.entregue,
                 indireto = resultado.indireto, treinaveis = treinaveis,
-                objetivo = entrada.objetivo,
+                objetivo = entrada.objetivo, pisoDiretoDe = pisoDiretoDe,
             ),
         )
     }

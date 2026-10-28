@@ -72,12 +72,32 @@ class WeekStructureTest {
     }
 
     @Test
-    fun `escassez sem rebaixamento (capacidade 65,33) sobe ao piso do isolamento 2 vezes`() {
-        // Fixture C da Fatia 3: TRICEPS=1 e BICEPS=1, abaixo do piso de isolamento (2).
+    fun `total abaixo do piso prescritivel nao chega mais nesta etapa - vira INV que falha alto`() {
+        // Era a fixture C da Fatia 3: TRICEPS=1 e BICEPS=1 SUBIAM ao piso aqui, por fora do
+        // orçamento que a etapa [3] já havia fechado — e era essa a causa de
+        // `entregue > capacidade` em 167/720 perfis. A decisão migrou inteira para a etapa [3]
+        // (`PriorityAllocation.pisoPrescritivel`), que sobe DENTRO do orçamento ou zera o músculo.
+        // Esta etapa não corrige mais nada: ela denuncia quem passou.
         val alocado = mapOf(
             TargetMuscle.BACK to 14, TargetMuscle.CHEST to 12, TargetMuscle.QUADS to 10,
             TargetMuscle.SHOULDERS to 10, TargetMuscle.POSTERIOR to 9, TargetMuscle.CALVES to 6,
             TargetMuscle.TRICEPS to 1, TargetMuscle.BICEPS to 1, TargetMuscle.GLUTES to 2,
+        )
+        val erro = assertFailsWith<IllegalArgumentException> {
+            WeekStructure.distribuirPelosDias(alocado, diasDe(4), mutableMapOf())
+        }
+        assertTrue("[INV]" in erro.message!!, erro.message)
+        assertTrue("TRICEPS" in erro.message!!, erro.message)
+    }
+
+    @Test
+    fun `a mesma fixture, saneada pela etapa 3, distribui sem tocar em nada`() {
+        // O caminho feliz do teste acima: com TRICEPS e BICEPS já no piso (2), que é o que a
+        // etapa [3] entrega hoje, esta etapa não dispara nada.
+        val alocado = mapOf(
+            TargetMuscle.BACK to 14, TargetMuscle.CHEST to 12, TargetMuscle.QUADS to 10,
+            TargetMuscle.SHOULDERS to 10, TargetMuscle.POSTERIOR to 9, TargetMuscle.CALVES to 6,
+            TargetMuscle.TRICEPS to 2, TargetMuscle.BICEPS to 2, TargetMuscle.GLUTES to 2,
         )
         val disparos = mutableMapOf<String, Int>()
         val semana = WeekStructure.distribuirPelosDias(alocado, diasDe(4), disparos)
@@ -91,7 +111,7 @@ class WeekStructureTest {
             ),
             semana,
         )
-        assertEquals(mapOf("sobe_ao_piso_do_isolamento" to 2), disparos)
+        assertEquals(emptyMap(), disparos)
     }
 
     @Test

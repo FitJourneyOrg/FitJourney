@@ -456,6 +456,86 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   **o coeficiente `glúteo → posterior` sem fonte** — 0,2 × 4 séries de composto = 0,8. Oráculo
   hoje: **32 testes, 0 vermelha**.
 
+### Motor v3 — etapa [3], PISO DE TRABALHO DIRETO E PISO PRESCRITÍVEL (Fatia 8, 2026-10-27)
+
+- **`[REGRA]` Piso de trabalho direto: 2 séries diretas por semana**, para `INTERMEDIATE` e
+  `ADVANCED`, nos músculos com **crédito indireto sancionado** (`TRICEPS`, `BICEPS`, `GLUTES`).
+  Iniciante **isento**, pela regra geral do híbrido (Iversen et al. 2021 / Gentil). **Não existe
+  para completar volume** — esses casos já saíam `ATENDIDO` —, existe para garantir **estímulo
+  direto onde o composto não alcança**: Brandão et al. 2020 (*J Strength Cond Res* 34(5)), a
+  cabeça longa do tríceps cresce **+2,1% só com supino contra +17,5% com extensão**, porque ela
+  cruza o ombro e no supino a ação é conflitante.
+- **Por que 2 e não 4, com a regra de decisão fixada ANTES da medição** (decisão do Rafael,
+  2026-10-27): 4 é o número da literatura (MV da Renaissance Periodization, Iversen 2021) e seria
+  adotado **se** não aumentasse `entregue > capacidade` e não levasse nenhum músculo protegido
+  abaixo do MEV. Medido: o piso de 4 é **honrado em 228/480** perfis INTER/ADV, contra
+  **324/480** do piso de 2. **Piso honrado em menos da metade dos casos elegíveis não é garantia,
+  é aspiração** — e declará-lo seria repor exatamente a desonestidade que esta rodada removeu.
+- **`[REGRA]` `piso_direto_negado` / `pisoDiretoNegado` é EIXO SEPARADO, não status novo.** O
+  músculo que tinha piso e não o recebeu continua com o status que o volume efetivo determina
+  (`ATENDIDO`, `MANUTENCAO`, …) e carrega a marca em paralelo. Decisão do Rafael: criar um sexto
+  status misturaria duas perguntas diferentes — *bateu o alvo?* e *teve trabalho direto?*
+  **Asserção (b) do D-1, na forma final:** nenhum `ATENDIDO` com direto = 0 **sem**
+  `pisoDiretoNegado`, no escopo INTER/ADV. Verde nos dois lados. Os `BEGINNER` ficam fora por
+  isenção declarada, e isso tem preço medido: **57 pares `BEGINNER`/`TRICEPS`** saem `ATENDIDO`
+  com zero série direta, cobertos só pelo crédito das pressões. Não é defeito; é a regra.
+- **`[REGRA]` Piso prescritível: dentro do orçamento, todo músculo recebe pelo menos o piso do
+  papel OU zero — nunca fração não prescritível.** Aplicado na **etapa [3]**
+  (`piso_prescritivel()` / `PriorityAllocation`), em ordem decrescente de `PESO_PRIORIDADE`, nos
+  **dois** caminhos de saída da alocação (com e sem escassez) — o caminho sem escassez foi o
+  resíduo de 6/720 da primeira tentativa, que só retornava inteiros arredondados. Quem não cabe
+  é **zerado**, não arredondado para baixo: meia série não se prescreve.
+- **A lição que isto fecha:** o estouro de capacidade **nunca foi excesso de volume**, era
+  **aumento de volume acontecendo fora do orçamento**. Os **167 → 27 → 0** são a mesma correção
+  aplicada em três lugares: o piso condicional da etapa [3], o `sobe_ao_piso_do_isolamento` da
+  etapa [4] (que agia por fora e hoje é `[INV]` que falha alto, 0 disparos nos 720) e, por fim,
+  panturrilha e antebraço, que subiam por fora pelo mesmo defeito. **`entregue > capacidade` é
+  0/720 — o critério de pronto da Fatia 8.**
+
+- **`[INV]` `entregue ≤ capacidade`, sempre.** Era o critério de pronto da Fatia 8 e passa a ser
+  invariante permanente: **0 violações nos 720**, afirmada nos dois lados. Não é "o número de
+  hoje" — é a propriedade. Os outros dois invariantes do mesmo critério estão acima: nenhum
+  músculo abaixo do mínimo efetivo **em silêncio** (resolvido pelo rótulo `MANUTENCAO`, etapa [7])
+  e nenhum `direto = 0` em INTER/ADV sem marcação (asserção (b) + `pisoDiretoNegado`).
+
+### Motor v3 — como LER os números dos 720 perfis (Fatia 8, 2026-10-27)
+
+- **`[REGRA]` A matriz dos 720 declara CASA sem acessório nenhum: ela é o PIOR CASO, não o
+  típico.** Decisão do Rafael: **a matriz fica como está** — é a fixture do teste diferencial,
+  onde pior caso é vantagem e estabilidade histórica vale mais que representatividade. O número
+  de produto existe **ao lado**, congelado em
+  `test_motor_v3.py::test_o_caso_realista_de_casa_tem_estes_outros_numeros`.
+- **`[INV]` Todo número medido sobre os 720 carrega esse viés e precisa declarar se sobrevive a
+  ele.** Verificado por medição em 2026-10-27, não por argumento:
+  - **Déficit de volume: robusto** (−6% com um banco). A conclusão "91% é capacidade física"
+    sobrevive, e toda medição anterior sobre os 720 continua valendo.
+  - **Vagas vazias: 100% artefato** — **239 → 0 com um banco sozinho**. Este número **nunca deve
+    ser citado como problema de produto**; citá-lo foi o que produziu um débito de "buraco de
+    catálogo em CASA" que a V66 já havia resolvido.
+- **Achado não investigado:** com os **6 acessórios** o resultado é **pior** que só com banco —
+  mais opções no pool mudam a escolha e pioram a cobertura. Registrado em `fontes/debitos.md`
+  (não-monotonicidade nos acessórios).
+
+### Motor v3 — etapa [6], A VAGA DIRETA DO TRÍCEPS (Fatia 8, 2026-10-27)
+
+- **`[REGRA]` A vaga de `ISOLAMENTO` de `TRICEPS` tem de ser extensão de cotovelo.** `MERGULHO` é
+  empurrar composto e só chega à vaga pela inversão de papel; fica fora. **Exigência, não
+  preferência**: se excluí-lo esvaziar o pool ele volta e o disparo
+  `triceps_sem_extensao_de_cotovelo` registra — melhor mergulho que vaga vazia. Mesma fonte
+  (Brandão 2020). Registrada **separada** da regra de volume, de propósito: é restrição de
+  seleção, não de quantidade.
+- **`[REGRA]` A preferência por extensão ACIMA DA CABEÇA não mora no motor.** `[INV]` **o motor
+  decide QUANTO, a curadoria decide QUAL.** Tentada como filtro no `preencher()`, a preferência
+  por `TRICEPS_FRANCES` rodava **antes** da `[REGRA]` da relevância 1 e esvaziava o pool:
+  **471/471 vagas em 2 exercícios**, com `TRICEPS_PULLEY` — relevância 1, prioridade 1, a escolha
+  primária da curadoria — **inalcançável em todos os 720 perfis**. Decisão do Rafael (opção 4):
+  se a ciência manda acima da cabeça primeiro, o que está errado é a **relevância no catálogo**, e
+  o conserto é migration de curadoria validada por CREF — não filtro no motor. Tripwire nos dois
+  lados fixando a distribuição que a curadoria produz hoje
+  (`test_o_motor_nao_escolhe_a_familia_do_triceps_pela_ciencia`); mudar a curadoria **também**
+  derruba o teste, de propósito, para que a mudança seja visível e deliberada. A `[PROPOSTA]` está
+  em `fontes/debitos.md`.
+
 ## Gates de geração (`/programs/generate`)
 
 Máquina em ordem, cada um barra com Forbidden:

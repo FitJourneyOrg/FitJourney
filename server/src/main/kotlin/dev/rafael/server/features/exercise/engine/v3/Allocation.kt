@@ -64,7 +64,56 @@ object PriorityAllocation {
     /** Piso de séries do primeiro papel: 3 no composto, 2 num músculo só-isolamento. */
     fun pisoDoPapel(musculo: TargetMuscle): Int = if (musculo in SO_ISOLAMENTO) 2 else 3
 
+    /** Menor total semanal prescritível para qualquer músculo — ver [pisoPrescritivel]. */
+    const val PISO_ISOLAMENTO = 2
+
     private const val EPS = 1e-9
+
+    /**
+     * `[REGRA]` (Fatia 8, 2026-10-27): o total semanal de cada músculo é ZERO ou >= 2.
+     *
+     * 1 série não é prescritível — nenhum exercício do catálogo tem 1 série. Isto roda na
+     * ETAPA [3], onde o orçamento existe. Antes vivia no [WeekStructure.distribuirPelosDias]
+     * (etapa [4]), que subia o total DEPOIS de o orçamento fechar, e era essa a causa de
+     * `entregue > capacidade` em 167/720 perfis: o estouro nunca foi excesso de volume, era
+     * aumento de volume acontecendo FORA do orçamento.
+     *
+     * Financiado DENTRO do orçamento, em ordem decrescente de peso: quem couber sobe, quem não
+     * couber vai a ZERO, e o que ele libera financia o próximo da fila — que por construção pesa
+     * menos.
+     *
+     * O orçamento é medido contra quem JÁ está decidido (os que ficaram no piso ou acima), nunca
+     * contra a fração dos pendentes. Medir contra ela invertia a prioridade: a fração do tríceps
+     * ocupava o orçamento na vez do glúteo, o glúteo não cabia e era ZERADO, e o tríceps subia
+     * com o que o glúteo liberou — 18 vezes nos 720, medido em 2026-10-27, contra a decisão de
+     * produto que põe o glúteo acima dele. Cada pendente vai acabar em `minimo` ou em 0; enquanto
+     * não decidido, não reserva nada. Teto garantido por indução: só somamos `minimo` depois de
+     * testar. Espelha `motor_v3.py::piso_prescritivel()`.
+     */
+    fun pisoPrescritivel(
+        inteiro: Map<TargetMuscle, Int>,
+        prioridade: List<TargetMuscle>,
+        capacidade: Double,
+        disparos: MutableMap<String, Int> = mutableMapOf(),
+    ): Map<TargetMuscle, Int> {
+        val minimo = PISO_ISOLAMENTO
+        // `semTeto` (o perfil de REFERÊNCIA) chega com capacidade infinita, e floor(inf) não é
+        // representável em Int. Orçamento infinito = todo mundo sobe ao piso e ninguém zera.
+        val teto = if (capacidade.isInfinite()) Int.MAX_VALUE else floor(capacidade + EPS).toInt()
+        val saida = inteiro.toMutableMap()
+        var decidido = saida.values.filter { it >= minimo }.sum()
+        for (m in prioridade.filter { (saida[it] ?: 0) in 1 until minimo }) {
+            if (decidido + minimo <= teto) {
+                saida[m] = minimo
+                decidido += minimo
+                disparos["sobe_ao_piso_dentro_do_orcamento"] = (disparos["sobe_ao_piso_dentro_do_orcamento"] ?: 0) + 1
+            } else {
+                saida.remove(m)
+                disparos["zerado_por_nao_caber_no_piso"] = (disparos["zerado_por_nao_caber_no_piso"] ?: 0) + 1
+            }
+        }
+        return saida
+    }
 
     /**
      * Aloca `direta` sob `capacidade`, dado `indireto` e `treinaveis` (músculos que a divisão da
@@ -95,23 +144,30 @@ object PriorityAllocation {
         treinaveis: Collection<TargetMuscle>,
         capacidade: Double,
         disparos: MutableMap<String, Int> = mutableMapOf(),
+        pisoDiretoDe: Map<TargetMuscle, Int> = emptyMap(),
     ): Map<TargetMuscle, Int> {
         val prioridade = treinaveis.sortedWith(
             compareByDescending<TargetMuscle> { PESO_PRIORIDADE.getValue(it) }.thenBy { it.ordinal }
         )
 
         if (treinaveis.sumOf { direta[it] ?: 0.0 } <= capacidade) {
-            return prioridade.mapNotNull { m ->
+            val folgado = prioridade.mapNotNull { m ->
                 val s = arredondar(direta[m] ?: 0.0)
                 if (s > 0) m to s else null
             }.toMap()
+            // Sem escassez TAMBÉM passa pelo piso prescritível: era por aqui que sobravam 6 dos
+            // 27 estouros residuais, porque o arredondamento pode devolver 1 série.
+            return pisoPrescritivel(folgado, prioridade, capacidade, disparos)
         }
 
         disparos["escassez"] = (disparos["escassez"] ?: 0) + 1
         val ativos = prioridade.filter { (direta[it] ?: 0.0) > 0.0 }
         val piso = ativos.associateWith { m ->
             val pisoIniciante = maxOf(0.0, VolumeTargets.piso(m) - (indireto[m] ?: 0.0))
-            minOf(direta.getValue(m), pisoIniciante)
+            // O piso direto (Fatia 8 / D-1) entra como PRIORIDADE NA FILA do orçamento, nunca
+            // por fora dele: eleva o piso protegido do músculo, e os laços de rebaixamento e
+            // sacrifício abaixo continuam podendo alcançá-lo — quem não couber sai.
+            minOf(direta.getValue(m), maxOf((pisoDiretoDe[m] ?: 0).toDouble(), pisoIniciante))
         }.toMutableMap()
 
         for (m in ORDEM_SACRIFICIO) {
@@ -190,7 +246,7 @@ object PriorityAllocation {
                 livre -= 1
             }
         }
-        return inteiro.filterValues { it > 0 }
+        return pisoPrescritivel(inteiro.filterValues { it > 0 }, prioridade, capacidade, disparos)
     }
 
     /** Kotlin `roundToInt`: meio pra cima — mesma convenção do oráculo Python. */

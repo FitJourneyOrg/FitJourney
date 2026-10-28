@@ -26,7 +26,44 @@ class ProgramAuditTest {
         entregue: Map<TargetMuscle, Int>,
         indireto: Map<TargetMuscle, Double> = emptyMap(),
         objetivo: Goal = Goal.GAIN_MUSCLE,
-    ) = ProgramAudit.auditar(alvo, entregue, indireto, treinaveis, objetivo)
+        pisoDiretoDe: Map<TargetMuscle, Int> = emptyMap(),
+    ) = ProgramAudit.auditar(alvo, entregue, indireto, treinaveis, objetivo, pisoDiretoDe)
+
+    @Test
+    fun `ATENDIDO sem serie direta sai marcado pisoDiretoNegado - eixo separado do status`() {
+        // ⭐ Asserção (b) do D-1: o alvo batido só pelo crédito indireto é ATENDIDO de verdade (o
+        // volume efetivo chegou), mas o usuário não fez UM exercício de glúteo na semana. Os dois
+        // fatos convivem em eixos separados; fundi-los num status novo esconderia um dos dois.
+        val auditoria = auditar(
+            alvo = mapOf(TargetMuscle.GLUTES to 10.0, TargetMuscle.TRICEPS to 10.0),
+            entregue = mapOf(TargetMuscle.TRICEPS to 4),
+            indireto = mapOf(TargetMuscle.GLUTES to 10.0, TargetMuscle.TRICEPS to 7.0),
+            pisoDiretoDe = mapOf(TargetMuscle.GLUTES to 2, TargetMuscle.TRICEPS to 2),
+        )
+        val gluteo = auditoria.getValue(TargetMuscle.GLUTES)
+        assertEquals(ProgramAudit.Status.ATENDIDO, gluteo.status)
+        assertEquals(0, gluteo.direto)
+        assertTrue(gluteo.pisoDiretoNegado, "0 série direta com piso de 2")
+
+        val triceps = auditoria.getValue(TargetMuscle.TRICEPS)
+        assertEquals(ProgramAudit.Status.ATENDIDO, triceps.status)
+        assertFalse(triceps.pisoDiretoNegado, "4 séries diretas cobrem o piso de 2")
+    }
+
+    @Test
+    fun `sem piso direto declarado ninguem e marcado - o iniciante e isento`() {
+        // Caminho de FALHA do campo: `pisoDiretoDe` vazio é o iniciante (isento pela regra geral
+        // do híbrido). Zero série direta ali não é negação de piso — é ausência de piso.
+        val auditoria = auditar(
+            alvo = mapOf(TargetMuscle.TRICEPS to 7.0),
+            entregue = emptyMap(),
+            indireto = mapOf(TargetMuscle.TRICEPS to 7.0),
+        )
+        val triceps = auditoria.getValue(TargetMuscle.TRICEPS)
+        assertEquals(ProgramAudit.Status.ATENDIDO, triceps.status)
+        assertEquals(0, triceps.direto)
+        assertFalse(triceps.pisoDiretoNegado)
+    }
 
     @Test
     fun `os cinco status, um caso de cada`() {

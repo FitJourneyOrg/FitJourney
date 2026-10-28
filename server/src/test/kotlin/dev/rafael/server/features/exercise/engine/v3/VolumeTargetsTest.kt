@@ -139,6 +139,31 @@ class VolumeTargetsTest {
         assertEquals(0.0, demandaDireta(alvo = 6.0, indireto = 7.0))
     }
 
+    @Test
+    fun `piso direto so existe nos tres musculos com credito indireto sancionado`() {
+        for (nivel in listOf(Level.INTERMEDIATE, Level.ADVANCED)) {
+            for (m in VolumeTargets.PISO_DIRETO_MUSCULOS) {
+                assertEquals(2, VolumeTargets.pisoDireto(m, nivel), "$m/$nivel")
+            }
+        }
+        // Caminho de FALHA, nos dois eixos: músculo que não recebe crédito indireto não tem piso
+        // direto (nada a compensar), e o iniciante é isento em todos (regra geral do híbrido —
+        // ele cresce com o composto e é quem tem o orçamento mais apertado).
+        assertEquals(0, VolumeTargets.pisoDireto(TargetMuscle.CHEST, Level.ADVANCED))
+        assertEquals(0, VolumeTargets.pisoDireto(TargetMuscle.FOREARMS, Level.ADVANCED))
+        for (m in VolumeTargets.PISO_DIRETO_MUSCULOS) {
+            assertEquals(0, VolumeTargets.pisoDireto(m, Level.BEGINNER), "isenção do iniciante: $m")
+        }
+    }
+
+    @Test
+    fun `os musculos do piso direto sao exatamente os que recebem credito indireto`() {
+        // `[INV]`: o piso direto existe PARA compensar o crédito indireto — se um par novo entrar
+        // na tabela de indireto, o recebedor novo precisa entrar aqui (ou a exclusão precisa ser
+        // decidida e registrada). Este teste é o que força essa conversa.
+        assertEquals(VolumeIndirectTable.recebedoresDeCredito, VolumeTargets.PISO_DIRETO_MUSCULOS)
+    }
+
     private fun totalAlvo(nivel: Level, objetivo: Goal): Double =
         TargetMuscle.entries.sumOf { VolumeTargets.weeklySets(it, nivel, objetivo) }
 

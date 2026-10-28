@@ -125,4 +125,59 @@ class CatalogFillerTest {
         assertEquals(saida1, saida2)
         assertEquals(saida1, saida3)
     }
+
+    // ------------------------------------------------------------------ Fatia 8: a vaga do triceps
+
+    @Test
+    fun `vaga de isolamento de triceps exclui MERGULHO mesmo sendo relevancia 1`() {
+        // So compostos: a vaga de ISOLAMENTO cai na inversao de papel e os dois viram candidatos.
+        // O MERGULHO e relevancia 1 / prioridade 1 e perderia por nada -- menos pela `[REGRA]`.
+        val catalogo = listOf(
+            exercicioV3("Mergulho sentado na maquina", TargetMuscle.TRICEPS, composto = true, equipamento = "MACHINE", familia = "MERGULHO", prioridade = 1, relevancia = 1),
+            exercicioV3("Supino fechado barra", TargetMuscle.TRICEPS, composto = true, equipamento = "BARBELL", familia = "SUPINO_FECHADO", prioridade = 9, relevancia = 2),
+        )
+        val vagas = listOf(SessionComposition.Vaga(TargetMuscle.TRICEPS, SessionComposition.Papel.ISOLAMENTO, 2))
+        val disparos = mutableMapOf<String, Int>()
+        val resultado = CatalogFiller.preencher(listOf("Dia" to vagas), catalogo, disparos)
+
+        assertEquals("Supino fechado barra", resultado.single().second.single().exercicio?.name)
+        assertEquals(1, disparos["papel_trocado"])
+        assertEquals(1, disparos["musculo_sem_relevancia_1"], "o relevancia 1 era o MERGULHO, excluido antes")
+        assertNull(disparos["triceps_sem_extensao_de_cotovelo"], "havia alternativa com extensao")
+    }
+
+    @Test
+    fun `MERGULHO volta para a vaga de triceps quando e o unico candidato, com disparo`() {
+        // Caminho de FALHA da `[REGRA]`: exigencia que esvaziaria o pool cede -- melhor mergulho
+        // que vaga vazia -- e o disparo registra para que a curadoria apareca na medicao.
+        val catalogo = listOf(
+            exercicioV3("Mergulho no banco", TargetMuscle.TRICEPS, composto = true, equipamento = "BODYWEIGHT", familia = "MERGULHO", prioridade = 10, relevancia = 2),
+        )
+        val vagas = listOf(SessionComposition.Vaga(TargetMuscle.TRICEPS, SessionComposition.Papel.ISOLAMENTO, 2))
+        val disparos = mutableMapOf<String, Int>()
+        val vazias = mutableListOf<Triple<String, TargetMuscle, SessionComposition.Papel>>()
+        val resultado = CatalogFiller.preencher(listOf("Dia" to vagas), catalogo, disparos, vazias)
+
+        assertEquals("Mergulho no banco", resultado.single().second.single().exercicio?.name)
+        assertEquals(1, disparos["triceps_sem_extensao_de_cotovelo"])
+        assertTrue(vazias.isEmpty(), "a exigencia cede, nao deixa vaga vazia")
+    }
+
+    @Test
+    fun `o motor nao prefere a familia acima da cabeca - quem decide e a relevancia da curadoria`() {
+        // Tripwire da decisao do Rafael (2026-10-27, opcao 4): a preferencia por extensao acima da
+        // cabeca (Brandao 2020) NAO mora no motor. Implementada como filtro aqui, ela rodava antes
+        // da `[REGRA]` da relevancia 1 e tornava TRICEPS_PULLEY inalcancavel nos 720 perfis.
+        // Equivalente no oraculo: `test_o_motor_nao_escolhe_a_familia_do_triceps_pela_ciencia`.
+        val catalogo = listOf(
+            exercicioV3("Triceps frances sentado com halter", TargetMuscle.TRICEPS, composto = false, equipamento = "DUMBBELL", familia = "TRICEPS_FRANCES", prioridade = 1, relevancia = 2),
+            exercicioV3("Triceps pulley com barra", TargetMuscle.TRICEPS, composto = false, equipamento = "CABLE", familia = "TRICEPS_PULLEY", prioridade = 9, relevancia = 1),
+        )
+        val vagas = listOf(SessionComposition.Vaga(TargetMuscle.TRICEPS, SessionComposition.Papel.ISOLAMENTO, 2))
+        val disparos = mutableMapOf<String, Int>()
+        val resultado = CatalogFiller.preencher(listOf("Dia" to vagas), catalogo, disparos)
+
+        assertEquals("Triceps pulley com barra", resultado.single().second.single().exercicio?.name)
+        assertEquals(emptyMap(), disparos)
+    }
 }

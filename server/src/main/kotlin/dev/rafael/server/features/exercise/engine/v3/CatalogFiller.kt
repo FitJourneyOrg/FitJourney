@@ -21,6 +21,14 @@ object CatalogFiller {
     private val EMPURRAR = setOf(TargetMuscle.CHEST, TargetMuscle.SHOULDERS)
 
     /**
+     * Famílias de tríceps que NÃO são extensão de cotovelo — ver a `[REGRA]` em [preencher].
+     * `MERGULHO` é empurrar composto (o cotovelo estende, mas o ombro também, e a carga sai do
+     * peitoral/deltoide); as outras quatro famílias do catálogo (FRANCES, TESTA, PULLEY, COICE)
+     * são todas extensão.
+     */
+    private val TRICEPS_SEM_EXTENSAO = setOf("MERGULHO")
+
+    /**
      * @param sessoes rótulo do dia + vagas da sessão (saída de [SessionComposition.comporSessao]).
      * @param candidatos pool já filtrado (ver [CatalogPool]).
      * @param disparos contadores de regra provisória/medida — ver KDoc de cada incremento.
@@ -81,6 +89,29 @@ object CatalogFiller {
                         disparos["familia_repetida_na_sessao"] = (disparos["familia_repetida_na_sessao"] ?: 0) + 1
                     }
                     cands
+                }
+
+                // `[REGRA]` tríceps (Fatia 8, 2026-10-27): a vaga de ISOLAMENTO tem de ser
+                // extensão de cotovelo — fora o MERGULHO, que é empurrar composto e só chega aqui
+                // pela inversão de papel. Brandão 2020: cabeça longa +2,1% só com supino contra
+                // +17,5% com extensão. Exigência, não preferência: se excluir o MERGULHO esvaziar
+                // o pool, ele volta e o disparo registra — melhor mergulho que vaga vazia.
+                //
+                // A preferência por ACIMA DA CABEÇA **não mora aqui** (decisão do Rafael, opção
+                // 4): implementada como filtro, ela rodava ANTES da regra da relevância 1 e
+                // esvaziava o pool — 471/471 vagas em 2 exercícios, com TRICEPS_PULLEY
+                // (relevância 1, prioridade 1) inalcançável nos 720 perfis. Motor decide QUANTO;
+                // curadoria decide QUAL. Virou `[PROPOSTA]` em `docs/fontes/debitos.md`.
+                if (v.alvo == TargetMuscle.TRICEPS && v.papel == SessionComposition.Papel.ISOLAMENTO) {
+                    val comExtensao = cands.filter { (it.familia ?: "") !in TRICEPS_SEM_EXTENSAO }
+                    cands = if (comExtensao.isNotEmpty()) {
+                        comExtensao
+                    } else {
+                        if (cands.isNotEmpty()) {
+                            disparos["triceps_sem_extensao_de_cotovelo"] = (disparos["triceps_sem_extensao_de_cotovelo"] ?: 0) + 1
+                        }
+                        cands
+                    }
                 }
 
                 if (v.alvo !in musculosAbertos) {

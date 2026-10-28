@@ -46,6 +46,20 @@ object ProgramAudit {
         val razao: Double?,
         val status: Status,
         /**
+         * `[REGRA]` (Fatia 8 / D-1): eixo SEPARADO do [status], não um status novo — "o alvo foi
+         * atendido" e "houve estímulo direto" são duas perguntas, e fundi-las esconderia uma das
+         * duas. `true` quando o músculo tinha piso direto ([VolumeTargets.pisoDireto]) e não o
+         * recebeu: o alvo foi batido pelo trabalho indireto, mas não coube exercício direto no
+         * orçamento da semana.
+         *
+         * É o que permite a asserção (b) passar honestamente: nenhum [Status.ATENDIDO] com
+         * `direto == 0` sem esta marca (fora do iniciante, que é isento). Débito de produto
+         * registrado: estes casos precisam de mensagem ao usuário, no mesmo espírito do rótulo de
+         * manutenção — "alvo batido pelo trabalho indireto; não coube exercício direto de glúteo
+         * nesta semana".
+         */
+        val pisoDiretoNegado: Boolean = false,
+        /**
          * [status] mede contra o ALVO (a prescrição do perfil); este campo mede contra o PISO (o
          * mínimo fisiológico), que é outra pergunta. O fator de objetivo multiplica o alvo **sem
          * respeitar o piso**: `MAINTAIN`/`BEGINNER` nasce com alvo abaixo da coluna do iniciante
@@ -69,6 +83,7 @@ object ProgramAudit {
         indireto: Map<TargetMuscle, Double>,
         treinaveis: Collection<TargetMuscle>,
         objetivo: Goal,
+        pisoDiretoDe: Map<TargetMuscle, Int> = emptyMap(),
     ): Map<TargetMuscle, Musculo> = TargetMuscle.entries.associateWith { m ->
         val direto = entregue[m] ?: 0
         val ind = indireto[m] ?: 0.0
@@ -85,6 +100,7 @@ object ProgramAudit {
         Musculo(
             musculo = m, direto = direto, indireto = ind, efetivo = efetivo, minimo = minimo,
             alvo = alvoM, razao = if (minimo > 0.0) efetivo / minimo else null, status = status,
+            pisoDiretoNegado = (pisoDiretoDe[m] ?: 0) > 0 && direto < (pisoDiretoDe[m] ?: 0),
             atingiuMinimo = efetivo >= minimo - EPS,
         )
     }
