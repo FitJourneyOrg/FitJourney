@@ -10,7 +10,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/** Motor v3, Fatia 7 — espelha `tools/motor_sim/motor_v3.py::modo_conservador_automatico()`
+/** Motor v3, Fatia 7 — espelha `server/src/test/oracle/motor_v3.py::modo_conservador_automatico()`
  *  e `rir_minimo()`. Cada gatilho/piso tem caso positivo e caminho de falha (C2). */
 class SafetyRulesTest {
 

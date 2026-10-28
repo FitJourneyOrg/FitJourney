@@ -1,9 +1,10 @@
-"""Testes da fatia 0 do motor v3. Rodar de tools/motor_sim/:  python3 -m unittest -v test_motor_v3
+"""Testes da fatia 0 do motor v3. Rodar de server/src/test/oracle/:  python3 -m unittest -v test_motor_v3
 
 Ordem: a especificação contra ela mesma (modelo à mão, cobertura) → o pipeline do simulador num
 catálogo ideal (prova a lógica) → o simulador no catálogo do BANCO (prova o dado) → disparos.
 Um vermelho aqui é informação: cada mensagem diz qual dos dois lados está errado.
 """
+import os
 import itertools
 import dataclasses
 import math
@@ -510,6 +511,44 @@ class DisparosNaMatriz(unittest.TestCase):
         for p in PERFIS[::37]:
             a, b = mv.gerar(p), mv.gerar(p)
             self.assertEqual((a.alocado, a.entregue, a.indireto), (b.alocado, b.entregue, b.indireto), p)
+
+
+class ReferenciaDos720(unittest.TestCase):
+    """⭐ Fatia 9: a referência que o Kotlin lê (`referencia_720.txt`) tem de ser a saída do
+    oráculo DE HOJE.
+
+    Nasceu de um defeito real: o `MotorV3FidelidadeCatalogoRealIntegrationTest` guardava 12 perfis
+    escritos no próprio .kt, gerados em 23/10. A Fatia 8 mudou o oráculo (piso direto, glúteo
+    8/10/12, coeficientes removidos, CORE fora) e os 12 passaram a divergir — 12 de 12 — sem que
+    nenhum teste visse, porque o `integrationTest` não rodou. Referência embutida em teste
+    envelhece em silêncio.
+
+    Aqui a regra é a inversa: o arquivo é GERADO, e este teste fica vermelho no mesmo instante em
+    que o oráculo (ou o `catalogo_banco.csv`) muda sem a referência acompanhar. A mensagem diz
+    o comando. Quem muda o oráculo regenera e REVISA o diff — é o diff que mostra o que a mudança
+    fez nos 720 perfis, e é contra ele que o Kotlin passa a ser cobrado.
+    """
+
+    def test_referencia_dos_720_esta_em_dia(self):
+        import gerar_referencia_720 as g
+        esperado = g.gerar_texto()
+        atual = ""
+        if os.path.exists(g.CAMINHO):
+            with open(g.CAMINHO, encoding="utf-8") as f:
+                atual = f.read()
+        if atual != esperado:
+            velhos = sum(1 for a, b in zip(atual.split("\nP|"), esperado.split("\nP|")) if a != b)
+            self.fail("referencia_720.txt esta VELHA (%d bloco(s) de perfil divergem). Rode, de "
+                      "server/src/test/oracle/:  python3 gerar_referencia_720.py  -- e revise o "
+                      "diff: ele e o efeito da sua mudanca nos 720 perfis." % velhos)
+
+    def test_a_referencia_cobre_exatamente_a_matriz(self):
+        """Caminho de falha do gerador: perfil faltando/sobrando seria varredura que nao varre."""
+        import gerar_referencia_720 as g
+        ids = [l.split("|")[1] for l in g.gerar_texto().split("\n") if l.startswith("P|")]
+        self.assertEqual(720, len(ids))
+        self.assertEqual(720, len(set(ids)), "perfil duplicado na matriz")
+        self.assertEqual([g.perfil_id(p) for p in PERFIS], ids)
 
 
 if __name__ == "__main__":

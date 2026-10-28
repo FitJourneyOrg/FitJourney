@@ -5,7 +5,7 @@ import dev.rafael.server.features.exercise.models.Exercise
 
 /**
  * Motor v3, etapa [6] — escolhe o exercício REAL do catálogo para cada [SessionComposition.Vaga],
- * espelhando `tools/motor_sim/motor_v3.py::preencher()`, com o fallback de inversão de papel
+ * espelhando `server/src/test/oracle/motor_v3.py::preencher()`, com o fallback de inversão de papel
  * decidido pelo Rafael em 2026-10-23 (`docs/regras/01-motor-de-geracao.md`, etapa [6]).
  */
 object CatalogFiller {

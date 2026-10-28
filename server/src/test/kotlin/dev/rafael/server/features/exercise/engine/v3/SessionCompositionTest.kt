@@ -9,7 +9,7 @@ import kotlin.test.assertFailsWith
 
 /**
  * Motor v3, Fatia 5 (`docs/trabalho/motor-v3-fatia-5.md`) — prova `SessionComposition` contra
- * `tools/motor_sim/motor_v3.py::compor_sessao()`, usando como entrada as sessões REAIS de
+ * `server/src/test/oracle/motor_v3.py::compor_sessao()`, usando como entrada as sessões REAIS de
  * `WeekStructure.distribuirPelosDias()` da Fatia 4 (fixtures A/B/C, já verificadas lá).
  *
  * Não cobre o ponto fixo do indireto — decisão de escopo registrada no KDoc de

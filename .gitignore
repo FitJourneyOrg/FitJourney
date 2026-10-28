@@ -91,25 +91,9 @@ __pycache__/
 # um diretório excluído — e precisamos de uma exceção.
 /tools/*
 
-# EXCEÇÃO (2026-10-27): tools/motor_sim/ é o ORÁCULO do teste diferencial do motor v3, não
-# tooling de curadoria — é infraestrutura de teste, e a Fatia 9 depende de ele existir. São
-# ~170KB de fonte. Não se regenera: perdê-lo custa mais que o espaço que economiza.
-# Agendado para a abertura da Fatia 9 (ver trabalho/motor-v3-desenho-e-fatias.md): mover para
-# server/src/test/oracle/, que é o que ele de fato é, em vez de viver de exceção aqui.
-!/tools/motor_sim/
-/tools/motor_sim/*
-!/tools/motor_sim/*.py
-!/tools/motor_sim/*.csv
-!/tools/motor_sim/*.md
-# os .sql são insumo dos geradores, não migration: cabecalho_v64.sql é o argumento 2 de
-# gerar_v64.py, e exportar_catalogo.sql é o que produz catalogo_banco.csv. Sem eles o oráculo
-# não se reproduz.
-!/tools/motor_sim/*.sql
-!/tools/motor_sim/historico/
-/tools/motor_sim/__pycache__/
-/tools/motor_sim/_to_delete/
-# rascunho de bancada, não entra
-/tools/motor_sim/_tmp*
+# (O recorte que mantinha o oráculo versionado dentro de /tools/ saiu em 2026-10-27: o
+# motor_sim foi para server/src/test/oracle/, onde é versionado por padrão. Aqui não há
+# mais exceção para manter. __pycache__/ acima já cobre o cache do Python.)
 # insumo morto do scraping; o catalogo vem das migrations (V28+)
 /exercises.csv
 # fotos de check-in (fatia B) — DADO DE USUÁRIO. Nunca no git, e o backup é outro assunto:

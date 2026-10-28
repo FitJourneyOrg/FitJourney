@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 
 /**
  * Motor v3, Fatia 4 (`docs/trabalho/motor-v3-fatia-4.md`) — prova `WeekStructure` contra
- * `tools/motor_sim/motor_v3.py::montar_semana()`, usando como entrada as mesmas saídas REAIS de
+ * `server/src/test/oracle/motor_v3.py::montar_semana()`, usando como entrada as mesmas saídas REAIS de
  * `PriorityAllocation.alocar()` da Fatia 3 (não números inventados).
  */
 class WeekStructureTest {

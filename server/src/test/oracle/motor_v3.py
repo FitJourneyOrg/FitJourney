@@ -625,7 +625,7 @@ def medir_entregue(sessoes: list):
 # "este musculo ficou abaixo do minimo": media `entregue` (direto) e `indireto` separados e nunca
 # somava os dois, entao a grandeza que responde "este programa serve?" -- o ESTIMULO TOTAL --
 # nao existia no modelo. Medido antes de construir: 2079 pares (perfil, musculo) dos 720 perfis
-# entregam efetivo abaixo do piso, e nenhum era sinalizado. Ver docs/trabalho/motor-v3-fatia-8.md.
+# entregam efetivo abaixo do piso, e nenhum era sinalizado. Ver docs/historico/motor-v3-fatia-8.md.
 ATENDIDO = "ATENDIDO"
 MANUTENCAO = "MANUTENCAO"
 ABAIXO_DO_MINIMO = "ABAIXO_DO_MINIMO"
@@ -665,7 +665,7 @@ class AuditoriaMusculo:
     # minimo fisiologico), que e outra pergunta: `FATOR_OBJETIVO_ALVO` multiplica o alvo sem
     # respeitar o piso, entao MAINTAIN/BEGINNER nasce com alvo ABAIXO do proprio piso em todos
     # os 10 musculos (peito 4,8 contra piso 8) -- 660 pares nos 720 perfis. Qual dos dois vence
-    # e decisao de prescricao NAO TOMADA (ver docs/trabalho/motor-v3-fatia-8.md), entao a
+    # e decisao de prescricao NAO TOMADA (ver docs/historico/motor-v3-fatia-8.md), entao a
     # auditoria expoe os dois fatos e nao arbitra: um perfil assim sai ATENDIDO com
     # `atingiu_minimo=False`.
     atingiu_minimo: bool

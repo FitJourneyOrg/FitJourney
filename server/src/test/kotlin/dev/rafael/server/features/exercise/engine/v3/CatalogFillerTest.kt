@@ -8,7 +8,7 @@ import kotlin.test.assertTrue
 
 /**
  * Motor v3, Fatia 6 (`docs/trabalho/motor-v3-fatia-6.md`) — prova `CatalogFiller` contra
- * `tools/motor_sim/motor_v3.py::preencher()` (mesmos catálogos pequenos, saída verificada lá),
+ * `server/src/test/oracle/motor_v3.py::preencher()` (mesmos catálogos pequenos, saída verificada lá),
  * mais as duas regras que são só do Kotlin: desempate por nome e ordem por tipo entregue.
  */
 class CatalogFillerTest {

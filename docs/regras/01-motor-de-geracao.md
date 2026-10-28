@@ -23,7 +23,7 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
 - **[REGRA]** Contraindicação não filtra o pool (decisão de 2026-10-21). Como filtro duro ela esvaziava grupo inteiro — dor no ombro deixava 1 exercício de peito, dor no joelho deixava 0 de quadríceps. `profiles.limitations` continua gravado e `exercises.contraindications` segue curado para a biblioteca, mas a tela de limitações virou aviso ("procure um profissional de saúde antes de treinar"), não exclusão no motor.
 
 - **[INV]** `exercises.volume_target` (V64) dá a cada exercício da lista principal **exatamente um**
-  alvo de volume, curado contra `tools/motor_sim/alvo_canonico.csv` — fato do DADO, já verdadeiro
+  alvo de volume, curado contra `server/src/test/oracle/alvo_canonico.csv` — fato do DADO, já verdadeiro
   hoje, **independente** de o motor Kotlin já usar isso para casar músculo↔exercício (ainda não
   usa: o `[INV]` acima sobre `movement_pattern`/categoria continua sendo o que o `SlotFiller`
   roda de verdade).
@@ -32,7 +32,7 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   2026-10-14; ver `ARCH #39`). **Decidido, não implementado.** Não escreva código novo contra o
   critério antigo; a troca do `SlotFiller` é trabalho de uma fatia do motor v3 (1–12).
 - **[REGRA]** A tabela canônica do catálogo (qual `volume_target` cada exercício tem) **não é
-  documento, é dado** — vive em `exercises.volume_target` e em `tools/motor_sim/alvo_canonico.csv`.
+  documento, é dado** — vive em `exercises.volume_target` e em `server/src/test/oracle/alvo_canonico.csv`.
   Pendente de validação profissional (CREF) — ver débito em `fontes/debitos.md`.
 
 ### Motor v3 — etapa [1], ALVOS (Fatia 1, fechada em 2026-10-23)
@@ -82,7 +82,7 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
 
 ### Motor v3 — etapa [3], ALOCAÇÃO POR PRIORIDADE (Fatia 3, fechada em 2026-10-23)
 
-- **[REGRA]** `engine.v3.PriorityAllocation.alocar()` espelha `tools/motor_sim/motor_v3.py::alocar()`
+- **[REGRA]** `engine.v3.PriorityAllocation.alocar()` espelha `server/src/test/oracle/motor_v3.py::alocar()`
   termo a termo, validado rodando a função Python com os mesmos números em 5 capacidades: sem
   escassez devolve `direta` arredondada (meio pra cima); sob escassez, piso =
   `min(direta, max(0, piso do iniciante − indireto))` por músculo ativo → rebaixa ao piso do
@@ -249,7 +249,7 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
 
 ### Motor v3 — etapa [7], AUDITORIA DO VOLUME EFETIVO (Fatia 9 antecipada, 2026-10-27)
 
-- **[REGRA]** `engine.v3.ProgramAudit.auditar()` espelha `tools/motor_sim/motor_v3.py::auditar()`
+- **[REGRA]** `engine.v3.ProgramAudit.auditar()` espelha `server/src/test/oracle/motor_v3.py::auditar()`
   termo a termo. Recebe alvo/entregue/indireto/treináveis e devolve, por músculo: `direto`,
   `indireto`, **`efetivo = direto + indireto`**, `minimo` (`VOLUME[m][0]`), `alvo`, `razao`,
   `status` e `atingiuMinimo`. **Não muda nenhuma série prescrita** — roda depois do pipeline, lê o
@@ -308,7 +308,7 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   preenchidas com composto creditam bíceps e antebraço. Somado: **BICEPS +398 séries de indireto
   não previsto, FOREARMS +526**, GLUTES +131, TRICEPS −87,5. Creditar pelo exercício real continua
   certo (Fatia 5); o que falta é o motor medir o que a troca custou. Ver
-  `docs/trabalho/motor-v3-fatia-8.md`.
+  `docs/historico/motor-v3-fatia-8.md`.
 
 ### Motor v3 — etapa [3] amendada pela etapa [8], CORTE PROPORCIONAL NA ALOCAÇÃO (Fatia 8, em andamento, 2026-10-24)
 
@@ -321,7 +321,7 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   calculado para algum músculo for maior que o piso que ele ainda tem, ele é removido por
   completo (`sacrificio_proporcional`) e o déficit é recalculado entre os que restam, até
   convergir (`corte_proporcional`) ou esvaziar tudo. Espelha
-  `tools/motor_sim/motor_v3.py::alocar()` termo a termo; mesmo algoritmo no Kotlin
+  `server/src/test/oracle/motor_v3.py::alocar()` termo a termo; mesmo algoritmo no Kotlin
   (`PriorityAllocation.kt`) e no oráculo.
 - **Decisão de prescrição, não lacuna de implementação** (Rafael, 2026-10-24): a alternativa era
   estender a `ORDEM_SACRIFICIO` com os 4 grandes, um por vez (corte sequencial) — medido nos 288
@@ -369,7 +369,7 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
 - **Por quê, medido antes de cortar.** CORE era o **único** alvo com pool vazio em *todas* as 15
   combinações de ambiente × nível × acessório, nos dois papéis (composto e isolamento), sem
   válvula de escape possível — a tabela completa de cobertura está em
-  `trabalho/motor-v3-fatia-8.md`. O alvo semanal era 0 em todo nível, então o buraco era
+  `historico/motor-v3-fatia-8.md`. O alvo semanal era 0 em todo nível, então o buraco era
   **dormente**: nunca abria vaga, não quebrava nada, e viraria vaga vazia de verdade no instante
   em que alguém desse alvo > 0. Na auditoria da etapa [7], os **720 status `SEM_CATALOGO` da
   matriz eram todos de CORE** — um por perfil, exatamente.
@@ -455,6 +455,28 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   antes da Fatia 8 (`POSTERIOR: -0,8` no avançado, atribuídos a "pergunta aberta da Fatia 9") eram
   **o coeficiente `glúteo → posterior` sem fonte** — 0,2 × 4 séries de composto = 0,8. Oráculo
   hoje: **32 testes, 0 vermelha**.
+
+### Motor v3 — MEDIÇÃO, REFERÊNCIA E AVISO (Fatia 9, 2026-10-27)
+
+- **[REGRA]** O oráculo (`server/src/test/oracle/motor_v3.py`) é a fonte; o Kotlin se prova contra
+  ele nos **720 perfis** via `MotorV3Varredura720Test` (`:server:test`, sem Docker), sobre
+  `catalogo_banco.csv`. Divergência = o Kotlin está errado, salvo mudança DE PROPÓSITO no oráculo.
+- **[INV]** `referencia_720.txt` é GERADA (`python3 gerar_referencia_720.py`), nunca editada à mão, e
+  `ReferenciaDos720` falha se estiver velha. **Mudou o oráculo ou o catálogo: regenere, revise o diff, só então
+  ajuste o Kotlin.**
+- **[INV]** O banco bate com `catalogo_banco.csv` campo a campo (147 linhas da lista principal),
+  afirmado por `MotorV3FidelidadeCatalogoRealIntegrationTest` (exige Docker). Migration de curadoria
+  nova pede regenerar o CSV (`exportar_catalogo.sql`) e a referência.
+- **[INV]** Teste que lê arquivo de fora de `src/test/kotlin` declara-o em `inputs.files` no
+  `server/build.gradle.kts`, com guarda de contagem. Sem isso o Gradle dá verde sem rodar.
+- **[INV]** Nos 720: `entregue ≤ capacidade`; nenhum `ATENDIDO` abaixo do alvo; nenhum `MANUTENCAO`
+  abaixo do piso; `efetivo ≥ direto`; as regras de segurança `ombro_teto_do_desenvolvimento` e
+  `um_empurrar_com_barra_por_sessao` disparam ao menos uma vez (regra que nunca dispara é código
+  morto); `ombro_vira_isolamento` = 0 (tripwire da Fatia 10: quando o foco entrar e disparar, vira
+  regra de segurança) e `ponto_fixo_nao_convergiu` = 0.
+- **[REGRA]** `ProgramAudit.avisos()` dá a CAUSA, não o texto: `NAO_TREINADO` (nada, nem indireto),
+  `ABAIXO_DO_PISO` (recebeu, mas menos que o piso) e `PISO_DIRETO_NEGADO` (piso batido, sem série
+  direta). `SEM_CATALOGO` nunca avisa. O limiar respeita o objetivo (MV em manutenção). Não muda programa.
 
 ### Motor v3 — etapa [3], PISO DE TRABALHO DIRETO E PISO PRESCRITÍVEL (Fatia 8, 2026-10-27)
 

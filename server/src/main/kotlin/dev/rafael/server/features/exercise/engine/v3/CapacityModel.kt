@@ -55,7 +55,7 @@ object CapacityModel {
      * `mesocicloAtual == null` conta como 1º mesociclo — o app ainda não acompanha mesociclos
      * (chega na Fatia 10). Convenção `[REGRA]` da Fatia 2, compartilhada pelo fator de idade e
      * pelo modo conservador automático ([SafetyRules], Fatia 7). Espelhada no oráculo Python
-     * como `primeiro_mesociclo()` em `tools/motor_sim/motor_v3.py`.
+     * como `primeiro_mesociclo()` em `server/src/test/oracle/motor_v3.py`.
      */
     fun primeiroMesociclo(mesocicloAtual: Int?): Boolean = (mesocicloAtual ?: 1) == 1
 

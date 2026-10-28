@@ -10,7 +10,7 @@ import dev.rafael.server.features.exercise.engine.TargetMuscle
  * oráculo nunca bate isso nos 720 perfis reais (máximo observado: 5), então só um `passo` falso
  * alcança esse caminho — mas a mecânica do laço (converge / oscila / esgota) é a mesma.
  *
- * Espelha `tools/motor_sim/motor_v3.py::gerar()` (o laço `for it in range(1, 31): ... else:
+ * Espelha `server/src/test/oracle/motor_v3.py::gerar()` (o laço `for it in range(1, 31): ... else:
  * disparos["ponto_fixo_nao_convergiu"] += 1`), termo a termo.
  */
 object PontoFixoIndireto {

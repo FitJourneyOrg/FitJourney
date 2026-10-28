@@ -27,7 +27,7 @@ volume do motor usa 11 (`TargetMuscle`). O casamento virou heurística para cose
 ## [REGRA] Decisão: opção C
 
 Casamento passa a ser `exercise.volumeTarget == alvo`. A tabela canônica para validação por CREF **é
-a própria coluna**, exportada em `tools/motor_sim/alvo_canonico.csv` — não um documento separado
+a própria coluna**, exportada em `server/src/test/oracle/alvo_canonico.csv` — não um documento separado
 para manter sincronizado à mão.
 
 Contrato e cliente intocados: `volume_target` é interno ao motor, não é `MuscleGroup` nem aparece
@@ -44,7 +44,7 @@ A V64 populou a coluna para os 147 exercícios da lista principal. O `SlotFiller
 **continua usando o critério antigo** (`movement_pattern`/categoria) — esta fatia não tocou o motor
 Kotlin, de propósito (nota de abertura do plano: *"Esta fatia não mexe no motor Kotlin. Ela
 conserta o catálogo e devolve a capacidade de medir."*). O simulador Python
-(`tools/motor_sim/motor_v3.py`) já usa `volume_target` como oráculo.
+(`server/src/test/oracle/motor_v3.py`) já usa `volume_target` como oráculo.
 
 Trocar o `SlotFiller` para ler a coluna é trabalho de uma fatia do motor v3 — até lá, o `[INV]`
 `[VENCIDO]` em `regras/01-motor-de-geracao.md` sobre casamento por padrão continua sendo o que roda

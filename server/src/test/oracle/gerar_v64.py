@@ -1,8 +1,8 @@
 """Gera V64__alvo_de_volume_do_motor.sql a partir de alvo_canonico.csv (fonte unica da tabela).
 
-Uso (de tools/motor_sim/):
+Uso (de server/src/test/oracle/):
   python3 gerar_v64.py alvo_canonico.csv cabecalho_v64.sql \
-    > ../../server/src/main/resources/db/migration/V64__alvo_de_volume_do_motor.sql
+    > ../../main/resources/db/migration/V64__alvo_de_volume_do_motor.sql
 Rodar de novo so enquanto a V64 nao foi aplicada em lugar nenhum; depois dela, mudanca de alvo
 e migration nova.
 """
