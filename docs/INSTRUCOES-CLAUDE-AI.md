@@ -124,9 +124,13 @@ pedir:
 2. Atualizar `docs/ESTADO.md` (movendo a fatia anterior para `docs/historico/` ao sair do "Agora"),
    `docs/fontes/debitos.md` e `docs/migrations/INDICE.md`.
 3. `python3 docs/geradores/gen_tudo.py`.
-4. **Limpeza:** me liste o que vai apagar (o arquivo da fatia em `docs/trabalho/`, o que sobrou em
-   `tools/cache/`) e **espere meu ok**. `docs/` e `tools/` estão fora do git — apagar é definitivo.
-   Nunca apague por conta própria; nunca toque na raiz de `tools/` nem em `tools/curadoria/`.
+4. **Limpeza:** me liste o que vai apagar (o arquivo da fatia em `docs/trabalho/`, o que sobrou
+   em `tools/cache/`) e **espere meu ok**. Nunca apague por conta própria; nunca toque na raiz
+   de `tools/` nem em `tools/curadoria/`. **O que é recuperável mudou em 2026-10-27:** `docs/`
+   voltou a ser versionado (a exclusão era de julho, sobre 3 rascunhos) e `tools/motor_sim`
+   entrou por recorte — nesses dois, apagar depois de commitar é **reversivel pelo git**. O
+   resto de `tools/` segue fora do git, e ali apagar **é definitivo**. Isso muda a ORDEM, não
+   a regra: commite antes de apagar, e aí o rascunho fica recuperável em vez de perdido.
 
 > **O que não foi promovido para um dos cinco lares era rascunho.** É esse teste que torna a limpeza
 > segura, e é por isso que o passo 1 vem antes do 4.
