@@ -4,7 +4,7 @@ import dev.rafael.server.features.exercise.engine.TargetMuscle
 
 /**
  * Motor v3, etapa [4] — ESTRUTURA DA SEMANA (`docs/trabalho/motor-v3-desenho-e-fatias.md` §3,
- * Fatia 4). Espelha `tools/motor_sim/motor_v3.py::montar_semana()`/`espalhar()` e
+ * Fatia 4). Espelha `server/src/test/oracle/motor_v3.py::montar_semana()`/`espalhar()` e
  * `spec_v3.py::DIVISOES`, validado rodando o Python com as mesmas saídas de `alocar()` (Fatia 3)
  * — não com números inventados (`docs/trabalho/motor-v3-fatia-4.md`).
  *

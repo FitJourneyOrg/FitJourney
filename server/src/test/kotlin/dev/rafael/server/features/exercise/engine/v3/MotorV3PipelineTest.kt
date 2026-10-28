@@ -9,7 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Motor v3, Fatia 6 — fim a fim: `MotorV3Pipeline.gerar()` contra `tools/motor_sim/motor_v3.py
+ * Motor v3, Fatia 6 — fim a fim: `MotorV3Pipeline.gerar()` contra `server/src/test/oracle/motor_v3.py
  * ::gerar()`, com `mv.CATALOGO` substituído pelo mesmo catálogo pequeno (1 composto + 1
  * isolamento por músculo) usado aqui. Não reprova cada peça (Fatias 1–6 já têm seus próprios
  * testes) — prova que a MONTAGEM (ordem das chamadas, tipos, o ponto fixo por cima) bate com o

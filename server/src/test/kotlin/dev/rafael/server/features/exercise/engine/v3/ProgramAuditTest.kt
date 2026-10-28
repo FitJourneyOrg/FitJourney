@@ -9,7 +9,7 @@ import kotlin.test.assertTrue
 
 /**
  * Motor v3, etapa [7] — prova `ProgramAudit.auditar()` contra
- * `tools/motor_sim/motor_v3.py::auditar()`. Entradas construídas à mão (a função é pura: recebe
+ * `server/src/test/oracle/motor_v3.py::auditar()`. Entradas construídas à mão (a função é pura: recebe
  * alvo/entregue/indireto/treináveis e classifica), cobrindo os cinco status e o caso que motivou
  * o campo `atingiuMinimo`.
  */
@@ -165,5 +165,46 @@ class ProgramAuditTest {
 
         assertEquals(TargetMuscle.entries.size, auditoria.size)
         assertTrue(auditoria.values.all { it.status != ProgramAudit.Status.MANUTENCAO })
+    }
+
+    @Test
+    fun `avisos separa as tres causas e ordena do mais grave ao menos`() {
+        val a = auditar(
+            alvo = mapOf(
+                TargetMuscle.CHEST to 14.0, TargetMuscle.BACK to 16.0,
+                TargetMuscle.GLUTES to 10.0, TargetMuscle.TRICEPS to 10.0,
+            ),
+            entregue = mapOf(TargetMuscle.CHEST to 5, TargetMuscle.TRICEPS to 4),
+            indireto = mapOf(TargetMuscle.GLUTES to 10.0, TargetMuscle.TRICEPS to 7.0),
+            pisoDiretoDe = mapOf(TargetMuscle.GLUTES to 2),
+        )
+        val avisos = ProgramAudit.avisos(a)
+        val porMusculo = avisos.associate { it.musculo to it.causa }
+
+        assertEquals(ProgramAudit.Causa.ABAIXO_DO_PISO, porMusculo[TargetMuscle.CHEST])    // 5 contra MEV 8
+        assertEquals(ProgramAudit.Causa.NAO_TREINADO, porMusculo[TargetMuscle.BACK])       // nada, nem indireto
+        assertEquals(ProgramAudit.Causa.PISO_DIRETO_NEGADO, porMusculo[TargetMuscle.GLUTES])  // piso batido so pelo indireto
+        assertEquals(ProgramAudit.Causa.NAO_TREINADO, avisos.first().causa)                // o mais grave abre a lista
+        assertEquals(avisos, avisos.sortedWith(compareBy({ it.causa }, { it.musculo })))
+    }
+
+    @Test
+    fun `avisos nao fala de quem esta bem nem de quem nao tem catalogo`() {
+        val tudoBem = TargetMuscle.entries.associateWith { 12.0 }
+        val a = auditar(alvo = tudoBem, entregue = TargetMuscle.entries.associateWith { 12 })
+        assertTrue(ProgramAudit.avisos(a).isEmpty())
+
+        val b = auditar(alvo = mapOf(semCatalogo to 10.0), entregue = emptyMap())
+        assertTrue(ProgramAudit.avisos(b).none { it.musculo == semCatalogo })  // SEM_CATALOGO nunca avisa
+    }
+
+    @Test
+    fun `avisos de manutencao usa o MV e nao reprova quem treinou o que manutencao significa`() {
+        // MAINTAIN mede contra o MV: efetivo 5 em peito (MEV 8) passa se o MV for <= 5.
+        val a = auditar(
+            alvo = mapOf(TargetMuscle.CHEST to 4.8), entregue = mapOf(TargetMuscle.CHEST to 5),
+            objetivo = Goal.MAINTAIN,
+        )
+        assertTrue(ProgramAudit.avisos(a).none { it.musculo == TargetMuscle.CHEST })
     }
 }

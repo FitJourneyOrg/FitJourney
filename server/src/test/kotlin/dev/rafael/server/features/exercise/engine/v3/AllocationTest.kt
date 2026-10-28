@@ -7,7 +7,7 @@ import kotlin.test.assertTrue
 
 /**
  * Motor v3, Fatia 3 (`docs/trabalho/motor-v3-fatia-3.md`) — prova `PriorityAllocation.alocar()`
- * contra `tools/motor_sim/motor_v3.py::alocar()`, com os MESMOS `direta`/`indireto` (avançado,
+ * contra `server/src/test/oracle/motor_v3.py::alocar()`, com os MESMOS `direta`/`indireto` (avançado,
  * especificação) em cinco capacidades. Os cinco resultados abaixo são a saída exata do Python
  * para essas entradas — sem tolerância, porque agora são inteiros.
  */

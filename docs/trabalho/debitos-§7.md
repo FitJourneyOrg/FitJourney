@@ -10,7 +10,7 @@
   entre outros. Não muda a referência medida (banco e catálogo pretendido dão o mesmo número), mas
   é migration de dado pendente.
 - **Ponto fixo indireto↔alocação oscila em 26 de 720 perfis** sob escassez (séries inteiras).
-  Candidato à fatia 3 do motor v3. O oráculo (`tools/motor_sim/`) fica com o estado de menor
+  Candidato à fatia 3 do motor v3. O oráculo (`server/src/test/oracle/`) fica com o estado de menor
   indireto e conta `ponto_fixo_oscilou`.
 - **Nenhum exercício ADVANCED no pool.** GLUTES com 3 candidatos e nenhum em casa. `papel_trocado`
   disparou 1164 vezes na matriz de 720 perfis — a cobertura alvo×papel do catálogo é fraca.

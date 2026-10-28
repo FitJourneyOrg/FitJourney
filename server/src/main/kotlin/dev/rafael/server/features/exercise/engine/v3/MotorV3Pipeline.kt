@@ -9,7 +9,7 @@ import dev.rafael.server.features.exercise.models.Exercise
 
 /**
  * Motor v3 — orquestra as Fatias 1 a 6 em volta do [PontoFixoIndireto]. Espelha
- * `tools/motor_sim/motor_v3.py::gerar()` termo a termo. **Não está ligado em produção** — isso
+ * `server/src/test/oracle/motor_v3.py::gerar()` termo a termo. **Não está ligado em produção** — isso
  * é decisão pra depois da Fatia 9 (ver `regras/01-motor-de-geracao.md`).
  */
 object MotorV3Pipeline {

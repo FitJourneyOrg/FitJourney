@@ -6,7 +6,7 @@ import dev.rafael.server.features.exercise.engine.TargetMuscle
  * Motor v3, etapa [5] — composição da sessão: quantos exercícios por músculo, com que papel
  * (âncora composto / acessório / isolamento) e quantas séries em cada.
  *
- * Espelha `tools/motor_sim/motor_v3.py::compor()`/`compor_sessao()`/`papeis_para()`/
+ * Espelha `server/src/test/oracle/motor_v3.py::compor()`/`compor_sessao()`/`papeis_para()`/
  * `distribuir()`/`isolamentos()` termo a termo (Fatia 5, `docs/trabalho/motor-v3-fatia-5.md`).
  *
  * **Decisão de escopo (2026-10-23):** não inclui o ciclo do ponto fixo do indireto. O oráculo

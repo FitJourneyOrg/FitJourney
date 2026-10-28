@@ -8,7 +8,7 @@ import dev.rafael.server.features.exercise.models.Exercise
 import dev.rafael.server.features.exercise.models.Modality
 
 /**
- * Motor v3, pré-filtro do catálogo para a etapa [6] — espelha `tools/motor_sim/motor_v3.py::pool()`
+ * Motor v3, pré-filtro do catálogo para a etapa [6] — espelha `server/src/test/oracle/motor_v3.py::pool()`
  * termo a termo. **Não é o `ExercisePreFilter` de produção** (esse abre transação e consulta o
  * banco; decisão do Rafael, 2026-10-23, foi não tocar nele). Este é puro, em memória, 100%
  * testável com fakes — a entrada já é um `List<Exercise>` carregado por fora.

@@ -18,7 +18,7 @@ contra ele que o motor Kotlin vai ser testado na fatia 9.
 | `alvo_canonico.csv` + `gerar_v64.py` + `cabecalho_v64.sql` | fonte e gerador da V64 (`volume_target`) |
 
 ```
-cd tools/motor_sim
+cd server/src/test/oracle
 python3 motor_v3.py                       # demanda direta da referência, banco × pretendido
 python3 -m unittest -v test_motor_v3      # sem dependência externa
 ```

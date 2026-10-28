@@ -5,9 +5,9 @@ import dev.rafael.server.features.exercise.engine.TargetMuscle
 
 /**
  * Motor v3, etapa [7] — AUDITORIA DO VOLUME EFETIVO. Espelha
- * `tools/motor_sim/motor_v3.py::auditar()` termo a termo.
+ * `server/src/test/oracle/motor_v3.py::auditar()` termo a termo.
  *
- * **Por que esta peça existe** (achado de 2026-10-27, `docs/trabalho/motor-v3-fatia-8.md`): o
+ * **Por que esta peça existe** (achado de 2026-10-27, `docs/historico/motor-v3-fatia-8.md`): o
  * motor media `entregue` (trabalho direto) e `indireto` em separado e nunca somava os dois, então
  * a grandeza que responde *"este programa serve?"* — o estímulo total que o músculo recebe — não
  * existia no modelo. Por isso nenhuma verificação contra o piso era possível: não faltava um
@@ -113,4 +113,32 @@ object ProgramAudit {
      */
     fun abaixoDoMinimo(auditoria: Map<TargetMuscle, Musculo>): List<Musculo> =
         auditoria.values.filter { it.status != Status.SEM_CATALOGO && it.minimo > 0.0 && !it.atingiuMinimo }
+
+    /**
+     * POR QUE o aviso do usuário é diferente para cada causa — o texto acionável depende do que
+     * aconteceu, não só de "ficou abaixo": [NAO_TREINADO] pede mais dias/tempo ou mais equipamento;
+     * [ABAIXO_DO_PISO] pede mais tempo por sessão; [PISO_DIRETO_NEGADO] não é falta de estímulo
+     * (o piso de volume foi batido pelo indireto) e sim falta de exercício direto na semana.
+     * O domínio só diz a CAUSA; a frase mora no i18n (Presentation), e o idioma é do cliente.
+     */
+    enum class Causa { NAO_TREINADO, ABAIXO_DO_PISO, PISO_DIRETO_NEGADO }
+
+    data class Aviso(val musculo: TargetMuscle, val causa: Causa, val efetivo: Double, val minimo: Double)
+
+    /**
+     * O aviso de honestidade da Fatia 9: um [Aviso] por músculo que merece fala, do mais grave ao
+     * menos (NAO_TREINADO, depois ABAIXO_DO_PISO, depois PISO_DIRETO_NEGADO; empate pela ordem do
+     * enum, para ser determinístico). [Status.SEM_CATALOGO] nunca avisa — não é escolha do motor.
+     * Não muda programa nenhum.
+     */
+    fun avisos(auditoria: Map<TargetMuscle, Musculo>): List<Aviso> =
+        auditoria.values.filter { it.status != Status.SEM_CATALOGO }.mapNotNull { m ->
+            val causa = when {
+                m.minimo > 0.0 && m.efetivo <= EPS -> Causa.NAO_TREINADO
+                m.minimo > 0.0 && !m.atingiuMinimo -> Causa.ABAIXO_DO_PISO
+                m.pisoDiretoNegado -> Causa.PISO_DIRETO_NEGADO
+                else -> null
+            }
+            causa?.let { Aviso(m.musculo, it, m.efetivo, m.minimo) }
+        }.sortedWith(compareBy({ it.causa }, { it.musculo }))
 }

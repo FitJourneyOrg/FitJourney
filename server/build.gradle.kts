@@ -112,6 +112,33 @@ val migrationsDoServidor = fileTree("$projectDir/src/main/resources/db/migration
     include("*.sql")
 }
 
+/**
+ * Os DOIS arquivos que o oráculo entrega ao Kotlin: o catálogo (`catalogo_banco.csv`) e a saída de
+ * `motor_v3.py` para os 720 perfis (`referencia_720.txt`). `MotorV3Varredura720Test` os lê de fora
+ * de `src/test/kotlin`; sem declará-los aqui, mexer só no oráculo deixa `:server:test` em
+ * `UP-TO-DATE` e verde sem rodar -- o mesmo defeito de 2026-09-22, em outro arquivo.
+ * `integrationTest` também os declara: ele compara o banco com o CSV.
+ */
+val oraculoDoMotor = fileTree("$projectDir/src/test/oracle") {
+    include("catalogo_banco.csv", "referencia_720.txt")
+}
+
+tasks.named<Test>("test") {
+    inputs.files(oraculoDoMotor)
+        .withPropertyName("oraculoDoMotor")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+
+    val oraculo = oraculoDoMotor   // `val` local: ver o comentário do integrationTest abaixo
+    doFirst {
+        val quantos = oraculo.files.size
+        check(quantos == 2) {
+            "o fileTree do oráculo casou com $quantos arquivo(s), esperava 2 (catalogo_banco.csv e " +
+                "referencia_720.txt): o caminho está errado e :server:test voltaria a ficar cego " +
+                "pra mudança no oráculo"
+        }
+    }
+}
+
 // integração roda depois dos unitários quando ambos rodam juntos (ex.: no check)
 tasks.named<Test>("integrationTest") {
     shouldRunAfter(tasks.named("test"))
@@ -119,6 +146,9 @@ tasks.named<Test>("integrationTest") {
 
     inputs.files(migrationsDoServidor)
         .withPropertyName("migrationsDoServidor")
+        .withPathSensitivity(PathSensitivity.RELATIVE)
+    inputs.files(oraculoDoMotor)
+        .withPropertyName("oraculoDoMotor")
         .withPathSensitivity(PathSensitivity.RELATIVE)
 
     // `val` local pelo mesmo motivo do konsist: a ação roda na EXECUÇÃO, quando o objeto do

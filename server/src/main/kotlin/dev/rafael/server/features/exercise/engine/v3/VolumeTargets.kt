@@ -57,7 +57,7 @@ object VolumeTargets {
      * SESSÃO. A especificação manda aplicar nos dois ("esses fatores agora multiplicam também o
      * teto da sessão, não só o alvo semanal") — e até 2026-10-27 este aqui faltava, o que dava a
      * todo perfil `MAINTAIN` um alvo 67% maior que o do oráculo, em 180 dos 720 perfis. Defeito
-     * registrado como E10 em `docs/trabalho/motor-v3-fatia-8.md`.
+     * registrado como E10 em `docs/historico/motor-v3-fatia-8.md`.
      */
     fun fatorObjetivoAlvo(goal: Goal): Double = if (goal == Goal.MAINTAIN) 0.6 else 1.0
 

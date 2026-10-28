@@ -9,7 +9,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/** Motor v3, Fatia 6 — prova `CatalogPool.pool()` contra `tools/motor_sim/motor_v3.py::pool()`. */
+/** Motor v3, Fatia 6 — prova `CatalogPool.pool()` contra `server/src/test/oracle/motor_v3.py::pool()`. */
 class CatalogPoolTest {
 
     @Test

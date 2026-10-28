@@ -30,7 +30,7 @@ import org.junit.jupiter.api.TestInstance
  * enxerga**. A V65 transformou as seis exigências em colunas; a V66 deu ao perfil onde guardar a
  * resposta.
  *
- * Medido no simulador (`tools/motor_sim`), varrendo os 180 perfis de casa: sem acessório declarado,
+ * Medido no simulador (`server/src/test/oracle`), varrendo os 180 perfis de casa: sem acessório declarado,
  * 131 vagas ficavam sem exercício; com cadeira e banco, nenhuma.
  *
  * O segundo defeito é o ambiente. Ele era **deduzido do equipamento**: `BODYWEIGHT` virava "casa",

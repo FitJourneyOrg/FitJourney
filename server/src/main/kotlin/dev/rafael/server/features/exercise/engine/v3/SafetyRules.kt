@@ -6,7 +6,7 @@ import dev.rafael.server.features.exercise.models.Exercise
 
 /**
  * Motor v3, etapa [8], parte 1 — regras de segurança (`docs/trabalho/motor-v3-fatia-7.md`).
- * Espelha `tools/motor_sim/motor_v3.py::modo_conservador_automatico()`/`rir_minimo()`.
+ * Espelha `server/src/test/oracle/motor_v3.py::modo_conservador_automatico()`/`rir_minimo()`.
  *
  * Troca de barra por halter/máquina para o iniciante: **não construída nesta fatia.** A
  * especificação (`motor-v3-ESPECIFICACAO.md`, linhas 521/765) manda o gatilho ser `BEGINNER`

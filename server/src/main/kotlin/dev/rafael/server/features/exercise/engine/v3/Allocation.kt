@@ -5,7 +5,7 @@ import kotlin.math.floor
 
 /**
  * Motor v3, etapa [3] — ALOCAÇÃO POR PRIORIDADE (`docs/trabalho/motor-v3-desenho-e-fatias.md`
- * §3, Fatia 3). Espelha `tools/motor_sim/motor_v3.py::alocar()` termo a termo — mesmo
+ * §3, Fatia 3). Espelha `server/src/test/oracle/motor_v3.py::alocar()` termo a termo — mesmo
  * algoritmo, mesma ordem de sacrifício e os mesmos pesos (`spec_v3.py`), validado contra ela
  * (`docs/trabalho/motor-v3-fatia-3.md`).
  *
@@ -136,7 +136,7 @@ object PriorityAllocation {
      * **Garante `soma(resultado) <= capacidade`** desde a Fatia 8 — antes dela, os músculos fora
      * de `ORDEM_SACRIFICIO` nunca eram tocados e podiam sozinhos exceder a capacidade; agora o
      * corte proporcional os alcança também. Mesmo comportamento do oráculo Python
-     * (`tools/motor_sim/motor_v3.py::alocar()`).
+     * (`server/src/test/oracle/motor_v3.py::alocar()`).
      */
     fun alocar(
         direta: Map<TargetMuscle, Double>,
@@ -193,7 +193,7 @@ object PriorityAllocation {
         // Decisão da Fatia 8, medida nos 720 perfis antes de decidir
         // (`docs/historico/motor-v3-fatia-8.md`): o corte sequencial (estender
         // `ORDEM_SACRIFICIO`) deixava os quatro perderem 25–36% de volume; o proporcional erra
-        // bem menos. Espelha `tools/motor_sim/motor_v3.py::alocar()` termo a termo.
+        // bem menos. Espelha `server/src/test/oracle/motor_v3.py::alocar()` termo a termo.
         if (piso.values.sum() > capacidade && piso.isNotEmpty()) {
             var deficit = piso.values.sum() - capacidade
             val ativosRestantes = piso.keys.toMutableSet()

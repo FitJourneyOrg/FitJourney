@@ -201,7 +201,7 @@ A pesquisa é direta: *"a alocação proporcional por peso fixo é cega ao défi
 estrutural — piso direto como restrição rígida, depois distribuição do resto por déficit.
 
 Isto **não depende de D-1 nem de D-2** e cabe dentro da Fatia 8. Desenho e medições em
-`docs/trabalho/motor-v3-fatia-8.md`.
+`docs/historico/motor-v3-fatia-8.md`.
 
 Referência externa para dimensionar o piso (a medir, não a assumir):
 - RP: volume de manutenção (MV) de bíceps ≈ 4 séries diretas/semana.
