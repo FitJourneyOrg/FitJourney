@@ -649,8 +649,8 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   cobertura de quem o escolhe; ou a 11 vem antes, ou você aceita isso explicitamente
   (`fontes/debitos.md`).
 
-**Persistência** (só interface + fakes nesta fatia; desenho em `trabalho/motor-v3-fatia-10-schema.md`;
-V69 liberada em 2026-10-28):
+**Persistência** (implementada na Fatia 10b — V69 + `*RepositoryImpl`, verde no `integrationTest`; desenho em
+`arch/motor-v3-progressao-schema.md`):
 
 - **`[REGRA]` D-1: a chave é `(usuário, exercício)` DE PROPÓSITO.** A progressão acompanha a pessoa;
   acrescentar `programa_id` faria o aluno voltar à calibração a cada programa novo com o mesmo

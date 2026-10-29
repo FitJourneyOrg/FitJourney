@@ -12,7 +12,7 @@ import kotlin.uuid.Uuid
  * Repositório de progressão em memória, com a **chave única de verdade**.
  *
  * A chave do mapa é `(usuário, exercício)` — a mesma do `UNIQUE` proposto em
- * `docs/trabalho/motor-v3-fatia-10-schema.md`. Sem isso o teste de idempotência não provaria nada:
+ * `docs/arch/motor-v3-progressao-schema.md`. Sem isso o teste de idempotência não provaria nada:
  * um dublê que acumula linhas faria "gravar duas vezes" parecer inofensivo por construção.
  *
  * Escrito à mão (sem biblioteca de mock): os targets iOS estão declarados e MockK é só JVM.
