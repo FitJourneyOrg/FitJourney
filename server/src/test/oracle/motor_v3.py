@@ -7,8 +7,11 @@ com o ponto fixo do indireto em volta de [3]–[6]: o indireto da iteração seg
 que o preenchimento de fato colocou no programa, nunca de uma estrutura provisória.
 
 Catálogo: catalogo_banco.csv, exportado do banco por exportar_catalogo.sql. Casamento
-músculo↔exercício = `volume_target` (V64): um exercício, um alvo. Sem padrão de movimento, sem
-etiqueta, sem remendo no carregamento.
+músculo↔exercício = `volume_target` (V64): um exercício, um alvo. `movement_pattern` NÃO
+decide alvo (isso é só `volume_target`) -- mas a Fatia 11 passou a lê-lo para a regra de
+SELEÇÃO de puxada horizontal no BACK (ver `aplicar_puxada_horizontal_semanal`), mesmo papel
+que `familia` já tinha (dedup na sessão, extensão de cotovelo do tríceps). Sem etiqueta, sem
+remendo no carregamento -- continua valendo para o resto.
 
 PROVISÓRIO, até a fatia dona decidir (cada um conta disparos em `Programa.disparos`):
   - alocação sob escassez (fatia 3, com adição da fatia 8): piso = coluna do iniciante menos o
@@ -73,6 +76,10 @@ class Exercicio:
     # tools/curadoria_oficial/curadoria_canonica.csv, nao derivavel de movement_pattern nem de
     # equipment (ver docs/trabalho/motor-v3-fatia-7.md). O motor nao olha contraindications.
     rir_minimo_seguranca: bool
+    # --- Fatia 11: so para a regra de SELECAO de puxada horizontal no BACK (nao decide alvo,
+    # volume_target continua sendo a unica fonte disso -- ver nota no cabecalho do arquivo).
+    # Default so para nao quebrar construtores antigos de teste que nao passam este campo.
+    movement_pattern: str = "NONE"
 
 
 def carregar_catalogo(caminho: str = os.path.join(AQUI, "catalogo_banco.csv")) -> list:
@@ -86,6 +93,7 @@ def carregar_catalogo(caminho: str = os.path.join(AQUI, "catalogo_banco.csv")) -
                 prioridade=int(r["prioridade"]), relevancia=int(r["relevancia"]),
                 nivel_maximo=r["nivel_maximo"], ambiente=r["ambiente"], familia=r["familia"],
                 acessorios=frozenset(a for a in ACESSORIOS if r[a] == "t"),
+                movement_pattern=r["movement_pattern"],
                 rir_minimo_seguranca=r["rir_minimo_seguranca"] == "t",
             ))
     return out
@@ -218,14 +226,38 @@ def bonus_de_foco(p: Perfil) -> dict:
     return out
 
 
+def alvos_do_foco(p: Perfil) -> frozenset:
+    """Os `TargetMuscle` que o foco efetivo deste perfil cobre -- mesma expansao do bonus
+    (`FOCO_PARA_ALVOS`). Usado para o bonus, o piso dos demais (Fatia 11) e a protecao dinamica na
+    alocacao (Fatia 11, `alocar(protegidos_extra=...)`)."""
+    return frozenset(m for g in foco_efetivo(p) for m in FOCO_PARA_ALVOS[g])
+
+
 def alvos(p: Perfil) -> dict:
+    """[1] alvo semanal por musculo. Fatia 10: foco soma bonus DEPOIS do fator de objetivo e
+    respeita o MRV. Fatia 11: com foco ativo, os demais grupos (fora do foco) vao ao PISO
+    (VOLUME[m][0] -- a mesma coluna que o iniciante usa, e e a unica forma de abrir espaco real
+    na sessao: a Fatia 10 mediu que o bonus sozinho e quase inerte porque a capacidade e o limite,
+    nao o alvo). Isencao nomeada: BACK fica no volume NORMAL (nao vai ao piso) quando a enfase e em
+    CHEST ou SHOULDERS -- razao declarada na spec ("puxar nunca cai abaixo de empurrar"), nao uma
+    desigualdade a comparar (ver nota em docs/trabalho/motor-v3-fatia-11.md sobre por que SHOULDERS
+    nao pode ser somado como "empurrar": mistura padrao de puxar na curadoria). Sem foco, o
+    resultado e identico ao de antes (foco vazio = isencao e piso nunca disparam)."""
     fator = FATOR_OBJETIVO_ALVO[p.objetivo]
     i = 0 if fator is None else NIVEIS.index(p.nivel)
     base = {m: min(VOLUME[m][i] * (1.0 if fator is None else fator), VOLUME[m][3]) for m in ALVOS}
-    # Fatia 10: foco soma DEPOIS do fator de objetivo e ainda respeita o MRV ("foco da +3,
-    # respeitando MRV"). Sem foco, o mapa e vazio e o resultado e identico ao de antes.
     bonus = bonus_de_foco(p)
-    return {m: min(base[m] + bonus.get(m, 0), VOLUME[m][3]) for m in ALVOS}
+    foco_alvos = alvos_do_foco(p)
+    foco_em_empurrar = any(g in EMPURRAR for g in foco_efetivo(p))
+    resultado = {}
+    for m in ALVOS:
+        valor = base[m] + bonus.get(m, 0)
+        if foco_alvos and m not in foco_alvos:
+            isento = m == "BACK" and foco_em_empurrar
+            if not isento:
+                valor = min(valor, float(VOLUME[m][0]))  # piso -- nunca sobe, so desce
+        resultado[m] = min(valor, VOLUME[m][3])
+    return resultado
 
 
 def teto_sessao(p: Perfil, divisao: str) -> float:
@@ -360,12 +392,23 @@ def piso_prescritivel(inteiro: dict, prioridade: list, capacidade: float,
 
 
 def alocar(direta: dict, indireto: dict, treinaveis: list, capacidade: float, disparos: Counter,
-           piso_direto_de: dict = None) -> dict:
+           piso_direto_de: dict = None, protegidos_extra: frozenset = frozenset()) -> dict:
     """`piso_direto_de`: musculo -> series diretas garantidas (Fatia 8). Entra como PRIORIDADE NA
     FILA do orcamento, nunca por fora dele: sob escassez ele eleva o piso protegido do musculo,
     e os lacos de rebaixamento e sacrificio continuam podendo alcanca-lo -- quem nao couber sai.
+
+    `protegidos_extra` (Fatia 11): alvo(s) em enfase -- extensao DINAMICA de PROTEGIDOS_ALOCACAO,
+    nunca lista paralela (mesmo motivo do `[INV]` de fonte unica da Fatia 8: ORDEM_SACRIFICIO so
+    pode ter uma origem). So vale para ESTA chamada; o conjunto ESTATICO (CHEST/BACK/QUADS/
+    POSTERIOR) nao muda. Protege de rebaixamento e sacrificio -- os dois nomeados na spec
+    ("nunca e sacrificado nem rebaixado"). NAO protege do corte proporcional: esse e tratamento
+    igual ao que CHEST/BACK/QUADS/POSTERIOR ja recebem hoje (a spec da enfase nao fala de corte
+    proporcional, que e invencao da Fatia 8, posterior ao conceito de PROTEGIDOS_ALOCACAO) -- um
+    musculo em enfase SEM escassez nem chega aqui; COM escassez extrema o suficiente para chegar
+    ao corte proporcional, ele perde volume como qualquer protegido estatico perde hoje.
     """
     piso_direto_de = piso_direto_de or {}
+    ordem_sacrificio = [m for m in ORDEM_SACRIFICIO if m not in protegidos_extra]
     prioridade = sorted(treinaveis, key=lambda m: (-PESO_PRIORIDADE[m], ALVOS.index(m)))
     if sum(direta[m] for m in treinaveis) <= capacidade:
         folgado = {m: arredondar(direta[m]) for m in prioridade if arredondar(direta[m]) > 0}
@@ -379,13 +422,13 @@ def alocar(direta: dict, indireto: dict, treinaveis: list, capacidade: float, di
     piso = {m: min(direta[m], max(float(piso_direto_de.get(m, 0)),
                                   max(0.0, VOLUME[m][0] - indireto[m])))
             for m in ativos}
-    for m in ORDEM_SACRIFICIO:
+    for m in ordem_sacrificio:
         if sum(piso.values()) <= capacidade:
             break
         if m in piso and piso[m] > piso_do_papel(m):
             piso[m] = piso_do_papel(m)
             disparos["rebaixamento"] += 1
-    for m in ORDEM_SACRIFICIO:
+    for m in ordem_sacrificio:
         if sum(piso.values()) <= capacidade:
             break
         if m in piso:
@@ -648,6 +691,71 @@ def preencher(sessoes: list, candidatos: list, p: Perfil, disparos: Counter, vaz
         vagas.sort(key=lambda v: not (v.exercicio.composto if v.exercicio else False))
 
 
+# ----------------------------------------------------------------------------- [6b] selecao semanal
+
+def aplicar_puxada_horizontal_semanal(sessoes: list, candidatos: list, disparos: Counter) -> None:
+    """[REGRA] Fatia 11: com 2+ vagas de BACK na semana, ao menos uma e HORIZONTAL_PULL. Com 1 vaga a
+    regra NAO se aplica -- nao ha o que balancear (disparo `puxada_horizontal_regra_nao_aplicavel`).
+
+    So troca QUAL exercicio ocupa uma vaga ja existente -- nunca soma serie, nunca muda `entregue`
+    (mesmo alvo, mesmo papel, mesmas series). Mesma forma da extensao de cotovelo do triceps (Fatia
+    8): motor decide QUANTO (alocacao), curadoria/selecao decide QUAL.
+
+    Medido antes de existir (Fatia 11, 2026-10-29): sem isto, 25,8% dos perfis dos 720 e 38,8% dos
+    960 (com foco) que treinam BACK nunca recebem puxada horizontal numa semana -- 100% dos casos em
+    ACADEMIA (CASA nunca falha). Causa: `Barra Fixa` (prioridade 1) e `Puxada Alta` (prioridade 2),
+    as duas prioridades mais altas do alvo BACK em academia, sao as duas VERTICAL_PULL -- toda opcao
+    HORIZONTAL_PULL vem depois (prioridade 3+) e a selecao normal nunca chega la quando ha poucas
+    vagas. O pool NUNCA esta vazio (ha HORIZONTAL_PULL em todo ambiente, inclusive CASA com peso
+    corporal/faixa elastica) -- por isso a correcao e so de SELECAO, nao de catalogo.
+    """
+    vagas_back = [(dia_idx, v) for dia_idx, (_, vagas) in enumerate(sessoes)
+                  for v in vagas if v.alvo == "BACK" and v.exercicio is not None]
+    if len(vagas_back) < 2:
+        disparos["puxada_horizontal_regra_nao_aplicavel"] += 1
+        return
+    # Medicao do espelho (nao e regra -- so registra, mesmo que de zero): com 2+ vagas, falta
+    # alguma VERTICAL_PULL? A ordem de prioridade poe a vertical primeiro em academia, entao o
+    # esperado e que isto nunca dispare.
+    if not any(v.exercicio.movement_pattern == "VERTICAL_PULL" for _, v in vagas_back):
+        disparos["puxada_vertical_semanal_ausente"] += 1
+    if any(v.exercicio.movement_pattern == "HORIZONTAL_PULL" for _, v in vagas_back):
+        return
+    disparos["puxada_horizontal_semanal_corrigida"] += 1
+    usados_por_dia = {dia_idx: {v.exercicio.nome for v in vagas if v.exercicio}
+                      for dia_idx, (_, vagas) in enumerate(sessoes)}
+    usados_semana = Counter(v.exercicio.nome for _, vagas in sessoes for v in vagas if v.exercicio)
+    familias_por_dia = {dia_idx: {v.exercicio.familia for v in vagas if v.exercicio}
+                        for dia_idx, (_, vagas) in enumerate(sessoes)}
+    melhor = None
+    for dia_idx, v in vagas_back:
+        quer_composto = v.papel in COMPOSTOS
+        cands = [e for e in candidatos
+                 if e.alvo == "BACK" and e.composto == quer_composto
+                 and e.movement_pattern == "HORIZONTAL_PULL"
+                 and e.nome not in usados_por_dia[dia_idx]]
+        if not cands:
+            continue
+        # mesma ordem de preencher(): familia inedita no dia se houver, relevancia 1 se houver,
+        # depois o menos usado na semana e, empatado, a menor prioridade.
+        inediotas = [e for e in cands if e.familia not in familias_por_dia[dia_idx]]
+        if inediotas:
+            cands = inediotas
+        base = [e for e in cands if e.relevancia == 1]
+        if base:
+            cands = base
+        escolha = min(cands, key=lambda e: (usados_semana[e.nome], e.prioridade))
+        candidato = (dia_idx, v, escolha)
+        if melhor is None or (usados_semana[escolha.nome], escolha.prioridade) < \
+                (usados_semana[melhor[2].nome], melhor[2].prioridade):
+            melhor = candidato
+    if melhor is None:
+        disparos["puxada_horizontal_sem_candidato"] += 1
+        return
+    _, v, escolha = melhor
+    v.exercicio = escolha
+
+
 # ----------------------------------------------------------------------------- [7] auditoria
 
 def medir_entregue(sessoes: list):
@@ -780,7 +888,8 @@ def gerar(p: Perfil) -> Programa:
         # A demanda direta nasce do alvo menos o indireto; o PISO DIRETO a eleva onde se aplica,
         # senao o musculo cujo indireto ja cobre o alvo pediria ZERO e nunca receberia vaga.
         direta = {m: max(float(pisos[m]), max(0.0, alvo[m] - indireto[m])) for m in ALVOS}
-        alocado = alocar(direta, indireto, treinaveis, capacidade, disparos, pisos)
+        alocado = alocar(direta, indireto, treinaveis, capacidade, disparos, pisos,
+                        protegidos_extra=alvos_do_foco(p))
         semana = montar_semana(alocado, dias, disparos)
         sessoes = [(rot, compor_sessao(series, disparos)) for (rot, _), series in zip(dias, semana)]
         preencher(sessoes, candidatos, p, disparos, vazias)
@@ -803,6 +912,7 @@ def gerar(p: Perfil) -> Programa:
     else:
         disparos["ponto_fixo_nao_convergiu"] += 1
     alocado, sessoes, entregue, compostos, novo, disparos, vazias = estado
+    aplicar_puxada_horizontal_semanal(sessoes, candidatos, disparos)
 
     acima = [(rot, sum(v.series for v in vagas if v.exercicio))
              for rot, vagas in sessoes

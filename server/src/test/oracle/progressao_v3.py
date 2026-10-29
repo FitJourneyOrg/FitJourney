@@ -332,6 +332,143 @@ def situacao_iniciante(decisoes: list, diagnostico_feito: bool) -> str:
     return ESTAGNACAO_TROCA if diagnostico_feito else ESTAGNACAO_DIAGNOSTICO
 
 
+# ----------------------------------------------------------------------------- promocao (Fatia 11)
+
+PROMOVER = "PROMOVER"
+RECUPERACAO = "RECUPERACAO"
+RECUPERACAO_SEM_RETOMADA = "RECUPERACAO_SEM_RETOMADA"
+
+
+def diagnostico_promocao_iniciante(decisoes: list) -> Optional[str]:
+    """[REGRA] Fatia 11: diagnostico de promocao a INTERMEDIATE pelo deload-como-diagnostico
+    (ESPECIFICACAO, "[PENDENTE 3]"). Opera sobre o HISTORICO DE UMA ANCORA (`decisoes`: SOBE/
+    MANTEM/DESCE/DELOAD, em ordem) -- mesma entrada de `situacao_iniciante`.
+
+    A spec, nas palavras dela: "a carga estagna e o motor aplica o deload (1); depois do deload a
+    carga volta a subir e estagna de novo em valores parecidos: os ganhos faceis acabaram, o
+    iniciante e promovido (2); depois do deload a carga nao volta a subir: e recuperacao, nao
+    nivel -- nao ha promocao, e o problema esta fora do programa (3)".
+
+    So ha o que diagnosticar quando a ancora JA reestagnou depois do ultimo deload (mesmo
+    `_sem_subir_no_fim` que `situacao_iniciante` usa para decidir ESTAGNACAO_DELOAD de novo) --
+    primeira estagnacao (sem deload algum ainda) nao diagnostica nada, so dispara o 1o deload.
+
+    Devolve:
+      PROMOVER                  -- subiu pelo menos uma vez depois do ultimo deload e reestagnou
+                                    (regra 2 da spec).
+      RECUPERACAO                -- nunca subiu depois do(s) deload(s) e este e o 1o deload da
+                                    ancora (regra 3, sem o aviso extra).
+      RECUPERACAO_SEM_RETOMADA   -- nunca subiu depois do ultimo deload E o deload anterior a
+                                    este TAMBEM nao teve retomada entre os dois (nenhum SOBE no
+                                    intervalo) -- "dois deloads consecutivos sem retomada" da
+                                    spec, gatilho do aviso do app (sono, alimentacao, estresse,
+                                    procurar profissional). Um deload com retomada seguido de
+                                    reestagnacao e OUTRA coisa (PROMOVER, ou um novo ciclo que
+                                    ainda nao reestagnou) -- nao conta para este aviso. Continua
+                                    SEM promocao -- so muda a mensagem, nao o nivel.
+      None                       -- ainda nao ha o que diagnosticar (sem deload no historico, ou
+                                    dentro da janela de espera pos-deload).
+
+    [PROPOSTA] esta funcao julga UMA ancora. A spec fala "o iniciante e promovido" no singular,
+    sem dizer se e preciso que TODAS as ancoras do perfil cheguem a PROMOVER ou se UMA basta (como
+    o ombro_vira_isolamento, que dispara por musculo). Decisao de agregacao entre ancoras
+    (`diagnostico_promocao_do_perfil`, abaixo) assume que UMA ancora em PROMOVER e suficiente --
+    nao ratificado, proponho em vez de assumir caso Rafael discorde.
+    """
+    if DELOAD not in decisoes:
+        return None
+    idx_ultimo = len(decisoes) - 1 - decisoes[::-1].index(DELOAD)
+    depois = decisoes[idx_ultimo + 1:]
+    if _sem_subir_no_fim(depois) < S.ESTAGNACAO_SESSOES:
+        return None   # ainda subindo ou dentro da janela -- nada a diagnosticar agora
+    if SOBE in depois:
+        return PROMOVER
+    antes = decisoes[:idx_ultimo]
+    if DELOAD in antes:
+        idx_penultimo = len(antes) - 1 - antes[::-1].index(DELOAD)
+        entre = antes[idx_penultimo + 1:]
+        if SOBE not in entre:
+            # nenhuma retomada entre os dois deloads mais recentes -- "consecutivos SEM retomada"
+            return RECUPERACAO_SEM_RETOMADA
+    return RECUPERACAO
+
+
+def diagnostico_promocao_do_perfil(diagnosticos_por_ancora: list) -> Optional[str]:
+    """[REGRA] (decisao do Rafael, 2026-10-29): agrega `diagnostico_promocao_iniciante` de TODAS
+    as ancoras do perfil (uma chamada por ancora, lista de resultados). Promove com DUAS ancoras
+    em PROMOVER -- ou UMA, se o perfil so tiver uma ancora. Motivo: o nivel barra exigencia
+    TECNICA (acesso a barra livre); o lift que estagna primeiro (tipicamente o de desenvolvimento
+    mais isolado) nao representa a maturidade da pessoa inteira, e promover por ele so abriria o
+    portao de barra livre cedo demais. Numero CALIBRAVEL (2), nao evidencia -- mesma familia do
+    10%/3 sessoes ja aprovados; o que NAO e calibravel e a excecao de 1 ancora (decorre da propria
+    definicao: "duas" exige que exista uma segunda).
+
+    Medido nos 240 perfis BEGINNER da matriz de 720 (2026-10-29): o catalogo atual NUNCA gera um
+    programa de iniciante com 1 so vaga preenchida (minimo observado: 5; mediana 14; maximo 17) --
+    a excecao de "uma ancora" e defesa declarada, sem caso vivo hoje, igual ao SEM_CATALOGO/V.mrv
+    da Fatia 8. Fica no codigo porque o catalogo pode mudar (perfil de 2 dias/pouca capacidade),
+    nao e remendo para um bug.
+
+    Sem nenhum PROMOVER, RECUPERACAO_SEM_RETOMADA vence RECUPERACAO (o aviso e sobre o PIOR caso,
+    nao a media). Todas None (ou lista vazia) = nada a reportar.
+
+    `[INV]` INALCANCAVEL hoje, motivo medido (mesmo padrao do `ombro_vira_isolamento`, Fatia 10 --
+    reauditado na Fatia 11): nenhum perfil BEGINNER da matriz de 720 gera programa com menos de 5
+    vagas preenchidas (minimo 5, mediana 14, maximo 17 -- `test_nenhum_beginner_tem_menos_de_5_
+    ancoras` em `test_progressao_v3.py` tranca o numero). O ramo `limite = 1` desta funcao so
+    executa com `n <= 1`, que a matriz de hoje nunca produz -- fica DECLARADO, nao e remendo morto:
+    um catalogo futuro com perfil de capacidade minima (2 dias, pouco tempo) pode produzir 1 so
+    vaga, e ai o ramo passa a disparar de verdade.
+    """
+    n = len(diagnosticos_por_ancora)
+    limite = 1 if n <= 1 else 2
+    if sum(1 for d in diagnosticos_por_ancora if d == PROMOVER) >= limite:
+        return PROMOVER
+    if RECUPERACAO_SEM_RETOMADA in diagnosticos_por_ancora:
+        return RECUPERACAO_SEM_RETOMADA
+    if RECUPERACAO in diagnosticos_por_ancora:
+        return RECUPERACAO
+    return None
+
+
+def diagnostico_promocao_avancado(um_rm_inicio: Optional[float], um_rm_fim: Optional[float],
+                                  reducoes_no_periodo: int,
+                                  limite_poucas_reducoes: int = 1) -> Optional[str]:
+    """[PROPOSTA] Fatia 11: diagnostico de promocao a ADVANCED (ESPECIFICACAO, "[PENDENTE 3]"),
+    "mesma logica medida por mesociclo -- 1RM estimado das ancoras comparado entre mesociclos
+    consecutivos; dois ciclos sem ganho, com adesao mantida e sem dor em escalonamento,
+    promovem". Pre-condicoes do chamador, NAO verificadas aqui (adesao, dor em escalonamento,
+    ancora congelada no periodo -- "senao o 1RM estimado compara exercicios diferentes"):
+    `um_rm_inicio`/`um_rm_fim` sao o 1RM estimado (Epley) da MESMA ancora no fim de cada um dos
+    dois mesociclos consecutivos da comparacao.
+
+    "Sem ganho" com ambiguidade resolvida pelo sinal que o motor ja tem (`decidir()`/DESCE):
+    poucas reducoes de carga no dia PROMOVEM (ganhos faceis acabaram, so variacao normal de
+    sessao); muitas indicam recuperacao, geram aviso e NAO promovem. `limite_poucas_reducoes` e
+    CALIBRAVEL -- a spec da a direcao, nao o numero, igual aos 10%/3 sessoes ja aprovados; comeca
+    em 1 (no maximo uma sessao com DESCE no periodo ainda conta como "sem ganho real", duas ou
+    mais e recuperacao) e e o primeiro a revisar se a telemetria discordar.
+
+    Devolve PROMOVER, RECUPERACAO (aviso, sem promocao) ou None (1RM ainda subiu -- nada a
+    diagnosticar, o avancado so se julga por estagnacao, nunca por tempo).
+    """
+    if um_rm_inicio is None or um_rm_fim is None:
+        return None
+    if um_rm_fim > um_rm_inicio + EPS:
+        return None
+    return PROMOVER if reducoes_no_periodo <= limite_poucas_reducoes else RECUPERACAO
+
+
+def pode_sugerir_promocao_de_novo(mesociclo_atual: int, mesociclo_na_recusa: Optional[int]) -> bool:
+    """[REGRA] (aprovado, 2026-10-29): depois de uma recusa de promocao, so volta a sugerir
+    quando o mesociclo atual passar de `mesociclo_na_recusa + 1` -- contador de mesociclo, nao
+    calendario (o calendario erra onde o app tem pausa e recalibracao). `mesociclo_na_recusa`
+    None = nunca recusou, sempre pode sugerir."""
+    if mesociclo_na_recusa is None:
+        return True
+    return mesociclo_atual > mesociclo_na_recusa + 1
+
+
 # ----------------------------------------------------------------------------- retorno apos pausa
 
 @dataclass(frozen=True)
