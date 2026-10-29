@@ -191,6 +191,24 @@ class ProgressPolicyTest {
         assertEquals(1.0, v.semClassificacao)
     }
 
+    @Test
+    fun `core nao conta volume, e exercicio so de core vira sem grupo em vez de sumir`() {
+        val s = listOf(
+            serie("2026-09-28", 60.0, ex = agachamento),
+            serie("2026-09-28", 60.0, ex = prancha),
+            serie("2026-09-28", 60.0, ex = supino),
+        )
+        val mapa = mapOf(
+            agachamento to listOf(MuscleGroup.LEGS, MuscleGroup.CORE),   // o primário real continua contando
+            prancha to listOf(MuscleGroup.CORE),
+            supino to listOf(MuscleGroup.CHEST),
+        )
+        val v = ProgressPolicy.seriesPorGrupo(s, mapa, semanas = 1)
+        assertEquals(setOf(MuscleGroup.LEGS, MuscleGroup.CHEST), v.porGrupo.keys)
+        assertEquals(1.0, v.semClassificacao, "a série só de core aparece como 'sem grupo'")
+        assertEquals(s.size.toDouble(), v.porGrupo.values.sum() + v.semClassificacao, "nenhuma série some")
+    }
+
     // ---- ultimo vs anterior ------------------------------------------------
 
     @Test

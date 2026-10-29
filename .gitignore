@@ -60,9 +60,20 @@ Thumbs.db
 /secrets
 # ===== Docker (volumes locais, se algum dia montados em ./) =====
 /pgdata/
-# Documentação inteira (fontes .md, ADRs, baterias, PDFs gerados) — local, não versionar.
-# Desde 2026-08-31 TUDO vive em docs/; a raiz tem só o README.md do repositório.
-docs/
+# docs/ VOLTOU A SER VERSIONADO em 2026-10-27. A exclusão anterior (`docs/`, commit d932591,
+# 26/07/2026, "para de versionar docs/ (Painel/Handoff/ADRs locais)") foi tomada quando a pasta
+# tinha TRÊS arquivos de rascunho — duas propostas da ARCH-27 e uma de exercícios-base, 377
+# linhas no total. Desde então docs/ virou a FONTE DA VERDADE do motor: regras/, os 39 ADRs de
+# arch/, historico/, fontes/debitos.md, migrations/INDICE.md, propostas/ com a especificação e o
+# ESTADO.md. A própria hierarquia de verdade do projeto põe docs/ESTADO.md, docs/CONVENCOES.md e
+# docs/regras/ logo abaixo do código. Mantê-los fora do git é perder a segunda autoridade do
+# projeto se o disco sumir. 115 .md, 22.251 linhas, ~1,7MB de texto.
+#
+# Fica fora só o que é GERADO (sai de `python3 docs/geradores/gen_tudo.py` em um comando) e o
+# resíduo de backup manual:
+docs/pdf/
+docs/gerados/
+docs/**/*.bak-*
 # Resíduo do layout antigo, em que os canônicos ficavam soltos na raiz. Mantido para não
 # reaparecerem num checkout velho.
 /FitJourney_*.pdf
@@ -74,8 +85,15 @@ catalogo.json
 # artefato dos geradores de PDF (docs/ e tools/ rodam Python)
 __pycache__/
 *.pyc
-# tooling local de curadoria (scripts Python + planilhas) — nao versionado
-/tools/
+# tooling local de curadoria (scripts Python + planilhas) — nao versionado. O que justifica a
+# exclusão é o tamanho: tools/cache tem ~20MB e tools/curadoria_oficial ~1,5MB de planilha.
+# Exclui o CONTEÚDO (`/tools/*`), não a pasta, porque o git não permite re-incluir nada dentro de
+# um diretório excluído — e precisamos de uma exceção.
+/tools/*
+
+# (O recorte que mantinha o oráculo versionado dentro de /tools/ saiu em 2026-10-27: o
+# motor_sim foi para server/src/test/oracle/, onde é versionado por padrão. Aqui não há
+# mais exceção para manter. __pycache__/ acima já cobre o cache do Python.)
 # insumo morto do scraping; o catalogo vem das migrations (V28+)
 /exercises.csv
 # fotos de check-in (fatia B) — DADO DE USUÁRIO. Nunca no git, e o backup é outro assunto:

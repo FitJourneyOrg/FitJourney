@@ -11,9 +11,18 @@ import dev.rafael.contract.profile.MuscleGroup
  *
  * Perna FINA: LEGS vira QUADS/POSTERIOR/CALVES (derivados de movement_pattern, dado
  * Braço desmembrado (Fatia B): ARMS (grupo do quiz) → BICEPS/TRICEPS/FOREARMS, casados por
- * `category` do catálogo (dado que já existe), do mesmo jeito que CALVES/CORE.
+ * `category` do catálogo (dado que já existe), do mesmo jeito que CALVES.
  */
-enum class TargetMuscle { CHEST, BACK, SHOULDERS, BICEPS, TRICEPS, FOREARMS, QUADS, POSTERIOR, CALVES, GLUTES, CORE }
+/**
+ * Alvos de volume do motor. CORE saiu em 2026-10-27: o catálogo não tinha nenhum exercício com
+ * `volume_target = 'CORE'` (a V68 aperta o CHECK para recusar o valor), o alvo semanal era 0 em
+ * todo nível, e o alvo só servia para produzir um `SEM_CATALOGO` por perfil na auditoria —
+ * medido: os 720 `SEM_CATALOGO` da matriz eram todos CORE, e nenhum outro número mudou com a
+ * remoção. `MuscleGroup.CORE` saiu junto, do contrato (0 perfis com CORE em `focus_areas`,
+ * 0 programas com CORE em `focus_muscles`, conferido no banco). Ver
+ * `docs/regras/01-motor-de-geracao.md`.
+ */
+enum class TargetMuscle { CHEST, BACK, SHOULDERS, BICEPS, TRICEPS, FOREARMS, QUADS, POSTERIOR, CALVES, GLUTES }
 
 /** Papel do exercício → define reps/descanso/RIR (ARCH #26 §3.2). */
 enum class SlotRole { COMPOSTO_PESADO, COMPOSTO_ACESSORIO, ISOLAMENTO }
@@ -55,7 +64,6 @@ object VolumeTable {
         TargetMuscle.POSTERIOR to V(6, 10, 14, 18),
         TargetMuscle.CALVES to V(5, 9, 12, 16),
         TargetMuscle.GLUTES to V(4, 8, 12, 16),
-        TargetMuscle.CORE to V(5, 8, 10, 16),
     )
 
     /** Alvo semanal por músculo/nível. GENERAL_HEALTH usa o piso (MEV). */
@@ -81,7 +89,7 @@ object VolumeTable {
         MuscleGroup.FOREARMS -> setOf(TargetMuscle.FOREARMS)
         MuscleGroup.LEGS -> setOf(TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.CALVES)
         MuscleGroup.GLUTES -> setOf(TargetMuscle.GLUTES)
-        MuscleGroup.CORE -> setOf(TargetMuscle.CORE)
+        MuscleGroup.CORE -> emptySet()   // sem alvo de volume (V68)
     }
 }
 

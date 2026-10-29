@@ -42,4 +42,9 @@ data class Exercise(
     // --- V65: catálogo inteiro ---
     val familia: String?,
     val acessorios: Set<Accessory>,
+
+    // --- V67 (fatia 7): RIR mínimo por propriedade -- aprovado por nome, não derivável de
+    // movementPattern/equipment (ver docs/trabalho/motor-v3-fatia-7.md). O motor não lê
+    // contraindications em tempo de execução.
+    val rirMinimoSeguranca: Boolean,
 )

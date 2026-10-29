@@ -51,5 +51,8 @@ object ExercisesTable : Table("exercises") {
     val requiresStep = bool("requires_step").default(false)
     val requiresAnchorPoint = bool("requires_anchor_point").default(false)
 
+    // --- V67 (fatia 7): RIR minimo por propriedade, aprovado por nome. NOT NULL DEFAULT false.
+    val rirMinimoSeguranca = bool("rir_minimo_seguranca").default(false)
+
     override val primaryKey = PrimaryKey(id)
 }
