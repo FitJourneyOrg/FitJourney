@@ -587,7 +587,10 @@ class ReferenciaDaProgressao(unittest.TestCase):
         """Caminho de falha do gerador: um tipo que sumisse da grade deixaria o Kotlin sem comparar."""
         import gerar_referencia_progressao as g
         tipos = Counter(l.split("|")[0] for l in g.linhas())
-        self.assertEqual({"PI", "SF", "PC", "RI", "RM", "DE", "SD", "CS", "DP", "IN", "RE", "AR"}, set(tipos))
+        self.assertEqual(
+            {"PI", "SF", "PC", "RI", "RM", "DE", "SD", "CS", "DP", "IN", "RE", "AR", "PD", "PP", "PA", "PN"},
+            set(tipos),
+        )
         self.assertEqual(6912, tipos["DE"])
         self.assertEqual(2730, tipos["IN"])
         self.assertTrue(all(n > 0 for n in tipos.values()))

@@ -25,7 +25,12 @@ casas -- o Kotlin compara com tolerancia). O primeiro campo diz o que e:
     CS|numero|semana|cons|numero'|semana'|cons'                concluir_semana
     RE|dias|numero|semana|cons|idade|numero'|semana'|cons'|recalibra|fator    retorno_apos_pausa
     AR|c|exp|pos|umrm|sem|inc|dias|c'|exp'|pos'|umrm'|sem'     aplicar_retorno
+    PD|historico|diagnostico                                   diagnostico_promocao_iniciante (Fatia 11)
+    PP|diagnosticos|diagnostico                                diagnostico_promocao_do_perfil (Fatia 11)
+    PA|umRmInicio|umRmFim|reducoes|limite|diagnostico           diagnostico_promocao_avancado (Fatia 11)
+    PN|atual|recusa|pode                                        pode_sugerir_promocao_de_novo (Fatia 11)
 `series` = `reps:rir;reps:rir;...`; RIR nulo (nao informado) = `-` (em series e nos campos `rir`). `historico` = letras S (SOBE) M (MANTEM) D (DESCE) L (DELOAD).
+`diagnosticos` (PP) = letras N (None) P (PROMOVER) R (RECUPERACAO) S (RECUPERACAO_SEM_RETOMADA), uma por ancora, pode ser vazio.
 """
 import itertools
 import os
@@ -44,6 +49,11 @@ OBJETIVOS = tuple(S.PRESCRICAO)
 
 def _f(x) -> str:
     return "" if x is None else "%.6f" % float(x)
+
+
+def _o(x) -> str:
+    """Optional[str] (os diagnosticos de promocao, que ja sao PROMOVER/RECUPERACAO/etc.)."""
+    return "" if x is None else str(x)
 
 
 def _b(x) -> str:
@@ -148,6 +158,26 @@ def linhas() -> list:
         n = P.aplicar_retorno(e, r, inc)
         out.append("AR|%s|%d|%s|%s|%d|%s|%d|%s|%d|%s|%s|%d" % (
             _f(carga), exp, _b(pos), _f(um), 2, _f(inc), dias, _f(n.carga), n.exposicoes, _b(n.pos_salto), _f(n.um_rm), n.sem_subir))
+    # --- diagnostico de promocao do iniciante (Fatia 11): mesma grade de historicos do IN
+    for tam in range(0, 6):
+        for letras in itertools.product("SMDL", repeat=tam):
+            h = "".join(letras)
+            out.append("PD|%s|%s" % (h, _o(P.diagnostico_promocao_iniciante(_hist(h)))))
+    # --- diagnostico de promocao do perfil (Fatia 11): agregacao de 0 a 4 ancoras
+    VALORES_DIAG = {"N": None, "P": P.PROMOVER, "R": P.RECUPERACAO, "S": P.RECUPERACAO_SEM_RETOMADA}
+    for n in range(0, 5):
+        for combo in itertools.product("NPRS", repeat=n):
+            diagnosticos = [VALORES_DIAG[c] for c in combo]
+            out.append("PP|%s|%s" % ("".join(combo), _o(P.diagnostico_promocao_do_perfil(diagnosticos))))
+    # --- diagnostico de promocao ao avancado (Fatia 11)
+    for um_inicio, um_fim, reducoes, limite in itertools.product(
+            (None, 50.0, 100.0), (None, 48.0, 49.999999, 50.0, 50.000001, 52.0, 100.0, 101.0),
+            range(0, 4), (0, 1, 2)):
+        r = P.diagnostico_promocao_avancado(um_inicio, um_fim, reducoes, limite)
+        out.append("PA|%s|%s|%d|%d|%s" % (_f(um_inicio), _f(um_fim), reducoes, limite, _o(r)))
+    # --- pode sugerir promocao de novo (Fatia 11)
+    for atual, recusa in itertools.product(range(1, 6), (None,) + tuple(range(0, 6))):
+        out.append("PN|%d|%s|%s" % (atual, _i(recusa), _b(P.pode_sugerir_promocao_de_novo(atual, recusa))))
     return out
 
 

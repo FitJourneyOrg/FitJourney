@@ -3,6 +3,7 @@ package dev.rafael.server.features.exercise.engine.v3
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.server.features.exercise.engine.v3.AncoraDoIniciante.Evento
+import dev.rafael.server.features.exercise.engine.v3.PromocaoDeNivel.Diagnostico
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Decisao
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Estado
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Serie
@@ -51,7 +52,10 @@ class ProgressaoContraOOraculoTest {
     fun `a grade tem todos os tipos de caso e nenhuma linha vazia`() {
         // Caminho de falha da própria varredura: uma referência truncada passaria com "0 divergências".
         val tipos = Oraculo.linhasDaProgressao().groupingBy { it.substringBefore('|') }.eachCount()
-        assertEquals(setOf("PI", "SF", "PC", "RI", "RM", "DE", "SD", "CS", "DP", "IN", "RE", "AR"), tipos.keys)
+        assertEquals(
+            setOf("PI", "SF", "PC", "RI", "RM", "DE", "SD", "CS", "DP", "IN", "RE", "AR", "PD", "PP", "PA", "PN"),
+            tipos.keys,
+        )
         assertEquals(6912, tipos["DE"])
         assertEquals(2730, tipos["IN"])
         assertTrue(Oraculo.linhasDaProgressao().size > 10_000, "a referência da progressão quase não tem casos")
@@ -88,6 +92,9 @@ class ProgressaoContraOOraculoTest {
     private fun d(s: String): Double? = s.takeIf { it.isNotEmpty() }?.toDouble()
 
     private fun b(s: String) = s == "1"
+
+    /** Diagnóstico de promoção opcional: `""` = `null`, senão o nome do enum. */
+    private fun diag(s: String): Diagnostico? = s.takeIf { it.isNotEmpty() }?.let { Diagnostico.valueOf(it) }
 
     /** RIR do arquivo: `-` = não informado (D-3). */
     private fun r(s: String): Int? = s.toIntOrNull()
@@ -167,6 +174,22 @@ class ProgressaoContraOOraculoTest {
                 val r = RetornoAposPausa.apos(c[7].toInt(), Mesociclo())
                 val n = RetornoAposPausa.aplicar(e, r, d(c[6])!!)
                 falha(d(c[8]) to n.carga, c[9].toInt() to n.exposicoes, b(c[10]) to n.posSalto, d(c[11]) to n.umRm, c[12].toInt() to n.semSubir)
+            }
+            "PD" -> { exige(3); falha(diag(c[2]) to PromocaoDeNivel.diagnosticoIniciante(eventos(c[1]))) }
+            "PP" -> {
+                exige(3)
+                val letraParaDiag = mapOf('N' to null, 'P' to Diagnostico.PROMOVER, 'R' to Diagnostico.RECUPERACAO, 'S' to Diagnostico.RECUPERACAO_SEM_RETOMADA)
+                val porAncora = c[1].map { letraParaDiag.getValue(it) }
+                falha(diag(c[2]) to PromocaoDeNivel.diagnosticoDoPerfil(porAncora))
+            }
+            "PA" -> {
+                exige(6)
+                val r = PromocaoDeNivel.diagnosticoAvancado(d(c[1]), d(c[2]), c[3].toInt(), c[4].toInt())
+                falha(diag(c[5]) to r)
+            }
+            "PN" -> {
+                exige(4)
+                falha(b(c[3]) to PromocaoDeNivel.podeSugerirDeNovo(c[1].toInt(), c[2].toIntOrNull()))
             }
             else -> error("referência da progressão: registro desconhecido '${c[0]}'")
         }
