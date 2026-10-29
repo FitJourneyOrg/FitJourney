@@ -27,8 +27,14 @@ enum class MuscleGroup {
     ;
 
     /**
-     * `false` só para [CORE]: sem alvo de volume o foco nele não teria efeito algum, então o quiz
-     * não o oferece. A biblioteca (filtro) oferece todos.
+     * `false` só para [CORE] — e **hoje, não por natureza**: o CORE não tem alvo de volume porque o
+     * catálogo ainda não tem abdômen (alvo semanal 0, sem exercício elegível; débito "Catálogo sem
+     * abdômen" em `docs/fontes/debitos.md`). **Quem puser core na lista principal tem de virar esta
+     * chave** — `TargetMuscle.CORE`, a linha da tabela de volume e este `true` andam juntos.
+     *
+     * [REGRA] (`docs/regras/01`): **o que CONTA volume usa esta propriedade** (foco do quiz, volume
+     * por grupo do progresso, `alvosDoFoco`); **o que CATALOGA usa o enum inteiro** (filtro da
+     * biblioteca, `primary_muscles`). Não se mantém lista de exceções à mão em cada tela.
      */
     val temAlvoDeVolume: Boolean get() = this != CORE
 }
