@@ -668,6 +668,19 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
 - **`[INV]`** A pausa se mede com `workout_sessions.created_at` (relógio do SERVIDOR), nunca com
   `started_at`/`finished_at` (relógio do cliente).
 
+### Dois enums, dois papéis: `MuscleGroup` cataloga, `temAlvoDeVolume` conta (2026-10-28)
+
+- **[REGRA]** `MuscleGroup` é o vocabulário do USUÁRIO (filtro da biblioteca, `primary_muscles`,
+  `secondary_muscles`); `TargetMuscle` é o alvo de volume do motor. São enums diferentes de propósito.
+- **[REGRA]** O que **conta volume** usa `MuscleGroup.temAlvoDeVolume` (foco do quiz, volume por grupo do
+  progresso, `alvosDoFoco`/`targetsForFocus`, `focoEfetivo`). O que **cataloga** usa o enum inteiro
+  (biblioteca). Nada de lista de exceções escrita à mão em cada tela.
+- `temAlvoDeVolume` é `false` só para `CORE`, e **condicional ao catálogo, não intrínseco**: vira `true` junto
+  com `TargetMuscle.CORE` e a linha da tabela de volume quando o catálogo tiver abdômen (débito "Catálogo sem
+  abdômen").
+- Origem: a Fatia 8 tirou CORE dos dois enums e o servidor passou a descartar em silêncio o `CORE` de 46
+  exercícios (`CuradoriaTagueamentoIntegrationTest` pegou). Devolvido ao `MuscleGroup` em 2026-10-28.
+
 ## Gates de geração (`/programs/generate`)
 
 Máquina em ordem, cada um barra com Forbidden:

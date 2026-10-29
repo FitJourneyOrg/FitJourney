@@ -344,7 +344,9 @@ object ProgressPolicy {
         val acumulado = mutableMapOf<MuscleGroup, Int>()
         var orfas = 0
         for (s in series) {
-            val grupos = musculos[s.exercicioId].orEmpty()
+            // `temAlvoDeVolume`: o que CONTA volume ignora grupo sem alvo (CORE). Exercício só com esse
+            // grupo cai em "sem grupo" -- como já acontecia antes de o CORE voltar ao enum -- em vez de sumir.
+            val grupos = musculos[s.exercicioId].orEmpty().filter { it.temAlvoDeVolume }
             if (grupos.isEmpty()) orfas++ else grupos.forEach { acumulado[it] = (acumulado[it] ?: 0) + 1 }
         }
         return VolumePorGrupo(
