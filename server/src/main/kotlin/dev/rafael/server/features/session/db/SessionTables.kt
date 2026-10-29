@@ -26,5 +26,8 @@ object SessionSetLogsTable : Table("session_set_logs") {
     val repsDone = integer("reps_done")
     val weightKg = double("weight_kg").nullable()
     val done = bool("done")
+
+    /** V69. NULL = não informado (a progressão aplica SÓ as regras por repetição). 0..10, sem backfill. */
+    val rir = short("rir").nullable()
     override val primaryKey = PrimaryKey(id)
 }

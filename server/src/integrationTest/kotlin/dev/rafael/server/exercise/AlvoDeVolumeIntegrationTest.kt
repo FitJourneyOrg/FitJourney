@@ -126,13 +126,13 @@ class AlvoDeVolumeIntegrationTest {
 
     /**
      * Regra escrita contra valor que ninguém verificou se acontece: um alvo do modelo de volume
-     * sem nenhum exercício faz o motor planejar séries que não consegue entregar. CORE fica de
-     * fora por decisão — o catálogo ainda não tem abdômen e a tabela de volume do v3 dá 0 a ele.
+     * sem nenhum exercício faz o motor planejar séries que não consegue entregar. O CORE saiu do
+     * motor na V68 (Fatia 8) e não é mais um `TargetMuscle`: agora NENHUM alvo pode ficar vazio.
      */
     @Test
-    fun `todo alvo do modelo de volume tem candidato, menos CORE`() {
+    fun `todo alvo do modelo de volume tem candidato`() {
         val semCandidato = TargetMuscle.entries.map { it.name }.toSet() - contagemPorAlvo().keys
 
-        assertTrue(semCandidato == setOf("CORE")) { "alvo sem nenhum exercício: $semCandidato" }
+        assertTrue(semCandidato.isEmpty()) { "alvo sem nenhum exercício: $semCandidato" }
     }
 }

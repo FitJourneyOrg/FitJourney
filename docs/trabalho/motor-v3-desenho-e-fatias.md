@@ -373,6 +373,10 @@ de graça) e não rastreia mesociclo — registro para a Fatia 10 abaixo.
 > semanas/mesociclos do mesmo programa, nunca re-rodar o preenchimento a cada semana. A troca de
 > exercício (progressão, variação) só acontece quando um NOVO programa é gerado — isso é decisão
 > e código da Fatia 10, não desta.
+>
+> **→ Fechado na Fatia 10 (2026-10-28):** `CicloDoMesociclo.semanaDoPrograma` lê a saída do
+> `preencher()`; a única exceção é a troca de âncora do iniciante (`[REGRA]` em
+> `regras/01-motor-de-geracao.md`, "Fatia 10").
 
 ---
 
@@ -534,7 +538,7 @@ sessão der, vale antecipar.
 
 ---
 
-### Fatia 10 — mesociclo e progressão
+### Fatia 10 — mesociclo e progressão  ✅ FECHADA em 2026-10-28 (Kotlin verde; narrativa em `historico/motor-v3-fatia-10.md`)
 - Mesociclo fixo em 4 semanas; séries fixas no ciclo, progressão por carga; deload na semana 4.
 - Progressão dupla com as quatro regras, incluindo a tolerância pós-salto e a redução de 4% por
   ponto de RIR abaixo do alvo.
@@ -562,6 +566,19 @@ sessão der, vale antecipar.
 - Promoção a avançado por 1RM estimado sem ganho em dois mesociclos, com âncoras congeladas.
 - Ênfase como fase de dois mesociclos, demais grupos no piso, no máximo um grupo grande,
   +3 pequeno / +6 grande, puxar nunca abaixo de empurrar.
+- **Condição herdada da Fatia 10 (2026-10-28) — o foco é permanente até esta fatia.** A Fatia 10
+  entregou SÓ o bônus de alvo. A medição mostrou o bônus quase inerte: **21 de 480 programas mudam por
+  foco e o `ATENDIDO` cai**, porque a capacidade da sessão é o limite. Isso confirma a **proteção
+  contra sacrifício na alocação** como a peça que faz o foco funcionar — e ela é desta fatia. Ligar
+  o motor v3 em produção entre a 10 e a 11 entrega um foco permanente e que **piora a cobertura de
+  quem o escolhe**; ou esta fatia vem antes de ligar, ou o Rafael aceita isso explicitamente
+  (mesmo tratamento do 60+ na Fatia 7).
+- **Orçamento do bônus:** `LEGS` ficou em +6 repartido (3/2/1) por escolha; o "limite total" da spec
+  e o piso nos demais grupos são desta fatia.
+- **Por que o eixo de foco na matriz é nenhum / peito / ombro:** é o que o tripwire de
+  `ombro_vira_isolamento` exige (peito dispara a regra: 16 disparos em 8 perfis; ombro não); os nove
+  grupos custariam tempo e tamanho sem ganho. Arquivo à parte (`referencia_foco.txt`, 960 perfis).
+  Ao implementar a fase, a matriz de foco precisa de novo eixo (fase 1/2) — reavaliar o conjunto.
 
 **Depende de:** 10. **Verifica-se por:** Tier 2 com histórico falso dos três caminhos de promoção.
 

@@ -64,9 +64,9 @@ object CapacityModel {
      * É o lado seguro: reduzir volume para quem tem 60+ começando é o objetivo da regra, e a
      * regra em si não muda quando a Fatia 10 passar a enviar o mesociclo real.
      */
-    fun fatorIdade(idade: Int?, nivel: Level, mesocicloAtual: Int?): Double {
+    fun fatorIdade(idade: Int?, nivel: Level, mesocicloAtual: Int?, retornoConservador: Boolean = false): Double {
         if (idade == null || idade < 60) return 1.0
-        return if (nivel == Level.BEGINNER || primeiroMesociclo(mesocicloAtual)) 0.75 else 1.0
+        return if (nivel == Level.BEGINNER || primeiroMesociclo(mesocicloAtual) || retornoConservador) 0.75 else 1.0
     }
 
     /** `min(teto por tempo, teto por nível × fator de objetivo × fator de idade)`. */
@@ -77,9 +77,10 @@ object CapacityModel {
         goal: Goal,
         idade: Int?,
         mesocicloAtual: Int?,
+        retornoConservador: Boolean = false,
     ): Double {
         val porTempo = tetoPorTempo(minutos, dias)
-        val porNivel = tetoPorNivel(nivel) * fatorObjetivo(goal) * fatorIdade(idade, nivel, mesocicloAtual)
+        val porNivel = tetoPorNivel(nivel) * fatorObjetivo(goal) * fatorIdade(idade, nivel, mesocicloAtual, retornoConservador)
         return minOf(porTempo, porNivel)
     }
 

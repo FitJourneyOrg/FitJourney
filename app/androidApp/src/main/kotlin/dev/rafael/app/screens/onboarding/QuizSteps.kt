@@ -171,7 +171,8 @@ fun FocusStep(selected: List<MuscleGroup>, onToggle: (MuscleGroup) -> Unit) {
         // ⚠️ Estes rótulos estavam DUPLICADOS aqui e no `ExerciseDetailScreen`, e já tinham
         // divergido: "Antebraço" aqui, "Antebraços" lá. É exatamente o que a `Rotulos.kt` existe
         // para impedir, e a prova de que uma cópia sobrevive num idioma e diverge no segundo.
-        MuscleGroup.entries.forEach { m ->
+        // CORE fica de fora: não tem alvo de volume, então escolher abdômen como foco não faria nada.
+        MuscleGroup.entries.filter { it.temAlvoDeVolume }.forEach { m ->
             FilterChip(
                 selected = m in selected,
                 onClick = { onToggle(m) },

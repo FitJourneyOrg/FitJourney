@@ -14,6 +14,11 @@ contra ele que o motor Kotlin vai ser testado na fatia 9.
 | `motor_v3.py` | o pipeline: alvos → teto → alocação → semana → composição → preenchimento → auditoria sobre o ENTREGUE |
 | `test_motor_v3.py` | os testes da fatia 0 (diferencial, cobertura, disparos) |
 | `catalogo_banco.csv` | o pool do motor, **exportado do banco** (`exportar_catalogo.sql`) — o simulador não lê planilha |
+| `progressao_v3.py` | Fatia 10: progressão dupla, calibração, 1RM, mesociclo, âncora do iniciante, retorno após pausa — funções puras |
+| `test_progressao_v3.py` | os testes da Fatia 10 (inclui 20 kg → 55 kg → 60 kg e as três faixas de pausa) |
+| `gerar_referencia_720.py` | gera `referencia_720.txt` (720 perfis) **e** `referencia_foco.txt` (960 perfis com foco peito/ombro); `--verifica` confere os dois |
+| `gerar_referencia_progressao.py` | gera `referencia_progressao.txt` (~10,6 mil casos das funções de `progressao_v3.py`) |
+| `referencia_720.txt`, `referencia_foco.txt`, `referencia_progressao.txt` | GERADOS, não editar. O Kotlin lê os três (e o CSV): estão em `inputs.files` do Gradle, com guarda `== 4` |
 | `historico/` | o v2, congelado (ver o README de lá) |
 | `alvo_canonico.csv` + `gerar_v64.py` + `cabecalho_v64.sql` | fonte e gerador da V64 (`volume_target`) |
 

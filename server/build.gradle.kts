@@ -113,14 +113,16 @@ val migrationsDoServidor = fileTree("$projectDir/src/main/resources/db/migration
 }
 
 /**
- * Os DOIS arquivos que o oráculo entrega ao Kotlin: o catálogo (`catalogo_banco.csv`) e a saída de
- * `motor_v3.py` para os 720 perfis (`referencia_720.txt`). `MotorV3Varredura720Test` os lê de fora
- * de `src/test/kotlin`; sem declará-los aqui, mexer só no oráculo deixa `:server:test` em
+ * Os QUATRO arquivos que o oráculo entrega ao Kotlin: o catálogo (`catalogo_banco.csv`), a saída de
+ * `motor_v3.py` para os 720 perfis (`referencia_720.txt`), a dos 960 perfis com foco
+ * (`referencia_foco.txt`, Fatia 10) e a das funções de progressão (`referencia_progressao.txt`,
+ * Fatia 10). `MotorV3Varredura720Test` e `ProgressaoContraOOraculoTest` os leem de fora de
+ * `src/test/kotlin`; sem declará-los aqui, mexer só no oráculo deixa `:server:test` em
  * `UP-TO-DATE` e verde sem rodar -- o mesmo defeito de 2026-09-22, em outro arquivo.
  * `integrationTest` também os declara: ele compara o banco com o CSV.
  */
 val oraculoDoMotor = fileTree("$projectDir/src/test/oracle") {
-    include("catalogo_banco.csv", "referencia_720.txt")
+    include("catalogo_banco.csv", "referencia_720.txt", "referencia_foco.txt", "referencia_progressao.txt")
 }
 
 tasks.named<Test>("test") {
@@ -131,10 +133,10 @@ tasks.named<Test>("test") {
     val oraculo = oraculoDoMotor   // `val` local: ver o comentário do integrationTest abaixo
     doFirst {
         val quantos = oraculo.files.size
-        check(quantos == 2) {
-            "o fileTree do oráculo casou com $quantos arquivo(s), esperava 2 (catalogo_banco.csv e " +
-                "referencia_720.txt): o caminho está errado e :server:test voltaria a ficar cego " +
-                "pra mudança no oráculo"
+        check(quantos == 4) {
+            "o fileTree do oráculo casou com $quantos arquivo(s), esperava 4 (catalogo_banco.csv, " +
+                "referencia_720.txt, referencia_foco.txt e referencia_progressao.txt): o caminho está " +
+                "errado e :server:test voltaria a ficar cego pra mudança no oráculo"
         }
     }
 }

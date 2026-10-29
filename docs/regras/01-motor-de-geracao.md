@@ -13,7 +13,7 @@
 
 Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por músculo → séries → papéis) → **ExercisePreFilter** (pool: ambiente + nível + acessórios) → **SlotFiller** (escolhe exercício por músculo+papel) → ProgramDto.
 
-- **[INV]** [VENCIDO: foco agora é +3 pequeno / +6 grande, como fase de dois mesociclos] Volume é a variável-mãe (#26): séries efetivas/semana por músculo (RP/Israetel), calibradas por nível/objetivo; foco dá +3 (respeitando MRV). Idade calibra o volume por faixa + RIR conservador (#24).
+- **[INV]** [VENCIDO em parte: o foco virou BÔNUS DE ALVO na Fatia 10 (+3 pequeno / +6 grande, um por escolha — ver "Fatia 10" abaixo); a FASE de dois mesociclos é da Fatia 11] Volume é a variável-mãe (#26): séries efetivas/semana por músculo (RP/Israetel), calibradas por nível/objetivo; foco dá +3 (respeitando MRV). Idade calibra o volume por faixa + RIR conservador (#24).
 - **[INV]** Só `modality='STRENGTH'` entra no pool. `is_base` primeiro (#28); variação só se a base acabar.
 - **[INV]** [VENCIDO: o critério não cobre GLUTES, e o afundo casa em QUADS e GLUTES ao mesmo tempo — fatia 0] Perna fina e braço fino: QUADS/POSTERIOR casam por `movement_pattern`; BICEPS/TRICEPS/FOREARMS por `category` (Fatia B). Splits roteiam Push→tríceps, Pull→bíceps/antebraço.
 - **[INV]** [VENCIDO duas vezes: o teto passa a ser min(tempo, nível × objetivo × idade), e a seleção deixa de variar por seed — vira determinística pelo perfil] Tetos por sessão: ≤6 exercícios, ≤20 séries totais; piso de 3 séries/exercício. Determinismo: estrutura fixa pelo perfil; seleção varia por seed.
@@ -205,7 +205,9 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   oráculo não sorteia nada (determinístico de graça — nada a fixar) e não rastreia mesociclo.
   **Dentro de um programa, a saída do `preencher()` é fixa** — reaproveitada em todas as
   semanas; a troca de exercício (progressão) só acontece ao gerar um NOVO programa, e isso é
-  código da Fatia 10, não desta.
+  código da Fatia 10, não desta. **Cumprido na Fatia 10** (`CicloDoMesociclo.semanaDoPrograma`).
+  **Única exceção:** a troca de âncora por estagnação do iniciante — `[REGRA]` nomeada na seção
+  "Fatia 10" abaixo, que referencia esta de volta.
 
 ### Motor v3 — etapa [8] parte 1, REGRAS DE SEGURANÇA (Fatia 7, 2026-10-24)
 
@@ -557,6 +559,114 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   (`test_o_motor_nao_escolhe_a_familia_do_triceps_pela_ciencia`); mudar a curadoria **também**
   derruba o teste, de propósito, para que a mudança seja visível e deliberada. A `[PROPOSTA]` está
   em `fontes/debitos.md`.
+
+### Motor v3 — mesociclo, progressão e foco (Fatia 10, 2026-10-28)
+
+**Progressão dupla** (`engine.v3.Progressao`, espelha `progressao_v3.py`; provada contra
+`referencia_progressao.txt`, 12.730 casos, e por casos escritos à mão):
+
+- **`[REGRA]`** As quatro regras: (1) sobe só quando TODAS as séries batem o topo da faixa no RIR
+  alvo; (2) o aumento é o menor incremento do equipamento, exceto nas 3 primeiras exposições, em que
+  vale o salto da calibração pelo PIOR RIR da sessão; (3) logo após um salto, repetições abaixo da
+  faixa são aceitas enquanto o RIR estiver no alvo; (4) se a 1ª série do dia sair mais difícil que o
+  alvo, as seguintes reduzem **4% FIXO por ponto de RIR abaixo do alvo** (decisão de 2026-10-28, dentro
+  da faixa de 3–5% da literatura; a contradição interna da spec foi fechada por decisão — **não
+  reabrir**). Redução que arredonda para a mesma carga é ANULADA e sinalizada.
+- **`[REGRA]`** Repetições abaixo da faixa fora da tolerância **devolvem um incremento**: simetria da
+  progressão dupla (sem "devolver" o loop de subir e devolver da regra 3 nem existiria).
+- **`[REGRA]` RIR NULO aplica SÓ as regras por repetição** (D-3, 2026-10-28). Sem exigência de RIR no
+  topo, sem salto proporcional (se QUALQUER série vem sem RIR), sem tolerância pós-salto, sem o −4% e
+  sem 1RM; a calibração, que é feita de RIR, não age. Sessão sem nenhum RIR não apaga o 1RM
+  histórico. Nada é inferido. Coluna `rir` nullable em `session_set_logs`, sem backfill.
+- **`[REGRA]`** Calibração: RIR informado ≥ 4 sobe na hora, até 3 séries; bandas +10/+25/+50% pelo
+  excesso sobre o alvo (1–2 / 3–4 / ≥5), teto +25% em barra livre; nunca arredonda para a mesma
+  carga (piso de um incremento). **O caso da spec fecha assim:** 20 kg → 30 → 45 → 55 kg nas 3 séries
+  e 60 kg na 2ª exposição — três exposições, não ~16 sessões.
+- **`[REGRA]`** Arredondamento: `para_incremento` vai ao múltiplo mais próximo e o **empate DESCE**
+  (`ceil(x/inc − 0,5 − 1e-9)·inc`, fixado porque Kotlin e Python divergem em empate exato); séries
+  arredondam meio pra cima.
+- **`[INV]`** O 1RM estimado (Epley, melhor série, só composto/acessório) **não escolhe a carga e não
+  entra em nenhuma regra desta fatia — nem na calibração**. É calculado e guardado como sinal para a
+  promoção da Fatia 11. Limitação registrada: a precisão do Epley cai acima de ~10 repetições.
+- **Heurísticas calibráveis, NÃO evidência** (mesmo padrão dos números da RP; trocar é trocar a
+  constante): `REDUCAO_RETORNO = 10%`, `ESTAGNACAO_SESSOES = 3`, a escolha do Epley, e o "devolver"
+  implícito acima. Detalhe em `fontes/debitos.md`.
+
+**Mesociclo** (`CicloDoMesociclo`):
+
+- **`[REGRA]`** 4 semanas, avança por CONCLUSÃO, não por calendário. Semanas 1–3: séries fixas;
+  semana 4: deload (metade das séries, meio pra cima, mín. 1; **carga mantida**) para INTERMEDIATE e
+  ADVANCED. **As séries nunca sobem dentro do ciclo.**
+- **`[REGRA]`** O iniciante NÃO tem deload por calendário (25% do tempo dele seria desperdício): só por
+  estagnação.
+- **`[REGRA]` EXCEÇÃO NOMEADA à fixidez das âncoras** (a `[REGRA]` de exercícios fixos dentro do
+  programa, acima, em "Motor v3 — etapa [8]/continuidade"): a **única** troca de exercício no meio do
+  programa é a troca por estagnação do iniciante, e só dispara quando as TRÊS condições valem, nesta
+  ordem — (a) um deload JÁ foi aplicado com a mesma âncora; (b) a estagnação PERSISTE: 3 sessões
+  seguintes ao deload sem SOBE; (c) há diagnóstico registrado (vem de fora, Fatia 11). Subir depois do
+  deload, em qualquer sessão, afasta a troca; estagnar de novo depois de retomar devolve DELOAD (sinal
+  de promoção, Fatia 11). Implementação: `AncoraDoIniciante.situacao` (varrida em todos os históricos
+  de até 7 eventos por um invariante independente da máquina). Referência cruzada com a `[REGRA]` de
+  continuidade acima.
+- **`[REGRA]`** Retorno após pausa, UMA regra em TRÊS ramos, relógio do SERVIDOR: ≤14 dias segue; 15–28
+  semana 1 do MESMO mesociclo com carga 10% menor (heurística); >28 mesociclo NOVO e **recalibração
+  obrigatória** (a carga informada seria a de antes da pausa). Pausa não é dimensão da matriz (é
+  evento no tempo): **inalcançável na varredura dos 720 por construção**, coberta por teste unitário
+  com histórico construído — o mesmo padrão do `ombro_vira_isolamento`.
+- **`[REGRA]` 60+ que volta depois de >28 dias entra no mesociclo N+1 em MODO CONSERVADOR explícito**
+  (`Mesociclo.conservador`), independente do número do mesociclo. **Extensão declarada ALÉM da lista
+  literal da spec**, que só olha o 1º mesociclo. Motivo: quem volta depois de um mês fora é quem mais
+  precisa do lado seguro. Vale até o fim DESTE mesociclo; abrir o seguinte o apaga. Efeito: RIR ≥ 3 e
+  fator 0,75 no teto, via `Entrada.retornoConservador`.
+- **`[INV]` Débito do 60+ FECHADO** (2026-10-28): `mesocicloAtual` real (`CicloDoMesociclo.paraPerfil`)
+  tira o 60+ do modo conservador permanente que valia desde a Fatia 2/7. A regra em si não mudou;
+  sem estado (nunca treinou) continua sendo o 1º mesociclo, o lado seguro. Iniciante 60+ segue
+  conservador em qualquer mesociclo.
+
+**Foco** (só o bônus de alvo; `VolumeTargets.bonusDeFoco`):
+
+- **`[REGRA]`** Só INTERMEDIATE/ADVANCED, nunca GENERAL_HEALTH, no máximo 2 grupos. O bônus soma
+  DEPOIS do fator de objetivo e respeita o MRV.
+- **`[REGRA]` UM bônus por escolha do usuário:** +6 se o grupo cobre algum alvo grande, senão +3. Grupo
+  de um alvo recebe o valor cheio; grupo que cobre vários alvos (`LEGS`) **reparte o valor único pelo
+  peso** (3/2/1 em quadríceps/posterior/panturrilha, soma exata, aritmética inteira) — nada de somar
+  o bônus cheio em cada alvo.
+- **`[REGRA]` "grande" é DERIVADO do `PESO_PRIORIDADE`** com a fronteira declarada em 0,6
+  (`FOCO_FRONTEIRA_GRANDE`): CHEST, BACK, SHOULDERS, QUADS, POSTERIOR, GLUTES grandes; BICEPS, TRICEPS,
+  CALVES, FOREARMS pequenos. Fonte única, mesmo princípio da `ORDEM_SACRIFICIO`. **Não** é o
+  conjunto `PROTEGIDOS_ALOCACAO` (proteção na alocação é outra pergunta).
+- **`[INV]`** Eixo de foco na matriz limitado a nenhum / peito / ombro (`referencia_foco.txt`, 960
+  perfis, arquivo à parte — `referencia_720.txt` não muda): é o que o tripwire de
+  `ombro_vira_isolamento` exige; os nove grupos custariam tempo e tamanho sem ganho. Inclui
+  GENERAL_HEALTH como controle (o foco é ignorado ali).
+- **`[INV]` Reauditoria de `ombro_vira_isolamento`:** 0 disparos nos 720; **16 disparos em 8 perfis com
+  foco em peito** (todos INTERMEDIATE, 6 dias, PPL). Entrou em `REGRAS_DE_SEGURANCA`, medida na UNIÃO
+  das matrizes. Foco em ombro não a alcança.
+- **`[INV]` O bônus de alvo é quase INERTE sem a Fatia 11:** medido, só 21 de 480 programas mudam por
+  foco e o `ATENDIDO` cai, porque a capacidade da sessão é o limite — o bônus sobe o alvo, não o que
+  cabe. A peça que faz o foco funcionar é a proteção contra sacrifício na alocação (Fatia 11).
+  **Condição da troca de produção:** ligar entre a 10 e a 11 entrega um foco PERMANENTE e que PIORA a
+  cobertura de quem o escolhe; ou a 11 vem antes, ou você aceita isso explicitamente
+  (`fontes/debitos.md`).
+
+**Persistência** (só interface + fakes nesta fatia; desenho em `trabalho/motor-v3-fatia-10-schema.md`;
+V69 liberada em 2026-10-28):
+
+- **`[REGRA]` D-1: a chave é `(usuário, exercício)` DE PROPÓSITO.** A progressão acompanha a pessoa;
+  acrescentar `programa_id` faria o aluno voltar à calibração a cada programa novo com o mesmo
+  exercício. O risco de estado velho ao retomar um exercício depois de meses é conhecido e já está
+  coberto pela regra de pausa acima de 28 dias.
+- **`[REGRA]` D-4: o mesociclo é por PESSOA.** `mesocicloAtual` entra no pipeline como atributo dela, e
+  é isso que tira o 60+ do conservador permanente; por programa, o débito fechado voltaria, e quem
+  regera o programa com frequência ficaria preso na semana 1, sem nunca deloadar. **Consequência
+  conhecida (não é bug):** trocar de programa no meio do mesociclo pode fazer o deload da semana 4
+  cair sobre exercícios com uma exposição só. É inofensivo (o deload mantém a carga e corta as
+  séries pela metade) e é o preço de manter o contador na pessoa.
+- **`[REGRA]` D-2:** `decidir()` não é idempotente; a idempotência vem de `progression_event` com PK
+  `(user_id, exercise_id, session_id)` — a `workout_sessions.id` já nasce no cliente para o sync.
+  Sem isso, um reenvio depois de timeout subiria a carga em dobro.
+- **`[INV]`** A pausa se mede com `workout_sessions.created_at` (relógio do SERVIDOR), nunca com
+  `started_at`/`finished_at` (relógio do cliente).
 
 ## Gates de geração (`/programs/generate`)
 
