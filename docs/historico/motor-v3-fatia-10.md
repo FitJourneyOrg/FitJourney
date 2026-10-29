@@ -4,7 +4,7 @@ Décima fatia do motor v3. Núcleo puro de progressão com **oráculo Python pri
 foco como bônus de alvo, rastreio de mesociclo (fecha o débito do 60+) e persistência por exercício
 (**só interface + fakes**; schema aprovado, migration na fatia seguinte). Regras em
 `regras/01-motor-de-geracao.md`, "Motor v3 — mesociclo, progressão e foco"; desenho do schema em
-`trabalho/motor-v3-fatia-10-schema.md`.
+`arch/motor-v3-progressao-schema.md`.
 
 ## O que entrou
 

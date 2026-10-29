@@ -85,3 +85,5 @@ Um arquivo por decisão, agrupado por fase em `arch/fase-N/`. Ao fechar uma fati
 |---|---------|--------|
 | #38 | [Perfil: JSON em TEXT; catálogo: colunas booleanas](fase-8/ARCH-38-json-vs-colunas-acessorios.md) | vigente · V65/V66, 2026-10-21 |
 | #39 | [Casamento músculo↔exercício: coluna `volume_target`](fase-8/ARCH-39-casamento-volume-target.md) | decidido, não implementado · V64, 2026-10-14 |
+
+- [`motor-v3-progressao-schema.md`](motor-v3-progressao-schema.md) — progressão por exercício, mesociclo por pessoa e RIR da série (V69; D-1 a D-4).

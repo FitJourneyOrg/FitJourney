@@ -9,7 +9,7 @@ import kotlin.uuid.Uuid
 /**
  * Progressão e 1RM estimado guardados **por exercício, não por vaga** (checklist da spec, "Durante a
  * implementação"; Fatia 10 do motor v3). Schema: `V69__progressao_por_exercicio.sql`; desenho e
- * decisões D-1 a D-4 em `docs/trabalho/motor-v3-fatia-10-schema.md`.
+ * decisões D-1 a D-4 em `docs/arch/motor-v3-progressao-schema.md`.
  *
  * A chave é `(usuário, exercício)` **de propósito** (D-1): a progressão acompanha a pessoa, e
  * acrescentar `programa_id` faria o aluno voltar à calibração a cada programa novo com o mesmo
