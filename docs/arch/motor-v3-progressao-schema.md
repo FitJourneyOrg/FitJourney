@@ -81,8 +81,50 @@ ganha coluna**: `dias parado = now() − max(workout_sessions.created_at)` (serv
 
 ## O que fica de fora (dívida registrada)
 
-- **Diagnóstico de estagnação** (`diagnosticoFeito` da âncora): vem de fora, Fatia 11.
+- ~~**Diagnóstico de estagnação** (`diagnosticoFeito` da âncora): vem de fora, Fatia 11.~~ → o núcleo
+  puro chegou na Fatia 11 (`PromocaoDeNivel.diagnosticoFeitoParaTrocaDeAncora`, abaixo); a camada de
+  serviço que chama com dado real continua fora — ver `fontes/debitos.md` ("O motor sabe, o app não
+  mostra").
 - **Cliente (SQLDelight):** só cópia otimista do `Estado`; a autoridade é o servidor. Sem schema de
   cliente nesta fatia.
 - **Locking:** last-write-wins no upsert basta se a PK de `progression_event` serializar a sessão
   (D-2). Sem coluna `version`.
+
+## `promotion_decline` — recusa de promoção de nível (ARCH · Fatia 11, aprovado 2026-10-29)
+
+Estado: **implementado e verde**: `V70__recusa_de_promocao.sql`, `PromotionDeclineTable` (em
+`ProgressaoTables.kt`), `PromotionDeclineRepository`/`Impl`. Tabela NOVA, nenhum dado existente
+apagado ou reescrito.
+
+A SUGESTÃO de promoção em si não é persistida — é derivada do histórico que a V69 já guarda
+(`exercise_progression`, `progression_event`) através de `PromocaoDeNivel`. Esta tabela só existe
+para o motor saber que **já perguntou** e **quando pode perguntar de novo**.
+
+```sql
+CREATE TABLE promotion_decline (
+    user_id             UUID      NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    nivel_proposto      TEXT      NOT NULL CHECK (nivel_proposto IN ('INTERMEDIATE', 'ADVANCED')),
+    mesociclo_na_recusa INT       NOT NULL CHECK (mesociclo_na_recusa >= 1),
+    recusado_em         TIMESTAMP NOT NULL DEFAULT now(),
+    PRIMARY KEY (user_id, nivel_proposto)
+);
+```
+
+**D-1** PK `(user_id, nivel_proposto)`, upsert a cada recusa — guarda só a MAIS RECENTE por par.
+Histórico completo de recusas omitido DE PROPÓSITO: o único consumo desenhado é "posso perguntar de
+novo?", que depende só da última. Append-only (padrão `progression_event`) e migration aditiva se
+um consumidor de histórico aparecer depois.
+
+**D-2** `mesociclo_na_recusa` copiado de `user_mesocycle.numero` no momento da recusa — NÃO é
+heurística de calendário (a primeira proposta, 8 semanas, foi descartada: erra com pausa e
+recalibração). `[REGRA]` pode sugerir de novo quando `mesociclo_atual > mesociclo_na_recusa + 1`
+(passou do mesociclo SEGUINTE ao da recusa) — `PromocaoDeNivel.podeSugerirDeNovo`. Contagem exata de
+mesociclo, não aproximação de tempo.
+
+`recusado_em` é `TIMESTAMP` (sem fuso), não `TIMESTAMPTZ`: conferido contra as 51 colunas de
+timestamp de TODAS as migrations do projeto — nenhuma usa `TIMESTAMPTZ`, V69 incluída. Consistência
+com o projeto inteiro, não só com a V69.
+
+**O que fica de fora**: o service/rota que decide QUANDO oferecer a promoção (lê `PromocaoDeNivel` +
+histórico real e só então grava uma recusa) — ver `fontes/debitos.md` ("O motor sabe, o app não
+mostra"); aprovado como sessão nova, fora do escopo da Fatia 11.
