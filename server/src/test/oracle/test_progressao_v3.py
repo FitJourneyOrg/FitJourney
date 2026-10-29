@@ -396,6 +396,139 @@ class AncoraDoIniciante(unittest.TestCase):
                          "retomou e estagnou de novo: nao e troca (sinal de promocao, Fatia 11), pede novo deload")
 
 
+class DiagnosticoDePromocaoDoIniciante(unittest.TestCase):
+    """Fatia 11, `[REGRA]`: deload-como-diagnostico (ESPECIFICACAO, "[PENDENTE 3]"). Opera sobre o
+    historico de UMA ancora -- mesma entrada de `situacao_iniciante`."""
+
+    def test_sem_deload_nenhum_nao_ha_o_que_diagnosticar(self):
+        self.assertIsNone(P.diagnostico_promocao_iniciante([SOBE, SOBE, MANTEM]))
+        self.assertIsNone(P.diagnostico_promocao_iniciante([SOBE, MANTEM, MANTEM]),
+                           "estagnou mas ainda nao deloadou -- isto dispara o 1o deload, nao diagnostica nada")
+
+    def test_dentro_da_janela_pos_deload_ainda_nao_diagnostica(self):
+        h = [MANTEM] * 3 + [P.DELOAD, MANTEM, MANTEM]
+        self.assertIsNone(P.diagnostico_promocao_iniciante(h))
+
+    def test_subiu_e_reestagnou_promove(self):
+        h = [MANTEM] * 3 + [P.DELOAD, SOBE, MANTEM, MANTEM, MANTEM]
+        self.assertEqual(P.PROMOVER, P.diagnostico_promocao_iniciante(h))
+
+    def test_ainda_subindo_depois_do_deload_nao_diagnostica(self):
+        h = [MANTEM] * 3 + [P.DELOAD, SOBE, SOBE]
+        self.assertIsNone(P.diagnostico_promocao_iniciante(h),
+                           "RETOMOU, nao reestagnou ainda: nada a diagnosticar")
+
+    def test_nunca_subiu_depois_do_1o_deload_e_recuperacao_sem_aviso_extra(self):
+        h = [MANTEM] * 3 + [P.DELOAD, MANTEM, MANTEM, MANTEM]
+        self.assertEqual(P.RECUPERACAO, P.diagnostico_promocao_iniciante(h))
+
+    def test_dois_deloads_consecutivos_sem_retomada_vira_recuperacao_com_aviso(self):
+        h = [MANTEM] * 3 + [P.DELOAD, MANTEM, MANTEM, MANTEM, P.DELOAD, MANTEM, MANTEM, MANTEM]
+        self.assertEqual(P.RECUPERACAO_SEM_RETOMADA, P.diagnostico_promocao_iniciante(h))
+
+    def test_retomada_entre_dois_deloads_nao_conta_como_sem_retomada(self):
+        # subiu entre o 1o e o 2o deload (retomou, estagnou de novo -> ja seria PROMOVER antes do
+        # 2o deload acontecer de verdade; aqui simulamos so para garantir que o "antes" do ultimo
+        # deload com SOBE nao e tratado como "sem retomada")
+        h = [MANTEM] * 3 + [P.DELOAD, SOBE, MANTEM, MANTEM, MANTEM, P.DELOAD, MANTEM, MANTEM, MANTEM]
+        self.assertEqual(P.RECUPERACAO, P.diagnostico_promocao_iniciante(h),
+                          "houve retomada antes do ultimo deload -- nao e 'dois deloads CONSECUTIVOS sem retomada'")
+
+
+class DiagnosticoDePromocaoDoPerfil(unittest.TestCase):
+    """Agregacao entre ancoras -- `[REGRA]` (decisao do Rafael, 2026-10-29): 2 ancoras em
+    PROMOVER, ou 1 se o perfil so tiver uma ancora. Motivo: nivel barra acesso a barra livre, e
+    uma unica ancora estagnando nao representa a maturidade da pessoa inteira."""
+
+    def test_sem_nenhum_diagnostico_nao_ha_nada_a_reportar(self):
+        self.assertIsNone(P.diagnostico_promocao_do_perfil([None, None, None]))
+
+    def test_uma_ancora_promovendo_nao_basta_com_mais_de_uma_ancora_no_perfil(self):
+        # 1 PROMOVER nao fecha o limiar de 2 (perfil com 3 ancoras) -- cai para o pior caso de
+        # recuperacao entre as outras, que e exatamente o que deve acontecer (nao fica mudo)
+        self.assertEqual(P.RECUPERACAO, P.diagnostico_promocao_do_perfil([None, P.RECUPERACAO, P.PROMOVER]))
+
+    def test_duas_ancoras_promovendo_promove(self):
+        self.assertEqual(P.PROMOVER,
+                          P.diagnostico_promocao_do_perfil([P.PROMOVER, P.RECUPERACAO, P.PROMOVER]))
+
+    def test_com_uma_unica_ancora_no_perfil_ela_sozinha_basta(self):
+        self.assertEqual(P.PROMOVER, P.diagnostico_promocao_do_perfil([P.PROMOVER]))
+        self.assertIsNone(P.diagnostico_promocao_do_perfil([P.RECUPERACAO]) and None)
+        self.assertEqual(P.RECUPERACAO, P.diagnostico_promocao_do_perfil([P.RECUPERACAO]))
+
+    def test_sem_duas_promovendo_o_pior_caso_de_recuperacao_vence(self):
+        self.assertEqual(P.RECUPERACAO_SEM_RETOMADA,
+                          P.diagnostico_promocao_do_perfil(
+                              [None, P.PROMOVER, P.RECUPERACAO, P.RECUPERACAO_SEM_RETOMADA]),
+                          "1 PROMOVER nao basta (perfil com 4 ancoras); entre as recuperacoes, o pior caso vence")
+
+    def test_so_recuperacao_simples(self):
+        self.assertEqual(P.RECUPERACAO, P.diagnostico_promocao_do_perfil([None, P.RECUPERACAO]))
+
+
+class InvariantesDoDiagnosticoDePromocao(unittest.TestCase):
+    """`[INV]` trancado -- mesmo padrao do `ombro_vira_isolamento` (Fatia 10): numero medido na
+    matriz de hoje, nao suposto. Se o catalogo mudar e isto quebrar, e sinal de que o ramo de
+    1-ancora em `diagnostico_promocao_do_perfil` passou a ter caso vivo -- investigar, nao so
+    atualizar o numero."""
+
+    def test_nenhum_beginner_tem_menos_de_5_ancoras(self):
+        from test_motor_v3 import PERFIS
+        contagens = []
+        for p in PERFIS:
+            if p.nivel != "BEGINNER":
+                continue
+            r = mv.gerar(p)
+            contagens.append(sum(1 for _, vagas in r.sessoes for v in vagas if v.exercicio is not None))
+        self.assertEqual(240, len(contagens))
+        self.assertGreaterEqual(min(contagens), 5,
+                                 "se isto cair abaixo de 5, o ramo de 1 ancora em "
+                                 "diagnostico_promocao_do_perfil ganhou caso vivo -- nao e so numero novo")
+        self.assertEqual(14, sorted(contagens)[len(contagens) // 2], "mediana registrada na Fatia 11")
+
+
+class DiagnosticoDePromocaoAoAvancado(unittest.TestCase):
+    """Fatia 11, `[PROPOSTA]` (numero de "poucas reducoes" calibravel -- a spec da a direcao, nao
+    o valor): 1RM congelado sem ganho entre dois mesociclos consecutivos."""
+
+    def test_1rm_subiu_nao_diagnostica(self):
+        self.assertIsNone(P.diagnostico_promocao_avancado(100.0, 105.0, reducoes_no_periodo=0))
+
+    def test_sem_1rm_nao_diagnostica(self):
+        self.assertIsNone(P.diagnostico_promocao_avancado(None, 100.0, reducoes_no_periodo=0))
+        self.assertIsNone(P.diagnostico_promocao_avancado(100.0, None, reducoes_no_periodo=0))
+
+    def test_sem_ganho_e_poucas_reducoes_promove(self):
+        self.assertEqual(P.PROMOVER, P.diagnostico_promocao_avancado(100.0, 100.0, reducoes_no_periodo=0))
+        self.assertEqual(P.PROMOVER, P.diagnostico_promocao_avancado(100.0, 98.0, reducoes_no_periodo=1))
+
+    def test_sem_ganho_e_muitas_reducoes_e_recuperacao(self):
+        self.assertEqual(P.RECUPERACAO, P.diagnostico_promocao_avancado(100.0, 95.0, reducoes_no_periodo=2))
+
+    def test_limite_de_poucas_reducoes_e_configuravel(self):
+        self.assertEqual(P.RECUPERACAO,
+                          P.diagnostico_promocao_avancado(100.0, 100.0, reducoes_no_periodo=2, limite_poucas_reducoes=1))
+        self.assertEqual(P.PROMOVER,
+                          P.diagnostico_promocao_avancado(100.0, 100.0, reducoes_no_periodo=2, limite_poucas_reducoes=2))
+
+
+class PodeSugerirPromocaoDeNovo(unittest.TestCase):
+    """Fatia 11, `[REGRA]` aprovado: contador de mesociclo, nao calendario."""
+
+    def test_nunca_recusou_sempre_pode(self):
+        self.assertTrue(P.pode_sugerir_promocao_de_novo(mesociclo_atual=1, mesociclo_na_recusa=None))
+
+    def test_mesociclo_seguinte_ao_da_recusa_ainda_nao_pode(self):
+        self.assertFalse(P.pode_sugerir_promocao_de_novo(mesociclo_atual=5, mesociclo_na_recusa=4))
+
+    def test_dois_mesociclos_depois_da_recusa_pode(self):
+        self.assertTrue(P.pode_sugerir_promocao_de_novo(mesociclo_atual=6, mesociclo_na_recusa=4))
+
+    def test_mesmo_mesociclo_da_recusa_nao_pode(self):
+        self.assertFalse(P.pode_sugerir_promocao_de_novo(mesociclo_atual=4, mesociclo_na_recusa=4))
+
+
 class RetornoAposPausa(unittest.TestCase):
     def test_tres_faixas(self):
         m = Mesociclo(2, 3)
@@ -454,7 +587,10 @@ class ReferenciaDaProgressao(unittest.TestCase):
         """Caminho de falha do gerador: um tipo que sumisse da grade deixaria o Kotlin sem comparar."""
         import gerar_referencia_progressao as g
         tipos = Counter(l.split("|")[0] for l in g.linhas())
-        self.assertEqual({"PI", "SF", "PC", "RI", "RM", "DE", "SD", "CS", "DP", "IN", "RE", "AR"}, set(tipos))
+        self.assertEqual(
+            {"PI", "SF", "PC", "RI", "RM", "DE", "SD", "CS", "DP", "IN", "RE", "AR", "PD", "PP", "PA", "PN"},
+            set(tipos),
+        )
         self.assertEqual(6912, tipos["DE"])
         self.assertEqual(2730, tipos["IN"])
         self.assertTrue(all(n > 0 for n in tipos.values()))

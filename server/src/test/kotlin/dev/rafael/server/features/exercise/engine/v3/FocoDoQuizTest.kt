@@ -28,13 +28,16 @@ class FocoDoQuizTest {
     }
 
     @Test
-    fun `grande ganha 6, pequeno ganha 3, e o resto nao muda`() {
+    fun `grande ganha 6, pequeno ganha 3, e o resto vai ao piso (Fatia 11, exceto BACK isento)`() {
         val sem = alvos()
         val com = alvos(foco = listOf(MuscleGroup.CHEST, MuscleGroup.BICEPS))
         assertEquals(6.0, com.getValue(TargetMuscle.CHEST) - sem.getValue(TargetMuscle.CHEST))
         assertEquals(3.0, com.getValue(TargetMuscle.BICEPS) - sem.getValue(TargetMuscle.BICEPS))
+        // Fatia 11: fora do foco, o alvo vai ao piso -- exceto BACK, isento porque CHEST está em
+        // EMPURRAR ("puxar nunca cai abaixo de empurrar").
         TargetMuscle.entries.filter { it != TargetMuscle.CHEST && it != TargetMuscle.BICEPS }.forEach {
-            assertEquals(sem.getValue(it), com.getValue(it), "$it")
+            val esperado = if (it == TargetMuscle.BACK) sem.getValue(it) else minOf(sem.getValue(it), VolumeTargets.piso(it).toDouble())
+            assertEquals(esperado, com.getValue(it), "$it")
         }
     }
 
@@ -56,7 +59,8 @@ class FocoDoQuizTest {
     @Test
     fun `no maximo dois grupos`() {
         val a = alvos(foco = listOf(MuscleGroup.CHEST, MuscleGroup.BACK, MuscleGroup.SHOULDERS))
-        assertEquals(listOf(20.0, 22.0, 12.0), listOf(a.getValue(TargetMuscle.CHEST), a.getValue(TargetMuscle.BACK), a.getValue(TargetMuscle.SHOULDERS)))
+        // SHOULDERS é o 3º grupo: cai fora do foco EFETIVO (máx. 2) e, Fatia 11, vai ao piso (6.0).
+        assertEquals(listOf(20.0, 22.0, 6.0), listOf(a.getValue(TargetMuscle.CHEST), a.getValue(TargetMuscle.BACK), a.getValue(TargetMuscle.SHOULDERS)))
     }
 
     @Test
@@ -69,7 +73,9 @@ class FocoDoQuizTest {
             pernas.associateWith { com.getValue(it) - sem.getValue(it) },
         )
         assertEquals(6.0, pernas.sumOf { com.getValue(it) - sem.getValue(it) }, "o bônus não pode ser somado cheio em cada alvo")
-        assertEquals(sem.getValue(TargetMuscle.GLUTES), com.getValue(TargetMuscle.GLUTES))
+        // Fatia 11: GLUTES não é alvo do foco LEGS (tem piso próprio, [alvosDoFoco]), então também
+        // vai ao piso -- não fica mais igual a "sem foco".
+        assertEquals(8.0, com.getValue(TargetMuscle.GLUTES))
     }
 
     @Test

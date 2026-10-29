@@ -83,12 +83,23 @@ object VolumeTargets {
                 Level.INTERMEDIATE -> v.inter
                 Level.ADVANCED -> v.adv
             }
-            val alvo = coluna * fatorObjetivoAlvo(goal)
-            if (v.mrv != null) minOf(alvo, v.mrv.toDouble()) else alvo
+            coluna * fatorObjetivoAlvo(goal)
         }
         val bonus = bonusDeFoco(level, goal, foco)[muscle] ?: 0
-        if (bonus == 0) return base
-        return if (v.mrv != null) minOf(base + bonus, v.mrv.toDouble()) else base + bonus
+        var valor = base + bonus
+
+        // `[REGRA]` Fatia 11: com foco ativo, todo alvo FORA do foco vai ao PISO (coluna do
+        // iniciante) -- exceto BACK, isento quando a ênfase é em CHEST ou SHOULDERS (isenção
+        // NOMEADA, "puxar nunca cai abaixo de empurrar" -- não é desigualdade geral: SHOULDERS
+        // contém trabalho de puxar na curadoria, somá-lo como "empurrar" contaria o antídoto
+        // como veneno). Sem foco, resultado idêntico ao de antes. Espelha `motor_v3.py::alvos()`.
+        val focoAlvos = alvosDoFoco(level, goal, foco)
+        if (focoAlvos.isNotEmpty() && muscle !in focoAlvos) {
+            val isento = muscle == TargetMuscle.BACK &&
+                focoEfetivo(level, goal, foco).any { it in EMPURRAR }
+            if (!isento) valor = minOf(valor, piso(muscle).toDouble())
+        }
+        return if (v.mrv != null) minOf(valor, v.mrv.toDouble()) else valor
     }
 
     // ---------------------------------------------------------------------------- foco (Fatia 10)
@@ -129,6 +140,17 @@ object VolumeTargets {
         MuscleGroup.LEGS -> setOf(TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.CALVES)
         MuscleGroup.CORE -> emptySet()   // vocabulário do usuário, sem alvo de volume (V68): foco nele não tem efeito
     }
+
+    /** Fatia 11: os dois grupos de "empurrar" citados pela spec na isenção do BACK. Espelha `motor_v3.py::EMPURRAR`. */
+    val EMPURRAR: Set<MuscleGroup> = setOf(MuscleGroup.CHEST, MuscleGroup.SHOULDERS)
+
+    /**
+     * Os [TargetMuscle] que o foco EFETIVO deste perfil cobre -- mesma expansão do bônus
+     * ([bonusDeFoco]), usada também pelo piso ([weeklySets]) e pela proteção dinâmica na
+     * alocação ([PriorityAllocation.alocar], `protegidosExtra`). Espelha `motor_v3.py::alvos_do_foco()`.
+     */
+    fun alvosDoFoco(level: Level, goal: Goal, foco: List<MuscleGroup>): Set<TargetMuscle> =
+        focoEfetivo(level, goal, foco).flatMap { alvosDoFoco(it) }.toSet()
 
     /**
      * Foco que VALE: só INTERMEDIATE/ADVANCED e nunca GENERAL_HEALTH, no máximo 2 grupos — mesma

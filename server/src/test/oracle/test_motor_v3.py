@@ -511,23 +511,29 @@ class DisparosNaMatriz(unittest.TestCase):
 
     def test_ombro_vira_isolamento_so_dispara_com_foco_em_peito(self):
         """⭐ REAUDITORIA da Fatia 10 (2026-10-28) -- o tripwire da Fatia 7 virou vermelho, como
-        previsto, e foi trocado por esta afirmacao em dois lados.
+        previsto, e foi trocado por esta afirmacao em dois lados. **2a REAUDITORIA na Fatia 11
+        (2026-10-29)**: o piso dos demais grupos (que a Fatia 10 deixou para depois, exatamente
+        porque "o bonus sozinho e quase inerte") libera capacidade de sessao para o peito --
+        8 perfis -> 72, so com foco em PEITO, nunca com OMBRO. Numero maior NAO e regressao: e a
+        propria protecao funcionando (o foco finalmente move algo, que era o ponto da Fatia 11).
 
         Sem foco, `peito_composto_do_dia` maximo e 7 e a regra pede 8 (limite = 10 - peito < 3):
-        ZERO disparos nos 720. Com foco em PEITO (+6, grande) o peito sobe a 20 series e a regra
-        dispara: 16 disparos em 8 perfis (todos INTERMEDIATE, 6 dias, PPL). Foco em OMBRO nao a
-        alcanca (nao mexe no peito). Ou seja: a regra NAO e codigo morto -- e alcancavel por um
-        perfil real, e por isso entrou em REGRAS_DE_SEGURANCA.
+        ZERO disparos nos 720 (nao mudou com o piso -- sem foco, o piso nunca entra em jogo).
+        Com foco em PEITO e o piso dos demais ativo, o peito ganha espaco de sessao que antes ia
+        para ombro/bracos e a regra passa a disparar em mais perfis e mais niveis (INTERMEDIATE e
+        ADVANCED agora, nao so INTERMEDIATE) e mais divisoes (4/5/6 dias). Foco em OMBRO continua
+        sem alcancar (nao mexe no peito).
 
         Os dois lados importam: se o zero dos 720 virar positivo, alguem fez a regra disparar sem
         foco (a Fatia 7 registrou isto como impossivel); se o lado do foco virar zero, a regra
         voltou a ser morta e a reauditoria precisa ser refeita."""
         self.assertEqual(0, disparos_na_matriz()["ombro_vira_isolamento"])
         disparou = [p for p in PERFIS_FOCO if mv.gerar(p).disparos["ombro_vira_isolamento"]]
-        self.assertEqual(8, len(disparou))
+        self.assertEqual(72, len(disparou))
         self.assertEqual({("CHEST",)}, {p.foco for p in disparou})
-        self.assertEqual({"INTERMEDIATE"}, {p.nivel for p in disparou})
-        self.assertEqual(16, disparos_na_matriz_com_foco()["ombro_vira_isolamento"])
+        self.assertEqual({"INTERMEDIATE", "ADVANCED"}, {p.nivel for p in disparou})
+        self.assertEqual({4, 5, 6}, {p.dias for p in disparou})
+        self.assertEqual(136, disparos_na_matriz_com_foco()["ombro_vira_isolamento"])
 
     def test_ponto_fixo_termina_e_e_deterministico_em_todo_perfil(self):
         # Oscilar é permitido e CONTADO (ver gerar(): ciclo sob escassez, pendência da fatia 3);
@@ -548,12 +554,31 @@ class FocoDoQuiz(unittest.TestCase):
         self.assertEqual((14.0, 12.0, 12.0), (a["CHEST"], a["SHOULDERS"], a["BICEPS"]))
 
     def test_grande_ganha_6_e_pequeno_ganha_3(self):
+        """O bonus continua so dos alvos em foco. Fatia 11: os DEMAIS vao ao piso (VOLUME[m][0]),
+        exceto BACK -- isento porque o foco inclui CHEST (empurrar); ver
+        `test_back_fica_no_normal_quando_a_enfase_e_em_empurrar` para o isolado dessa isencao."""
         sem, com = mv.alvos(mv.Perfil()), mv.alvos(mv.Perfil(foco=("CHEST", "BICEPS")))
         self.assertEqual(6.0, com["CHEST"] - sem["CHEST"])
         self.assertEqual(3.0, com["BICEPS"] - sem["BICEPS"])
+        self.assertEqual(sem["BACK"], com["BACK"], "BACK isento -- foco inclui CHEST")
         for m in ALVOS:
-            if m not in ("CHEST", "BICEPS"):
-                self.assertEqual(sem[m], com[m], m)
+            if m not in ("CHEST", "BICEPS", "BACK"):
+                from spec_v3 import VOLUME
+                self.assertEqual(float(VOLUME[m][0]), com[m], m)
+
+    def test_back_fica_no_normal_quando_a_enfase_e_em_empurrar(self):
+        """[REGRA] Fatia 11: "puxar nunca cai abaixo de empurrar" e a RAZAO de uma ISENCAO, nao
+        uma desigualdade imposta -- BACK fica no volume NORMAL (nao vai ao piso) quando a enfase e
+        em CHEST ou SHOULDERS. Com enfase em LEGS (nenhum dos dois), BACK vai ao piso como
+        qualquer outro musculo de fora do foco."""
+        sem = mv.alvos(mv.Perfil())
+        for grupo_empurrar in ("CHEST", "SHOULDERS"):
+            com = mv.alvos(mv.Perfil(foco=(grupo_empurrar,)))
+            self.assertEqual(sem["BACK"], com["BACK"], grupo_empurrar)
+        com_pernas = mv.alvos(mv.Perfil(foco=("LEGS",)))
+        from spec_v3 import VOLUME
+        self.assertEqual(float(VOLUME["BACK"][0]), com_pernas["BACK"],
+                         "sem enfase em empurrar, BACK vai ao piso como os outros")
 
     def test_grande_e_derivado_do_peso_com_a_fronteira_declarada(self):
         """[REGRA] 2026-10-28: grande = PESO_PRIORIDADE >= FOCO_FRONTEIRA_GRANDE, nao lista a mao."""
@@ -582,8 +607,11 @@ class FocoDoQuiz(unittest.TestCase):
             self.assertEqual((), mv.foco_efetivo(com))
 
     def test_no_maximo_dois_grupos(self):
+        """So os 2 primeiros do tuplo valem -- SHOULDERS fica de fora do foco (so CHEST+BACK
+        contam) e, Fatia 11, vai ao PISO (6.0) por estar fora do foco -- nao fica em 12 (normal)
+        porque a isencao de puxar/empurrar e so para BACK, nao para quem SOBRA do proprio foco."""
         a = mv.alvos(mv.Perfil(foco=("CHEST", "BACK", "SHOULDERS")))
-        self.assertEqual((20.0, 22.0, 12.0), (a["CHEST"], a["BACK"], a["SHOULDERS"]))  # BACK 16+6; ombro de fora
+        self.assertEqual((20.0, 22.0, 6.0), (a["CHEST"], a["BACK"], a["SHOULDERS"]))  # BACK 16+6; ombro no piso
 
     def test_pernas_cobre_quadriceps_posterior_e_panturrilha(self):
         sem, com = mv.alvos(mv.Perfil()), mv.alvos(mv.Perfil(foco=("LEGS",)))
@@ -592,7 +620,12 @@ class FocoDoQuiz(unittest.TestCase):
                          {m: com[m] - sem[m] for m in ("QUADS", "POSTERIOR", "CALVES")})
         self.assertEqual(6.0, sum(com[m] - sem[m] for m in ("QUADS", "POSTERIOR", "CALVES")),
                          "o bonus nao pode ser somado cheio em cada alvo")
-        self.assertEqual(sem["GLUTES"], com["GLUTES"], "gluteo e foco proprio, nao parte de LEGS")
+        # Fatia 11: GLUTES e foco PROPRIO, nao parte de LEGS -- fica de fora do foco escolhido e
+        # vai ao piso como qualquer outro musculo nao focado (LEGS nao e empurrar, BACK tambem
+        # vai ao piso aqui -- sem isencao).
+        from spec_v3 import VOLUME
+        self.assertEqual(float(VOLUME["GLUTES"][0]), com["GLUTES"], "gluteo fora do foco, vai ao piso")
+        self.assertEqual(float(VOLUME["BACK"][0]), com["BACK"], "sem enfase em empurrar, BACK vai ao piso")
 
     def test_distribuicao_do_bonus_soma_exata_e_e_deterministica(self):
         for total in (3, 6):
@@ -766,3 +799,89 @@ class EscolhaPelaCuradoria(unittest.TestCase):
         trocados = {(n, v.alvo, v.papel) for n, p in programas()
                     for _, v in escolhidos(p) if (v.papel in mv.COMPOSTOS) != v.exercicio.composto}
         self.assertEqual(set(), trocados)
+
+
+def _exercicio_minimo(nome, alvo, composto, movement_pattern, familia="FAM", relevancia=1, prioridade=1):
+    return mv.Exercicio(nome=nome, alvo=alvo, composto=composto, equipamento="MACHINE",
+                        nivel="BEGINNER", visivel=True, base=True, prioridade=prioridade,
+                        relevancia=relevancia, nivel_maximo="ADVANCED", ambiente="ACADEMIA",
+                        familia=familia, acessorios=frozenset(), rir_minimo_seguranca=False,
+                        movement_pattern=movement_pattern)
+
+
+class SelecaoDePuxadaHorizontalNoBack(unittest.TestCase):
+    """Fatia 11, [REGRA]: com 2+ vagas de BACK na semana, ao menos uma e HORIZONTAL_PULL. Mesma
+    forma da extensao de cotovelo do triceps (Fatia 8) -- selecao, nao volume: a vaga ja existe,
+    so troca QUAL exercicio a ocupa."""
+
+    def test_academia_sem_foco_nunca_fica_sem_puxada_horizontal(self):
+        """Caminho feliz, no catalogo real: dos 720, 186 precisavam de correcao (medido antes desta
+        regra existir) -- apos a correcao, nenhum perfil com 2+ vagas de BACK fica sem horizontal."""
+        sem_horizontal = []
+        for nivel, p in programas():
+            vagas_back = [v for _, v in escolhidos(p) if v.alvo == "BACK"]
+            if len(vagas_back) >= 2 and not any(
+                    v.exercicio.movement_pattern == "HORIZONTAL_PULL" for v in vagas_back):
+                sem_horizontal.append((nivel, p.perfil.ambiente))
+        self.assertEqual([], sem_horizontal)
+
+    def test_com_uma_vaga_so_a_regra_nao_se_aplica(self):
+        """Caminho de nao-aplicacao, explicito: 1 vaga de BACK na semana nao e balanceada contra
+        nada -- a correcao nem olha o exercicio, so conta o disparo."""
+        vertical = _exercicio_minimo("Barra Fixa", "BACK", True, "VERTICAL_PULL")
+        v = mv.Vaga(alvo="BACK", papel="COMPOSTO", series=4, exercicio=vertical)
+        sessoes = [("Dia 1", [v])]
+        disparos = Counter()
+        mv.aplicar_puxada_horizontal_semanal(sessoes, [vertical], disparos)
+        self.assertEqual(1, disparos["puxada_horizontal_regra_nao_aplicavel"])
+        self.assertEqual("Barra Fixa", v.exercicio.nome)
+
+    def test_duas_vagas_verticais_trocam_uma_para_horizontal(self):
+        """Caminho feliz, de unidade: 2 vagas verticais, 1 horizontal disponivel -- uma delas
+        troca, a outra fica, a serie de cada vaga nao muda."""
+        vertical = _exercicio_minimo("Barra Fixa", "BACK", True, "VERTICAL_PULL", familia="VERTICAL")
+        horizontal = _exercicio_minimo("Remada Curvada com Barra", "BACK", True, "HORIZONTAL_PULL",
+                                       familia="HORIZONTAL", prioridade=3)
+        v1 = mv.Vaga(alvo="BACK", papel="COMPOSTO", series=4, exercicio=vertical)
+        v2 = mv.Vaga(alvo="BACK", papel="COMPOSTO", series=4, exercicio=vertical)
+        sessoes = [("Dia 1", [v1]), ("Dia 2", [v2])]
+        disparos = Counter()
+        mv.aplicar_puxada_horizontal_semanal(sessoes, [vertical, horizontal], disparos)
+        self.assertEqual(1, disparos["puxada_horizontal_semanal_corrigida"])
+        padroes = {v1.exercicio.movement_pattern, v2.exercicio.movement_pattern}
+        self.assertEqual({"VERTICAL_PULL", "HORIZONTAL_PULL"}, padroes)
+        self.assertEqual(4, v1.series)
+        self.assertEqual(4, v2.series)
+
+    def test_sem_candidato_horizontal_nao_quebra_e_conta_disparo(self):
+        """Caminho de falha: pool sem HORIZONTAL_PULL nenhum para BACK -- nada e trocado, o
+        disparo registra que a correcao nao pode ser aplicada (nao deveria ocorrer no catalogo
+        real: `test_academia_sem_foco_nunca_fica_sem_puxada_horizontal` prova que nao ocorre)."""
+        v1 = _exercicio_minimo("Barra Fixa", "BACK", True, "VERTICAL_PULL")
+        v2 = _exercicio_minimo("Puxada Alta", "BACK", True, "VERTICAL_PULL", prioridade=2)
+        vaga1 = mv.Vaga(alvo="BACK", papel="COMPOSTO", series=4, exercicio=v1)
+        vaga2 = mv.Vaga(alvo="BACK", papel="COMPOSTO", series=4, exercicio=v2)
+        sessoes = [("Dia 1", [vaga1]), ("Dia 2", [vaga2])]
+        disparos = Counter()
+        mv.aplicar_puxada_horizontal_semanal(sessoes, [v1, v2], disparos)
+        self.assertEqual(1, disparos["puxada_horizontal_sem_candidato"])
+        self.assertEqual("Barra Fixa", vaga1.exercicio.nome)
+        self.assertEqual("Puxada Alta", vaga2.exercicio.nome)
+
+    def test_familia_repetida_no_dia_nao_impede_a_correcao_quando_e_a_unica_saida(self):
+        """Mesma regra de `preencher()`: familia inedita no dia e preferencia, nao exigencia -- se
+        so sobrar uma familia ja usada no dia, a correcao ainda troca (nao deixa vertical parado
+        por excesso de zelo com familia)."""
+        vertical = _exercicio_minimo("Barra Fixa", "BACK", True, "VERTICAL_PULL", familia="REMADA")
+        horizontal = _exercicio_minimo("Remada Curvada com Barra", "BACK", True, "HORIZONTAL_PULL",
+                                       familia="REMADA", prioridade=3)
+        # as duas vagas no MESMO dia, mesma familia disponivel nos dois candidatos -- nao ha
+        # alternativa de familia inedita, e a correcao deve trocar mesmo assim.
+        v1 = mv.Vaga(alvo="BACK", papel="COMPOSTO", series=4, exercicio=vertical)
+        v2 = mv.Vaga(alvo="BACK", papel="COMPOSTO", series=3, exercicio=vertical)
+        sessoes = [("Dia 1", [v1, v2])]
+        disparos = Counter()
+        mv.aplicar_puxada_horizontal_semanal(sessoes, [vertical, horizontal], disparos)
+        self.assertEqual(1, disparos["puxada_horizontal_semanal_corrigida"])
+        padroes = {v1.exercicio.movement_pattern, v2.exercicio.movement_pattern}
+        self.assertEqual({"VERTICAL_PULL", "HORIZONTAL_PULL"}, padroes)

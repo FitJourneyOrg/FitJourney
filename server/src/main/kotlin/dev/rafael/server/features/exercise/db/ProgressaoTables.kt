@@ -46,3 +46,17 @@ object ProgressionEventTable : Table("progression_event") {
     val seq = long("seq").databaseGenerated()
     override val primaryKey = PrimaryKey(userId, exerciseId, sessionId)
 }
+
+/**
+ * Espelha `V70__recusa_de_promocao.sql` (Fatia 11). Só a recusa MAIS RECENTE por
+ * `(user_id, nivel_proposto)` — histórico completo omitido de propósito, ver cabeçalho da migration.
+ */
+object PromotionDeclineTable : Table("promotion_decline") {
+    val userId = uuid("user_id").references(UsersTable.id)
+
+    /** `INTERMEDIATE` | `ADVANCED`. */
+    val nivelProposto = text("nivel_proposto")
+    val mesocicloNaRecusa = integer("mesociclo_na_recusa")
+    val recusadoEm = datetime("recusado_em")
+    override val primaryKey = PrimaryKey(userId, nivelProposto)
+}

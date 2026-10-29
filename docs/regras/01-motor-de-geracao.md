@@ -265,6 +265,17 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   ou alvo zero) · `MANUTENCAO` (passou do piso, não do alvo) · `ABAIXO_DO_MINIMO` · `NAO_TREINADO`
   (nada, nem direto nem indireto) · `SEM_CATALOGO` (não havia exercício no pool do perfil — não é
   escolha do motor).
+- **[REGRA] definição fixada (2026-10-29, Fatia 11):** "pares abaixo do mínimo" / "abaixo do MEV",
+  usado informalmente em conversa e em medições ad hoc, é a SOMA de `ABAIXO_DO_MINIMO` +
+  `NAO_TREINADO` — os dois são o mesmo eixo (`efetivo < minimo_efetivo(m, objetivo)`), e só se
+  diferenciam por `efetivo == 0` (`NAO_TREINADO`) ou `> 0` (`ABAIXO_DO_MINIMO`). Nunca o status
+  `ABAIXO_DO_MINIMO` isolado — contá-lo só seria subcontar quem está pior (zerado) como se
+  estivesse fora da medição. Remedido nos 720 com esta definição em 2026-10-29: **2.188 pares**
+  (1.429 `ABAIXO_DO_MINIMO` + 759 `NAO_TREINADO`), contra os **2.079** da medição original (acima,
+  antes da auditoria por status existir) e os **1.487** de 2026-10-27 (pós-remoção do CORE, 1.040 +
+  447). Os três números são de catálogos e motores DIFERENTES ao longo das Fatias 8-11 (volume
+  indireto corrigido, antebraço/glúteo/posterior revisados, catálogo crescendo) — não é erro de
+  definição, é deriva real registrada, não a mesma matriz duas vezes.
 - **[INV]** Todo músculo sai da auditoria com status; nenhum sai `ATENDIDO` com efetivo abaixo do
   alvo; nenhum sai `MANUTENCAO` com efetivo abaixo do piso. Medido nos 720, 0 violações.
 - **[REGRA]** O gatilho do aviso de honestidade (`abaixoDoMinimo()`) usa **`atingiuMinimo`, não o
@@ -639,15 +650,63 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   perfis, arquivo à parte — `referencia_720.txt` não muda): é o que o tripwire de
   `ombro_vira_isolamento` exige; os nove grupos custariam tempo e tamanho sem ganho. Inclui
   GENERAL_HEALTH como controle (o foco é ignorado ali).
-- **`[INV]` Reauditoria de `ombro_vira_isolamento`:** 0 disparos nos 720; **16 disparos em 8 perfis com
-  foco em peito** (todos INTERMEDIATE, 6 dias, PPL). Entrou em `REGRAS_DE_SEGURANCA`, medida na UNIÃO
-  das matrizes. Foco em ombro não a alcança.
-- **`[INV]` O bônus de alvo é quase INERTE sem a Fatia 11:** medido, só 21 de 480 programas mudam por
-  foco e o `ATENDIDO` cai, porque a capacidade da sessão é o limite — o bônus sobe o alvo, não o que
-  cabe. A peça que faz o foco funcionar é a proteção contra sacrifício na alocação (Fatia 11).
-  **Condição da troca de produção:** ligar entre a 10 e a 11 entrega um foco PERMANENTE e que PIORA a
-  cobertura de quem o escolhe; ou a 11 vem antes, ou você aceita isso explicitamente
-  (`fontes/debitos.md`).
+- **`[INV]` Reauditoria de `ombro_vira_isolamento` na Fatia 10:** 0 disparos nos 720; 16 disparos em
+  8 perfis com foco em peito. Entrou em `REGRAS_DE_SEGURANCA`, medida na UNIÃO das matrizes. Foco em
+  ombro não a alcança.
+- **`[INV]` Reauditoria de `ombro_vira_isolamento` na Fatia 11 (número corrigido, 2026-10-29):** com
+  a fase de ênfase (piso + proteção dinâmica) ligada, o número sobe para **136 disparos nos 960 com
+  foco em peito** (`test_ombro_vira_isolamento_so_dispara_com_foco_em_peito`), continua **0 nos 720
+  sem foco**. A fase aumenta os casos em que o composto de peito domina a sessão o suficiente para
+  a regra de segurança do ombro (desenvolvimento) disparar — consistente com o piso elevando o
+  volume relativo de CHEST quando ele é o foco. Qualquer código ou doc que ainda cite "16" para a
+  matriz COM foco está medindo a Fatia 10, sem a fase — reauditar, não só atualizar o número.
+- **`[INV]` O bônus de alvo SOZINHO (Fatia 10, sem a fase) é quase INERTE:** medido, só 21 de 480
+  programas mudam por foco e o `ATENDIDO` cai, porque a capacidade da sessão é o limite — o bônus
+  sobe o alvo, não o que cabe. A peça que fazia o foco funcionar de verdade é a fase de ênfase
+  (piso + proteção contra sacrifício na alocação), entregue na Fatia 11, abaixo.
+  **Condição da troca de produção: FECHADA na Fatia 11** (`fontes/debitos.md` — o risco era ligar
+  entre a 10 e a 11 com foco permanente sem proteção; a proteção existe agora).
+
+**Foco — fase de ênfase (Fatia 11, `VolumeTargets.weeklySets`/`alvos()`, `PriorityAllocation.alocar`,
+`WeeklyBackSelection`):**
+
+- **`[REGRA]` Piso nos demais grupos.** Com foco ativo (1 ou 2 grupos, elegibilidade de sempre), todo
+  alvo FORA do foco efetivo vai ao PISO (a coluna do iniciante, `VOLUME[m][0]` — nunca sobe, só
+  desce). Sem foco, resultado idêntico ao de antes (bônus da Fatia 10 continua valendo igual). É a
+  peça que torna o foco capaz de mudar o `entregue`, não só o alvo — ver `[INV]` acima.
+- **`[REGRA]` Isenção NOMEADA do `BACK`** quando a ênfase efetiva inclui `CHEST` ou `SHOULDERS`
+  (`EMPURRAR`): `BACK` fica no volume NORMAL, não vai ao piso. Razão declarada na spec ("puxar nunca
+  cai abaixo de empurrar") — **não é uma desigualdade geral a comparar**: é exceção por nome, porque
+  `SHOULDERS` mistura exercícios de padrão de PUXAR na curadoria (Face Pull, Crucifixo Inverso) —
+  somar o alvo inteiro de `SHOULDERS` como "empurrar" contaria o antídoto como veneno. Não generaliza
+  para outros pares; se outro músculo precisar da mesma isenção, é uma decisão nova, não a extensão
+  automática desta.
+- **`[REGRA]` Proteção dinâmica na alocação sob escassez** (`PriorityAllocation.alocar`,
+  `protegidos_extra`/`protegidosExtra`): os alvos do foco efetivo saem de `ORDEM_SACRIFICIO` —
+  protegidos de REBAIXAMENTO e SACRIFÍCIO, **não** de corte proporcional (que continua tocando todo
+  mundo, inclusive os estaticamente protegidos — `[INV]` fonte única da Fatia 3 intacto:
+  `ORDEM_SACRIFICIO` deriva só de `PESO_PRIORIDADE`/`PROTEGIDOS_ALOCACAO`, nunca do foco). Medido:
+  move **+592 séries** sob escassez real (680/960 perfis) sem converter nenhum `ATENDIDO` adicional
+  nesta amostra — custo aceito sem o "peso temporário" (`fontes/debitos.md`).
+- **`[REGRA]` Seleção de puxada horizontal semanal no `BACK`** (`aplicar_puxada_horizontal_semanal`/
+  `WeeklyBackSelection`, chamada ao FIM de `gerar()`): com 2+ vagas de `BACK` na semana, ao menos uma
+  é `HORIZONTAL_PULL` — SELEÇÃO, não capacidade (mesmo alvo/papel/séries, só troca QUAL exercício
+  ocupa a vaga, zero custo de capacidade, não refaz o ponto fixo). Com 1 vaga, a regra não se aplica
+  (nada a balancear). Cede a preferência de família inédita no dia quando é a ÚNICA saída (mesma
+  lógica de `preencher()`). Medido no catálogo real: corrige 186/720 e 372/960 perfis que ficavam sem
+  horizontal; 0 perfis sem candidato (`HORIZONTAL_PULL` nunca falta no pool); o espelho ("ao menos
+  uma vertical") foi avaliado e **descartado por motivo, não omissão** — dispara 100% em CASA por
+  falta de equipamento (pool de `VERTICAL_PULL` fica vazio ali), não por defeito de seleção
+  simétrico (`fontes/debitos.md`).
+- **`[REGRA]` Limiar de agregação da promoção a INTERMEDIATE: 2 âncoras em `PROMOVER`, ou 1 se o
+  perfil só tiver uma** (`diagnostico_promocao_do_perfil`/`PromocaoDeNivel.diagnosticoDoPerfil`).
+  Motivo: o nível barra exigência técnica (acesso a barra livre); o lift que estagna primeiro não
+  representa a maturidade da pessoa inteira. **Calibrável, não evidência** — primeiro parâmetro a
+  recalibrar quando o RIR chegar do cliente (`fontes/debitos.md`). `[INV]` a exceção de 1 âncora é
+  INALCANÇÁVEL hoje: nenhum perfil `BEGINNER` da matriz de 720 gera programa com menos de 5 vagas
+  preenchidas (mínimo 5, mediana 14, máximo 17) — trancado em
+  `test_nenhum_beginner_tem_menos_de_5_ancoras` e no espelho Kotlin, mesmo padrão do
+  `ombro_vira_isolamento`.
 
 **Persistência** (implementada na Fatia 10b — V69 + `*RepositoryImpl`, verde no `integrationTest`; desenho em
 `arch/motor-v3-progressao-schema.md`):
