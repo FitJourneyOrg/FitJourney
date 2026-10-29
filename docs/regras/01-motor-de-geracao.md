@@ -265,6 +265,17 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   ou alvo zero) · `MANUTENCAO` (passou do piso, não do alvo) · `ABAIXO_DO_MINIMO` · `NAO_TREINADO`
   (nada, nem direto nem indireto) · `SEM_CATALOGO` (não havia exercício no pool do perfil — não é
   escolha do motor).
+- **[REGRA] definição fixada (2026-10-29, Fatia 11):** "pares abaixo do mínimo" / "abaixo do MEV",
+  usado informalmente em conversa e em medições ad hoc, é a SOMA de `ABAIXO_DO_MINIMO` +
+  `NAO_TREINADO` — os dois são o mesmo eixo (`efetivo < minimo_efetivo(m, objetivo)`), e só se
+  diferenciam por `efetivo == 0` (`NAO_TREINADO`) ou `> 0` (`ABAIXO_DO_MINIMO`). Nunca o status
+  `ABAIXO_DO_MINIMO` isolado — contá-lo só seria subcontar quem está pior (zerado) como se
+  estivesse fora da medição. Remedido nos 720 com esta definição em 2026-10-29: **2.188 pares**
+  (1.429 `ABAIXO_DO_MINIMO` + 759 `NAO_TREINADO`), contra os **2.079** da medição original (acima,
+  antes da auditoria por status existir) e os **1.487** de 2026-10-27 (pós-remoção do CORE, 1.040 +
+  447). Os três números são de catálogos e motores DIFERENTES ao longo das Fatias 8-11 (volume
+  indireto corrigido, antebraço/glúteo/posterior revisados, catálogo crescendo) — não é erro de
+  definição, é deriva real registrada, não a mesma matriz duas vezes.
 - **[INV]** Todo músculo sai da auditoria com status; nenhum sai `ATENDIDO` com efetivo abaixo do
   alvo; nenhum sai `MANUTENCAO` com efetivo abaixo do piso. Medido nos 720, 0 violações.
 - **[REGRA]** O gatilho do aviso de honestidade (`abaixoDoMinimo()`) usa **`atingiuMinimo`, não o
