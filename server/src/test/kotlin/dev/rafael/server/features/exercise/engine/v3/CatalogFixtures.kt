@@ -6,6 +6,7 @@ import dev.rafael.contract.profile.Level
 import dev.rafael.server.features.exercise.engine.TargetMuscle
 import dev.rafael.server.features.exercise.models.Ambiente
 import dev.rafael.server.features.exercise.models.Exercise
+import dev.rafael.server.features.exercise.models.MovementPattern
 import dev.rafael.server.features.exercise.models.Modality
 import kotlin.uuid.Uuid
 
@@ -24,6 +25,7 @@ fun exercicioV3(
     ambiente: Ambiente = Ambiente.ACADEMIA,
     acessorios: Set<Accessory> = emptySet(),
     rirMinimoSeguranca: Boolean = false,
+    movementPattern: MovementPattern? = null,
 ) = Exercise(
     id = Uuid.random(),
     name = name,
@@ -32,7 +34,7 @@ fun exercicioV3(
     videoRef = "",
     thumbRef = "",
     modality = Modality.STRENGTH,
-    movementPattern = null,
+    movementPattern = movementPattern,
     secondaryPattern = null,
     isCompound = composto,
     equipment = equipamento,

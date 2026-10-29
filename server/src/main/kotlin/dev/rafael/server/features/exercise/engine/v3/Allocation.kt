@@ -145,10 +145,20 @@ object PriorityAllocation {
         capacidade: Double,
         disparos: MutableMap<String, Int> = mutableMapOf(),
         pisoDiretoDe: Map<TargetMuscle, Int> = emptyMap(),
+        /**
+         * `[REGRA]` Fatia 11: extensão DINÂMICA de [PROTEGIDOS_ALOCACAO], só para esta chamada —
+         * nunca lista paralela, mesmo `[INV]` de fonte única da `ORDEM_SACRIFICIO`. Protege de
+         * rebaixamento e sacrifício (os dois nomeados na spec, "nunca é sacrificado nem
+         * rebaixado"); **não** protege do corte proporcional — mesmo tratamento que
+         * CHEST/BACK/QUADS/POSTERIOR já recebem hoje. Espelha
+         * `motor_v3.py::alocar(protegidos_extra=...)`.
+         */
+        protegidosExtra: Set<TargetMuscle> = emptySet(),
     ): Map<TargetMuscle, Int> {
         val prioridade = treinaveis.sortedWith(
             compareByDescending<TargetMuscle> { PESO_PRIORIDADE.getValue(it) }.thenBy { it.ordinal }
         )
+        val ordemSacrificio = ORDEM_SACRIFICIO.filter { it !in protegidosExtra }
 
         if (treinaveis.sumOf { direta[it] ?: 0.0 } <= capacidade) {
             val folgado = prioridade.mapNotNull { m ->
@@ -170,7 +180,7 @@ object PriorityAllocation {
             minOf(direta.getValue(m), maxOf((pisoDiretoDe[m] ?: 0).toDouble(), pisoIniciante))
         }.toMutableMap()
 
-        for (m in ORDEM_SACRIFICIO) {
+        for (m in ordemSacrificio) {
             if (piso.values.sum() <= capacidade) break
             val atual = piso[m] ?: continue
             val pisoPapel = pisoDoPapel(m).toDouble()
@@ -179,7 +189,7 @@ object PriorityAllocation {
                 disparos["rebaixamento"] = (disparos["rebaixamento"] ?: 0) + 1
             }
         }
-        for (m in ORDEM_SACRIFICIO) {
+        for (m in ordemSacrificio) {
             if (piso.values.sum() <= capacidade) break
             if (piso.remove(m) != null) {
                 disparos["sacrificio"] = (disparos["sacrificio"] ?: 0) + 1

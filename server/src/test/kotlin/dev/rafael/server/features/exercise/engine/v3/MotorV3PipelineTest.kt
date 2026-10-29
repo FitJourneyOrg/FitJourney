@@ -73,7 +73,19 @@ class MotorV3PipelineTest {
         // orçamento fechar, e virou `[INV]` que falha alto. Nenhum
         // `sobe_ao_piso_dentro_do_orcamento` no lugar dele — aqui o piso direto já resolve pela
         // demanda, antes de a etapa [3] precisar corrigir nada.
-        assertEquals(mapOf("escassez" to 1), resultado.disparos)
+        // Fatia 11: este catálogo sintético não tem `movementPattern` em nenhum exercício de
+        // BACK (não é objetivo deste fixture testar a seleção semanal) -- a regra detecta a
+        // ausência de puxada vertical, tenta corrigir e não acha candidato horizontal. Três
+        // disparos novos, nenhum deles muda `entregue`/`alocado` (a regra é seleção, não capacidade).
+        assertEquals(
+            mapOf(
+                "escassez" to 1,
+                "puxada_vertical_semanal_ausente" to 1,
+                "puxada_horizontal_semanal_corrigida" to 1,
+                "puxada_horizontal_sem_candidato" to 1,
+            ),
+            resultado.disparos,
+        )
         assertEquals(emptyList(), resultado.estado.vagasVazias)
         assertEquals(
             emptyList(),

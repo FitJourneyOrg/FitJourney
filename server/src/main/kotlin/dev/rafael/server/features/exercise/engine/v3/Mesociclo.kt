@@ -125,7 +125,9 @@ object AncoraDoIniciante {
         data object Deload : Evento
     }
 
-    private fun semSubirNoFim(eventos: List<Evento>): Int {
+    // internal (nao private): reaproveitado por PromocaoDeNivel.diagnosticoIniciante (Fatia 11),
+    // mesmo helper que o oraculo compartilha entre situacao_iniciante e diagnostico_promocao_iniciante.
+    internal fun semSubirNoFim(eventos: List<Evento>): Int {
         var n = 0
         for (e in eventos.asReversed()) {
             if (e is Evento.Carga && e.decisao == Decisao.SOBE) break

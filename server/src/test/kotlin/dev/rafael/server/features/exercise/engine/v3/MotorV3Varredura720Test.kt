@@ -7,6 +7,7 @@ import dev.rafael.contract.profile.TrainingEnvironment
 import dev.rafael.server.features.exercise.engine.TargetMuscle
 import dev.rafael.server.features.exercise.models.Ambiente
 import dev.rafael.server.features.exercise.models.Exercise
+import dev.rafael.server.features.exercise.models.MovementPattern
 import java.io.File
 import kotlin.math.abs
 import kotlin.test.Test
@@ -101,9 +102,10 @@ class MotorV3Varredura720Test {
         val mortas = REGRAS_DE_SEGURANCA.filter { (uniao[it] ?: 0) == 0 }
         assertTrue(mortas.isEmpty(), "regras de segurança sem nenhum disparo nas duas matrizes: $mortas (total: $uniao)")
         // Reauditoria da Fatia 10 (era o tripwire da Fatia 7): sem foco continua inalcançável (720) e
-        // com foco em peito dispara 16 vezes -- o número que o oráculo mediu. Se mudar, reauditar.
+        // com foco em peito dispara 136 vezes -- o número que o oráculo mediu
+        // (test_motor_v3.py::test_ombro_vira_isolamento_so_dispara_com_foco_em_peito). Se mudar, reauditar.
         assertEquals(0, sem720["ombro_vira_isolamento"] ?: 0, "sem foco a regra voltou a disparar: reauditar")
-        assertEquals(16, comFoco["ombro_vira_isolamento"] ?: 0, "o foco em peito deixou de disparar a regra, ou disparou mais: reauditar")
+        assertEquals(136, comFoco["ombro_vira_isolamento"] ?: 0, "o foco em peito deixou de disparar a regra, ou disparou mais: reauditar")
         assertEquals(0, uniao["ponto_fixo_nao_convergiu"] ?: 0)
     }
 
@@ -368,6 +370,7 @@ internal object Oraculo {
                     if (flag("requires_anchor_point")) add(Accessory.ANCHOR_POINT)
                 },
                 rirMinimoSeguranca = flag("rir_minimo_seguranca"),
+                movementPattern = MovementPattern.valueOf(r.getValue("movement_pattern")),
             )
         }
     }

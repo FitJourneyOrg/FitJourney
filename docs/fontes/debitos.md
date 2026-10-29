@@ -367,8 +367,8 @@ pré-V14; a checagem no banco mostrou que não havia duplicata alguma (só o con
 | **`LEGS` do foco** | ✅ Decidido · um bônus repartido pelo peso (3/2/1) | O "limite total" da spec e o piso nos demais grupos são da Fatia 11 |
 | **60+ após pausa >28 dias → mesociclo N+1 conservador** | ✅ Decidido · extensão declarada além da spec | Motivo: quem volta depois de um mês é quem mais precisa do lado seguro |
 | **Deload da semana 4 sobre exercício com uma exposição** (consequência do mesociclo por pessoa, D-4) | ⚪ Aceito · registrado para não virar "bug" | Inofensivo: deload mantém a carga e corta as séries pela metade |
-| **Diagnóstico de estagnação** (`diagnosticoFeito` da âncora do iniciante) | 🔲 Aberto · Fatia 11 | Vem de fora da máquina; sem ele a troca nunca é autorizada (`DIAGNOSTICO_PENDENTE`) |
-| **Promoção de nível pelo 1RM / ênfase em fase** | 🔲 Aberto · Fatia 11 | O 1RM já é guardado por exercício |
+| **Diagnóstico de estagnação** (`diagnosticoFeito` da âncora do iniciante) | 🟡 Parcial · Fatia 11, núcleo puro fechado | `PromocaoDeNivel.diagnosticoFeitoParaTrocaDeAncora()` faz a ponte: `RECUPERACAO`/`RECUPERACAO_SEM_RETOMADA` autorizam a troca, `PROMOVER` é outro caminho (sobe de nível, não troca âncora). **Falta** a camada de serviço que lê `ProgressaoRepository.historico()` de verdade e decide quando perguntar ao usuário — fora do escopo desta fatia |
+| **Promoção de nível pelo 1RM / ênfase em fase** | ✅ Fechado · Fatia 11 (oráculo + Kotlin) | `PromocaoDeNivel` (diagnósticos + `podeSugerirDeNovo`), `PromotionDeclineRepository`/`Impl` (V70). **Falta** o service/rota que decide QUANDO chamar isto num fluxo real (mesma lacuna do item acima) e os testes Kotlin contra `referencia_progressao.txt` |
 | Pausa fora da matriz | ⚪ Aceito | Evento no tempo, não dimensão: inalcançável nos 720 por construção, coberto por teste unitário |
 
 ## Motor v3 — fatia 11 (nível, promoção e ênfase, em andamento, 2026-10-29)

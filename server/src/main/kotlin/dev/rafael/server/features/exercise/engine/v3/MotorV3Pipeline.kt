@@ -88,7 +88,10 @@ object MotorV3Pipeline {
             val direta = TargetMuscle.entries.associateWith { m ->
                 maxOf(pisoDiretoDe.getValue(m).toDouble(), demandaDireta(alvo.getValue(m), indireto[m] ?: 0.0))
             }
-            val alocado = PriorityAllocation.alocar(direta, indireto, treinaveis, capacidade, disparos, pisoDiretoDe)
+            val alocado = PriorityAllocation.alocar(
+                direta, indireto, treinaveis, capacidade, disparos, pisoDiretoDe,
+                protegidosExtra = VolumeTargets.alvosDoFoco(entrada.nivel, entrada.objetivo, entrada.foco),
+            )
             val semana = WeekStructure.distribuirPelosDias(alocado, dias, disparos)
             val sessoesVagas = dias.zip(semana).map { (dia, series) -> dia.rotulo to SessionComposition.comporSessao(series, disparos) }
             val preenchidas = CatalogFiller.preencher(sessoesVagas, candidatos, disparos, vazias, modoConservador)
@@ -97,8 +100,15 @@ object MotorV3Pipeline {
             Triple(Estado(alocado, preenchidas, entregue, compostos, vazias), novo, disparos)
         }
 
+        // Fatia 11: seleção semanal de BACK, DEPOIS do ponto fixo convergir -- sobre o `sessoes`
+        // final. Troca exercício, nunca série: `entregue`/`auditoria` abaixo continuam medidos
+        // sobre o estado original, igual ao oráculo (`motor_v3.py::gerar()`, chamada logo após o
+        // unpack do `estado`, antes de montar o `Programa`).
+        val backSelecionado = WeeklyBackSelection.aplicar(resultado.estado.sessoes, candidatos, resultado.disparos)
+        val estadoFinal = resultado.estado.copy(sessoes = backSelecionado.sessoes)
+
         return Resultado(
-            divisao, capacidade, resultado.estado, resultado.indireto, resultado.disparos,
+            divisao, capacidade, estadoFinal, resultado.indireto, backSelecionado.disparos,
             resultado.iteracoes,
             auditoria = ProgramAudit.auditar(
                 alvo = alvo, entregue = resultado.estado.entregue,
