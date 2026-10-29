@@ -24,10 +24,12 @@ object SafetyRules {
      * gatilho por preferência declarada ("quer começar no modo leve?") fica fora — o campo não
      * existe em `ProfileDto`/nenhuma migration ainda.
      */
-    fun modoConservadorAutomatico(nivel: Level, objetivo: Goal, idade: Int?, mesocicloAtual: Int?): Boolean =
+    fun modoConservadorAutomatico(
+        nivel: Level, objetivo: Goal, idade: Int?, mesocicloAtual: Int?, retornoConservador: Boolean = false,
+    ): Boolean =
         nivel == Level.BEGINNER ||
             objetivo == Goal.GENERAL_HEALTH ||
-            (idade != null && idade >= 60 && CapacityModel.primeiroMesociclo(mesocicloAtual))
+            (idade != null && idade >= 60 && (CapacityModel.primeiroMesociclo(mesocicloAtual) || retornoConservador))
 
     /**
      * Piso de RIR de segurança. Não é a tabela de RIR por semana/objetivo — isto é só o piso

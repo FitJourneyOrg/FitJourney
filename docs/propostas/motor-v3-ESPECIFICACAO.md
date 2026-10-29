@@ -604,7 +604,7 @@ Essa ausência passou por todas as nossas análises sem ser notada, e era item d
 1. A carga sobe apenas quando todas as séries batem o topo da faixa no RIR alvo
 2. Cada aumento é o **menor incremento disponível** no equipamento — exceto nas primeiras exposições ao exercício, em que saltos maiores são permitidos (sua correção P1)
 3. Logo depois de um salto de carga, repetições abaixo da faixa são aceitas enquanto o RIR estiver no alvo (sua correção P2) — sem isso, o halter que pula de 8 para 10 kg, +25%, entra em loop de subir e devolver
-4. Se a primeira série do dia sair mais difícil que o alvo, as seguintes reduzem a carga em **3 a 5% por ponto de RIR abaixo do alvo** (sua correção P3)
+4. Se a primeira série do dia sair mais difícil que o alvo, as seguintes reduzem a carga em **4% por ponto de RIR abaixo do alvo** (sua correção P3). `[REGRA]` **4% FIXO**, decidido em 2026-10-28 (Fatia 10): está dentro da faixa de 3–5% da literatura, e a versão anterior deste item ("3 a 5%") era uma contradição interna — uma regra que pede um número e dá três — fechada por decisão. **Não reabrir.** Redução que arredonda para a mesma carga (4% de 8 kg num halter de 2 kg) é ANULADA e sinalizada, não aplicada em silêncio.
 5. No isolamento não se usa 1RM estimado — só progressão dupla
 
 Antes não havia regra nem limite: um 1RM estimado a partir do RIR relatado podia gerar um salto grande de carga a partir de uma única série boa ou de um RIR mal informado.

@@ -46,9 +46,9 @@ import kotlin.test.fail
 class MotorV3Varredura720Test {
 
     @Test
-    fun `os 720 perfis batem com o oraculo vaga a vaga, musculo a musculo e disparo a disparo`() {
+    fun `os 720 perfis e os 960 do foco batem com o oraculo vaga a vaga, musculo a musculo e disparo a disparo`() {
         val catalogo = Oraculo.catalogo()
-        val referencia = Oraculo.referencia()
+        val referencia = Oraculo.referencia() + Oraculo.referenciaFoco()
 
         val divergentes = mutableListOf<Pair<RefPerfil, List<String>>>()
         for (ref in referencia) {
@@ -63,7 +63,7 @@ class MotorV3Varredura720Test {
             fail(
                 buildString {
                     appendLine("${divergentes.size}/${referencia.size} perfis divergiram do oráculo. Por categoria: $porCategoria")
-                    appendLine("Se a mudança foi DE PROPÓSITO no oráculo, regenere (`python3 gerar_referencia_720.py`) e revise o diff.")
+                    appendLine("Se a mudança foi DE PROPÓSITO no oráculo, regenere (`python3 gerar_referencia_720.py`) e revise o diff dos DOIS arquivos.")
                     appendLine("Se foi só no Kotlin, o Kotlin está errado: o oráculo é a fonte.")
                     divergentes.take(6).forEach { (ref, d) ->
                         appendLine("--- ${ref.id}")
@@ -76,27 +76,35 @@ class MotorV3Varredura720Test {
     }
 
     @Test
-    fun `os invariantes valem nos 720 perfis sem olhar para o oraculo`() {
+    fun `os invariantes valem nos 720 perfis e nos 960 do foco sem olhar para o oraculo`() {
         // Independente da referência: se oráculo e Kotlin errarem JUNTOS, a comparação acima passa e
         // isto acusa. É a lição de 2026-10-27 (E10): dois lados podem concordar e estar errados.
         val catalogo = Oraculo.catalogo()
-        val disparos = mutableMapOf<String, Int>()
         val violacoes = mutableListOf<String>()
-        for (ref in Oraculo.referencia()) {
-            val r = MotorV3Pipeline.gerar(Oraculo.entradaDe(ref.id), catalogo)
-            violacoes += invariantes(r).map { "${ref.id}: $it" }
-            r.disparos.forEach { (k, n) -> disparos.merge(k, n, Int::plus) }
+        fun varre(perfis: List<RefPerfil>): Map<String, Int> {
+            val disparos = mutableMapOf<String, Int>()
+            for (ref in perfis) {
+                val r = MotorV3Pipeline.gerar(Oraculo.entradaDe(ref.id), catalogo)
+                violacoes += invariantes(r).map { "${ref.id}: $it" }
+                r.disparos.forEach { (k, n) -> disparos.merge(k, n, Int::plus) }
+            }
+            return disparos
         }
+        val sem720 = varre(Oraculo.referencia())
+        val comFoco = varre(Oraculo.referenciaFoco())
         if (violacoes.isNotEmpty()) {
             fail("${violacoes.size} violação(ões) de invariante:\n" + violacoes.take(10).joinToString("\n") { "  $it" })
         }
-        // Regra de segurança que nunca dispara é código morto com cara de proteção.
-        val mortas = REGRAS_DE_SEGURANCA.filter { (disparos[it] ?: 0) == 0 }
-        assertTrue(mortas.isEmpty(), "regras de segurança sem nenhum disparo nos 720: $mortas (total: $disparos)")
-        // Reauditoria da Fatia 7: inalcançável sem foco. Quando o foco (Fatia 10) entrar e disparar,
-        // este assert fica vermelho -- é o sinal para mover a regra para REGRAS_DE_SEGURANCA.
-        assertEquals(0, disparos["ombro_vira_isolamento"] ?: 0)
-        assertEquals(0, disparos["ponto_fixo_nao_convergiu"] ?: 0)
+        // Regra de segurança que nunca dispara é código morto com cara de proteção. Medido na UNIÃO
+        // das matrizes: `ombro_vira_isolamento` só é alcançável com foco em peito (Fatia 10).
+        val uniao = (sem720.keys + comFoco.keys).associateWith { (sem720[it] ?: 0) + (comFoco[it] ?: 0) }
+        val mortas = REGRAS_DE_SEGURANCA.filter { (uniao[it] ?: 0) == 0 }
+        assertTrue(mortas.isEmpty(), "regras de segurança sem nenhum disparo nas duas matrizes: $mortas (total: $uniao)")
+        // Reauditoria da Fatia 10 (era o tripwire da Fatia 7): sem foco continua inalcançável (720) e
+        // com foco em peito dispara 16 vezes -- o número que o oráculo mediu. Se mudar, reauditar.
+        assertEquals(0, sem720["ombro_vira_isolamento"] ?: 0, "sem foco a regra voltou a disparar: reauditar")
+        assertEquals(16, comFoco["ombro_vira_isolamento"] ?: 0, "o foco em peito deixou de disparar a regra, ou disparou mais: reauditar")
+        assertEquals(0, uniao["ponto_fixo_nao_convergiu"] ?: 0)
     }
 
     @Test
@@ -133,8 +141,10 @@ class MotorV3Varredura720Test {
     }
 
     private companion object {
-        /** Espelha `REGRAS_DE_SEGURANCA` de `test_motor_v3.py`: as duas que PRECISAM disparar na matriz. */
-        val REGRAS_DE_SEGURANCA = listOf("ombro_teto_do_desenvolvimento", "um_empurrar_com_barra_por_sessao")
+        /** Espelha `REGRAS_DE_SEGURANCA` de `test_motor_v3.py`: as que PRECISAM disparar nas matrizes (união). */
+        val REGRAS_DE_SEGURANCA = listOf(
+            "ombro_teto_do_desenvolvimento", "um_empurrar_com_barra_por_sessao", "ombro_vira_isolamento",
+        )
     }
 
     @Test
@@ -147,6 +157,41 @@ class MotorV3Varredura720Test {
         assertEquals(720 * TargetMuscle.entries.size, referencia.sumOf { it.musculos.size })
         assertTrue(referencia.sumOf { it.vagas.size } > 10_000, "a referência quase não tem vagas")
         assertEquals(147, Oraculo.catalogo().size)
+    }
+
+    @Test
+    fun `a matriz do foco traz 960 perfis unicos, so peito e ombro, e nenhum id colide com os 720`() {
+        // O eixo de foco na matriz é nenhum/peito/ombro DE PROPÓSITO (decisão de 2026-10-28): é o que o
+        // tripwire de `ombro_vira_isolamento` exige; os nove grupos custariam tempo e tamanho sem ganho.
+        val foco = Oraculo.referenciaFoco()
+        assertEquals(960, foco.size)
+        assertEquals(960, foco.map { it.id }.toSet().size, "perfil duplicado na referência do foco")
+        assertEquals(960 * TargetMuscle.entries.size, foco.sumOf { it.musculos.size })
+        assertEquals(setOf("fCHEST", "fSHOULDERS"), foco.map { it.id.split("-").last() }.toSet())
+        assertTrue(foco.map { it.id }.toSet().intersect(Oraculo.referencia().map { it.id }.toSet()).isEmpty())
+        // Nunca iniciante (o foco seria ignorado, perfil sem informação). GENERAL_HEALTH ENTRA de
+        // propósito: é o controle -- o foco é ignorado ali e a referência tem de provar isso.
+        assertTrue(foco.none { it.id.contains("BEGINNER") })
+        assertEquals(240, foco.count { it.id.startsWith("GENERAL_HEALTH") }, "o controle de saúde geral sumiu da matriz")
+    }
+
+    @Test
+    fun `o foco entra no pipeline, e iniciante e saude geral o ignoram`() {
+        val catalogo = Oraculo.catalogo()
+        val base = Oraculo.entradaDe("GAIN_MUSCLE-INTERMEDIATE-4d-60m-30a-ACADEMIA")
+        val comFoco = Oraculo.entradaDe("GAIN_MUSCLE-INTERMEDIATE-4d-60m-30a-ACADEMIA-fCHEST")
+        assertEquals(listOf(dev.rafael.contract.profile.MuscleGroup.CHEST), comFoco.foco)
+        assertEquals(emptyList(), base.foco)
+        val a = MotorV3Pipeline.gerar(base, catalogo).auditoria.getValue(TargetMuscle.CHEST).alvo
+        val b = MotorV3Pipeline.gerar(comFoco, catalogo).auditoria.getValue(TargetMuscle.CHEST).alvo
+        assertTrue(b > a, "o foco em peito tem de subir o alvo do peito ($a -> $b)")
+        // caminho de falha: iniciante ignora o foco, o alvo não muda
+        val ini = Oraculo.entradaDe("GAIN_MUSCLE-BEGINNER-4d-60m-30a-ACADEMIA")
+        val iniFoco = ini.copy(foco = listOf(dev.rafael.contract.profile.MuscleGroup.CHEST))
+        assertEquals(
+            MotorV3Pipeline.gerar(ini, catalogo).auditoria.getValue(TargetMuscle.CHEST).alvo,
+            MotorV3Pipeline.gerar(iniFoco, catalogo).auditoria.getValue(TargetMuscle.CHEST).alvo,
+        )
     }
 
     @Test
@@ -329,10 +374,23 @@ internal object Oraculo {
 
     fun referencia(): List<RefPerfil> = lerReferencia(arquivo("referencia_720.txt").readText())
 
-    /** `OBJETIVO-NIVEL-4d-60m-30a-AMBIENTE` → [MotorV3Pipeline.Entrada]. */
+    fun referenciaFoco(): List<RefPerfil> = lerReferencia(arquivo("referencia_foco.txt").readText())
+
+    /** As linhas de caso de `referencia_progressao.txt` (sem comentário nem linha em branco). */
+    fun linhasDaProgressao(): List<String> =
+        arquivo("referencia_progressao.txt").readLines().filter { it.isNotBlank() && !it.startsWith("#") }
+
+    /**
+     * `OBJETIVO-NIVEL-4d-60m-30a-AMBIENTE[-fGRUPO[+GRUPO]]` → [MotorV3Pipeline.Entrada]. O 7º trecho,
+     * opcional, é o foco (matriz de `referencia_foco.txt`).
+     */
     fun entradaDe(id: String): MotorV3Pipeline.Entrada {
         val p = id.split("-")
-        check(p.size == 6) { "id de perfil malformado: $id" }
+        check(p.size == 6 || p.size == 7) { "id de perfil malformado: $id" }
+        val foco = if (p.size == 7) {
+            check(p[6].startsWith("f")) { "7º trecho do id não é foco: $id" }
+            p[6].removePrefix("f").split("+").map { dev.rafael.contract.profile.MuscleGroup.valueOf(it) }
+        } else emptyList()
         val ambiente = TrainingEnvironment.valueOf(p[5])
         return MotorV3Pipeline.Entrada(
             objetivo = Goal.valueOf(p[0]), nivel = Level.valueOf(p[1]),
@@ -341,6 +399,7 @@ internal object Oraculo {
             ambiente = ambiente,
             // Mesma regra do produto: academia tem tudo, casa vale o que foi declarado (nada).
             acessorios = Accessory.paraAmbiente(ambiente, emptyList()),
+            foco = foco,
         )
     }
 

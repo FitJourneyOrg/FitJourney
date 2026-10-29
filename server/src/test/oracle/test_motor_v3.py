@@ -199,16 +199,34 @@ PERFIS = [mv.Perfil(objetivo=o, nivel=n, dias=d, minutos=t, idade=i, ambiente=a)
           for o, n, d, t, i, a in itertools.product(
               ["GAIN_MUSCLE", "LOSE_FAT", "MAINTAIN", "GENERAL_HEALTH"], NIVEIS, range(2, 7),
               [45, 60, 75], [30, 65], ["ACADEMIA", "CASA"])]
-# ombro_vira_isolamento NAO entra aqui -- ver test_ombro_vira_isolamento_inalcancavel_sem_foco,
-# padrao enumerado (Fatia 7, 2026-10-24): e inalcancavel nos 720 perfis de hoje (sem foco do
-# quiz), nao regra morta. Entra de volta nesta lista quando o foco passar a fazer parte da
-# matriz e a reauditoria (Fatia 10) confirmar que ela dispara de verdade.
-REGRAS_DE_SEGURANCA = ["ombro_teto_do_desenvolvimento", "um_empurrar_com_barra_por_sessao"]
+# Fatia 10: a matriz do FOCO. Eixo limitado a nenhum (a matriz de cima) / peito / ombro -- e o que o
+# tripwire de `ombro_vira_isolamento` exige (a regra le o composto de PEITO do dia); os oito grupos
+# do quiz custariam tempo e tamanho sem ganho. Fora INICIANTE: o foco nao vale para ele
+# (`mv.foco_efetivo`), seria o mesmo perfil da matriz de cima outra vez. 2 x 2 x 240 = 960 perfis.
+PERFIS_FOCO = [mv.Perfil(objetivo=o, nivel=n, dias=d, minutos=t, idade=i, ambiente=a, foco=(f,))
+               for f in ("CHEST", "SHOULDERS")
+               for o, n, d, t, i, a in itertools.product(
+                   ["GAIN_MUSCLE", "LOSE_FAT", "MAINTAIN", "GENERAL_HEALTH"], NIVEIS[1:], range(2, 7),
+                   [45, 60, 75], [30, 65], ["ACADEMIA", "CASA"])]
+# `ombro_vira_isolamento` voltou para esta lista na Fatia 10 (2026-10-28): era inalcancavel nos 720
+# perfis sem foco (peito_composto_do_dia maximo 7, a regra pede 8) e o foco em PEITO a alcanca --
+# ver test_ombro_vira_isolamento_so_dispara_com_foco_em_peito. Ela e medida na UNIAO das duas
+# matrizes (`disparos_na_matriz_com_foco`), porque nos 720 ela continua zero, de proposito.
+REGRAS_DE_SEGURANCA = ["ombro_teto_do_desenvolvimento", "um_empurrar_com_barra_por_sessao",
+                       "ombro_vira_isolamento"]
 
 
 def disparos_na_matriz():
     total = Counter()
     for p in PERFIS:
+        total.update(mv.gerar(p).disparos)
+    return total
+
+
+def disparos_na_matriz_com_foco():
+    """Disparos nos 960 perfis COM foco (a matriz de cima fica de fora)."""
+    total = Counter()
+    for p in PERFIS_FOCO:
         total.update(mv.gerar(p).disparos)
     return total
 
@@ -487,21 +505,29 @@ class DisparosNaMatriz(unittest.TestCase):
     """Regra de segurança que nunca dispara é código morto com cara de proteção."""
 
     def test_toda_regra_de_seguranca_dispara(self):
-        total = disparos_na_matriz()
+        total = disparos_na_matriz() + disparos_na_matriz_com_foco()
         mortas = [r for r in REGRAS_DE_SEGURANCA if total[r] == 0]
-        self.assertEqual([], mortas, f"disparos na matriz de {len(PERFIS)} perfis: {dict(total)}")
+        self.assertEqual([], mortas, f"disparos em {len(PERFIS)}+{len(PERFIS_FOCO)} perfis: {dict(total)}")
 
-    def test_ombro_vira_isolamento_inalcancavel_sem_foco(self):
-        """Padrão enumerado (Fatia 7, 2026-10-24), não regra morta: `peito_composto_do_dia`
-        máximo observado nos 720 perfis de hoje é 7, e a regra precisa de 8 pra rebaixar o
-        desenvolvimento a isolamento puro (limite = 10 − peito_composto_do_dia < 3). Testada por
-        unidade com entrada construída (equivalente Kotlin: `SessionCompositionTest`). Esta
-        asserção é VERDE hoje e é a reauditoria em si: quando o foco do quiz (+3/+6, Fatia 10)
-        entrar na matriz e algum perfil passar de 7 compostos de peito no dia, o disparo deixa de
-        ser zero e este teste FICA VERMELHO -- sinal pra mover `ombro_vira_isolamento` de volta
-        pra `REGRAS_DE_SEGURANCA` e fechar a reauditoria."""
-        total = disparos_na_matriz()
-        self.assertEqual(0, total["ombro_vira_isolamento"])
+    def test_ombro_vira_isolamento_so_dispara_com_foco_em_peito(self):
+        """⭐ REAUDITORIA da Fatia 10 (2026-10-28) -- o tripwire da Fatia 7 virou vermelho, como
+        previsto, e foi trocado por esta afirmacao em dois lados.
+
+        Sem foco, `peito_composto_do_dia` maximo e 7 e a regra pede 8 (limite = 10 - peito < 3):
+        ZERO disparos nos 720. Com foco em PEITO (+6, grande) o peito sobe a 20 series e a regra
+        dispara: 16 disparos em 8 perfis (todos INTERMEDIATE, 6 dias, PPL). Foco em OMBRO nao a
+        alcanca (nao mexe no peito). Ou seja: a regra NAO e codigo morto -- e alcancavel por um
+        perfil real, e por isso entrou em REGRAS_DE_SEGURANCA.
+
+        Os dois lados importam: se o zero dos 720 virar positivo, alguem fez a regra disparar sem
+        foco (a Fatia 7 registrou isto como impossivel); se o lado do foco virar zero, a regra
+        voltou a ser morta e a reauditoria precisa ser refeita."""
+        self.assertEqual(0, disparos_na_matriz()["ombro_vira_isolamento"])
+        disparou = [p for p in PERFIS_FOCO if mv.gerar(p).disparos["ombro_vira_isolamento"]]
+        self.assertEqual(8, len(disparou))
+        self.assertEqual({("CHEST",)}, {p.foco for p in disparou})
+        self.assertEqual({"INTERMEDIATE"}, {p.nivel for p in disparou})
+        self.assertEqual(16, disparos_na_matriz_com_foco()["ombro_vira_isolamento"])
 
     def test_ponto_fixo_termina_e_e_deterministico_em_todo_perfil(self):
         # Oscilar é permitido e CONTADO (ver gerar(): ciclo sob escassez, pendência da fatia 3);
@@ -511,6 +537,83 @@ class DisparosNaMatriz(unittest.TestCase):
         for p in PERFIS[::37]:
             a, b = mv.gerar(p), mv.gerar(p)
             self.assertEqual((a.alocado, a.entregue, a.indireto), (b.alocado, b.entregue, b.indireto), p)
+
+
+class FocoDoQuiz(unittest.TestCase):
+    """Fatia 10: o foco e SO um bonus de alvo (+3 pequeno, +6 grande). A fase de dois mesociclos, o
+    piso nos demais grupos e a protecao na alocacao sao da Fatia 11."""
+
+    def test_sem_foco_o_alvo_e_o_de_antes(self):
+        a = mv.alvos(mv.Perfil(nivel="INTERMEDIATE"))
+        self.assertEqual((14.0, 12.0, 12.0), (a["CHEST"], a["SHOULDERS"], a["BICEPS"]))
+
+    def test_grande_ganha_6_e_pequeno_ganha_3(self):
+        sem, com = mv.alvos(mv.Perfil()), mv.alvos(mv.Perfil(foco=("CHEST", "BICEPS")))
+        self.assertEqual(6.0, com["CHEST"] - sem["CHEST"])
+        self.assertEqual(3.0, com["BICEPS"] - sem["BICEPS"])
+        for m in ALVOS:
+            if m not in ("CHEST", "BICEPS"):
+                self.assertEqual(sem[m], com[m], m)
+
+    def test_grande_e_derivado_do_peso_com_a_fronteira_declarada(self):
+        """[REGRA] 2026-10-28: grande = PESO_PRIORIDADE >= FOCO_FRONTEIRA_GRANDE, nao lista a mao."""
+        from spec_v3 import FOCO_FRONTEIRA_GRANDE, GRANDES, PESO_PRIORIDADE
+        self.assertEqual({"CHEST", "BACK", "SHOULDERS", "QUADS", "POSTERIOR", "GLUTES"}, set(GRANDES))
+        self.assertEqual(GRANDES, {m for m in ALVOS if PESO_PRIORIDADE[m] >= FOCO_FRONTEIRA_GRANDE})
+        # a fronteira fica entre TRICEPS (0,55) e GLUTES (0,7): nenhum musculo na borda
+        self.assertTrue(0.55 < FOCO_FRONTEIRA_GRANDE < 0.7)
+        self.assertTrue(all(abs(w - FOCO_FRONTEIRA_GRANDE) >= 0.049 for w in PESO_PRIORIDADE.values()))
+        # ombro e gluteo sao grandes: o bonus (antes do MRV) e 6, nao 3
+        bonus = mv.bonus_de_foco(mv.Perfil(foco=("SHOULDERS", "GLUTES")))
+        self.assertEqual({"SHOULDERS": 6, "GLUTES": 6}, bonus)
+        self.assertEqual({"BICEPS": 3}, mv.bonus_de_foco(mv.Perfil(foco=("BICEPS",))))
+
+    def test_o_bonus_respeita_o_mrv(self):
+        # avancado: peito 18 + 6 = 24 > 22; costas 20 + 6 = 26 > 25; antebraco 9 + 3 = 12 = MRV
+        a = mv.alvos(mv.Perfil(nivel="ADVANCED", foco=("CHEST", "BACK")))
+        self.assertEqual((22.0, 25.0), (a["CHEST"], a["BACK"]))
+        self.assertEqual(12.0, mv.alvos(mv.Perfil(nivel="ADVANCED", foco=("FOREARMS",)))["FOREARMS"])
+
+    def test_iniciante_e_saude_geral_ignoram_o_foco(self):
+        # mesma elegibilidade do motor antigo (`effectiveFocus`) e da spec ("so intermediario e avancado")
+        for p in (mv.Perfil(nivel="BEGINNER"), mv.Perfil(objetivo="GENERAL_HEALTH")):
+            com = dataclasses.replace(p, foco=("CHEST",))
+            self.assertEqual(mv.alvos(p), mv.alvos(com), p)
+            self.assertEqual((), mv.foco_efetivo(com))
+
+    def test_no_maximo_dois_grupos(self):
+        a = mv.alvos(mv.Perfil(foco=("CHEST", "BACK", "SHOULDERS")))
+        self.assertEqual((20.0, 22.0, 12.0), (a["CHEST"], a["BACK"], a["SHOULDERS"]))  # BACK 16+6; ombro de fora
+
+    def test_pernas_cobre_quadriceps_posterior_e_panturrilha(self):
+        sem, com = mv.alvos(mv.Perfil()), mv.alvos(mv.Perfil(foco=("LEGS",)))
+        # UM bonus por escolha (+6: LEGS cobre alvo grande), repartido pelo peso 1,0 / 0,9 / 0,4
+        self.assertEqual({"QUADS": 3.0, "POSTERIOR": 2.0, "CALVES": 1.0},
+                         {m: com[m] - sem[m] for m in ("QUADS", "POSTERIOR", "CALVES")})
+        self.assertEqual(6.0, sum(com[m] - sem[m] for m in ("QUADS", "POSTERIOR", "CALVES")),
+                         "o bonus nao pode ser somado cheio em cada alvo")
+        self.assertEqual(sem["GLUTES"], com["GLUTES"], "gluteo e foco proprio, nao parte de LEGS")
+
+    def test_distribuicao_do_bonus_soma_exata_e_e_deterministica(self):
+        for total in (3, 6):
+            for alvos in (("QUADS", "POSTERIOR", "CALVES"), ("CHEST",), ("BICEPS", "TRICEPS")):
+                d = mv.distribuir_bonus(total, alvos)
+                self.assertEqual(total, sum(d.values()), (total, alvos))
+                self.assertTrue(all(v >= 0 for v in d.values()))
+        self.assertEqual({"CHEST": 6}, mv.distribuir_bonus(6, ("CHEST",)))
+
+    def test_alvo_coberto_por_dois_grupos_nao_soma_duas_vezes(self):
+        self.assertEqual(mv.alvos(mv.Perfil(foco=("CHEST",))), mv.alvos(mv.Perfil(foco=("CHEST", "CHEST"))))
+
+    def test_grupo_desconhecido_falha_alto(self):
+        with self.assertRaises(KeyError):
+            mv.alvos(mv.Perfil(foco=("PESCOCO",)))
+
+    def test_o_foco_chega_ao_programa(self):
+        # sem teto de capacidade o alvo maior vira mais series entregues -- o bonus nao fica no papel
+        base = mv.gerar(mv.Perfil(sem_teto=True))
+        foco = mv.gerar(mv.Perfil(sem_teto=True, foco=("CHEST",)))
+        self.assertGreater(foco.entregue["CHEST"], base.entregue["CHEST"])
 
 
 class ReferenciaDos720(unittest.TestCase):
@@ -541,6 +644,27 @@ class ReferenciaDos720(unittest.TestCase):
             self.fail("referencia_720.txt esta VELHA (%d bloco(s) de perfil divergem). Rode, de "
                       "server/src/test/oracle/:  python3 gerar_referencia_720.py  -- e revise o "
                       "diff: ele e o efeito da sua mudanca nos 720 perfis." % velhos)
+
+    def test_referencia_do_foco_esta_em_dia(self):
+        import gerar_referencia_720 as g
+        esperado = g.gerar_texto_foco()
+        atual = ""
+        if os.path.exists(g.CAMINHO_FOCO):
+            with open(g.CAMINHO_FOCO, encoding="utf-8") as f:
+                atual = f.read()
+        if atual != esperado:
+            self.fail("referencia_foco.txt esta VELHA. Rode, de server/src/test/oracle/:  "
+                      "python3 gerar_referencia_720.py  -- e revise o diff.")
+
+    def test_a_referencia_do_foco_cobre_exatamente_a_matriz_do_foco(self):
+        import gerar_referencia_720 as g
+        ids = [l.split("|")[1] for l in g.gerar_texto_foco().split("\n") if l.startswith("P|")]
+        self.assertEqual(960, len(ids))
+        self.assertEqual(960, len(set(ids)), "perfil duplicado na matriz do foco")
+        self.assertEqual([g.perfil_id(p) for p in PERFIS_FOCO], ids)
+        self.assertTrue(all("-f" in i for i in ids))
+        self.assertTrue(all("-f" not in l.split("|")[1] for l in g.gerar_texto().split("\n") if l.startswith("P|")),
+                        "a matriz sem foco nao pode ter id de foco")
 
     def test_a_referencia_cobre_exatamente_a_matriz(self):
         """Caminho de falha do gerador: perfil faltando/sobrando seria varredura que nao varre."""

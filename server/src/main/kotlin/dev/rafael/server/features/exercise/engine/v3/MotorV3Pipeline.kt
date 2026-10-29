@@ -3,6 +3,7 @@ package dev.rafael.server.features.exercise.engine.v3
 import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
+import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.TrainingEnvironment
 import dev.rafael.server.features.exercise.engine.TargetMuscle
 import dev.rafael.server.features.exercise.models.Exercise
@@ -23,6 +24,13 @@ object MotorV3Pipeline {
         val mesocicloAtual: Int?,
         val ambiente: TrainingEnvironment,
         val acessorios: Set<Accessory>,
+        /** Foco do quiz (`ProfileDto.focusAreas`). Fatia 10: só bônus de alvo — ver [VolumeTargets.bonusDeFoco]. */
+        val foco: List<MuscleGroup> = emptyList(),
+        /**
+         * `[REGRA]` Fatia 10: 60+ que voltou depois de >28 dias ([Mesociclo.conservador]). Modo
+         * conservador explícito, independente do número do mesociclo; só vale com idade ≥ 60.
+         */
+        val retornoConservador: Boolean = false,
     )
 
     data class Estado(
@@ -47,11 +55,12 @@ object MotorV3Pipeline {
     fun gerar(entrada: Entrada, catalogoCompleto: List<Exercise>): Resultado {
         val (divisao, dias) = WeekStructure.divisao(entrada.dias)
         val alvo = TargetMuscle.entries.associateWith {
-            VolumeTargets.weeklySets(it, entrada.nivel, entrada.objetivo)
+            VolumeTargets.weeklySets(it, entrada.nivel, entrada.objetivo, entrada.foco)
         }
         val teto = CapacityModel.tetoDaSessao(
             minutos = entrada.minutos, dias = entrada.dias, nivel = entrada.nivel,
             goal = entrada.objetivo, idade = entrada.idade, mesocicloAtual = entrada.mesocicloAtual,
+            retornoConservador = entrada.retornoConservador,
         )
         val capacidade = teto * dias.size
 
@@ -64,7 +73,7 @@ object MotorV3Pipeline {
         // `motor_v3.py::preencher()`, que chama `modo_conservador_automatico(p)` uma vez no topo.
         val modoConservador = SafetyRules.modoConservadorAutomatico(
             nivel = entrada.nivel, objetivo = entrada.objetivo, idade = entrada.idade,
-            mesocicloAtual = entrada.mesocicloAtual,
+            mesocicloAtual = entrada.mesocicloAtual, retornoConservador = entrada.retornoConservador,
         )
 
         val pisoDiretoDe = TargetMuscle.entries.associateWith { VolumeTargets.pisoDireto(it, entrada.nivel) }

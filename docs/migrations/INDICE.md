@@ -7,7 +7,7 @@
 > prosa do Painel e do Handoff, nunca numa lista. Schema das tabelas de exercício em
 > `BANCO_EXERCICIOS.md`.
 
-**Estado: V67 no código, local — não commitada** (ver `ESTADO.md`). ⚠️ Até 2026-10-07 os
+**Estado: V69 no código, local — não commitada** (ver `ESTADO.md`). ⚠️ Até 2026-10-07 os
 documentos de estado paravam na **V60** — a V61 existia no código e não aparecia em nenhum deles.
 
 ## V38 → V63
@@ -41,7 +41,7 @@ documentos de estado paravam na **V60** — a V61 existia no código e não apar
 | V62 | `drop_workouts_origin` | Remove `workouts.origin` (V7), coluna que nada lia; a origem é `programs.origin`. Medido: 15 linhas, todas `MANUAL` | B10 |
 | V63 | `dedup_stiff_terra_romeno` | Une terra romeno e stiff (o Stiff fica): apaga os 2 Terra Romeno, repõe FK defensivamente, `Stiff com Halteres` herda a taxonomia de hinge do `Stiff com Barra`. Medido: 0 uso nos que somem. Catálogo 924→922 | C4 |
 
-## V64 → V68 (motor v3, não commitadas)
+## V64 → V69 (motor v3, não commitadas)
 
 | # | Arquivo | O que fez | Fatia |
 |---|---|---|---|
@@ -50,6 +50,7 @@ documentos de estado paravam na **V60** — a V61 existia no código e não apar
 | V66 | `acessorios_do_usuario` | `profiles.accessories TEXT` (JSON), nullable — o outro lado do par dos seis `requires_*` da V65: o que o usuário *tem*, não só o que o exercício *exige*. `NULL` = nunca perguntado, `[]` = perguntado e nada declarado — distinção travada em `ProfileRepositoryImpl` e `AcessoriosPersistenciaIntegrationTest` | Acessórios no onboarding |
 | V67 | `rir_minimo_de_seguranca` | `exercises.rir_minimo_seguranca BOOLEAN NOT NULL DEFAULT false`. RIR mínimo por propriedade (não derivável de `movement_pattern`/`equipment`) — aprovado por nome contra `tools/curadoria_oficial/curadoria_canonica.csv`, 8 exercícios `true` (peso livre com barra/landmine, carga na coluna ou sobre a cabeça). Autoconferência da contagem no fim (mesmo padrão da V64) | Motor v3 — fatia 7 |
 | V68 | `core_sai_do_motor` | **SCHEMA (constraint).** Aperta `chk_exercises_volume_target` para recusar `'CORE'`: o alvo saiu do motor (`TargetMuscle`) e do contrato (`MuscleGroup`). Não reescreve dado — um bloco `DO` **falha alto** se alguma linha ainda tiver `volume_target = 'CORE'`. Medido antes: 0 exercícios com o alvo, 0 perfis com `CORE` em `focus_areas`, 0 programas com `CORE` em `focus_muscles`; e a remoção não mudou nenhum número da matriz dos 720 (só zerou os 720 `SEM_CATALOGO`, que eram todos CORE) | Motor v3 — fatia 8 |
+| V69 | `progressao_por_exercicio` | **SCHEMA (aditiva).** 3 tabelas NOVAS — `exercise_progression` (PK usuário+exercício, D-1), `user_mesocycle` (por pessoa, com `conservador`, D-4) e `progression_event` (append-only; PK usuário+exercício+sessão = chave de idempotência, D-2; coluna `seq` IDENTITY dá a ordem do histórico, sem depender de relógio) — e `session_set_logs.rir SMALLINT NULL` com CHECK 0..10 (D-3, sem backfill; RIR nulo = só regras por repetição). **Não apaga nem reescreve dado**: nenhuma linha existente muda. Nada grava `rir` ainda (contrato/DTO é o passo seguinte) | Motor v3 — fatia 10b |
 
 V1 → V37: fundação, catálogo, treino, programas, sessões, conquistas e grupos. Detalhe no arquivo
 de cada uma; curadoria do catálogo em `BANCO_EXERCICIOS.md`.

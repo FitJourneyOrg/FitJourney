@@ -225,3 +225,83 @@ REFERENCIA_COBERTURA = {  # (nível, minutos) -> % para 2..6 dias
     ("ADVANCED", 60): (24, 36, 54, 67, 80),
     ("ADVANCED", 75): (30, 44, 59, 74, 89),
 }
+
+# ============================================================================= Fatia 10
+# Foco, mesociclo e progressao. Fonte: motor-v3-ESPECIFICACAO.md, "Prescricao de cada serie",
+# "Carga e progressao", "Progressao e mesociclo" e "Priorizacao: agora e uma fase".
+
+# --- Foco (so o BONUS DE ALVO; a fase de dois mesociclos, o piso nos demais grupos e a protecao na
+# alocacao sao da Fatia 11). Registrado em docs/trabalho/motor-v3-desenho-e-fatias.md.
+#
+# `ProfileDto.focusAreas` e `MuscleGroup` (grosso); o alvo e `TargetMuscle` (fino). Mapa copiado do
+# motor antigo (`VolumeModel.targetsForFocus`).
+FOCO_PARA_ALVOS = {
+    "CHEST": ("CHEST",), "BACK": ("BACK",), "SHOULDERS": ("SHOULDERS",), "BICEPS": ("BICEPS",),
+    "TRICEPS": ("TRICEPS",), "FOREARMS": ("FOREARMS",), "GLUTES": ("GLUTES",),
+    "LEGS": ("QUADS", "POSTERIOR", "CALVES"),
+}
+FOCO_BONUS_PEQUENO = 3  # spec, tabela "Priorizacao": +3 para pequeno
+FOCO_BONUS_GRANDE = 6   # +6 para grande
+FOCO_MAX_GRUPOS = 2
+# Elegibilidade: mesma do motor antigo (`DeterministicWorkoutGenerator.effectiveFocus`) e da spec
+# ("so intermediario e avancado"). Saude geral usa o piso por definicao -- bonus contradiria isso.
+FOCO_NIVEIS = frozenset({"INTERMEDIATE", "ADVANCED"})
+FOCO_OBJETIVOS_SEM_FOCO = frozenset({"GENERAL_HEALTH"})
+# [REGRA] 2026-10-28: "grande" e DERIVADO do PESO_PRIORIDADE (fonte unica, o mesmo principio da
+# ORDEM_SACRIFICIO) por uma fronteira DECLARADA: peso >= FOCO_FRONTEIRA_GRANDE. A fronteira 0,6 fica
+# entre TRICEPS (0,55) e GLUTES (0,7), a 0,05 e 0,10 deles: ninguem esta na borda. Nao e o maior vao
+# da tabela (0,7 -> 0,9 e 0,2 de largura), mas e o que deixa o gluteo -- que o Rafael decidiu ser
+# grande -- do lado de cima, e os bracos do lado de baixo.
+# Resultado: CHEST, BACK, SHOULDERS, QUADS, POSTERIOR, GLUTES grandes; BICEPS, TRICEPS, CALVES,
+# FOREARMS pequenos. A spec so da dois exemplos (antebraco pequeno, costas grande). NAO e o
+# conjunto PROTEGIDOS_ALOCACAO: protecao na alocacao (fronteira A, Fatia 8) e outra pergunta.
+FOCO_FRONTEIRA_GRANDE = 0.6
+GRANDES = frozenset(m for m in ALVOS if PESO_PRIORIDADE[m] >= FOCO_FRONTEIRA_GRANDE)
+
+# [REGRA] 2026-10-28 (extensao declarada ALEM da lista literal da spec): 60+ que volta depois de mais
+# de PAUSA_RECALIBRA_DIAS entra no mesociclo N+1 em MODO CONSERVADOR explicito, independente do
+# numero do mesociclo (a regra da spec so olha o 1o mesociclo). Motivo: quem volta depois de um mes
+# fora e quem mais precisa do lado seguro. Mesma idade de corte do fator 0,75 (FATOR_IDADE_60).
+IDADE_RETORNO_CONSERVADOR = 60
+
+# --- Mesociclo: fixo em 4 semanas; as series NAO sobem dentro do ciclo.
+MESOCICLO_SEMANAS = 4
+SEMANA_DELOAD = 4            # intermediario e avancado; o iniciante deloada por estagnacao
+DELOAD_FATOR_SERIES = 0.5    # "metade do volume, carga mantida"
+
+# --- Prescricao por papel (spec, "Prescricao de cada serie"): (reps min, reps max, descanso s, RIR).
+# COMPOSTO = "composto pesado", ACESSORIO = "composto acessorio".
+PRESCRICAO = {
+    "GAIN_MUSCLE": {"COMPOSTO": (6, 9, 120, 2), "ACESSORIO": (8, 12, 90, 1), "ISOLAMENTO": (12, 16, 60, 1)},
+    "LOSE_FAT": {"COMPOSTO": (6, 9, 120, 2), "ACESSORIO": (8, 12, 90, 1), "ISOLAMENTO": (12, 16, 60, 1)},
+    "MAINTAIN": {"COMPOSTO": (6, 9, 120, 2), "ACESSORIO": (8, 12, 90, 2), "ISOLAMENTO": (12, 16, 60, 2)},
+    "GENERAL_HEALTH": {"COMPOSTO": (8, 12, 120, 3), "ACESSORIO": (10, 14, 90, 3), "ISOLAMENTO": (12, 18, 75, 3)},
+}
+
+# --- Progressao dupla (spec, "Carga e progressao").
+# Regra 4: "3 a 5% por ponto de RIR abaixo do alvo" no corpo (l.608), "4%" no checklist. DECISAO do
+# Rafael (2026-10-28): 4% FIXO, dentro da faixa 3-5%, contradicao interna fechada -- nao reabrir.
+REDUCAO_POR_PONTO_RIR = 0.04
+# Regra 3 (tolerancia pos-salto) e a de "abaixo da faixa devolve" nao tem numero: sao estado.
+EXPOSICOES_COM_SALTO_MAIOR = 3   # "as tres primeiras exposicoes" aceitam saltos maiores
+# --- Serie de calibracao (spec l.80 e l.600): RIR informado >= 4 sobe na hora; ate 3 series.
+CALIBRACAO_RIR_MINIMO = 4
+CALIBRACAO_MAX_SERIES = 3
+# (excesso de RIR sobre o alvo: de, ate, salto). Spec l.80: 1-2 -> +10%, 3-4 -> +25%, 5+ -> +50%.
+CALIBRACAO_SALTOS = ((1, 2, 0.10), (3, 4, 0.25), (5, 10**6, 0.50))
+CALIBRACAO_TETO_BARRA_LIVRE = 0.25  # "teto de +25% em barra livre"
+
+# --- Retorno apos pausa (spec, tabela): <=2 semanas segue; 2-4 semana 1 com carga menor; >4
+# novo mesociclo recalibrado. Em DIAS (o relogio e do servidor): 14 e 28.
+PAUSA_SEGUE_DIAS = 14
+PAUSA_RECALIBRA_DIAS = 28
+# [PROPOSTA] 2026-10-28: a spec diz "carga um pouco menor" sem numero. 10% e heuristica SEM FONTE;
+# trocar e trocar esta constante. Pendente de decisao do Rafael.
+REDUCAO_RETORNO = 0.10
+
+# --- Iniciante: ancora fixa; deload so por estagnacao (spec, item 24).
+# "Retomada e a carga subir em pelo menos uma ancora nas tres sessoes seguintes ao deload" (spec,
+# "Reavaliacao do nivel"). O mesmo 3 e usado como janela de estagnacao ANTES do deload --
+# [PROPOSTA]: a spec nao da numero para "estagnar".
+RETOMADA_SESSOES = 3
+ESTAGNACAO_SESSOES = 3

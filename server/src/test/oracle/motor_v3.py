@@ -33,7 +33,8 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from spec_v3 import (ALVOS, DIVISOES, EQUIPAMENTO_CASA, FATOR_IDADE_60, FATOR_MANUTENCAO,
-                     FATOR_OBJETIVO_ALVO, PISO_DIRETO, PISO_DIRETO_MUSCULOS, PISO_DIRETO_NIVEIS,
+                     FATOR_OBJETIVO_ALVO, FOCO_BONUS_GRANDE, FOCO_BONUS_PEQUENO, FOCO_MAX_GRUPOS,
+                     FOCO_NIVEIS, FOCO_OBJETIVOS_SEM_FOCO, FOCO_PARA_ALVOS, GRANDES, PISO_DIRETO, PISO_DIRETO_MUSCULOS, PISO_DIRETO_NIVEIS,
                      FATOR_OBJETIVO_TETO, INDIRETO, MAX_EXERCICIOS_MUSCULO,
                      MAX_SERIES_EXERCICIO, MAX_SERIES_MUSCULO_SESSAO, MINUTOS_POR_SERIE, NIVEIS,
                      OMBRO_LIMITE, OMBRO_MINIMO_COMPOSTO, ORDEM_SACRIFICIO, OVERHEAD_MIN,
@@ -118,6 +119,13 @@ class Perfil:
     # matriz vinha recebendo fator de idade 1,0 (sem redução) no oráculo -- o Kotlin daria
     # 0,75. Corrigido para alinhar com a `[REGRA]` da Fatia 2.
     mesociclo_atual: Optional[int] = None
+    # Fatia 10: foco do quiz (`ProfileDto.focusAreas`, ate 2 `MuscleGroup`), SO como bonus de alvo.
+    # A fase de dois mesociclos, o piso nos demais grupos e a protecao na alocacao sao da Fatia 11:
+    # ate la o foco e PERMANENTE (condicao da troca de producao, docs/fontes/debitos.md).
+    foco: tuple = ()
+    # Fatia 10 [REGRA]: 60+ que voltou depois de >28 dias de pausa (`progressao_v3.retorno_apos_pausa`).
+    # Modo conservador explicito, independente do numero do mesociclo; so vale com idade >= 60.
+    retorno_conservador: bool = False
     sem_teto: bool = False         # "sem restrição de capacidade": a configuração da referência
     so_visiveis: bool = True       # False = catálogo pretendido (como se modality estivesse curada)
 
@@ -176,10 +184,48 @@ def primeiro_mesociclo(mesociclo_atual: Optional[int]) -> bool:
     return (mesociclo_atual if mesociclo_atual is not None else 1) == 1
 
 
+def foco_efetivo(p: Perfil) -> tuple:
+    """Foco que vale: so INTERMEDIATE/ADVANCED e nunca GENERAL_HEALTH, no maximo 2 grupos --
+    mesma elegibilidade do motor antigo (`effectiveFocus`) e da spec. Fora disso, ignorado."""
+    if p.nivel not in FOCO_NIVEIS or p.objetivo in FOCO_OBJETIVOS_SEM_FOCO:
+        return ()
+    return tuple(p.foco[:FOCO_MAX_GRUPOS])
+
+
+def distribuir_bonus(total: int, alvos: tuple) -> dict:
+    """Reparte `total` series entre `alvos` proporcionalmente ao PESO_PRIORIDADE, em inteiros, por
+    maior resto (soma exata == total). Aritmetica inteira (peso x100) para Kotlin e Python nao
+    divergirem em empate; desempate pela ordem de ALVOS."""
+    pesos = {m: round(PESO_PRIORIDADE[m] * 100) for m in alvos}
+    soma = sum(pesos.values())
+    parte = {m: total * pesos[m] // soma for m in alvos}
+    resto = total - sum(parte.values())
+    for m in sorted(alvos, key=lambda m: (-(total * pesos[m] % soma), ALVOS.index(m)))[:resto]:
+        parte[m] += 1
+    return parte
+
+
+def bonus_de_foco(p: Perfil) -> dict:
+    """UM bonus por ESCOLHA do usuario: +6 se o grupo cobre algum alvo grande, senao +3. Grupo de um
+    alvo so recebe o valor cheio; grupo que cobre varios alvos (LEGS) reparte o valor UNICO entre
+    eles pelo peso -- nada de somar o bonus cheio em cada alvo. O MRV continua o teto em `alvos()`."""
+    out = {}
+    for g in foco_efetivo(p):
+        alvos_g = FOCO_PARA_ALVOS[g]
+        total = FOCO_BONUS_GRANDE if any(m in GRANDES for m in alvos_g) else FOCO_BONUS_PEQUENO
+        for m, v in distribuir_bonus(total, alvos_g).items():
+            out[m] = max(out.get(m, 0), v)
+    return out
+
+
 def alvos(p: Perfil) -> dict:
     fator = FATOR_OBJETIVO_ALVO[p.objetivo]
     i = 0 if fator is None else NIVEIS.index(p.nivel)
-    return {m: min(VOLUME[m][i] * (1.0 if fator is None else fator), VOLUME[m][3]) for m in ALVOS}
+    base = {m: min(VOLUME[m][i] * (1.0 if fator is None else fator), VOLUME[m][3]) for m in ALVOS}
+    # Fatia 10: foco soma DEPOIS do fator de objetivo e ainda respeita o MRV ("foco da +3,
+    # respeitando MRV"). Sem foco, o mapa e vazio e o resultado e identico ao de antes.
+    bonus = bonus_de_foco(p)
+    return {m: min(base[m] + bonus.get(m, 0), VOLUME[m][3]) for m in ALVOS}
 
 
 def teto_sessao(p: Perfil, divisao: str) -> float:
@@ -187,7 +233,8 @@ def teto_sessao(p: Perfil, divisao: str) -> float:
         return math.inf
     overhead = OVERHEAD_MIN["FULL_BODY" if divisao == "FULL_BODY" else "DEMAIS"]
     por_tempo = (p.minutos - overhead) / MINUTOS_POR_SERIE
-    idade = FATOR_IDADE_60 if p.idade >= 60 and (p.nivel == "BEGINNER" or primeiro_mesociclo(p.mesociclo_atual)) else 1.0
+    idade = FATOR_IDADE_60 if p.idade >= 60 and (
+        p.nivel == "BEGINNER" or primeiro_mesociclo(p.mesociclo_atual) or p.retorno_conservador) else 1.0
     por_nivel = TETO_NIVEL[p.nivel] * FATOR_OBJETIVO_TETO[p.objetivo] * idade
     return min(por_tempo, por_nivel)
 
@@ -199,7 +246,7 @@ def modo_conservador_automatico(p: Perfil) -> bool:
     return (
         p.nivel == "BEGINNER"
         or p.objetivo == "GENERAL_HEALTH"
-        or (p.idade >= 60 and primeiro_mesociclo(p.mesociclo_atual))
+        or (p.idade >= 60 and (primeiro_mesociclo(p.mesociclo_atual) or p.retorno_conservador))
     )
 
 

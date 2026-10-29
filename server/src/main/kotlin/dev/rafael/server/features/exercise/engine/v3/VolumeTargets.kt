@@ -2,6 +2,7 @@ package dev.rafael.server.features.exercise.engine.v3
 
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
+import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.server.features.exercise.engine.TargetMuscle
 
 /**
@@ -64,18 +65,114 @@ object VolumeTargets {
     /**
      * Alvo semanal por músculo/nível/objetivo. GENERAL_HEALTH usa o piso (MEV); os demais usam a
      * coluna do nível vezes [fatorObjetivoAlvo], limitada ao MRV. Espelha `motor_v3.py::alvos()`
-     * termo a termo: `min(coluna × fator, teto)`.
+     * termo a termo: `min(coluna × fator, teto)`, e depois o bônus de [foco] (Fatia 10), que soma
+     * DEPOIS do fator de objetivo e ainda respeita o MRV. Sem foco o resultado é idêntico ao de antes.
      */
-    fun weeklySets(muscle: TargetMuscle, level: Level, goal: Goal): Double {
+    fun weeklySets(
+        muscle: TargetMuscle,
+        level: Level,
+        goal: Goal,
+        foco: List<MuscleGroup> = emptyList(),
+    ): Double {
         val v = table.getValue(muscle)
-        if (goal == Goal.GENERAL_HEALTH) return v.ini.toDouble()
-        val coluna = when (level) {
-            Level.BEGINNER -> v.ini
-            Level.INTERMEDIATE -> v.inter
-            Level.ADVANCED -> v.adv
+        val base = if (goal == Goal.GENERAL_HEALTH) {
+            v.ini.toDouble()
+        } else {
+            val coluna = when (level) {
+                Level.BEGINNER -> v.ini
+                Level.INTERMEDIATE -> v.inter
+                Level.ADVANCED -> v.adv
+            }
+            val alvo = coluna * fatorObjetivoAlvo(goal)
+            if (v.mrv != null) minOf(alvo, v.mrv.toDouble()) else alvo
         }
-        val alvo = coluna * fatorObjetivoAlvo(goal)
-        return if (v.mrv != null) minOf(alvo, v.mrv.toDouble()) else alvo
+        val bonus = bonusDeFoco(level, goal, foco)[muscle] ?: 0
+        if (bonus == 0) return base
+        return if (v.mrv != null) minOf(base + bonus, v.mrv.toDouble()) else base + bonus
+    }
+
+    // ---------------------------------------------------------------------------- foco (Fatia 10)
+
+    /** +3 para músculo pequeno (spec, tabela "Priorização: agora é uma fase"). */
+    const val FOCO_BONUS_PEQUENO = 3
+
+    /** +6 para músculo grande. */
+    const val FOCO_BONUS_GRANDE = 6
+    const val FOCO_MAX_GRUPOS = 2
+
+    /**
+     * `[REGRA]` 2026-10-28: "grande" é DERIVADO do [PriorityAllocation.PESO_PRIORIDADE] (fonte única, o
+     * mesmo princípio da `ORDEM_SACRIFICIO`) por uma fronteira DECLARADA: peso ≥ [FOCO_FRONTEIRA_GRANDE].
+     * A fronteira 0,6 fica entre TRICEPS (0,55) e GLUTES (0,7), a 0,05 e 0,10 deles: ninguém na borda.
+     * Resultado: CHEST, BACK, SHOULDERS, QUADS, POSTERIOR, GLUTES grandes; BICEPS, TRICEPS, CALVES,
+     * FOREARMS pequenos. NÃO é o conjunto `PROTEGIDOS_ALOCACAO`: proteção na alocação é outra pergunta.
+     * Espelha `spec_v3.py::GRANDES`.
+     */
+    const val FOCO_FRONTEIRA_GRANDE = 0.6
+
+    val GRANDES: Set<TargetMuscle>
+        get() = TargetMuscle.entries.filter { PriorityAllocation.PESO_PRIORIDADE.getValue(it) >= FOCO_FRONTEIRA_GRANDE }.toSet()
+
+    /**
+     * Foco do quiz (`MuscleGroup`, grosso) → alvos finos. Copiado do motor antigo
+     * (`VolumeModel.targetsForFocus`): o v3 não depende do v2, que vai ser substituído.
+     * Espelha `spec_v3.py::FOCO_PARA_ALVOS`.
+     */
+    fun alvosDoFoco(grupo: MuscleGroup): Set<TargetMuscle> = when (grupo) {
+        MuscleGroup.CHEST -> setOf(TargetMuscle.CHEST)
+        MuscleGroup.BACK -> setOf(TargetMuscle.BACK)
+        MuscleGroup.SHOULDERS -> setOf(TargetMuscle.SHOULDERS)
+        MuscleGroup.BICEPS -> setOf(TargetMuscle.BICEPS)
+        MuscleGroup.TRICEPS -> setOf(TargetMuscle.TRICEPS)
+        MuscleGroup.FOREARMS -> setOf(TargetMuscle.FOREARMS)
+        MuscleGroup.GLUTES -> setOf(TargetMuscle.GLUTES)
+        MuscleGroup.LEGS -> setOf(TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.CALVES)
+        MuscleGroup.CORE -> emptySet()   // vocabulário do usuário, sem alvo de volume (V68): foco nele não tem efeito
+    }
+
+    /**
+     * Foco que VALE: só INTERMEDIATE/ADVANCED e nunca GENERAL_HEALTH, no máximo 2 grupos — mesma
+     * elegibilidade do motor antigo (`DeterministicWorkoutGenerator.effectiveFocus`) e da spec.
+     * Fora disso o foco é ignorado, sem erro. Espelha `motor_v3.py::foco_efetivo()`.
+     */
+    fun focoEfetivo(level: Level, goal: Goal, foco: List<MuscleGroup>): List<MuscleGroup> =
+        // `temAlvoDeVolume` ANTES do `take`: um CORE legado no perfil não pode gastar uma das 2 vagas de foco.
+        // O oráculo não tem CORE no vocabulário (a matriz nunca o gera), então isto não muda nenhuma referência.
+        if (level == Level.BEGINNER || goal == Goal.GENERAL_HEALTH) emptyList()
+        else foco.filter { it.temAlvoDeVolume }.take(FOCO_MAX_GRUPOS)
+
+    /**
+     * Reparte [total] séries entre [alvos] proporcionalmente ao `PESO_PRIORIDADE`, em inteiros, por
+     * maior resto (soma exata == total). Aritmética inteira (peso ×100) para Kotlin e Python não
+     * divergirem em empate; desempate pela ordem de [TargetMuscle]. Espelha `distribuir_bonus()`.
+     */
+    fun distribuirBonus(total: Int, alvos: List<TargetMuscle>): Map<TargetMuscle, Int> {
+        val pesos = alvos.associateWith { Math.round(PriorityAllocation.PESO_PRIORIDADE.getValue(it) * 100).toInt() }
+        val soma = pesos.values.sum()
+        val parte = alvos.associateWith { total * pesos.getValue(it) / soma }.toMutableMap()
+        val resto = total - parte.values.sum()
+        alvos.sortedWith(compareBy<TargetMuscle>({ -(total * pesos.getValue(it) % soma) }, { it.ordinal }))
+            .take(resto).forEach { parte[it] = parte.getValue(it) + 1 }
+        return parte
+    }
+
+    /**
+     * UM bônus por ESCOLHA do usuário: +6 se o grupo cobre algum alvo grande, senão +3. Grupo de um
+     * alvo só recebe o valor cheio; grupo que cobre vários alvos (`LEGS`) reparte o valor ÚNICO entre
+     * eles pelo peso — nada de somar o bônus cheio em cada alvo (`LEGS` = +3/+2/+1, total +6).
+     *
+     * **Só o bônus de alvo.** A fase de dois mesociclos, o piso nos demais grupos e a proteção na
+     * alocação são da Fatia 11: até lá o foco é PERMANENTE e, medido, quase inerte (a capacidade é
+     * o limite — ver `docs/historico/motor-v3-fatia-10.md`). Espelha `motor_v3.py::bonus_de_foco()`.
+     */
+    fun bonusDeFoco(level: Level, goal: Goal, foco: List<MuscleGroup>): Map<TargetMuscle, Int> {
+        val out = mutableMapOf<TargetMuscle, Int>()
+        for (g in focoEfetivo(level, goal, foco)) {
+            val alvos = alvosDoFoco(g).sortedBy { it.ordinal }
+            val total = if (alvos.any { it in GRANDES }) FOCO_BONUS_GRANDE else FOCO_BONUS_PEQUENO
+            distribuirBonus(total, alvos).forEach { (m, v) -> out[m] = maxOf(out[m] ?: 0, v) }
+        }
+        return out
     }
 
     /** Teto (MRV). `null` = sem teto definido ainda (abdômen, até o catálogo ter exercícios). */

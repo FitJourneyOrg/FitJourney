@@ -89,6 +89,7 @@ object VolumeTable {
         MuscleGroup.FOREARMS -> setOf(TargetMuscle.FOREARMS)
         MuscleGroup.LEGS -> setOf(TargetMuscle.QUADS, TargetMuscle.POSTERIOR, TargetMuscle.CALVES)
         MuscleGroup.GLUTES -> setOf(TargetMuscle.GLUTES)
+        MuscleGroup.CORE -> emptySet()   // sem alvo de volume (V68)
     }
 }
 
