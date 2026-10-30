@@ -44,6 +44,13 @@ object ProgressionEventTable : Table("progression_event") {
 
     /** Ordem de registro (IDENTITY do banco, nunca informada no insert). É por ela que o histórico ordena. */
     val seq = long("seq").databaseGenerated()
+
+    /**
+     * V71. Mesociclo da pessoa no momento do evento — fonte das âncoras do `PromotionService`
+     * (exercício com evento no mesociclo ATUAL) e, quando o avançado tiver service/rota, do
+     * snapshot de 1RM por mesociclo. `null` = evento anterior à V71, sem backfill.
+     */
+    val mesociclo = integer("mesociclo").nullable()
     override val primaryKey = PrimaryKey(userId, exerciseId, sessionId)
 }
 

@@ -94,7 +94,7 @@ class ProgressaoFluxoTest {
         fun aplica(): Boolean {
             val atual = runBlocking { repo.buscar(eu, supino).valor()!! }
             val (depois, decisao) = Progressao.decidir(atual, List(3) { Serie(9, 3) }, Papel.COMPOSTO, Goal.GAIN_MUSCLE, 2.5, true)
-            return runBlocking { repo.registrar(eu, supino, sessao, depois, AncoraDoIniciante.Evento.Carga(decisao)).valor() }
+            return runBlocking { repo.registrar(eu, supino, sessao, depois, AncoraDoIniciante.Evento.Carga(decisao), mesociclo = 1).valor() }
         }
         assertEquals(true, aplica())
         assertEquals(false, aplica(), "o reenvio é recusado pela chave (usuário, exercício, sessão)")
@@ -106,11 +106,11 @@ class ProgressaoFluxoTest {
     @Test
     fun `historico respeita o limite, e limite invalido ou banco fora falham`(): Unit = runBlocking {
         val repo = FakeProgressaoRepository()
-        repeat(4) { repo.registrar(eu, supino, Uuid.random(), Estado(carga = 50.0, exposicoes = it), AncoraDoIniciante.Evento.Deload).valor() }
+        repeat(4) { repo.registrar(eu, supino, Uuid.random(), Estado(carga = 50.0, exposicoes = it), AncoraDoIniciante.Evento.Deload, mesociclo = 1).valor() }
         assertEquals(2, repo.historico(eu, supino, limite = 2).valor().size)
         assertIs<AppResult.Failure>(repo.historico(eu, supino, limite = 0))
         repo.falhar = true
-        assertIs<AppResult.Failure>(repo.registrar(eu, supino, Uuid.random(), Estado(carga = 50.0), AncoraDoIniciante.Evento.Deload))
+        assertIs<AppResult.Failure>(repo.registrar(eu, supino, Uuid.random(), Estado(carga = 50.0), AncoraDoIniciante.Evento.Deload, mesociclo = 1))
     }
 
     @Test

@@ -58,9 +58,9 @@ class ProgressaoIntegrationTest {
         val supino = Semear.exercicio("Supino", listOf("CHEST"))
         val s = sessao(eu)
 
-        val primeira = progressao.registrar(eu, supino, s, Estado(carga = 60.0, exposicoes = 2), Evento.Carga(Decisao.SOBE)).valor()
+        val primeira = progressao.registrar(eu, supino, s, Estado(carga = 60.0, exposicoes = 2), Evento.Carga(Decisao.SOBE), mesociclo = 1).valor()
         // o cliente reenviou depois de um timeout, e o serviço (por erro) decidiu de novo: estado diferente
-        val segunda = progressao.registrar(eu, supino, s, Estado(carga = 65.0, exposicoes = 3), Evento.Carga(Decisao.SOBE)).valor()
+        val segunda = progressao.registrar(eu, supino, s, Estado(carga = 65.0, exposicoes = 3), Evento.Carga(Decisao.SOBE), mesociclo = 1).valor()
 
         assertTrue(primeira)
         assertFalse(segunda, "a sessão já estava registrada")
@@ -72,8 +72,8 @@ class ProgressaoIntegrationTest {
     fun `sessoes diferentes do mesmo exercicio avancam o estado`() = runBlocking {
         val eu = Semear.usuario()
         val supino = Semear.exercicio("Supino", listOf("CHEST"))
-        progressao.registrar(eu, supino, sessao(eu, 1), Estado(carga = 55.0, exposicoes = 1), Evento.Carga(Decisao.MANTEM)).valor()
-        progressao.registrar(eu, supino, sessao(eu, 2), Estado(carga = 60.0, exposicoes = 2, posSalto = true), Evento.Carga(Decisao.SOBE)).valor()
+        progressao.registrar(eu, supino, sessao(eu, 1), Estado(carga = 55.0, exposicoes = 1), Evento.Carga(Decisao.MANTEM), mesociclo = 1).valor()
+        progressao.registrar(eu, supino, sessao(eu, 2), Estado(carga = 60.0, exposicoes = 2, posSalto = true), Evento.Carga(Decisao.SOBE), mesociclo = 1).valor()
         assertEquals(Estado(carga = 60.0, exposicoes = 2, posSalto = true), progressao.buscar(eu, supino).valor())
     }
 
@@ -85,7 +85,7 @@ class ProgressaoIntegrationTest {
             Evento.Carga(Decisao.SOBE), Evento.Carga(Decisao.MANTEM), Evento.Carga(Decisao.DESCE), Evento.Deload, Evento.Carga(Decisao.MANTEM),
         )
         eventos.forEachIndexed { i, e ->
-            progressao.registrar(eu, supino, sessao(eu, i + 1), Estado(carga = 50.0, exposicoes = i), e).valor()
+            progressao.registrar(eu, supino, sessao(eu, i + 1), Estado(carga = 50.0, exposicoes = i), e, mesociclo = 1).valor()
         }
         assertEquals(eventos, progressao.historico(eu, supino).valor())
         assertEquals(eventos.takeLast(2), progressao.historico(eu, supino, limite = 2).valor(), "o limite corta os MAIS ANTIGOS")
@@ -97,7 +97,7 @@ class ProgressaoIntegrationTest {
         val eu = Semear.usuario()
         val supino = Semear.exercicio("Supino", listOf("CHEST"))
         val s = sessao(eu)
-        progressao.registrar(eu, supino, s, Estado(carga = 60.0, exposicoes = 2), Evento.Carga(Decisao.SOBE)).valor()
+        progressao.registrar(eu, supino, s, Estado(carga = 60.0, exposicoes = 2), Evento.Carga(Decisao.SOBE), mesociclo = 1).valor()
         transaction { WorkoutSessionsTable.deleteWhere { WorkoutSessionsTable.id eq s } }
         assertTrue(progressao.historico(eu, supino).valor().isEmpty())
         assertEquals(60.0, progressao.buscar(eu, supino).valor()!!.carga)
@@ -152,10 +152,10 @@ class ProgressaoIntegrationTest {
         val supino = Semear.exercicio("Supino", listOf("CHEST"))
         val s = sessao(eu)
         // estado inválido (carga <= 0) -> a transação inteira volta, inclusive o evento
-        assertTrue(progressao.registrar(eu, supino, s, Estado(carga = -5.0, exposicoes = 1), Evento.Carga(Decisao.SOBE)) is AppResult.Failure)
+        assertTrue(progressao.registrar(eu, supino, s, Estado(carga = -5.0, exposicoes = 1), Evento.Carga(Decisao.SOBE), mesociclo = 1) is AppResult.Failure)
         assertTrue(progressao.historico(eu, supino).valor().isEmpty(), "evento e estado entram juntos ou nenhum")
         // e a sessão pode ser registrada depois, com estado válido
-        assertTrue(progressao.registrar(eu, supino, s, Estado(carga = 50.0, exposicoes = 1), Evento.Carga(Decisao.SOBE)).valor())
+        assertTrue(progressao.registrar(eu, supino, s, Estado(carga = 50.0, exposicoes = 1), Evento.Carga(Decisao.SOBE), mesociclo = 1).valor())
     }
 
     // ------------------------------------------------------------------------------ D-4

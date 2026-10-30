@@ -29,6 +29,9 @@ class FakeProgressaoRepository : ProgressaoRepository {
     /** Eventos por `(usuário, exercício, sessão)` — a MESMA chave da PK de `progression_event` (D-2). */
     private val eventos = linkedMapOf<Triple<Uuid, Uuid, Uuid>, AncoraDoIniciante.Evento>()
 
+    /** Mesociclo de cada evento (V71) — mesma chave de [eventos], mapa paralelo pra não reabrir a tupla. */
+    private val mesociclos = mutableMapOf<Triple<Uuid, Uuid, Uuid>, Int>()
+
     override suspend fun buscar(usuarioId: Uuid, exercicioId: Uuid): AppResult<Progressao.Estado?> {
         if (falhar) return caiu()
         return estados[usuarioId to exercicioId].asSuccess()
@@ -46,11 +49,13 @@ class FakeProgressaoRepository : ProgressaoRepository {
         sessaoId: Uuid,
         estado: Progressao.Estado,
         evento: AncoraDoIniciante.Evento,
+        mesociclo: Int,
     ): AppResult<Boolean> {
         if (falhar) return caiu()
         val chave = Triple(usuarioId, exercicioId, sessaoId)
         if (chave in eventos) return false.asSuccess()   // sessão já registrada: NÃO regrava o estado
         eventos[chave] = evento
+        mesociclos[chave] = mesociclo
         estados[usuarioId to exercicioId] = estado
         return true.asSuccess()
     }
@@ -64,6 +69,15 @@ class FakeProgressaoRepository : ProgressaoRepository {
     override suspend fun todos(usuarioId: Uuid): AppResult<Map<Uuid, Progressao.Estado>> {
         if (falhar) return caiu()
         return estados.filterKeys { it.first == usuarioId }.mapKeys { it.key.second }.asSuccess()
+    }
+
+    override suspend fun exerciciosComEventoNoMesociclo(usuarioId: Uuid, mesociclo: Int): AppResult<List<Uuid>> {
+        if (falhar) return caiu()
+        return mesociclos.entries
+            .filter { (chave, m) -> chave.first == usuarioId && m == mesociclo }
+            .map { (chave, _) -> chave.second }
+            .distinct()
+            .asSuccess()
     }
 
     private fun <T> caiu(): AppResult<T> =

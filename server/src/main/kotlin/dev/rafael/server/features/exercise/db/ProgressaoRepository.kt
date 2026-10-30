@@ -45,6 +45,13 @@ interface ProgressaoRepository {
         sessaoId: Uuid,
         estado: Progressao.Estado,
         evento: AncoraDoIniciante.Evento,
+        /**
+         * V71. O `mesocicloAtual` da pessoa (`CicloDoMesociclo.paraPerfil`) no momento do
+         * evento — grava junto, nunca inferido depois. Sem default: quem chama é obrigado a
+         * resolver o mesociclo antes de registrar, o mesmo motivo do `idioma` sem default no
+         * `ExerciseRepository`.
+         */
+        mesociclo: Int,
     ): AppResult<Boolean>
 
     /**
@@ -56,6 +63,20 @@ interface ProgressaoRepository {
 
     /** Todos os estados da pessoa, por exercício — o que o retorno após pausa precisa varrer. */
     suspend fun todos(usuarioId: Uuid): AppResult<Map<Uuid, Progressao.Estado>>
+
+    /**
+     * V71. Exercícios com AO MENOS UM evento de progressão no mesociclo [mesociclo] — as âncoras
+     * da pessoa NESTA janela, pro `PromotionService` (fatia nova, pós-11). Emenda à definição de
+     * âncora em `docs/regras/01-motor-de-geracao.md`: continua "as vagas que a pessoa treina",
+     * mas a fonte no servidor é o histórico de progressão, não `users.active_program_id` — esse é
+     * documentado como destaque de UI (V60), e usá-lo pra decisão de domínio falharia calado
+     * (programa nunca "ativado" = pessoa sem diagnóstico, sem nada reportar). Comportamento é
+     * imune à troca de programa; ponteiro de UI não é.
+     *
+     * Só a LISTA de ids — quem chama ainda lê o [historico] completo de cada um (sem filtro de
+     * mesociclo: o diagnóstico precisa do deload anterior, que pode estar em outra janela).
+     */
+    suspend fun exerciciosComEventoNoMesociclo(usuarioId: Uuid, mesociclo: Int): AppResult<List<Uuid>>
 }
 
 /**
