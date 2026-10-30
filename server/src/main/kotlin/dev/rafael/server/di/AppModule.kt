@@ -16,6 +16,13 @@ import dev.rafael.server.features.exercise.db.ExerciseRepository
 import dev.rafael.server.features.exercise.db.ExerciseRepositoryImpl
 import dev.rafael.server.features.exercise.engine.DeterministicWorkoutGenerator
 import dev.rafael.server.features.exercise.engine.ExercisePreFilter
+import dev.rafael.server.features.exercise.db.ProgressaoRepository
+import dev.rafael.server.features.exercise.db.ProgressaoRepositoryImpl
+import dev.rafael.server.features.exercise.db.MesocicloRepository
+import dev.rafael.server.features.exercise.db.MesocicloRepositoryImpl
+import dev.rafael.server.features.exercise.db.PromotionDeclineRepository
+import dev.rafael.server.features.exercise.db.PromotionDeclineRepositoryImpl
+import dev.rafael.server.features.exercise.services.PromotionService
 import dev.rafael.server.features.exercise.engine.StructureEngine
 import dev.rafael.server.features.exercise.engine.WorkoutGenerator
 import dev.rafael.server.features.exercise.services.ExerciseService
@@ -145,6 +152,13 @@ val appModule = module {
 
     single<ExerciseRepository> { ExerciseRepositoryImpl() }
     single { ExerciseService(get(), get()) }   // repo + ExercisePreFilter (registrado abaixo)
+
+    // Motor v3 — progressão/mesociclo (Fatia 10b/11), ainda sem pipeline em produção; usados por
+    // PromotionService (service/rota da promoção, fatia nova pós-11).
+    single<ProgressaoRepository> { ProgressaoRepositoryImpl() }
+    single<MesocicloRepository> { MesocicloRepositoryImpl() }
+    single<PromotionDeclineRepository> { PromotionDeclineRepositoryImpl() }
+    single { PromotionService(get(), get(), get(), get(), get()) }
 
     // Aprender / wiki (Fase 8). Read-only: repositório + serviço fino, sem gate de premium.
     single<WikiRepository> { WikiRepositoryImpl() }
