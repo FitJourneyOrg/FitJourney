@@ -54,6 +54,7 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
         sessaoId: Uuid,
         estado: Progressao.Estado,
         evento: Evento,
+        mesociclo: Int,
     ): AppResult<Boolean> = dbQuery {
         transaction {
             // `insertIgnore` + contagem, em vez de "SELECT e depois INSERT": quem decide o empate é a
@@ -65,6 +66,7 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
                 it[sessionId] = sessaoId
                 it[tipo] = evento.nome()
                 it[createdAt] = agora()
+                it[ProgressionEventTable.mesociclo] = mesociclo
             }.insertedCount
             if (inseridos == 0) {
                 false
@@ -92,6 +94,15 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
             ExerciseProgressionTable.selectAll()
                 .where { ExerciseProgressionTable.userId eq usuarioId }
                 .associate { it[ExerciseProgressionTable.exerciseId] to estadoDe(it) }
+        }
+    }
+
+    override suspend fun exerciciosComEventoNoMesociclo(usuarioId: Uuid, mesociclo: Int): AppResult<List<Uuid>> = dbQuery {
+        transaction {
+            ProgressionEventTable.selectAll()
+                .where { (ProgressionEventTable.userId eq usuarioId) and (ProgressionEventTable.mesociclo eq mesociclo) }
+                .map { it[ProgressionEventTable.exerciseId] }
+                .distinct()
         }
     }
 

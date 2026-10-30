@@ -360,4 +360,15 @@ object ErrorCodes {
     // Notificações (F.1)
     // ---------------------------------------------------------------------
     const val TOKEN_DE_PUSH_VAZIO = "TOKEN_DE_PUSH_VAZIO"
+
+    // ---------------------------------------------------------------------
+    // Promoção de nível (motor v3, fatia nova pós-11 — service/rota do iniciante)
+    // ---------------------------------------------------------------------
+
+    /**
+     * `POST /me/promotion/decline` sem sugestão pendente pra recusar. 409: é regra de negócio
+     * recusando (a sugestão é derivada e recalculada a cada leitura, não um recurso que "não
+     * existe mais" — por isso 409 (`Conflict`), não 404), não dado velho pra repetir.
+     */
+    const val SEM_SUGESTAO_DE_PROMOCAO = "SEM_SUGESTAO_DE_PROMOCAO"
 }

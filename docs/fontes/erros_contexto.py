@@ -421,6 +421,13 @@ CONTEXTO = {
         "paga, sem bloco grátis para misturar, por isso o servidor recusa com 403 em vez de "
         "devolver campo nulo. Quem chega aqui normalmente já viu o paywall na lista.",
 
+    # ---- Promoção de nível (service/rota, sessão pós-fatia-11) ----
+    "Não há sugestão de promoção pendente":
+        "Chamou `POST /me/promotion/decline` sem a tela ter mostrado nenhuma sugestão. A sugestão "
+        "é derivada e recalculada a cada `GET /me/promotion` (nunca persistida), então isto não é "
+        "dado velho pra repetir — é a tela chamando o decline por conta própria, fora do fluxo "
+        "normal (que só oferece o botão quando o `GET` anterior trouxe uma sugestão).",
+
     # ---- Genéricos do servidor ----
     "Recurso não encontrado":
         "Chamou um endereço que não existe na API. A pessoa não vê isto navegando pelo app: é "

@@ -265,6 +265,8 @@
 
     <string name="erro_token_de_push_vazio">We couldn\'t set up notifications on this device.</string>
 
+    <string name="erro_sem_sugestao_de_promocao">This promotion suggestion is no longer available.</string>
+
 
     <!-- ============================ Common ============================ -->
 
