@@ -167,6 +167,9 @@ object TextosDeErro {
         // ---- notificações ----
         ErrorCodes.TOKEN_DE_PUSH_VAZIO -> R.string.erro_token_de_push_vazio
 
+        // ---- promoção de nível (sessão pós-fatia-11) ----
+        ErrorCodes.SEM_SUGESTAO_DE_PROMOCAO -> R.string.erro_sem_sugestao_de_promocao
+
         // ---- os nove que carregavam número do servidor (G.4, 2026-09-11) ----
         // O número virou parte da frase no catálogo, com o nome da constante do servidor no
         // comentário de cada uma. Ver a nota do `SEM_TEXTO_PROPRIO`, logo abaixo.

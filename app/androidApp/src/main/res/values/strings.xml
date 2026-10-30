@@ -447,6 +447,12 @@
     <!-- Falha ao registrar o token de push. "Neste aparelho" porque é local, não da conta. -->
     <string name="erro_token_de_push_vazio">Não consegui preparar as notificações neste aparelho.</string>
 
+    <!-- ~~~~~~~~~~~~~~~~~~~~ Promoção de nível (sessão pós-fatia-11) ~~~~~~~~~~~~~~~~~~~~ -->
+
+    <!-- Recusou uma sugestão de promoção que já não existe mais (a sugestão é recalculada a cada
+         leitura, nunca guardada) — tela deveria só oferecer o botão quando há uma pra recusar. -->
+    <string name="erro_sem_sugestao_de_promocao">Essa sugestão de promoção não está mais disponível.</string>
+
 
     <!--
       ============================================================================================
