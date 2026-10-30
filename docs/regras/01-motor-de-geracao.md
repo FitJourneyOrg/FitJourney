@@ -707,6 +707,22 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   preenchidas (mínimo 5, mediana 14, máximo 17) — trancado em
   `test_nenhum_beginner_tem_menos_de_5_ancoras` e no espelho Kotlin, mesmo padrão do
   `ombro_vira_isolamento`.
+- **`[REGRA]` emenda (2026-10-29, service/rota da promoção, fatia nova pós-11) — a FONTE das
+  âncoras no servidor é o histórico de progressão, não o programa.** A definição em si não muda:
+  âncora continua sendo "as vagas que a pessoa treina" (acima). O que muda é de ONDE o
+  `PromotionService` lê esse conjunto —
+  `ProgressaoRepository.exerciciosComEventoNoMesociclo(usuário, mesocicloAtual)`, isto é, todo
+  exercício com evento de progressão registrado no mesociclo atual —, e não
+  `ProgramRepository`/`users.active_program_id`. O ponteiro de programa ativo foi descartado por
+  nome: seu próprio KDoc (V60) diz "não mexe em sessão/histórico, é só destaque de UI resolvido no
+  servidor", e dar a ele um segundo papel de decisão de domínio repete o padrão que já custou caro
+  três vezes nesta fatia. Pior: o caso `null` (programa criado mas nunca `activate()`) falharia
+  CALADO — a pessoa treina e nunca recebe diagnóstico, sem nada reportar. Histórico de progressão é
+  comportamento (o que a pessoa de fato fez), imune a troca de programa; ponteiro de UI não é. **Não
+  diverge do oráculo**: lá a função pura (`diagnostico_promocao_do_perfil`) recebe as decisões já
+  prontas — a escolha de QUAL conjunto de âncoras entra é do chamador, nos dois lados; só o
+  chamador do servidor mudou de fonte. Schema: `V71__mesociclo_do_evento_de_progressao.sql`
+  (coluna `progression_event.mesociclo`, sem backfill).
 
 **Persistência** (implementada na Fatia 10b — V69 + `*RepositoryImpl`, verde no `integrationTest`; desenho em
 `arch/motor-v3-progressao-schema.md`):
