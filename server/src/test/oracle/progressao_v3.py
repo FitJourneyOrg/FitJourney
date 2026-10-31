@@ -459,6 +459,43 @@ def diagnostico_promocao_avancado(um_rm_inicio: Optional[float], um_rm_fim: Opti
     return PROMOVER if reducoes_no_periodo <= limite_poucas_reducoes else RECUPERACAO
 
 
+def diagnostico_promocao_avancado_do_perfil(diagnosticos_por_ancora: list) -> Optional[str]:
+    """[REGRA] (decisao do Rafael, 2026-10-30): agrega `diagnostico_promocao_avancado` de TODAS as
+    ancoras do perfil (compostos com relevancia=1, uma chamada por ancora). Promove com MAIORIA
+    ESTRITA em PROMOVER -- mais da metade, sem excecao de tamanho (mais da metade de 1 e 1).
+
+    Deliberadamente MAIS ALTO que o limiar do iniciante (`diagnostico_promocao_do_perfil`, 2 fixo
+    ou 1 se so houver uma ancora). Motivo: ser intermediario E progredir em ritmos diferentes por
+    lift -- uma ancora congelada enquanto as outras sobem e comportamento NORMAL do estagio, nao
+    saida dele. Avancado exige desaceleracao GERAL, nao de um lift isolado. O contraste com o
+    iniciante e intencional: nao harmonizar os dois limiares depois sem saber que a diferenca e
+    proposital.
+
+    Sem nenhum PROMOVER em maioria, RECUPERACAO vence None (ha sinal de recuperacao a reportar).
+    Todas None (ou lista vazia) = nada a reportar -- `diagnostico_promocao_avancado` nunca devolve
+    RECUPERACAO_SEM_RETOMADA, so PROMOVER/RECUPERACAO/None.
+
+    Numero (maioria estrita) CALIBRAVEL, nao evidencia -- SEGUNDO parametro a recalibrar quando
+    houver telemetria real (depois do "2" do iniciante). Erra para o lado conservador de proposito:
+    promover cedo demais entrega o alvo de volume do avancado (148 series/semana contra 113 do
+    intermediario) a quem ainda nao sustenta esse volume.
+
+    `[INV]` verificado estruturalmente contra a matriz de 720 (INTERMEDIATE, compostos
+    relevancia=1 presentes no programa gerado): minimo 2 ancoras por perfil, nunca 0 ou 1
+    (distribuicao 2 a 12, mediana 5) -- a maioria e sempre alcancavel sem ramo especial de tamanho,
+    ao contrario do caso do iniciante (que precisou do ramo `limite=1`). Isto e CONTAGEM de
+    ancoras disponiveis, nao taxa de disparo real: sem RIR chegando do cliente em producao, nao ha
+    como medir quantas vezes a maioria FECHA em PROMOVER de fato.
+    """
+    n = len(diagnosticos_por_ancora)
+    maioria = n // 2 + 1
+    if sum(1 for d in diagnosticos_por_ancora if d == PROMOVER) >= maioria:
+        return PROMOVER
+    if RECUPERACAO in diagnosticos_por_ancora:
+        return RECUPERACAO
+    return None
+
+
 def pode_sugerir_promocao_de_novo(mesociclo_atual: int, mesociclo_na_recusa: Optional[int]) -> bool:
     """[REGRA] (aprovado, 2026-10-29): depois de uma recusa de promocao, so volta a sugerir
     quando o mesociclo atual passar de `mesociclo_na_recusa + 1` -- contador de mesociclo, nao

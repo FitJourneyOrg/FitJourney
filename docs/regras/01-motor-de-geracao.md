@@ -723,6 +723,26 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   prontas — a escolha de QUAL conjunto de âncoras entra é do chamador, nos dois lados; só o
   chamador do servidor mudou de fonte. Schema: `V71__mesociclo_do_evento_de_progressao.sql`
   (coluna `progression_event.mesociclo`, sem backfill).
+- **`[REGRA]` Limiar de agregação da promoção a ADVANCED: maioria estrita** — mais da metade dos
+  compostos com `relevancia = 1` do programa precisa estar em `PROMOVER`, sem exceção de tamanho
+  (mais da metade de 1 é 1; a matriz confirma que nenhum perfil `INTERMEDIATE` chega a ter só 1 —
+  ver `[INV]` abaixo). **Deliberadamente mais alta que o limiar do iniciante (2 fixo).** Motivo: ser
+  intermediário É progredir em ritmos diferentes por lift — uma âncora congelada enquanto as outras
+  sobem é comportamento normal do estágio, não saída dele. Avançado exige desaceleração GERAL, não
+  de um lift isolado. O contraste com o iniciante é intencional e fica escrito aqui para que ninguém
+  "harmonize" os dois limiares depois sem saber que a diferença é proposital. **Erra para o lado
+  conservador de propósito**: promover cedo demais entrega o alvo de volume do avançado (148
+  séries/semana contra 113 do intermediário) a quem ainda não o sustenta — o custo de atrasar é
+  menor que o custo de empurrar volume demais pra alguém que não estagnou de verdade.
+  **Calibrável, não evidência** — SEGUNDO parâmetro a recalibrar quando houver telemetria real
+  (depois do "2" do iniciante, `fontes/debitos.md`). `[INV]` verificado contra a matriz de 720
+  (`INTERMEDIATE`, compostos `relevancia=1` presentes no programa gerado): mínimo 2 âncoras por
+  perfil, nunca 0 ou 1 — distribuição 2 a 12, mediana 5. A exceção de tamanho do iniciante (1 âncora
+  = limite 1) é portanto INALCANÇÁVEL aqui por construção, não por decisão — não precisa de ramo
+  especial no código. **Limite estrutural, não taxa de disparo medida**: sem RIR chegando do
+  cliente em produção (mesmo débito do iniciante), não há como medir quantas âncoras REALMENTE
+  disparam `PROMOVER` — só quantas âncoras EXISTEM por perfil. Fica registrado como limitação da
+  verificação, não como dado ausente por descuido.
 
 **Persistência** (implementada na Fatia 10b — V69 + `*RepositoryImpl`, verde no `integrationTest`; desenho em
 `arch/motor-v3-progressao-schema.md`):

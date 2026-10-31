@@ -86,6 +86,42 @@ object PromocaoDeNivel {
     }
 
     /**
+     * `[REGRA]` (decisão do Rafael, 2026-10-30): agrega [diagnosticoAvancado] de TODAS as âncoras
+     * do perfil (compostos com `relevancia = 1`). Promove com **MAIORIA ESTRITA em PROMOVER** —
+     * mais da metade, sem exceção de tamanho (mais da metade de 1 é 1).
+     *
+     * Deliberadamente MAIS ALTO que o limiar do iniciante ([diagnosticoDoPerfil], 2 fixo ou 1 se
+     * só houver uma âncora). Motivo: ser intermediário É progredir em ritmos diferentes por lift —
+     * uma âncora congelada enquanto as outras sobem é comportamento NORMAL do estágio, não saída
+     * dele. Avançado exige desaceleração GERAL, não de um lift isolado. O contraste com o
+     * iniciante é intencional: não harmonizar os dois limiares depois sem saber que a diferença é
+     * proposital.
+     *
+     * Sem nenhum PROMOVER em maioria, [Diagnostico.RECUPERACAO] vence `null` (há sinal de
+     * recuperação a reportar). Todas `null` (ou lista vazia) = nada a reportar — [diagnosticoAvancado]
+     * nunca devolve [Diagnostico.RECUPERACAO_SEM_RETOMADA], só PROMOVER/RECUPERACAO/`null`.
+     *
+     * Número (maioria estrita) CALIBRÁVEL, não evidência — SEGUNDO parâmetro a recalibrar quando
+     * houver telemetria real (depois do "2" do iniciante, `docs/fontes/debitos.md`). Erra pro lado
+     * conservador de propósito: promover cedo demais entrega o alvo de volume do avançado (148
+     * séries/semana contra 113 do intermediário) a quem ainda não sustenta esse volume.
+     *
+     * `[INV]` verificado estruturalmente contra a matriz de 720 (`INTERMEDIATE`, compostos
+     * `relevancia=1` presentes no programa gerado): mínimo 2 âncoras por perfil, nunca 0 ou 1
+     * (distribuição 2 a 12, mediana 5) — a maioria é sempre alcançável sem ramo especial de
+     * tamanho, ao contrário do iniciante (que precisou do ramo `limite=1`). Isto é CONTAGEM de
+     * âncoras disponíveis, não taxa de disparo real: sem RIR chegando do cliente em produção, não
+     * há como medir quantas vezes a maioria FECHA em PROMOVER de fato. Espelha
+     * `progressao_v3.py::diagnostico_promocao_avancado_do_perfil()`.
+     */
+    fun diagnosticoAvancadoDoPerfil(porAncora: List<Diagnostico?>): Diagnostico? {
+        val maioria = porAncora.size / 2 + 1
+        if (porAncora.count { it == Diagnostico.PROMOVER } >= maioria) return Diagnostico.PROMOVER
+        if (Diagnostico.RECUPERACAO in porAncora) return Diagnostico.RECUPERACAO
+        return null
+    }
+
+    /**
      * `[REGRA]` (aprovado, 2026-10-29): depois de uma recusa de promoção, só volta a sugerir
      * quando o mesociclo atual passar de `mesocicloNaRecusa + 1` — contador de mesociclo, não
      * calendário. `mesocicloNaRecusa == null` = nunca recusou, sempre pode sugerir. Espelha

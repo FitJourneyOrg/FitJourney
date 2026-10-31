@@ -158,7 +158,7 @@ val appModule = module {
     single<ProgressaoRepository> { ProgressaoRepositoryImpl() }
     single<MesocicloRepository> { MesocicloRepositoryImpl() }
     single<PromotionDeclineRepository> { PromotionDeclineRepositoryImpl() }
-    single { PromotionService(get(), get(), get(), get(), get()) }
+    single { PromotionService(get(), get(), get(), get(), get(), get()) }
 
     // Aprender / wiki (Fase 8). Read-only: repositório + serviço fino, sem gate de premium.
     single<WikiRepository> { WikiRepositoryImpl() }

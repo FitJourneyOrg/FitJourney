@@ -58,6 +58,17 @@ interface ExerciseRepository {
     suspend fun paraAnalise(ids: List<Uuid>): AppResult<Map<Uuid, ExercicioParaAnalise>>
 
     suspend fun nomesTraduzidos(ids: List<Uuid>, idioma: Idioma): AppResult<Map<Uuid, String>>
+
+    /**
+     * V72/fatia da promoção do avançado. Dos [ids] dados (já filtrados por quem chama — tipicamente
+     * [dev.rafael.server.features.exercise.db.ProgressaoRepository.exerciciosComEventoNoMesociclo]),
+     * devolve só os que são COMPOSTOS com `relevancia = 1` — a âncora do diagnóstico
+     * `PromocaoDeNivel.diagnosticoAvancado` (decisão de 2026-10-29: derivada da curadoria, sem
+     * coluna nova). `relevancia`/`is_compound` são nullable no catálogo não-curado — ambos NULL
+     * nunca casa (`relevancia = 1`), então exercício sem curadoria simplesmente não é âncora do
+     * avançado, sem precisar de tratamento especial para o NULL.
+     */
+    suspend fun ancorasAvancadas(ids: List<Uuid>): AppResult<List<Uuid>>
 }
 
 /** Projecao minima do catalogo para a analise de progressao (J.2). */

@@ -10,13 +10,10 @@ continua sem chamador. Núcleo puro já fechado na Fatia 11.
 
 ## Perguntas que preciso responder antes de codar
 
-- [ ] **Agregação entre âncoras.** O iniciante tem `diagnosticoDoPerfil()` agregando TODAS as
-  âncoras (2 em PROMOVER, ou 1 se só houver uma). O avançado **não tem equivalente** — nem no
-  core, nem no oráculo, nem em `regras/01` ou na especificação. `diagnosticoAvancado()` opera
-  "da MESMA âncora" (KDoc), uma só. Com a âncora definida como "compostos com `relevancia = 1`"
-  (plural, decisão de 2026-10-29), normalmente há MAIS DE UMA. Preciso de uma regra: todas
-  precisam concordar? Qualquer uma em PROMOVER já promove? Tem limite por tamanho do perfil, como
-  o do iniciante? **Bloqueante — perguntei ao Rafael em 2026-10-31, aguardando resposta.**
+- [x] **Agregação entre âncoras — RESPONDIDO (2026-10-31).** Maioria estrita (mais da metade
+  em PROMOVER, sem exceção de tamanho). `PromocaoDeNivel.diagnosticoAvancadoDoPerfil()` +
+  `progressao_v3.py::diagnostico_promocao_avancado_do_perfil()`. Registrado como `[REGRA]` em
+  `docs/regras/01-motor-de-geracao.md` e como heurística calibrável em `fontes/debitos.md`.
 
 ## Decisões tomadas
 
@@ -41,6 +38,10 @@ continua sem chamador. Núcleo puro já fechado na Fatia 11.
   sem registro — senão, daqui a um mês, ninguém sabe se a regra funciona ou quebrou. Tratamento:
   distinguir os dois casos explicitamente no service (logging/observabilidade no mínimo; decisão
   de expor isso no contrato ou não ainda em aberto — ver Desenho).
+
+## Status (2026-10-31)
+
+Código escrito: migration V72, repositório (`primeiroUmRmNoMesociclo`/`reducoesDesde`), `ExerciseRepository.ancorasAvancadas`, `PromocaoDeNivel.diagnosticoAvancadoDoPerfil`, `PromotionService.diagnosticarAvancado`, testes (`PromocaoDeNivelTest`, `PromotionServiceTest`, invariante de matriz). **Nada commitado ainda** — falta rodar a suíte (cinco comandos) e o Rafael confirmar build verde antes do commit.
 
 ## Desenho
 

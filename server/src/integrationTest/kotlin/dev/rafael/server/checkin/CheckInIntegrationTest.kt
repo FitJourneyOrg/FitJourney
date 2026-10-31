@@ -22,6 +22,7 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
@@ -100,8 +101,14 @@ class CheckInIntegrationTest {
                 scoringModel = ScoringModel.CONTAGEM_CHECKINS,
                 title = "Desafio",
                 description = null,
-                startDate = LocalDate.parse("2026-09-01"),
-                endDate = LocalDate.parse("2026-09-30"),
+                // Datas relativas a hoje(), nao absolutas: um desafio "ainda rolando" com data fixa
+                // vence sozinho conforme o tempo passa -- foi o que quebrou
+                // `so entra na purga a foto de desafio encerrado ALEM da carencia` em 2026-10-31,
+                // quando "2026-09-30" ultrapassou os 30 dias de carencia e o grupo "rolando" (e
+                // qualquer outro teste desta classe que usasse este default) passou a contar
+                // como encerrado-alem-da-carencia por acidente, poluindo comFotoExpirada().
+                startDate = hoje().minus(DatePeriod(days = 60)),
+                endDate = hoje().plus(DatePeriod(days = 60)),
                 timezone = TimeZone.of("America/Sao_Paulo"),
                 rules = regras,
                 createdBy = dono,

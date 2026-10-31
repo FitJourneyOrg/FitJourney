@@ -87,6 +87,7 @@ class ProgressServiceTest {
         override suspend fun findByCategory(category: dev.rafael.contract.exercise.ExerciseCategory, idioma: Idioma) = error("não usado")
         override suspend fun findById(id: Uuid, idioma: Idioma) = error("não usado")
         override suspend fun existsByIds(ids: List<Uuid>) = error("não usado")
+        override suspend fun ancorasAvancadas(ids: List<Uuid>) = error("não usado")
     }
 
     private fun serie(ex: Uuid, kg: Double?, reps: Int = 10, done: Boolean = true, ordem: Int = 0) =

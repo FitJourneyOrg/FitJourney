@@ -99,6 +99,18 @@ class ExerciseRepositoryImpl : ExerciseRepository {
                 }
         }
 
+    override suspend fun ancorasAvancadas(ids: List<Uuid>): AppResult<List<Uuid>> =
+        dbQuery {
+            if (ids.isEmpty()) return@dbQuery emptyList()
+            ExercisesTable.selectAll()
+                .where {
+                    (ExercisesTable.id inList ids) and
+                        (ExercisesTable.isCompound eq true) and
+                        (ExercisesTable.relevancia eq 1.toShort())
+                }
+                .map { it[ExercisesTable.id] }
+        }
+
     override suspend fun nomesTraduzidos(ids: List<Uuid>, idioma: Idioma): AppResult<Map<Uuid, String>> =
         dbQuery {
             if (ids.isEmpty() || idioma == Idioma.PADRAO) return@dbQuery emptyMap()
