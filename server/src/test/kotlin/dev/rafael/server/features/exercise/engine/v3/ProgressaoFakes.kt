@@ -32,6 +32,9 @@ class FakeProgressaoRepository : ProgressaoRepository {
     /** Mesociclo de cada evento (V71) — mesma chave de [eventos], mapa paralelo pra não reabrir a tupla. */
     private val mesociclos = mutableMapOf<Triple<Uuid, Uuid, Uuid>, Int>()
 
+    /** Snapshot do 1RM de cada evento (V72) — mesma chave de [eventos], mesmo motivo do mapa paralelo. */
+    private val umRms = mutableMapOf<Triple<Uuid, Uuid, Uuid>, Double?>()
+
     override suspend fun buscar(usuarioId: Uuid, exercicioId: Uuid): AppResult<Progressao.Estado?> {
         if (falhar) return caiu()
         return estados[usuarioId to exercicioId].asSuccess()
@@ -56,6 +59,7 @@ class FakeProgressaoRepository : ProgressaoRepository {
         if (chave in eventos) return false.asSuccess()   // sessão já registrada: NÃO regrava o estado
         eventos[chave] = evento
         mesociclos[chave] = mesociclo
+        umRms[chave] = estado.umRm
         estados[usuarioId to exercicioId] = estado
         return true.asSuccess()
     }
@@ -78,6 +82,26 @@ class FakeProgressaoRepository : ProgressaoRepository {
             .map { (chave, _) -> chave.second }
             .distinct()
             .asSuccess()
+    }
+
+    override suspend fun primeiroUmRmNoMesociclo(usuarioId: Uuid, exercicioId: Uuid, mesociclo: Int): AppResult<Double?> {
+        if (falhar) return caiu()
+        // `eventos` é LinkedHashMap: ordem de inserção == ordem de `seq` no banco real.
+        val chave = eventos.keys.firstOrNull { chave ->
+            chave.first == usuarioId && chave.second == exercicioId && mesociclos[chave] == mesociclo
+        }
+        return (chave?.let { umRms[it] }).asSuccess()
+    }
+
+    override suspend fun reducoesDesde(usuarioId: Uuid, exercicioId: Uuid, desde: Int): AppResult<Int> {
+        if (falhar) return caiu()
+        return eventos.entries.count { (chave, evento) ->
+            chave.first == usuarioId &&
+                chave.second == exercicioId &&
+                evento is AncoraDoIniciante.Evento.Carga &&
+                evento.decisao == Progressao.Decisao.DESCE &&
+                (mesociclos[chave] ?: Int.MIN_VALUE) >= desde
+        }.asSuccess()
     }
 
     private fun <T> caiu(): AppResult<T> =

@@ -15,6 +15,7 @@ import kotlinx.datetime.toLocalDateTime
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.and
 import org.jetbrains.exposed.v1.core.eq
+import org.jetbrains.exposed.v1.core.greaterEq
 import org.jetbrains.exposed.v1.jdbc.insertIgnore
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
@@ -67,6 +68,7 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
                 it[tipo] = evento.nome()
                 it[createdAt] = agora()
                 it[ProgressionEventTable.mesociclo] = mesociclo
+                it[ProgressionEventTable.umRmKg] = estado.umRm
             }.insertedCount
             if (inseridos == 0) {
                 false
@@ -103,6 +105,35 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
                 .where { (ProgressionEventTable.userId eq usuarioId) and (ProgressionEventTable.mesociclo eq mesociclo) }
                 .map { it[ProgressionEventTable.exerciseId] }
                 .distinct()
+        }
+    }
+
+    override suspend fun primeiroUmRmNoMesociclo(usuarioId: Uuid, exercicioId: Uuid, mesociclo: Int): AppResult<Double?> = dbQuery {
+        transaction {
+            ProgressionEventTable.selectAll()
+                .where {
+                    (ProgressionEventTable.userId eq usuarioId) and
+                        (ProgressionEventTable.exerciseId eq exercicioId) and
+                        (ProgressionEventTable.mesociclo eq mesociclo)
+                }
+                .orderBy(ProgressionEventTable.seq to SortOrder.ASC)
+                .limit(1)
+                .singleOrNull()
+                ?.get(ProgressionEventTable.umRmKg)
+        }
+    }
+
+    override suspend fun reducoesDesde(usuarioId: Uuid, exercicioId: Uuid, desde: Int): AppResult<Int> = dbQuery {
+        transaction {
+            ProgressionEventTable.selectAll()
+                .where {
+                    (ProgressionEventTable.userId eq usuarioId) and
+                        (ProgressionEventTable.exerciseId eq exercicioId) and
+                        (ProgressionEventTable.tipo eq Decisao.DESCE.name) and
+                        (ProgressionEventTable.mesociclo greaterEq desde)
+                }
+                .count()
+                .toInt()
         }
     }
 

@@ -77,6 +77,27 @@ interface ProgressaoRepository {
      * mesociclo: o diagnóstico precisa do deload anterior, que pode estar em outra janela).
      */
     suspend fun exerciciosComEventoNoMesociclo(usuarioId: Uuid, mesociclo: Int): AppResult<List<Uuid>>
+
+    /**
+     * V72. O `um_rm_kg` do PRIMEIRO evento do exercício com [mesociclo] exato — "o 1RM que era no
+     * início do mesociclo N", sem tabela de snapshot (decisão do Rafael, 2026-10-30: o log vira
+     * autodescritivo). `null` se não houver evento do exercício naquele mesociclo, OU se o único
+     * evento existente for anterior à V72 (sem snapshot gravado) — os dois casos são "não há
+     * início medido para este mesociclo", e quem chama ([dev.rafael.server.features.exercise.
+     * services.PromotionService]) precisa tratar isso como DADO INSUFICIENTE, não como "sem
+     * promoção a sugerir": são coisas diferentes, e o período cego logo após esta migration
+     * (~2 mesociclos sem dado recuperável) é esperado, não falha.
+     */
+    suspend fun primeiroUmRmNoMesociclo(usuarioId: Uuid, exercicioId: Uuid, mesociclo: Int): AppResult<Double?>
+
+    /**
+     * V72. Quantos eventos `DESCE` o exercício teve a partir do mesociclo [desde] (inclusive) até
+     * agora — o "poucas reduções promovem, muitas indicam recuperação" de
+     * [dev.rafael.server.features.exercise.engine.v3.PromocaoDeNivel.diagnosticoAvancado].
+     * Eventos com `mesociclo IS NULL` (anteriores à V71) nunca entram — são de antes da janela
+     * poder ser medida.
+     */
+    suspend fun reducoesDesde(usuarioId: Uuid, exercicioId: Uuid, desde: Int): AppResult<Int>
 }
 
 /**

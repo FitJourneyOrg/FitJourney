@@ -51,6 +51,16 @@ object ProgressionEventTable : Table("progression_event") {
      * snapshot de 1RM por mesociclo. `null` = evento anterior à V71, sem backfill.
      */
     val mesociclo = integer("mesociclo").nullable()
+
+    /**
+     * V72. Snapshot do 1RM estimado (`Progressao.Estado.umRm`) NO MOMENTO deste evento --
+     * o estado pós-decisão que `Progressao.decidir()`/`calibrar()` já calcula e só não era
+     * persistido por evento. `null` = evento anterior à V72, sem snapshot recuperável (só o
+     * ATUAL sobrevive em `exercise_progression`, que não é o mesmo dado). Fonte de
+     * "1RM no início do mesociclo N" pro diagnóstico de promoção do avançado
+     * (`PromocaoDeNivel.diagnosticoAvancado`), sem tabela de snapshot separada.
+     */
+    val umRmKg = double("um_rm_kg").nullable()
     override val primaryKey = PrimaryKey(userId, exerciseId, sessionId)
 }
 
