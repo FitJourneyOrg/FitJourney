@@ -136,7 +136,8 @@ class ProgressServiceTest {
 
     private fun programa(id: Uuid, inicio: String, semanas: Int = 8) = Program(
         id = id, userId = Uuid.random(), name = "", origin = WorkoutOrigin.AI,
-        daysPerWeek = 4, split = null, focusMuscles = emptyList(), locked = false,
+        daysPerWeek = 4, split = null, focusMuscles = emptyList(), avisos = emptyList(),
+        grupamentosReduzidosPeloFoco = emptyList(), locked = false,
         workouts = emptyList(),
         createdAt = LocalDateTime(2026, 8, 1, 10, 0),
         updatedAt = LocalDateTime(2026, 8, 1, 10, 0),

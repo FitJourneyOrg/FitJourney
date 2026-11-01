@@ -207,4 +207,51 @@ class ProgramAuditTest {
         )
         assertTrue(ProgramAudit.avisos(a).none { it.musculo == TargetMuscle.CHEST })
     }
+
+    @Test
+    fun `avisos agora tambem fala de MANUTENCAO, a mais branda, depois de PISO_DIRETO_NEGADO`() {
+        // CHEST: acima do piso (8), abaixo do alvo (14) -- MANUTENCAO. GLUTES: piso batido so
+        // pelo indireto -- PISO_DIRETO_NEGADO. As duas convivem, e a ordem de gravidade e'
+        // PISO_DIRETO_NEGADO antes de MANUTENCAO (nenhuma das duas e' "faltou algo").
+        //
+        // Os demais musculos (exceto `semCatalogo`) entram com alvo/entregue bem acima de
+        // qualquer minimo -- sem isso ficariam NAO_TREINADO por conta propria (avisos() reage
+        // a `efetivo == 0`, nao ao alvo), e isso contaminaria `avisos.first()`/`avisos.last()`
+        // abaixo com um terceiro musculo que o teste nao quer exercitar.
+        val outros = TargetMuscle.entries.filter {
+            it != TargetMuscle.CHEST && it != TargetMuscle.GLUTES && it != semCatalogo
+        }
+        val a = auditar(
+            alvo = mapOf(TargetMuscle.CHEST to 14.0, TargetMuscle.GLUTES to 10.0) +
+                outros.associateWith { 20.0 },
+            entregue = mapOf(TargetMuscle.CHEST to 12) + outros.associateWith { 20 },
+            indireto = mapOf(TargetMuscle.GLUTES to 10.0),
+            pisoDiretoDe = mapOf(TargetMuscle.GLUTES to 2),
+        )
+        val avisos = ProgramAudit.avisos(a)
+        val porMusculo = avisos.associate { it.musculo to it.causa }
+
+        assertEquals(ProgramAudit.Status.MANUTENCAO, a.getValue(TargetMuscle.CHEST).status)
+        assertEquals(ProgramAudit.Causa.MANUTENCAO, porMusculo[TargetMuscle.CHEST])
+        assertEquals(ProgramAudit.Causa.PISO_DIRETO_NEGADO, porMusculo[TargetMuscle.GLUTES])
+        assertEquals(setOf(TargetMuscle.CHEST, TargetMuscle.GLUTES), porMusculo.keys, "so os dois deviam avisar")
+        assertEquals(ProgramAudit.Causa.PISO_DIRETO_NEGADO, avisos.first().causa, "PISO_DIRETO_NEGADO e' mais grave, abre a lista")
+        assertEquals(ProgramAudit.Causa.MANUTENCAO, avisos.last().causa)
+    }
+
+    @Test
+    fun `MANUTENCAO nao avisa quando atingiuMinimo e falso -- cai em ABAIXO_DO_PISO antes`() {
+        // Caminho de falha do `when` de avisos(): a ordem das condicoes importa. BICEPS abaixo
+        // do piso tem que sair ABAIXO_DO_PISO, nunca MANUTENCAO (que exige atingiuMinimo=true).
+        //
+        // Mesmo motivo do teste acima: os demais musculos entram blindados (alvo/entregue bem
+        // acima do minimo), senao o `.single()` abaixo quebra com os NAO_TREINADO deles.
+        val outros = TargetMuscle.entries.filter { it != TargetMuscle.BICEPS && it != semCatalogo }
+        val a = auditar(
+            alvo = mapOf(TargetMuscle.BICEPS to 12.0) + outros.associateWith { 20.0 },
+            entregue = mapOf(TargetMuscle.BICEPS to 1) + outros.associateWith { 20 },
+        )
+        assertEquals(ProgramAudit.Status.ABAIXO_DO_MINIMO, a.getValue(TargetMuscle.BICEPS).status)
+        assertEquals(ProgramAudit.Causa.ABAIXO_DO_PISO, ProgramAudit.avisos(a).single().causa)
+    }
 }

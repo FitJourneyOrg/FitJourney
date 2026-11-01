@@ -41,7 +41,28 @@ data class ProgramDto(
     val currentWeek: Int = 1,             // semana atual, derivada no servidor (1..durationWeeks)
     val createdAt: String? = null,
     val updatedAt: String? = null,
+    // Débito (c)/(d) de "o motor sabe, o app não mostra" (2026-10-31): declaração de custo do
+    // motor, snapshot gravado NA GERAÇÃO (mesmo padrão de focusMuscles acima) -- dormente
+    // enquanto o motor v3 não for o WorkoutGenerator de produção (nasce sempre vazio).
+    // Chave `TargetMuscle.name` (motor), não `MuscleGroup` -- cliente traduz via Rotulos.kt,
+    // mesmo padrão do `split`.
+    val avisos: List<ProgramAvisoDto> = emptyList(),
+    val grupamentosReduzidosPeloFoco: List<String> = emptyList(),
 )
+
+/** Um aviso de honestidade por músculo que merece fala — ver `ProgramAudit.avisos()` (servidor). */
+@Serializable
+data class ProgramAvisoDto(
+    val musculo: String,       // TargetMuscle.name
+    val causa: CausaAvisoDto,
+)
+
+/**
+ * NAO_TREINADO/ABAIXO_DO_PISO/PISO_DIRETO_NEGADO/MANUTENCAO, em ordem de gravidade — espelha
+ * `ProgramAudit.Causa` (servidor). A frase mora no cliente (i18n), o domínio só manda a causa.
+ */
+@Serializable
+enum class CausaAvisoDto { NAO_TREINADO, ABAIXO_DO_PISO, PISO_DIRETO_NEGADO, MANUTENCAO }
 
 @Serializable
 data class ScheduleEntry(
