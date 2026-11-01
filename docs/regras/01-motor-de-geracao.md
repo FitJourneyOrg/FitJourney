@@ -488,8 +488,31 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   morto); `ombro_vira_isolamento` = 0 (tripwire da Fatia 10: quando o foco entrar e disparar, vira
   regra de segurança) e `ponto_fixo_nao_convergiu` = 0.
 - **[REGRA]** `ProgramAudit.avisos()` dá a CAUSA, não o texto: `NAO_TREINADO` (nada, nem indireto),
-  `ABAIXO_DO_PISO` (recebeu, mas menos que o piso) e `PISO_DIRETO_NEGADO` (piso batido, sem série
-  direta). `SEM_CATALOGO` nunca avisa. O limiar respeita o objetivo (MV em manutenção). Não muda programa.
+  `ABAIXO_DO_PISO` (recebeu, mas menos que o piso), `PISO_DIRETO_NEGADO` (piso batido, sem série
+  direta) e, desde a fatia "declaração de custo do motor" (2026-10-31), `MANUTENCAO` (passou do
+  piso, só não bateu o alvo do nível — a mais branda das quatro, entra DEPOIS de
+  `PISO_DIRETO_NEGADO` na ordem de gravidade). `SEM_CATALOGO` nunca avisa. O limiar respeita o
+  objetivo (MV em manutenção). Não muda programa.
+- **`[REGRA]` `VolumeTargets.custoDoFoco(level, goal, foco): Set<TargetMuscle>`** (mesma fatia):
+  os `TargetMuscle` que a fase de ênfase reduz ao piso — todo alvo FORA de
+  `alvosDoFoco(focoEfetivo(...))`, **exceto** `BACK` quando o foco inclui CHEST ou SHOULDERS (a
+  isenção `[REGRA]` da Fatia 11, extraída para `isentoDoPisoPorFoco()` e reusada pelos dois —
+  duplicar essa condição teria sido o jeito mais fácil de ela divergir). Vazio quando
+  `foco.isEmpty()`. É um fato ESTRUTURAL sobre qual alvo está em uso, não uma medição de entrega
+  — por isso é lista separada no contrato (`ProgramDto.grupamentosReduzidosPeloFoco`), não uma
+  `Causa` nova.
+- **Fecha (c)/(d) de "O motor sabe, o app não mostra" (`fontes/debitos.md`, P0).** `avisos` e
+  `custoDoFoco` chegam ao `ProgramDto` (`avisos: List<ProgramAvisoDto>`,
+  `grupamentosReduzidosPeloFoco: List<String>`), persistidos como snapshot na geração — mesmo
+  padrão de `focusMuscles` (servidor: coluna `TEXT` JSON, migration V73; cliente: cache SQLite,
+  migration `10.sqm`) — e aparecem num card na tela de detalhe do programa
+  (`ProgramDetailScreen.AvisosDoPrograma`), que some sozinho quando as duas listas estão vazias.
+  **Fica dormente**: a mudança é 100% aditiva (`WorkoutGenerator`/`DeterministicWorkoutGenerator`,
+  produção, não muda), então ninguém vê aviso nenhum até o v3 virar o gerador de produção —
+  decisão separada, registrada em "Troca de produção do `StructureEngine`". O vocabulário exposto
+  é `TargetMuscle` cru (chave do motor, cliente traduz via `Rotulos.kt`), não `MuscleGroup` —
+  coar perderia QUADS/POSTERIOR/CALVES, exatamente o buraco do débito "Vocabulário de músculo
+  incompleto" (continua aberto, separado).
 
 ### Motor v3 — etapa [3], PISO DE TRABALHO DIRETO E PISO PRESCRITÍVEL (Fatia 8, 2026-10-27)
 
