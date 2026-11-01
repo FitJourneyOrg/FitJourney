@@ -58,6 +58,48 @@ fun MuscleGroup.rotulo(): Int = when (this) {
     MuscleGroup.CORE -> R.string.enum_musculo_core
 }
 
+/**
+ * O `TargetMuscle` do motor (10 valores, server-only -- ver `engine.TargetMuscle`) chega ao
+ * cliente como `String` crua em [dev.rafael.features.program.domain.model.ProgramAviso.musculo]
+ * e na lista de `grupamentosReduzidosPeloFoco`: o domínio não conhece o enum do servidor, mesmo
+ * padrão de [rotuloDeEquipamento] (fatia "declaracao-de-custo-do-motor", 2026-10-31).
+ *
+ * Oito dos dez nomes coincidem com rótulo JÁ EXISTENTE em outro catálogo: sete com
+ * [MuscleGroup] e CALVES com `ExerciseCategory.CALVES` (`enum_categoria_calves` -- mesma
+ * palavra "Panturrilhas"/"Calves" nos dois catálogos; achado pelo `CatalogoDeStringsTest`, que
+ * prende os textos repetidos do pt-BR a uma lista fechada). Reaproveita em vez de duplicar.
+ * Só QUADS e POSTERIOR -- o próprio motivo do débito "Vocabulário de músculo incompleto" --
+ * não tinham rótulo em catálogo nenhum, e ganham string nova.
+ */
+@StringRes
+fun rotuloDoMusculoAlvo(bruto: String): Int? = when (bruto.uppercase()) {
+    "CHEST" -> R.string.enum_musculo_chest
+    "BACK" -> R.string.enum_musculo_back
+    "SHOULDERS" -> R.string.enum_musculo_shoulders
+    "BICEPS" -> R.string.enum_musculo_biceps
+    "TRICEPS" -> R.string.enum_musculo_triceps
+    "FOREARMS" -> R.string.enum_musculo_forearms
+    "GLUTES" -> R.string.enum_musculo_glutes
+    "QUADS" -> R.string.enum_musculo_alvo_quads
+    "POSTERIOR" -> R.string.enum_musculo_alvo_posterior
+    "CALVES" -> R.string.enum_categoria_calves   // mesmo rotulo da categoria de exercicio, ja existia
+    else -> null
+}
+
+/**
+ * A frase do aviso de honestidade (`ProgramAudit.Causa`, ver KDoc lá -- "o domínio só diz a
+ * causa, a frase mora no cliente"). [ProgramAviso.causa] chega como `String` crua pelo mesmo
+ * motivo de [rotuloDoMusculoAlvo]: domínio não conhece contrato.
+ */
+@StringRes
+fun rotuloDaCausaDeAviso(bruto: String): Int? = when (bruto.uppercase()) {
+    "NAO_TREINADO" -> R.string.programa_detalhe_aviso_nao_treinado
+    "ABAIXO_DO_PISO" -> R.string.programa_detalhe_aviso_abaixo_do_piso
+    "PISO_DIRETO_NEGADO" -> R.string.programa_detalhe_aviso_piso_direto_negado
+    "MANUTENCAO" -> R.string.programa_detalhe_aviso_manutencao
+    else -> null
+}
+
 @StringRes
 fun Level.rotulo(): Int = when (this) {
     Level.BEGINNER -> R.string.enum_nivel_beginner

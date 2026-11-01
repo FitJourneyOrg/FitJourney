@@ -2,6 +2,7 @@ package dev.rafael.features.program.presentation.viewmodel
 
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
+import dev.rafael.features.program.domain.model.ProgramAviso
 import dev.rafael.features.program.presentation.state.ProgramDetailEvent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -47,6 +48,37 @@ class ProgramDetailViewModelTest {
 
         assertNull(vm.state.value.program)
         assertEquals("Programa não encontrado", vm.state.value.error?.message)
+    }
+
+    // ---- fatia "declaracao-de-custo-do-motor": o motor avisa, o ViewModel so repassa ----
+
+    @Test
+    fun `avisos e grupamentosReduzidosPeloFoco do programa chegam intactos ao state`() = runTest(dispatcher) {
+        val comAvisos = program("p1").copy(
+            avisos = listOf(
+                ProgramAviso(musculo = "CHEST", causa = "MANUTENCAO"),
+                ProgramAviso(musculo = "GLUTES", causa = "PISO_DIRETO_NEGADO"),
+            ),
+            grupamentosReduzidosPeloFoco = listOf("SHOULDERS", "BICEPS"),
+        )
+        val repo = FakeProgramRepository(listResult = AppResult.Success(listOf(comAvisos)))
+        val vm = ProgramDetailViewModel("p1", repo)
+        vm.onEvent(ProgramDetailEvent.Retry)
+        advanceUntilIdle()
+
+        assertEquals(comAvisos.avisos, vm.state.value.program?.avisos)
+        assertEquals(comAvisos.grupamentosReduzidosPeloFoco, vm.state.value.program?.grupamentosReduzidosPeloFoco)
+    }
+
+    @Test
+    fun `programa sem avisos (motor atual, dormente) chega com as duas listas vazias`() = runTest(dispatcher) {
+        val repo = FakeProgramRepository(listResult = AppResult.Success(listOf(program("p1"))))
+        val vm = ProgramDetailViewModel("p1", repo)
+        vm.onEvent(ProgramDetailEvent.Retry)
+        advanceUntilIdle()
+
+        assertEquals(emptyList<ProgramAviso>(), vm.state.value.program?.avisos)
+        assertEquals(emptyList<String>(), vm.state.value.program?.grupamentosReduzidosPeloFoco)
     }
 
     @Test

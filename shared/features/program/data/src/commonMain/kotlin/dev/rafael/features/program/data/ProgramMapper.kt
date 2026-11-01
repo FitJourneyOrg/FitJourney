@@ -3,7 +3,9 @@ package dev.rafael.features.program.data
 import dev.rafael.contract.program.ProgramDto
 import dev.rafael.contract.program.ScheduleEntry
 import dev.rafael.contract.workout.WorkoutDto
+import dev.rafael.contract.program.ProgramAvisoDto
 import dev.rafael.features.program.domain.model.Program
+import dev.rafael.features.program.domain.model.ProgramAviso
 import dev.rafael.features.program.domain.model.ProgramScheduleEntry
 import dev.rafael.features.program.domain.model.ProgramWorkout
 
@@ -14,6 +16,8 @@ fun ProgramDto.toDomain() = Program(
     daysPerWeek = daysPerWeek,
     split = split?.name,
     focusMuscles = focusMuscles.map { it.name },
+    avisos = avisos.map { it.toDomain() },
+    grupamentosReduzidosPeloFoco = grupamentosReduzidosPeloFoco,
     locked = locked,
     isActive = isActive,
     schedule = schedule.map { it.toDomain() },
@@ -35,3 +39,5 @@ private fun WorkoutDto.toProgramWorkout() = ProgramWorkout(
 )
 
 private fun ScheduleEntry.toDomain() = ProgramScheduleEntry(workoutId = workoutId, dayOfWeek = dayOfWeek)
+
+private fun ProgramAvisoDto.toDomain() = ProgramAviso(musculo = musculo, causa = causa.name)
