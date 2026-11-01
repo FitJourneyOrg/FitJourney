@@ -131,6 +131,17 @@
     <!-- Região abdominal e lombar. "Core" é o termo usado em academia, não se traduz. -->
     <string name="enum_musculo_core">Core</string>
 
+    <!--
+      QUADS e POSTERIOR: os 2 músculos que o `TargetMuscle` do motor distingue dentro de LEGS e
+      que `MuscleGroup` (acima) não separa, e que não tinham rótulo em catálogo nenhum ainda
+      (ver `rotuloDoMusculoAlvo()` em Rotulos.kt). CALVES, o terceiro, reaproveita
+      `enum_categoria_calves` (já existe, mesma palavra "Panturrilhas") em vez de duplicar.
+      Aparecem só no card de avisos do programa, quando o grupo reduzido ao piso ou com
+      estímulo baixo é parte da perna.
+    -->
+    <string name="enum_musculo_alvo_quads">Quadríceps</string>
+    <string name="enum_musculo_alvo_posterior">Posterior de coxa</string>
+
     <!-- Nível de experiência. Escolhido no quiz e exibido no exercício. -->
     <string name="enum_nivel_beginner">Iniciante</string>
     <string name="enum_nivel_intermediate">Intermediário</string>
@@ -1090,6 +1101,25 @@
     <string name="programa_detalhe_excluir_pergunta">Excluir programa?</string>
     <string name="programa_detalhe_excluir_texto">Isso apaga o programa e todos os treinos dentro dele. Não pode ser desfeito.</string>
     <string name="programa_detalhe_renomear_titulo">Renomear programa</string>
+
+    <!--
+      Card "declaração de custo do motor" (fatia "declaracao-de-custo-do-motor", 2026-10-31):
+      os quatro sinais que `ProgramAudit`/`VolumeTargets` calculam e o app não mostrava
+      ("o motor sabe, o app não mostra", débito P0). Fica dormente (o card não aparece) até o
+      motor v3 virar o gerador de produção, decisão separada, registrada em debitos.md.
+    -->
+    <!-- Título do card, acima da lista de músculos com algum aviso. -->
+    <string name="programa_detalhe_avisos_titulo">Avisos do seu programa</string>
+    <!-- Causa NAO_TREINADO: o músculo não recebeu nenhum estímulo, direto nem indireto. -->
+    <string name="programa_detalhe_aviso_nao_treinado">Sem estímulo nenhum nesta semana.</string>
+    <!-- Causa ABAIXO_DO_PISO: recebeu algo, mas menos que o mínimo fisiológico recomendado. -->
+    <string name="programa_detalhe_aviso_abaixo_do_piso">Abaixo do mínimo recomendado para este músculo.</string>
+    <!-- Causa PISO_DIRETO_NEGADO: o indireto bateu o mínimo, mas não houve exercício direto na semana. -->
+    <string name="programa_detalhe_aviso_piso_direto_negado">O indireto bateu o mínimo, mas não houve exercício direto esta semana.</string>
+    <!-- Causa MANUTENCAO, a mais branda: passou do mínimo, só não chegou ao alvo do nível. -->
+    <string name="programa_detalhe_aviso_manutencao">Passou do mínimo, mas não chegou ao alvo do seu nível.</string>
+    <!-- Título da segunda lista do mesmo card: músculos fora da fase de ênfase, reduzidos ao mínimo. -->
+    <string name="programa_detalhe_foco_custo_titulo">Reduzido ao mínimo enquanto o foco está ativo</string>
 
     <!--
       A frase que explica o programa gerado: split + dias, e o foco quando presente. Usada

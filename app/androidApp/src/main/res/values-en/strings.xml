@@ -82,6 +82,8 @@
     <string name="enum_musculo_legs">Legs</string>
     <string name="enum_musculo_glutes">Glutes</string>
     <string name="enum_musculo_core">Core</string>
+    <string name="enum_musculo_alvo_quads">Quads</string>
+    <string name="enum_musculo_alvo_posterior">Hamstrings</string>
 
     <string name="enum_nivel_beginner">Beginner</string>
     <string name="enum_nivel_intermediate">Intermediate</string>
@@ -674,6 +676,12 @@
     <string name="programa_detalhe_excluir_pergunta">Delete program?</string>
     <string name="programa_detalhe_excluir_texto">This deletes the program and every workout inside it. It can\'t be undone.</string>
     <string name="programa_detalhe_renomear_titulo">Rename program</string>
+    <string name="programa_detalhe_avisos_titulo">Program notices</string>
+    <string name="programa_detalhe_aviso_nao_treinado">No stimulus at all this week.</string>
+    <string name="programa_detalhe_aviso_abaixo_do_piso">Below the recommended minimum for this muscle.</string>
+    <string name="programa_detalhe_aviso_piso_direto_negado">Indirect work hit the minimum, but there was no direct exercise this week.</string>
+    <string name="programa_detalhe_aviso_manutencao">Past the minimum, but short of your level\'s target.</string>
+    <string name="programa_detalhe_foco_custo_titulo">Reduced to the minimum while the focus is active</string>
 
     <string name="programa_rationale_base">%2$s split over %1$d days: %3$s</string>
     <string name="programa_rationale_foco">Since you prioritized %1$s, the program adds extra volume for those muscles.</string>

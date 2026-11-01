@@ -1,0 +1,13 @@
+-- Migration 10: declaração de custo do motor (avisos + custo do foco), espelhando a V73 do
+-- servidor -- mesmo par de campos, mesmo motivo (fatia "declaracao-de-custo-do-motor").
+--
+-- ADD COLUMN direto, sem recriar a tabela: duas colunas NOVAS e NULLÁVEIS, sem dado prévio
+-- pra migrar -- mesmo raciocínio da 5, 6 e 7 (a recriação da 4 só foi necessária porque
+-- mudava tipo/nulidade de coluna JÁ EXISTENTE).
+--
+-- FORMATO: JSON, mesmo padrão de `focusMuscles` (4.sqm) -- `avisos` é List<ProgramAvisoDto>,
+-- `grupamentosReduzidosPeloFoco` é List<String> (TargetMuscle.name). NULL aqui só pode ser
+-- linha anterior a esta migration; o próximo sync grava `"[]"` quando o motor em produção
+-- (ainda o antigo, dormente pra isto) não gera nenhum dos dois -- ver ProgramLocalDataSource.
+ALTER TABLE program ADD COLUMN avisos TEXT;
+ALTER TABLE program ADD COLUMN grupamentosReduzidosPeloFoco TEXT;

@@ -2,6 +2,8 @@ package dev.rafael.features.program.data
 
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitType
+import dev.rafael.contract.program.CausaAvisoDto
+import dev.rafael.contract.program.ProgramAvisoDto
 import dev.rafael.contract.program.ProgramDto
 import dev.rafael.contract.program.ScheduleEntry
 import dev.rafael.contract.workout.WorkoutDto
@@ -131,5 +133,40 @@ class ProgramMapperTest {
         val inativo = ProgramDto(id = "p2", name = "Outro", daysPerWeek = 2, isActive = false).toDomain()
         assertTrue(ativo.isActive)
         assertFalse(inativo.isActive)
+    }
+
+    // ---- fatia "declaracao-de-custo-do-motor": avisos + custo do foco ----
+
+    @Test
+    fun `avisos mapeiam musculo e causa pras chaves do enum (dominio nao conhece contrato)`() {
+        val dto = ProgramDto(
+            id = "p", name = "P", daysPerWeek = 3,
+            avisos = listOf(
+                ProgramAvisoDto(musculo = "CHEST", causa = CausaAvisoDto.MANUTENCAO),
+                ProgramAvisoDto(musculo = "GLUTES", causa = CausaAvisoDto.PISO_DIRETO_NEGADO),
+            ),
+        )
+        val d = dto.toDomain()
+        assertEquals(2, d.avisos.size)
+        assertEquals("CHEST", d.avisos[0].musculo)
+        assertEquals("MANUTENCAO", d.avisos[0].causa)
+        assertEquals("GLUTES", d.avisos[1].musculo)
+        assertEquals("PISO_DIRETO_NEGADO", d.avisos[1].causa)
+    }
+
+    @Test
+    fun `grupamentosReduzidosPeloFoco passa direto -- ja e List de String no contrato`() {
+        val dto = ProgramDto(
+            id = "p", name = "P", daysPerWeek = 3,
+            grupamentosReduzidosPeloFoco = listOf("SHOULDERS", "BICEPS"),
+        )
+        assertEquals(listOf("SHOULDERS", "BICEPS"), dto.toDomain().grupamentosReduzidosPeloFoco)
+    }
+
+    @Test
+    fun `programa sem avisos (motor atual, dormente) mapeia pras duas listas vazias`() {
+        val d = sampleDto().toDomain()
+        assertEquals(emptyList(), d.avisos)
+        assertEquals(emptyList(), d.grupamentosReduzidosPeloFoco)
     }
 }
