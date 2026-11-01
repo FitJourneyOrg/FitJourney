@@ -11,6 +11,12 @@ object ProgramsTable : Table("programs") {
     val daysPerWeek = integer("days_per_week")
     val split = varchar("split", 64).nullable()   // SplitType.name; null = MANUAL (shell). V56: era .label
     val focusMuscles = text("focus_muscles").nullable()   // JSON List<MuscleGroup>; null = legado (pré-V56)
+    // V73 (débito (c)/(d) de "o motor sabe, o app não mostra"): snapshot gravado na criação,
+    // mesmo padrão de focusMuscles. null só em linha de antes da V73; motor que não calcula
+    // ainda (StructureEngine, produção hoje) grava "[]" (lista vazia), não null -- dormente
+    // até o v3 virar o WorkoutGenerator.
+    val avisos = text("avisos").nullable()                              // JSON List<ProgramAvisoDto>
+    val grupamentosReduzidosPeloFoco = text("grupamentos_reduzidos_pelo_foco").nullable()  // JSON List<String>
     val locked = bool("locked").default(false)
     val createdAt = datetime("created_at")
     val updatedAt = datetime("updated_at")

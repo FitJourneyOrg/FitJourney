@@ -19,7 +19,7 @@ class FocoDoQuizTest {
     private fun alvos(
         nivel: Level = Level.INTERMEDIATE, objetivo: Goal = Goal.GAIN_MUSCLE, foco: List<MuscleGroup> = emptyList(),
     ): Map<TargetMuscle, Double> =
-        TargetMuscle.entries.associateWith { VolumeTargets.weeklySets(it, nivel, objetivo, foco).toDouble() }
+        TargetMuscle.entries.associateWith { VolumeTargets.weeklySets(it, nivel, objetivo, foco) }
 
     @Test
     fun `sem foco o alvo e o de antes`() {
@@ -81,6 +81,56 @@ class FocoDoQuizTest {
     @Test
     fun `alvo coberto duas vezes nao soma duas vezes`() {
         assertEquals(alvos(foco = listOf(MuscleGroup.CHEST)), alvos(foco = listOf(MuscleGroup.CHEST, MuscleGroup.CHEST)))
+    }
+
+    // ---- custoDoFoco (débito (c)/(d) de "o motor sabe, o app não mostra", 2026-10-31) ----
+    // A declaração ao usuário de QUAIS músculos caíram pro piso por causa do foco -- tem que
+    // bater exatamente com o que `weeklySets()` de fato fez, isenção do BACK inclusive, senão a
+    // tela mente.
+
+    @Test
+    fun `custoDoFoco vazio sem foco`() {
+        assertEquals(emptySet(), VolumeTargets.custoDoFoco(Level.INTERMEDIATE, Goal.GAIN_MUSCLE, emptyList()))
+    }
+
+    @Test
+    fun `custoDoFoco vazio quando o foco nao e efetivo (iniciante ou saude geral)`() {
+        val foco = listOf(MuscleGroup.CHEST)
+        assertEquals(emptySet(), VolumeTargets.custoDoFoco(Level.BEGINNER, Goal.GAIN_MUSCLE, foco))
+        assertEquals(emptySet(), VolumeTargets.custoDoFoco(Level.INTERMEDIATE, Goal.GENERAL_HEALTH, foco))
+    }
+
+    @Test
+    fun `custoDoFoco em CHEST isenta o BACK, mas nao os outros fora do foco`() {
+        val custo = VolumeTargets.custoDoFoco(Level.INTERMEDIATE, Goal.GAIN_MUSCLE, listOf(MuscleGroup.CHEST))
+        assertTrue(TargetMuscle.BACK !in custo, "BACK isento -- CHEST está em EMPURRAR")
+        assertTrue(TargetMuscle.CHEST !in custo, "CHEST é o próprio foco")
+        assertTrue(TargetMuscle.SHOULDERS in custo, "SHOULDERS não é o foco nem a isenção -- cai pro piso")
+        assertTrue(TargetMuscle.BICEPS in custo)
+    }
+
+    @Test
+    fun `custoDoFoco em BICEPS (fora de EMPURRAR) nao isenta o BACK`() {
+        val custo = VolumeTargets.custoDoFoco(Level.INTERMEDIATE, Goal.GAIN_MUSCLE, listOf(MuscleGroup.BICEPS))
+        assertTrue(TargetMuscle.BACK in custo, "sem CHEST/SHOULDERS no foco, a isenção não vale")
+    }
+
+    @Test
+    fun `custoDoFoco e exatamente quem weeklySets reduziu ao piso`() {
+        // Prova por construção, não por valor cravado: todo músculo em custoDoFoco tem o alvo
+        // igual ao piso (ou menor, se o piso também cair no MRV); todo músculo fora dele e fora
+        // do próprio foco está OU no foco OU isento.
+        val nivel = Level.INTERMEDIATE; val objetivo = Goal.GAIN_MUSCLE
+        val foco = listOf(MuscleGroup.CHEST, MuscleGroup.BICEPS)
+        val custo = VolumeTargets.custoDoFoco(nivel, objetivo, foco)
+        val focoAlvos = VolumeTargets.alvosDoFoco(nivel, objetivo, foco)
+        for (m in TargetMuscle.entries) {
+            when {
+                m in focoAlvos -> assertTrue(m !in custo, "$m é o próprio foco, não é custo dele")
+                m == TargetMuscle.BACK -> assertTrue(m !in custo, "BACK isento neste foco (CHEST em EMPURRAR)")
+                else -> assertTrue(m in custo, "$m deveria estar reduzido ao piso")
+            }
+        }
     }
 
     @Test
