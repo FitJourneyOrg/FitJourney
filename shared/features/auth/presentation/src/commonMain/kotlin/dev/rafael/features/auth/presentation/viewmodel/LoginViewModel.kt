@@ -38,19 +38,15 @@ class LoginViewModel(
             else
                 authRepository.signIn(current.email, current.password)
             when (authResult) {
-                is AppResult.Failure -> {
+                is AppResult.Failure ->
                     _state.update { it.copy(isLoading = false, error = authResult.error) }
-                    return@launch
-                }
-                is AppResult.Success -> {
-                    // 2) Backend: valida a sessão no /me (Firebase autentica, backend autoriza)
-                    when (val me = authRepository.fetchMe()) {
-                        is AppResult.Success ->
-                            _state.update { it.copy(isLoading = false, loggedInUserId = me.value.uid) }
-                        is AppResult.Failure ->
-                            _state.update { it.copy(isLoading = false, error = me.error) }
-                    }
-                }
+                is AppResult.Success ->
+                    // Entra com a sessão do Firebase, sem esperar confirmação do backend (login-sem-backend,
+                    // 2026-11-05): `uid` já está em mãos, e esperar o `/me` travava o login inteiro quando o
+                    // backend estava fora, mesmo com credencial válida. A Splash (`prepararAntesDaHome` ->
+                    // `me.sincronizar()`) já sincroniza o resto depois, de forma resiliente a essa falha --
+                    // ela é quem decide se a Home abre completa ou incompleta, não o login.
+                    _state.update { it.copy(isLoading = false, loggedInUserId = authResult.value.uid) }
             }
         }
     }
