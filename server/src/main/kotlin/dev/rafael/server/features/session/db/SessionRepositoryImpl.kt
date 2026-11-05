@@ -49,6 +49,7 @@ class SessionRepositoryImpl : SessionRepository {
                     it[repsDone] = s.repsDone
                     it[weightKg] = s.weightKg
                     it[done] = s.done
+                    it[rir] = s.rir?.toShort()
                 }
             }
         }
@@ -74,6 +75,7 @@ class SessionRepositoryImpl : SessionRepository {
                     repsDone = it[SessionSetLogsTable.repsDone],
                     weightKg = it[SessionSetLogsTable.weightKg],
                     done = it[SessionSetLogsTable.done],
+                    rir = it[SessionSetLogsTable.rir]?.toInt(),
                 )
             }
             .sortedWith(compareBy({ it.orderIndex }, { it.setIndex }))
