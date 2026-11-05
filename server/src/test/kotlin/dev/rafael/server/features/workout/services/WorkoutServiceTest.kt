@@ -90,6 +90,7 @@ class WorkoutServiceTest {
         override suspend fun paraAnalise(ids: List<Uuid>) = error("não usado")
         override suspend fun nomesTraduzidos(ids: List<Uuid>, idioma: Idioma) = error("não usado")
         override suspend fun ancorasAvancadas(ids: List<Uuid>) = error("não usado")
+        override suspend fun paraProgressao(ids: List<Uuid>) = error("não usado")
     }
 
     private class FakeWorkoutGenerator : WorkoutGenerator {

@@ -7,6 +7,7 @@ import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.flatMap
 import dev.rafael.core.result.map
 import dev.rafael.server.features.session.db.SessionRepository
+import dev.rafael.server.features.session.models.WorkoutSession
 import dev.rafael.server.features.session.models.toDomain
 import dev.rafael.server.features.session.models.toDto
 import dev.rafael.server.features.user.services.UserService
@@ -19,6 +20,11 @@ class SessionService(
     // `stats`/`achievements`. Default não faz nada — o grafo funciona sem avaliação, mesmo
     // padrão do `avisar` do FriendshipService/SocialService.
     private val avaliarConquistas: suspend (firebaseUid: String, email: String?) -> Unit = { _, _ -> },
+    // Porta estreita pra progressão (fatia "rir-chega-e-registra", 2026-11-05): recebe o
+    // `WorkoutSession` já salvo (tipo do próprio `session`, sem acoplar módulo a módulo) e quem
+    // implementa decide papel/incremento/estado anterior. Mesmo "`also` não decide o resultado"
+    // do `avaliarConquistas` — ver `record()`.
+    private val aplicarProgressao: suspend (session: WorkoutSession) -> Unit = { },
 ) {
     /**
      * Registra uma sessão executada (idempotente por id — ver repo). O userId vem do token,
@@ -35,10 +41,11 @@ class SessionService(
                 return@flatMap AppError.Validation("O fim do treino não pode ser antes do início", code = ErrorCodes.SESSAO_COM_FIM_ANTES_DO_INICIO).asFailure()
             }
             repository.save(session).map { dto }.also { resultado ->
-                // Só avalia conquista quando a sessão FOI salva — sessão que falhou não mudou
-                // progresso nenhum. `also` não altera o resultado devolvido ao chamador.
+                // Só avalia conquista/progressão quando a sessão FOI salva — sessão que falhou
+                // não mudou progresso nenhum. `also` não altera o resultado devolvido ao chamador.
                 if (resultado is AppResult.Success) {
                     avaliarConquistas(firebaseUid, email)
+                    aplicarProgressao(session)
                 }
             }
         }

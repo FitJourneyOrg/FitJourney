@@ -111,6 +111,20 @@ class ExerciseRepositoryImpl : ExerciseRepository {
                 .map { it[ExercisesTable.id] }
         }
 
+    override suspend fun paraProgressao(ids: List<Uuid>): AppResult<Map<Uuid, ExercicioParaProgressao>> =
+        dbQuery {
+            if (ids.isEmpty()) return@dbQuery emptyMap()
+            ExercisesTable.selectAll()
+                .where { ExercisesTable.id inList ids }
+                .associate { row ->
+                    row[ExercisesTable.id] to ExercicioParaProgressao(
+                        incremento = row[ExercisesTable.incremento],
+                        barraLivre = row[ExercisesTable.barraLivre],
+                        cargaInvertida = row[ExercisesTable.cargaInvertida],
+                    )
+                }
+        }
+
     override suspend fun nomesTraduzidos(ids: List<Uuid>, idioma: Idioma): AppResult<Map<Uuid, String>> =
         dbQuery {
             if (ids.isEmpty() || idioma == Idioma.PADRAO) return@dbQuery emptyMap()

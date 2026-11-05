@@ -69,7 +69,28 @@ interface ExerciseRepository {
      * avançado, sem precisar de tratamento especial para o NULL.
      */
     suspend fun ancorasAvancadas(ids: List<Uuid>): AppResult<List<Uuid>>
+
+    /**
+     * Leitura CRUA pra progressão (fatia "rir-chega-e-registra"): `incremento`/`barraLivre`/
+     * `cargaInvertida` (V74), **sem `idioma`** — mesmo motivo do [paraAnalise]: quem decide não
+     * traduz. `ProgressaoAplicadaService` é o único chamador.
+     *
+     * Id sem linha no catálogo (não deveria acontecer — `exerciseId` vem de um `WorkoutExercise`
+     * já validado na criação do treino) fica fora do mapa; quem chama trata ausência como "não dá
+     * pra progredir este exercício", mesmo piso do `incremento == null`.
+     */
+    suspend fun paraProgressao(ids: List<Uuid>): AppResult<Map<Uuid, ExercicioParaProgressao>>
 }
+
+/**
+ * Projecao minima do catalogo pra DECIDIR a progressao (fatia "rir-chega-e-registra").
+ * `incremento == null` = sem carga externa em kg; quem chama nao invoca `decidir()`/`calibrar()`.
+ */
+data class ExercicioParaProgressao(
+    val incremento: Double?,
+    val barraLivre: Boolean,
+    val cargaInvertida: Boolean,
+)
 
 /** Projecao minima do catalogo para a analise de progressao (J.2). */
 data class ExercicioParaAnalise(

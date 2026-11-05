@@ -79,6 +79,7 @@ class PromotionServiceTest {
         override suspend fun existsByIds(ids: List<Uuid>) = error("não usado")
         override suspend fun paraAnalise(ids: List<Uuid>) = error("não usado")
         override suspend fun nomesTraduzidos(ids: List<Uuid>, idioma: dev.rafael.contract.i18n.Idioma) = error("não usado")
+        override suspend fun paraProgressao(ids: List<Uuid>) = error("não usado")
     }
 
     private fun perfil(level: Level) = Profile(
