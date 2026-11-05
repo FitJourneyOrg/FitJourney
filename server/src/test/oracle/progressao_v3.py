@@ -112,9 +112,15 @@ def salto_da_faixa(excesso_rir: int, barra_livre: bool) -> float:
     return 0.0
 
 
-def carga_apos_salto(carga: float, pct: float, incremento: float) -> float:
-    """Nunca menos que UM incremento acima: um salto pedido que arredonda para a mesma carga
-    travaria a calibracao (10% de 10 kg num incremento de 2,5 kg)."""
+def carga_apos_salto(carga: float, pct: float, incremento: float, carga_invertida: bool = False) -> float:
+    """Nunca menos que UM incremento acima (ou, invertido, nunca mais que um incremento abaixo):
+    um salto pedido que arredonda para a mesma carga travaria a calibracao (10% de 10 kg num
+    incremento de 2,5 kg). `carga_invertida` (fatia rir-chega-e-registra, 2026-11-05): mais peso E
+    mais ajuda (ex. Barra Fixa Assistida) -- RIR alto na calibracao = ficou facil = precisa de
+    MENOS assistencia, entao o salto puxa a carga pra baixo, com o mesmo piso de um incremento."""
+    if carga_invertida:
+        candidata = para_incremento(carga * (1.0 - pct), incremento)
+        return max(min(candidata, carga - incremento), incremento)
     return max(para_incremento(carga * (1.0 + pct), incremento), carga + incremento)
 
 
@@ -125,7 +131,7 @@ class PassoCalibracao:
 
 
 def passo_calibracao(carga: float, rir_informado: Optional[int], serie_n: int, rir_alvo: int,
-                     barra_livre: bool, incremento: float) -> PassoCalibracao:
+                     barra_livre: bool, incremento: float, carga_invertida: bool = False) -> PassoCalibracao:
     """Uma serie de calibracao. `serie_n` e 1-based. RIR informado >= 4 sobe NA HORA e a pessoa faz
     outra serie, ate 3 series (spec l.600). Abaixo de 4 a carga e a certa: termina sem mexer.
     Na 3a serie a carga ainda sobe (e a sugestao para a proxima exposicao) e termina."""
@@ -134,18 +140,18 @@ def passo_calibracao(carga: float, rir_informado: Optional[int], serie_n: int, r
     pct = salto_da_faixa(rir_informado - rir_alvo, barra_livre)
     if pct == 0.0:
         return PassoCalibracao(carga, True)
-    nova = carga_apos_salto(carga, pct, incremento)
+    nova = carga_apos_salto(carga, pct, incremento, carga_invertida)
     return PassoCalibracao(nova, serie_n >= S.CALIBRACAO_MAX_SERIES)
 
 
 def calibrar(carga_inicial: float, rirs_informados: list, rir_alvo: int, barra_livre: bool,
-             incremento: float) -> Estado:
+             incremento: float, carga_invertida: bool = False) -> Estado:
     """Conveniencia: roda os passos sobre uma lista de RIRs informados e devolve o Estado depois da
     1a exposicao. Lista curta demais para fechar nao e erro -- devolve a ultima carga sugerida."""
     carga, usadas = carga_inicial, 0
     for n, rir in enumerate(rirs_informados, start=1):
         usadas = n
-        passo = passo_calibracao(carga, rir, n, rir_alvo, barra_livre, incremento)
+        passo = passo_calibracao(carga, rir, n, rir_alvo, barra_livre, incremento, carga_invertida)
         carga = passo.carga
         if passo.terminou:
             break
@@ -157,7 +163,7 @@ def calibrar(carga_inicial: float, rirs_informados: list, rir_alvo: int, barra_l
 # ----------------------------------------------------------------------------- progressao dupla
 
 def decidir(estado: Estado, series: list, papel: str, objetivo: str, incremento: float,
-            barra_livre: bool) -> tuple:
+            barra_livre: bool, carga_invertida: bool = False) -> tuple:
     """Decisao ENTRE sessoes. Devolve (Estado novo, SOBE|MANTEM|DESCE).
 
     Regra 1: sobe so quando TODAS as series batem o topo da faixa sem ficar mais perto da falha que o
@@ -189,10 +195,15 @@ def decidir(estado: Estado, series: list, papel: str, objetivo: str, incremento:
         pct = 0.0
         if exposicoes <= S.EXPOSICOES_COM_SALTO_MAIOR and todos_com_rir:
             pct = salto_da_faixa(min(s.rir for s in series) - rir_alvo, barra_livre)
-        nova = carga_apos_salto(estado.carga, pct, incremento) if pct else estado.carga + incremento
+        if pct:
+            nova = carga_apos_salto(estado.carga, pct, incremento, carga_invertida)
+        elif carga_invertida:
+            nova = max(estado.carga - incremento, incremento)
+        else:
+            nova = estado.carga + incremento
         return Estado(nova, exposicoes, True, um_rm, 0), SOBE
     if abaixo and not (estado.pos_salto and rir_no_alvo):
-        nova = max(estado.carga - incremento, incremento)
+        nova = (estado.carga + incremento) if carga_invertida else max(estado.carga - incremento, incremento)
         return Estado(nova, exposicoes, False, um_rm, estado.sem_subir + 1), DESCE
     # Fica. A tolerancia so continua se foi ela que segurou a carga; entrar na faixa a encerra.
     return (Estado(estado.carga, exposicoes, bool(abaixo and estado.pos_salto), um_rm,
@@ -200,19 +211,25 @@ def decidir(estado: Estado, series: list, papel: str, objetivo: str, incremento:
 
 
 def reducao_intrasessao(carga: float, rir_primeira_serie: Optional[int], rir_alvo: int,
-                        incremento: float) -> tuple:
+                        incremento: float, carga_invertida: bool = False) -> tuple:
     """Regra 4: se a 1a serie do dia saiu mais dificil que o alvo, as seguintes reduzem 4% POR PONTO
     de RIR abaixo do alvo (linear sobre a carga do dia). Devolve (carga das proximas series,
     anulada). `anulada` = a reducao arredondou para a mesma carga (4% de 8 kg num incremento de
     2 kg): a carga fica e o chamador sabe que a regra nao agiu -- nao existe carga menor carregavel.
+    `carga_invertida`: "mais dificil" num assistido pede MAIS assistencia -- a carga SOBE, nao desce.
     """
     if rir_primeira_serie is None:
         return carga, False   # RIR nulo: a regra 4 nao age (e nao e "anulada": nao havia o que medir)
     falta = rir_alvo - rir_primeira_serie
     if falta <= 0:
         return carga, False
-    nova = para_incremento(carga * (1.0 - S.REDUCAO_POR_PONTO_RIR * falta), incremento)
-    nova = max(nova, incremento)
+    fator = 1.0 + (1.0 if carga_invertida else -1.0) * S.REDUCAO_POR_PONTO_RIR * falta
+    candidata = para_incremento(carga * fator, incremento)
+    if carga_invertida:
+        if candidata <= carga + EPS:
+            return carga, True
+        return candidata, False
+    nova = max(candidata, incremento)
     if nova >= carga - EPS:
         return carga, True
     return nova, False
