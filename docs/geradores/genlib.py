@@ -26,6 +26,23 @@ BULLET = ParagraphStyle("bul", parent=BODY, leftIndent=10, bulletIndent=0)
 CELL = ParagraphStyle("cell", parent=S["Normal"], fontSize=8.0, leading=10)
 CELLH = ParagraphStyle("cellh", parent=CELL, textColor=colors.white, fontName="Helvetica-Bold")
 
+TABLE_STYLE = TableStyle([
+    ("BACKGROUND",(0,0),(-1,0),NAVY),
+    ("GRID",(0,0),(-1,-1),0.3,colors.HexColor("#CBD2DE")),
+    ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white,LIGHT]),
+    ("VALIGN",(0,0),(-1,-1),"TOP"),
+    ("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),
+    ("LEFTPADDING",(0,0),(-1,-1),4),("RIGHTPADDING",(0,0),(-1,-1),4),
+])
+TABLE_PAD_V = 6       # TOPPADDING + BOTTOMPADDING da TABLE_STYLE acima
+TABLE_PAD_H = 8       # LEFTPADDING + RIGHTPADDING
+# Altura útil de uma página A4 em branco, com as margens que build_pdf usa (15mm/15mm). Uma
+# linha de tabela é ATÔMICA — o Table do ReportLab quebra a tabela entre linhas, mas não dentro
+# de uma linha — então uma linha que não cabe nem numa página em branco nunca vai caber, e o
+# LayoutError só aparece lá dentro do ReportLab, sem dizer qual linha. 0.97 é folga de
+# arredondamento de fonte, não dado real.
+USABLE_H = (A4[1] - 30*mm) * 0.97
+
 
 def inline(t):
     original = t          # guardado em markdown: é isto que a pessoa procura com Ctrl+F
@@ -123,25 +140,45 @@ def render_md(path, story):
             block = []
             while i < len(lines) and lines[i].startswith("|"):
                 block.append(lines[i]); i += 1
-            rows = []
+            linhas = []  # [(cells_raw, sty), ...]
             for r, raw in enumerate(block):
                 cells = [c.strip() for c in raw.strip().strip("|").split("|")]
                 if r == 1 and set("".join(cells)) <= set("-: "):  # separador
                     continue
-                sty = CELLH if r == 0 else CELL
-                rows.append([Paragraph(inline(c), sty) for c in cells])
-            ncol = max(len(r) for r in rows)
+                linhas.append((cells, CELLH if r == 0 else CELL))
+            ncol = max(len(cells) for cells, _ in linhas)
             width = 178*mm
-            tb = Table(rows, colWidths=[width/ncol]*ncol)
-            tb.setStyle(TableStyle([
-                ("BACKGROUND",(0,0),(-1,0),NAVY),
-                ("GRID",(0,0),(-1,-1),0.3,colors.HexColor("#CBD2DE")),
-                ("ROWBACKGROUNDS",(0,1),(-1,-1),[colors.white,LIGHT]),
-                ("VALIGN",(0,0),(-1,-1),"TOP"),
-                ("TOPPADDING",(0,0),(-1,-1),3),("BOTTOMPADDING",(0,0),(-1,-1),3),
-                ("LEFTPADDING",(0,0),(-1,-1),4),("RIGHTPADDING",(0,0),(-1,-1),4),
-            ]))
-            story += [tb, Spacer(1,6)]; continue
+            colw = width/ncol
+            netw = colw - TABLE_PAD_H
+
+            def tabela(seg):
+                tb = Table([[Paragraph(inline(c), sty) for c in cells] for cells, sty in seg],
+                           colWidths=[colw]*ncol)
+                tb.setStyle(TABLE_STYLE)
+                return tb
+
+            # Linha cujo conteúdo não cabe nem numa página em branco vira prosa (rótulo em negrito
+            # + resto), fora da Table — ver USABLE_H. É o defeito que travava gen_debitos.py/
+            # gen_docs.py com LayoutError silencioso em 2026-11.
+            seg = []
+            for cells, sty in linhas:
+                altura = TABLE_PAD_V
+                for c in cells:
+                    altura = max(altura, Paragraph(inline(c), sty).wrap(netw, 0xFFFFFF)[1] + TABLE_PAD_V)
+                if altura <= USABLE_H or sty is CELLH:
+                    seg.append((cells, sty))
+                    continue
+                if seg:
+                    story += [tabela(seg), Spacer(1, 6)]
+                    seg = []
+                rotulo, resto = cells[0], " — ".join(c for c in cells[1:] if c)
+                story.append(Paragraph(inline("**%s**" % rotulo), BODY))
+                if resto:
+                    story.append(Paragraph(inline(resto), BODY))
+                story.append(Spacer(1, 6))
+            if seg:
+                story += [tabela(seg), Spacer(1, 6)]
+            continue
         if ln.startswith("### "): flush(); story.append(Paragraph(inline(ln[4:]), H3))
         elif ln.startswith("## "): flush(); story.append(Paragraph(inline(ln[3:]), H2))
         elif ln.startswith("# "): flush(); story.append(Paragraph(inline(ln[2:]), H1))
