@@ -286,3 +286,53 @@ nesta sessão (catálogo V74 foi só servidor; login-sem-backend foi só cliente
 abrir em sessão nova, com este plano pronto, começando pela etapa 1–4 do servidor (unificação do
 enum + `WorkoutExerciseDto.papel`) como primeiro commit/teste verde, antes de tocar
 `SessionService.record()`.
+
+
+## Status real ao fim da sessão de 2026-11-05 (esta) — Backend + Contrato FECHADOS
+
+**Servidor e contrato (passos 1–7 do desenho acima): feitos, testados, commitados.**
+
+- Passos 1–5 (unificação `Papel`/`SlotRole`, persistência de `papel` em `workout_exercises`,
+  V75) + o item BLOQUEANTE (`cargaInvertida` em `decidir()`/`calibrar()`/`reducaoIntrasessao`,
+  com os 4 testes nomeados do oráculo) — commits anteriores desta sessão.
+- Passo 7 (RIR até o banco: `SetLogDto`/`SetLog`/`SessionMapper`/`SessionRepositoryImpl`) —
+  commit `6ad9b2a`.
+- Passo 6 (`SessionService.record()` → `ProgressaoAplicadaService` → `calibrar()`/`decidir()` →
+  `registrar()`) — commit `07c02bf`. Build verde: `:konsist:test :server:test`.
+
+**Achados/decisões NOVAS desta sessão, não previstas no desenho original — registrar antes de
+reabrir o cliente:**
+
+- **`Goal` não vem de `User`, vem de `Profile`** (`ProfileRepository.findByUserId`). Sem
+  `Profile` (perfil incompleto/onboarding não terminado): `ProgressaoAplicadaService` pula a
+  sessão INTEIRA (decisão do Rafael, 2026-11-05) — sem `Goal` não dá pra escolher
+  `PrescricaoV3.de()` pra nenhum exercício.
+- **`ExerciseRepository` ganhou `paraProgressao(ids)`** (lê `incremento`/`barraLivre`/
+  `cargaInvertida` sem `idioma`, mesmo motivo do `paraAnalise` — "quem decide não traduz").
+- **Bi-set resolvido por `(exerciseId, orderIndex)`**, não só `exerciseId`: duas vagas do mesmo
+  exercício são duas linhas de `WorkoutExercise` com `orderIndex` diferente; só a de menor
+  `orderIndex` entra na progressão (as séries da(s) outra(s) vaga(s) são ignoradas).
+- **Calibração não produz `Decisao` — registrada como `Evento.Carga(Decisao.MANTEM)`** (decisão
+  do Rafael, 2026-11-05): não existe `Decisao` própria pra "acabei de calibrar", e `MANTEM`
+  reaproveita o enum sem mudar o oráculo. Conta pro streak de estagnação do `AncoraDoIniciante`
+  como uma sessão que não subiu — aceito.
+- `papel` de origem é resolvido pela VAGA exata (`exerciseId` E `orderIndex`), via
+  `WorkoutRepository.findById(userId, session.workoutId)` — sessão sem `workoutId` (treino
+  manual/ad-hoc) ou `WorkoutExercise.papel == null` (sem prescrição automática): pula SÓ aquele
+  exercício, mesmo piso do `incremento == null`.
+- `cargaInicial` da calibração vem do `SetLog.weightKg` logado pelo cliente (1º set com peso
+  não-nulo da vaga) — não existe outro lugar pra "qual foi o peso que a pessoa usou pela 1ª vez".
+- Teste novo: `ProgressaoAplicadaServiceTest` (5 casos: calibração, `decidir()`/SOBE, sem
+  `Profile`, sem `papel`, bi-set). **Débito aberto, não resolvido aqui**: `ExerciseRepositoryImpl
+  .paraProgressao()` é código novo contra o Exposed real, sem caso em `ProgressaoIntegrationTest`
+  — só os fakes cobrem a orquestração.
+
+**O que falta — só Cliente, abrir sessão nova com isto:**
+1. `SetEntry` (`WorkoutSessionState.kt`) ganha `val rir: String = ""`.
+2. `SessionEvent.RirChanged(index, value)`, tratado em `WorkoutSessionViewModel.onEvent` igual
+   a `RepsChanged`/`WeightChanged`.
+3. `finish()` passa `rir = e.rir.toIntOrNull()` pro `SetLogDto`.
+4. UI de execução: campo de RIR por série, com rótulo explicando pra quem nunca usou (pode ficar
+   em branco — D-3 cobre `rir == null`).
+5. **Primeiro passo, antes de tocar `SetEntry`**: checar se existe tabela/cache local de log de
+   sessão (SQLDelight) — não inspecionado ainda, meramente assumido que o DTO basta.
