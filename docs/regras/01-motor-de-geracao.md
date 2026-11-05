@@ -799,6 +799,51 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
 - Origem: a Fatia 8 tirou CORE dos dois enums e o servidor passou a descartar em silêncio o `CORE` de 46
   exercícios (`CuradoriaTagueamentoIntegrationTest` pegou). Devolvido ao `MuscleGroup` em 2026-10-28.
 
+### Motor v3 — SEMÂNTICA DE CARGA no catálogo (fatia do catálogo, 2026-11-05)
+
+- **[REGRA]** `exercises.incremento` é **granularidade física** em kg: a menor carga alcançável
+  naquele equipamento. `Progressao.paraIncremento()` arredonda para múltiplos dela. **Não é passo
+  prescritivo** — que `decidir()` por acidente também usa como passo aditivo; essa colagem dos dois
+  usos é débito aberto (passo proporcional), não propriedade desejada.
+- **[REGRA]** `incremento` NULL = **não se aplica**, e o chamador NÃO invoca o motor para aquele
+  exercício: `decidir()`/`calibrar()` exigem `Double` não-nulo e **não existe fallback por
+  repetição**. Não confundir com "não curado": são 432 dos 893 (peso do corpo, faixa, kettlebell).
+- **[REGRA]** Carga de halter é **POR HALTER**, não a soma dos dois, e o incremento é 1,0 kg. O
+  rack brasileiro anda de 1 em 1 até 10 kg, que é onde o iniciante vive; 2 kg faz 6→8 (+33%) e,
+  medido, **nunca converge**. Acima de 10 kg a sugestão às vezes nomeia halter inexistente — erro
+  cosmético, aceito em troca de acertar embaixo.
+- **[INV]** `barra_livre` nunca discorda de `equipment IN ('BARBELL','TRAP_BAR')` enquanto for
+  derivável — garantido pelo `chk_exercises_barra_livre` (V74), **no banco, não em código**. `SMITH`
+  é false (tem barra, trilho guiado) e `LANDMINE` é false (arco travado pela ponta fixa). Mesmo
+  arranjo que a V65 usou para `is_base` × `relevancia` enquanto as duas conviviam.
+- **[REGRA]** `carga_invertida` = mais peso é mais FÁCIL (máquina assistida, a carga é contrapeso).
+  O motor tem de **trocar o sinal**: `SOBE` significa DIMINUIR. São 4 no catálogo, 1 na lista
+  principal. Marcados **por nome explícito**, nunca por `LIKE '%Assistid%'`: os outros cinco
+  "assistidos" são assistência de banco, parceiro ou faixa, sem carga selecionável.
+- **[PROPOSTA]** A troca de sinal em `decidir()` **ainda não existe**. Bloqueia o fechamento da
+  fatia do RIR, com caso de teste nomeado lá. Ligar o fio sem ela faz a Barra Fixa Assistida — o
+  caminho do iniciante até a barra fixa — **regredir calada** conforme a pessoa fica mais forte.
+- **Curar por equipamento é paliativo DECLARADO**, não solução: põe leg press e pec deck no mesmo
+  número. ADR em `arch/motor-v3-semantica-de-carga.md`.
+
+### Motor v3 — DUAS LEIS da progressão dupla, medidas (fatia do catálogo, 2026-11-05)
+
+Instrumento: `tools/motor_sim/sim_incremento.py` (port fiel do `Progressao.kt`; o motor é exato, o
+modelo de usuário é suposição declarada no arquivo). São **critério de aceite reutilizável**, e é
+por isso que estão aqui e não só no histórico.
+
+- **Lei 1 — o loop converge enquanto o passo for ≲20% da carga.** Acima disso a progressão dupla
+  entra em sobe/desce permanente: a pessoa bate o topo da faixa, sobe, cai abaixo do piso, desce,
+  repete. Isolamento (faixa 12–16) quebra em **20%**; composto e acessório, em **25%**. Projeto:
+  manter o passo **≤ 15%** da carga típica. **É o critério de aceite da fatia do passo
+  proporcional** — o conserto só vale se nenhum par (exercício, carga) ficar acima disso.
+- **Lei 2 — a Regra 4 (freio intrassessão, −4%/ponto) só age acima de ~12,5× o incremento.** De
+  `paraIncremento(carga × (1 − 0,04 × falta), inc) < carga`, ou seja `carga > inc / (0,08 × falta)`:
+  com incremento 1,0 age a partir de 13 kg; 2,5 → 32,5 kg; 5,0 → **65 kg**. **Incremento grande
+  desliga o freio de segurança justamente nas cargas leves** — foi o argumento que decidiu
+  `MACHINE` = 2,5 e não 5. Consequência aceita do "por halter": o limiar está na mesma unidade, então
+  por halter o freio só age a partir de 13 kg por halter (~26 kg reais).
+
 ## Gates de geração (`/programs/generate`)
 
 Máquina em ordem, cada um barra com Forbidden:

@@ -42,6 +42,9 @@
 - _(os 4 itens P0 desta revisão foram fechados em 2026-09-22 — ver tabela abaixo: `exercise_translations` no TRUNCATE, `:server:integrationTest` sem `inputs.files`, outbox `save()`×`alvosPendentes()`, `created_at`×`local_date`)_
 - **"O motor sabe, o app não mostra"** — puxado pra P0 em 2026-10-30 (decisão do Rafael: é o que mais vale priorizar). Regras já escritas e testadas (12.730 casos no oráculo) não disparam em produção porque a camada de produto não as alimenta nem exibe — risco de falsa confiança já ativo, silencioso, enquanto fica aberto. Quatro faces; entrada completa (com o que falta em cada uma) em "Motor v3 — fatia 11" mais abaixo neste arquivo: **(a)** RIR não chega do cliente (calibração/−4% com zero disparo), **(b)** avançado sem service/rota (iniciante já fechado, 2026-10-29), ~~**(c)** fase de ênfase não declara o custo ao usuário~~ e ~~**(d)** `ProgramAudit.avisos()` sem copy nem tela~~ — **(c)/(d) fechadas 2026-10-31**, ver entrada abaixo
 
+- **Progressão inexistente para quem treina em casa** — ⚪ aberto (2026-11-05, medido na fatia do catálogo). **42 de 147 (28,6%) do pool do motor** com `incremento` NULL: `BODYWEIGHT` 26, `BAND` 15, `HAND_GRIP` 1. `decidir()`/`calibrar()` exigem `Double` não-nulo e **não existe progressão por repetição/cadência no código nem em especificação**. Não é polimento: é **funcionalidade ausente para um público inteiro**, e o público é o que não tem academia. Medição: `tools/motor_sim/sim_incremento.py`
+- **4 de 26 âncoras do avançado estruturalmente mortas** — ⚪ aberto (2026-11-05, medido). Barra Fixa, Flexão, Mergulho e afins são `BODYWEIGHT` (composto + `relevancia = 1` = âncora do `diagnosticoAvancado`). Sem `carga`, `estimarUmRm()` devolve null e `decidir()` exige `requireNotNull(estado.carga)` — essas 4 caem **permanentemente** em DADO INSUFICIENTE no `diagnosticoAvancadoPorAncora`, **inclusive para quem treina em academia**. É bug de funcionalidade existente, não feature ausente: por isso separado do item acima, que o esconderia
+
 ### P1 — bug pequeno, sem decisão pendente
 
 - _(regex de segurança e os dois débitos de "endereço/rodapé DEBUG" fechados em 2026-09-22 — ver tabela)_
@@ -109,6 +112,70 @@
 `Servidor subiu em loopback` (superado) · `ErrorResponse não carrega parâmetros` (recusado, escopo) · `19 pares de texto idêntico` (mantido por decisão) · `AchievementDto perdeu vantagem de ajustar texto sem release` (custo aceito) · `/me/profile sem TTL` (decisão consciente) · `Premium não edita conteúdo de IA offline` (consequência aceita) · `Isolamento por classe, não por teste` (mitigado por doc, não é código) · `registrar() do push falha em silêncio` (aceito — push é acessório) · `Card do treino ativo sem duração/grupo muscular` e `Barra de progresso semanal ausente no card de treino ativo` (obsoletos — V60 removeu o card de sugestão "treino ativo" da Home inteiro; ativação virou conceito de PROGRAMA, 2026-09-27)
 
 ---
+
+## Design (2026-11-03) — o que a extração do design system achou
+
+> Vieram da varredura das 39 telas para montar `docs/DESIGN_SYSTEM.md`. Regras em
+> `regras/15-design-e-cor.md`; narrativa do item pago em `historico/correcao-do-tonal-generico.md`.
+
+| Débito | Status | Nota |
+|---|---|---|
+| **`secondaryContainer` era o roxo de IA** | ✅ Pago · 2026-11-03 | O Material 3 usa o slot como cor tonal GENÉRICA, e **13 arquivos herdavam dele**: os `-`/`+` de peso e reps, o chip da série e a trilha de progresso da sessão apareciam roxos sem haver IA nenhuma. Já tinha sido achado UMA vez e remendado na tela errada (`AchievementsScreen` declarou `trackColor` à mão porque *"11 de 30 parecia 90%"*), e o slot continuou roxo. Agora `Ink3`; quem quer significado pede `primaryContainer` explicitamente. Verificado no aparelho, antes e depois. > **Cor que o Material pede emprestada para tudo tem de ser neutra** |
+| **Dois emojis dentro do `strings.xml`** | 🔲 Aberto · P2 | `treino_detalhe_trocar_exercicio` = "🔁  Trocar exercício" e `treino_detalhe_excluir_exercicio` = "🗑  Excluir exercício". Símbolo é DESENHO, pela mesma razão que a caixa alta não mora no catálogo (#37) — e estas duas passam por fora de todas as guardas, que varrem travessão, caixa e reticências. Saída: ícone do Material no `DropdownMenuItem`, texto limpo no catálogo, e a proibição entra no `CatalogoDeStringsTest` junto com as outras três |
+| **Texto no lugar de ícone, em cinco pontos** | 🔲 Aberto · P5 | `ProgramListScreen` usa `Text("+")` no FAB e o emoji "✨" como ícone do FAB de IA; `WorkoutFormScreen` usa `Text("←")` no voltar e `Text("↑")`/`Text("↓")`/`Text("✕")`/`Text("−")` nas ações do exercício; `ProgramGenerateScreen` usa um `TextButton("Voltar")` em vez da seta. O resto do app usa Material Icons, e o `←` em particular quebra em RTL, onde o resto usa `AutoMirrored` |
+| **Ações do exercício só por toque longo, e o toque normal não faz nada** | 🔲 Aberto · P2 | `WorkoutDetailScreen`: a linha é `combinedClickable(onClick = {}, onLongClick = …)`. Trocar e excluir exercício só existem pelo toque longo, **sem nenhuma affordance na tela** — e o toque normal é um callback vazio, então a linha parece quebrada. Nenhum outro lugar do app depende de toque longo |
+| **O vazio da lista de programas fala de treino** | 🔲 Aberto · P1 | `programa_lista_vazio` = "Você ainda não tem nenhum treino." numa tela cujo título é "Meus programas". Resíduo do achatamento do V59, que a V60 reverteu. Uma string |
+| **Ilustrações do catálogo têm fundo branco** | 🔲 Aberto · P4 | Num app dark-only, a miniatura do exercício é o retângulo mais claro da tela. Ficou evidente ao corrigir o roxo: o olho que ia para o roxo passou a ir para a miniatura, que compete com o botão de ação. Saída: fundo transparente na origem, ou tratamento no cliente. Entra junto com "re-encodar os 963 MP4" — é produção de mídia, não layout |
+| **Três azuis competindo na sessão de treino** | 🔲 Aberto · P5 | Chip da série atual, "Série feita" e o play do descanso. Resolvível no redesenho, ver a Margem de manobra do design system |
+| **O peso abre em 0 na sessão** | 🔲 Aberto · P3 | O número que o KDoc da tela chama de protagonista abre no valor menos informativo possível. A saída natural é abrir no último valor registrado naquele exercício, o que depende do histórico por exercício que o Progresso já consulta |
+| **Dois tamanhos de título no quiz, sem razão** | 🔲 Aberto · P5 | Oito passos em `headlineSmall`, quatro (`ENVIRONMENT`, `ACCESSORIES`, `HEALTH`, `LIMITATIONS`) em `titleLarge` |
+| **Cinco passos do quiz empilham chips um por linha** | 🔲 Aberto · P5 | `GOAL` (4), `LEVEL` (3), `FOCUS` (8) e `REST_DAYS` (7) põem os `FilterChip` dentro de uma `Column`. Só `DAYS` usa uma `Row`. A pergunta de descanso tem sete linhas de um chip cada. Não existe `FlowRow` em lugar nenhum do quiz |
+| **O denominador do progresso do quiz muda no meio** | 🔲 Aberto · P5 | `ACCESSORIES` entra em `visibleSteps` só depois que a pessoa responde `ENVIRONMENT`, que é o passo 8: a fração salta de "8/11" para "9/12" entre um toque e o seguinte. `FOCUS` faz o mesmo nos passos 1 e 2 |
+| **O terceiro grupo de foco é ignorado em silêncio** | 🔲 Aberto · P5 | `toggleFocus` tem `else -> current` com o comentário "cheio: ignora o 3º". O chip não responde e nada explica por quê; o contador "2/2" é a única pista |
+| **Assimetria renomear × excluir no programa trancado** | 🔲 Aberto · P1 | `ProgramDetailScreen`: renomear some quando `readOnly`, excluir continua. Um usuário free não pode renomear o programa que a IA gerou, mas pode apagá-lo |
+| **O comentário do `trackColor` do `AchievementsScreen` virou falso** | 🔲 Aberto · P5 | Diz que o default "é roxo vivo", e não é mais desde 2026-11-03. Ou some com o `trackColor` explícito e herda o neutro, ou reescreve o comentário |
+| **`AiPurpleDark` ficou sem uso no tema** | 🔲 Aberto · P6 | Consequência da correção acima. Continua exportado e documentado como token. Decidir se fica disponível ou se liga em algum container de IA de verdade |
+| **Sete slots do `colorScheme` sem valor próprio** | 🔲 Aberto · P3 | `surfaceContainer`, `surfaceContainerLow/High`, `inverseSurface`, `scrim`, `errorContainer`, `onErrorContainer`, `surfaceTint`. O que cai neles usa o default do `darkColorScheme`, fora da paleta Volt Athletic. É exatamente a mesma classe do débito pago acima, e a correção do `secondaryContainer` mostrou o custo |
+| **Nenhuma decisão tipográfica no código** | 🔲 Aberto · P3 | O tema instala `MaterialTheme.typography` cru: escala e fonte default do M3. A fonte foi DECIDIDA em 2026-11-03 (Inter), peso/tracking/escala não. Um `Typography` no `FitJourneyTheme` muda o app inteiro num arquivo |
+| **Nenhum `Shapes` no tema** | 🔲 Aberto · P5 | O raio do `Card` (default do M3) e o `12.dp` dos blocos manuais divergem visivelmente. 21 usos de `RoundedCornerShape(12.dp)` espalhados |
+| **Nenhum token de espaçamento** | 🔲 Aberto · P5 | Escala emergente medida (8/12/16/24 dominam), toda em literais `.dp` nas telas |
+| **Sem asset de marca** | 🔲 Aberto · P4 | O slot `MarcaDoApp()` na Splash já espera um `Image`. Decidido em 2026-11-03 que a marca é a palavra, em Inter 800, nunca em lime |
+| **Componentes de UI fora do módulo de design system** | 🔲 Aberto · P3 | `shimmer`, `NetworkImage`, `ErroDeTela`, `AvatarInicial`, `SeloDeSync`, `Frase`, `Rotulos` vivem no módulo Android do app; só os tokens estão em `shared/core/designsystem`. **Nenhum componente de UI do app é reusável no target iOS hoje** |
+
+## Fatia do catálogo — semântica de carga (2026-11-05)
+
+Abertos no fechamento da fatia que criou `incremento`/`barra_livre`/`carga_invertida` (V74). Os dois
+P0 estão lá acima; estes são os demais. Instrumento das medições: `tools/motor_sim/sim_incremento.py`;
+decisões em `arch/motor-v3-semantica-de-carga.md`; regras e as duas Leis em `regras/01-motor-de-geracao.md`.
+
+- **P3 · `decidir()` soma valor absoluto fixo, independente da carga** — 2,5 kg é 2,5% num
+  agachamento de 100 kg e 12,5% num desenvolvimento de 20 kg: generoso com quem já é forte,
+  agressivo com quem começa. **Direção do conserto decidida: passo proporcional**, e o critério de
+  aceite já existe medido — a **Lei 1** (o loop quebra a ~20% da carga; nenhum par exercício/carga
+  pode ficar acima disso). **Custo conhecido:** mexer em `decidir()` obriga a atualizar
+  `server/src/test/oracle/progressao_v3.py` e regerar `referencia_progressao.txt` (847 KB)
+- **P3 · `incremento` curado por exercício** (os 147, como `familia` e os `requires_*`) — o aparato
+  de curadoria já existe. **O que isso NÃO resolve, e precisa ficar escrito:** nem a assistida (é
+  direção, já resolvida pela flag), nem a aditiva (abaixo), nem a variância **por academia** — o
+  mesmo pec deck tem pino de 2,5 numa rede e 5 em outra. O teto real é calibração derivada do
+  histórico do usuário
+- **P2 · `Barra Fixa com Peso`: o piso impede prescrever zero** — `carga` ali é o peso ADICIONAL, e
+  `max(carga - inc, inc)` tem piso no próprio incremento, então **"sem peso adicional" é
+  imprescritível**. O piso deveria ser zero para carga aditiva. Registrado **separado** da semântica
+  geral de "peso corporal + lastro", que é fatia própria (abaixo)
+- **P4 · Semântica de "peso corporal + lastro"** — o raciocínio percentual do motor é cego ao peso
+  corporal: 2,5→5 kg de anilha é +100% para ele e ~+3% da carga real do sistema. São 2 exercícios
+  (`Barra Fixa com Peso`, `Flexão com Peso`), mas a decisão de produto é maior: se e como o motor
+  conhece o peso do usuário para compor a carga. **Não codar sem definir antes**
+- **P4 · `CABLE`/`MACHINE`/`DUMBBELL` são heurística calibrável, e quem calibra é uma TAREFA DE
+  MEDIÇÃO** — não é campo de perfil, não é tela, não é curadoria. Curto prazo: análise sobre os
+  registros (hoje, o Rafael). Destino: derivar do histórico. **Registrado assim de propósito, para
+  não nascer uma tela por falta de dono**
+- **P5 · `TRAP_BAR` e `KETTLEBELL` são decisões inertes** — `TRAP_BAR` recebeu 2,5 kg e
+  `barra_livre = true`, `KETTLEBELL` recebeu NULL, e **nenhum dos dois tem exercício na lista
+  principal** (medido). Só valem via substituição manual pelo usuário. O motivo do NULL do
+  kettlebell é "o motor não usa", **não** "varia por tamanho" — registrar o certo importa, porque o
+  motivo errado convidaria alguém a consertar o que não está quebrado
 
 ## Fatia H — Catálogo de exercícios (ARCH #37)
 

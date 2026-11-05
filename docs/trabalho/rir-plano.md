@@ -63,6 +63,70 @@ juntas pra qualquer coisa mudar em produção.
    o RIR da 1ª série do dia; `decidir()`/`estimarUmRm()` usam RIR de TODAS as séries. A tela
    precisaria capturar RIR série a série (como já faz com `repsDone`/`weight`), não só a primeira.
 
+## Achado de 2026-11-05 — resposta real à pergunta 1 (lido no código, não suposição)
+
+> A pergunta 1 original ("de onde vêm `Papel`/`incremento`/`barraLivre` hoje, catálogo ou
+> sessão?") presumia que os três já existiam em algum lugar e só precisavam ser encontrados e
+> ligados. **Não existem.** Verificado por grep em `server/src/main/kotlin` e em
+> `shared/features/{exercise,session}` (domain + data):
+
+- **`Papel`** (`SessionComposition.Papel`, `engine/v3/SessionComposition.kt`) é um conceito que só
+  existe DENTRO do motor v3, atribuído em tempo de geração do programa. Não está em
+  `WorkoutSessionDto`/`SetLogDto`, não está persistido em nenhuma tabela de sessão, e o gerador de
+  produção hoje (`StructureEngine`/`SlotFiller`, não-v3) não carrega esse conceito pra frente.
+- **`incremento` e `barraLivre`** (por exercício) **não existem em lugar nenhum do código.** Os dois
+  nomes só aparecem como parâmetros de `Progressao.decidir()`/`calibrar()` — nenhum produtor em
+  `Exercise` (catálogo, campo a campo verificado: `equipment` é só `String?` solto, sem estrutura
+  pra derivar "é barra livre" ou "incremento de carga"), nenhum em `ExerciseRepository`, nenhum em
+  qualquer DTO de sessão. O único "incremento" real no código é o passo fixo de **2,5 kg** da UI
+  (`WorkoutSessionViewModel.ajustarPeso()`, botão `-`/`+`) — igual pra todo mundo, sem relação com
+  o exercício, e que NÃO serve como substituto: `Progressao` precisa do incremento típico daquele
+  equipamento específico (a diferença entre halter de 2 kg em 2 kg e barra com anilha de 1,25 kg).
+
+**O que isso muda:** esta não é uma fatia de "ligar um fio que falta" — é uma fatia de **modelar dois
+dados novos no catálogo** (`incremento: Double` e `barraLivre: Boolean` por exercício, provavelmente
+migration nova + curadoria manual, já que não é derivável do que existe) **e decidir como `Papel`
+sai do v3 e chega no momento do `record()`**, antes de sequer cogitar chamar `decidir()`/`calibrar()`
+em produção. As perguntas 2–4 originais continuam valendo como estavam.
+
+**Decisão em aberto, nomeada aqui pra não virar suposição na próxima sessão:** talvez valha quebrar
+em duas fatias — (1) catálogo: `incremento`/`barraLivre` por exercício, curadoria, migration; (2) o
+fio RIR → `Progressao` → `registrar()`, que já depende de (1) estar pronto. Decidir ao abrir a
+sessão, não antes.
+
+## ⚠️ Aviso de 2026-11-05 — o RIR chegando NÃO conserta a qualidade da progressão
+
+> Medido na simulação da fatia do catálogo (`tools/motor_sim/sim_incremento.py`, tabelas em
+> `trabalho/catalogo-incremento-e-semantica-de-carga.md`). **Esta fatia não pode ser planejada
+> como se resolvesse a progressão** — ela destrava o dado, e o que aparece embaixo são dois
+> defeitos de comportamento que já estão lá:
+
+- **A Regra 3 não protege no caso para que foi escrita.** O KDoc diz que a tolerância pós-salto
+  existe para evitar "o halter de 8 → 10 kg em loop de subir e devolver". Mas ela exige
+  `rirNoAlvo`, e quem acabou de receber um aumento volta com RIR 0 — a tolerância não ativa e o
+  DESCE acontece. Resultado medido: oscilação permanente sempre que o passo passa de ~20% da
+  carga (halter leve, crossover leve, máquina leve com incremento 5).
+- **MANTEM em RIR 0: motor imóvel com a pessoa treinando à falha.** Halter a 13 kg, sessões 3–10:
+  8–9 reps com RIR 0 (falha) oito sessões seguidas. Está dentro da faixa 8–12, então não é
+  `abaixo`; não bate o topo, então não é `topo` → MANTEM. A Regra 4 seria o freio, mas está
+  anulada (limiar 12,5 × incremento = 13 kg; a carga É 13 kg). **Hoje isso é invisível porque o
+  motor está dormente; com o RIR chegando, passa a ser comportamento de produção.**
+- **[BLOQUEIA O FECHAMENTO DESTA FATIA] A troca de sinal de `cargaInvertida` no `decidir()`.**
+  A coluna `carga_invertida` nasceu na V74 (fatia do catálogo) com 4 exercícios marcados, mas
+  **o motor ainda não a lê**. Hoje é inofensivo porque nada chama `decidir()` em produção; **no
+  dia em que este fio ligar sem a troca de sinal, a Barra Fixa Assistida regride calada** — o
+  `SOBE` faz `carga + incremento`, e na assistida mais peso é mais ajuda. Direção errada é pior
+  que magnitude errada. Custo conhecido e aceito: mexer em `decidir()` obriga a atualizar
+  `server/src/test/oracle/progressao_v3.py` e regerar `referencia_progressao.txt` (847 KB).
+  **Caso de teste nomeado, obrigatório na C2 desta fatia:** exercício com `cargaInvertida = true`,
+  séries no topo da faixa com RIR no alvo, decisão `SOBE` → **a carga devolvida tem de ser MENOR
+  que a anterior**. Caminho de falha do mesmo caso: `cargaInvertida = false` no mesmo cenário →
+  carga maior (prova que o sinal não foi trocado para todo mundo).
+- **Decisão B (Rafael, 2026-11-05): o contador da Regra 4 conta o EFEITO, não a intenção.** Com o
+  arredondamento, a regra computa e é apagada (`anulada = true`). Se o disparo contar a execução,
+  a medição mostra freio agindo onde não age. **Corrigir nesta fatia**, que é quem instrumenta a
+  Regra 4 pela primeira vez.
+
 ## Desenho — Servidor → Contrato → Cliente (esqueleto, a confirmar na sessão)
 
 **Servidor** (depende das respostas 1–3):

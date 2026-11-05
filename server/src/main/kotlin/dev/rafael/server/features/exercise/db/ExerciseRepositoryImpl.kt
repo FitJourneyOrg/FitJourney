@@ -183,4 +183,7 @@ internal fun ResultRow.toExercise(nomeTraduzido: String? = null): Exercise = Exe
         if (this@toExercise[ExercisesTable.requiresAnchorPoint]) add(Accessory.ANCHOR_POINT)
     },
     rirMinimoSeguranca = this[ExercisesTable.rirMinimoSeguranca],
+    incremento = this[ExercisesTable.incremento],
+    barraLivre = this[ExercisesTable.barraLivre],
+    cargaInvertida = this[ExercisesTable.cargaInvertida],
 )

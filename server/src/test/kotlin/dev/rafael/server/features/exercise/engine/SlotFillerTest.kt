@@ -54,6 +54,11 @@ class SlotFillerTest {
         familia = null,
         acessorios = emptySet(),
         rirMinimoSeguranca = false,
+        // V74: o SlotFiller (motor antigo) não lê nenhum dos três. Coerentes com equipment = null,
+        // que é o que o chk_exercises_barra_livre exige: sem equipamento, barra livre é false.
+        incremento = null,
+        barraLivre = false,
+        cargaInvertida = false,
     )
 
     private fun slot(
