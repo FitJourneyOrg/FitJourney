@@ -9,6 +9,7 @@ object WorkoutExercisesTable : Table("workout_exercises") {
     val orderIndex = integer("order_index")
     val restSeconds = integer("rest_seconds").default(90)
     val rir = integer("rir").nullable()   // ARCH #26 — RIR alvo; null no manual
+    val papel = varchar("papel", 16).nullable()   // V75 — Papel.name; null no manual
 
     override val primaryKey = PrimaryKey(id)
 }

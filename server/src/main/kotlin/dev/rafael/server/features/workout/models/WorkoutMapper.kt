@@ -16,6 +16,7 @@ fun WorkoutExercise.toDto(): WorkoutExerciseDto = WorkoutExerciseDto(
     orderIndex = orderIndex,
     restSeconds = restSeconds,   // <- ERA O QUE FALTAVA (saía sempre 90)
     rir = rir,
+    papel = papel,
     sets = sets.map { WorkoutSetDto(reps = it.reps, orderIndex = it.orderIndex) },
 )
 // DTO -> domínio (entrada): ESCREVER o campo
@@ -25,6 +26,7 @@ fun WorkoutExerciseDto.toDomain(): WorkoutExercise = WorkoutExercise(
     orderIndex = orderIndex,
     restSeconds = restSeconds,   // <- ERA O QUE FALTAVA (valor do cliente morria aqui)
     rir = rir,
+    papel = papel,
     sets = sets.map { WorkoutSet(id = Uuid.NIL, reps = it.reps, orderIndex = it.orderIndex) },
 )
 

@@ -284,6 +284,7 @@ private fun ProgramDto.toModel(userId: Uuid, origin: WorkoutOrigin, name: String
                         orderIndex = e.orderIndex,
                         restSeconds = e.restSeconds,
                         rir = e.rir,
+                        papel = e.papel,
                         sets = e.sets.map { s -> WorkoutSet(Uuid.NIL, s.reps, s.orderIndex) },
                     )
                 },

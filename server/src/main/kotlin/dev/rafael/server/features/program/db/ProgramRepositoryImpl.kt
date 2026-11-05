@@ -1,5 +1,6 @@
 package dev.rafael.server.features.program.db
 
+import dev.rafael.contract.workout.Papel
 import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.core.result.AppError
@@ -183,6 +184,7 @@ class ProgramRepositoryImpl : ProgramRepository {
                 it[orderIndex] = ex.orderIndex
                 it[restSeconds] = ex.restSeconds
                 it[rir] = ex.rir
+                it[papel] = ex.papel?.name
             }
             ex.sets.forEach { s ->
                 WorkoutSetsTable.insert {
@@ -236,6 +238,7 @@ class ProgramRepositoryImpl : ProgramRepository {
             orderIndex = this[WorkoutExercisesTable.orderIndex],
             restSeconds = this[WorkoutExercisesTable.restSeconds],
             rir = this[WorkoutExercisesTable.rir],
+            papel = this[WorkoutExercisesTable.papel]?.let { Papel.valueOf(it) },
             sets = sets,
         )
     }

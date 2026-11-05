@@ -3,6 +3,7 @@ package dev.rafael.server.features.workout.db
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
+import dev.rafael.contract.workout.Papel
 import dev.rafael.core.result.asSuccess
 import dev.rafael.server.features.workout.models.Workout
 import dev.rafael.server.features.workout.models.WorkoutExercise
@@ -128,6 +129,7 @@ class WorkoutRepositoryImpl : WorkoutRepository {
                 it[orderIndex] = ex.orderIndex
                 it[restSeconds] = ex.restSeconds
                 it[rir] = ex.rir
+                it[papel] = ex.papel?.name
             }
             ex.sets.forEach { s ->
                 WorkoutSetsTable.insert {
@@ -175,6 +177,7 @@ class WorkoutRepositoryImpl : WorkoutRepository {
             orderIndex = this[WorkoutExercisesTable.orderIndex],
             restSeconds = this[WorkoutExercisesTable.restSeconds],
             rir = this[WorkoutExercisesTable.rir],
+            papel = this[WorkoutExercisesTable.papel]?.let { Papel.valueOf(it) },
             sets = sets,
         )
     }
