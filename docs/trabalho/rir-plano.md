@@ -183,3 +183,106 @@ sessão, não antes.
    aqui com as referências de linha).
 2. Responder as 4 perguntas acima com o Rafael ANTES de codar (C1 — decisão arquitetural nova).
 3. Backend → Contrato → Cliente, nessa ordem, como sempre.
+
+## Achado de 2026-11-05 (sessão "login sem backend", antes de abrir esta fatia) — pergunta 2 tem resposta nova
+
+A V74 (fatia do catálogo, fechada hoje) já criou `incremento`/`barraLivre`/`cargaInvertida` em
+`exercises` — a pergunta 1 original ("de onde vêm esses três?") está **parcialmente resolvida**:
+os dois primeiros existem agora no catálogo, server-side (`Exercise.incremento`/`barraLivre`,
+não vão ao DTO). Falta só `Papel`.
+
+E sobre `Papel` (pergunta 2), uma leitura nova do gerador de PRODUÇÃO (não-v3) muda o quadro:
+
+- `SessionComposition.Papel` (v3) é atribuído por VAGA, não por exercício — depende de quantas
+  séries aquele músculo recebe na semana e da posição na distribuição (`papeisPara()`). Não é
+  propriedade do `Exercise`, é propriedade do PLANO daquela semana. Confirma que não dá pra
+  "adicionar uma coluna no catálogo" pra isto, ao contrário de `incremento`/`barraLivre`.
+- **Mas a produção já calcula o equivalente.** `StructureEngine`/`VolumeModel` têm `SlotRole`
+  (`COMPOSTO_PESADO`/`COMPOSTO_ACESSORIO`/`ISOLAMENTO`) — mesma tripla de `Papel`, calculada do
+  mesmo jeito (posição na distribuição de séries do músculo). E uma FATIA do `role` já sobrevive
+  até o template persistido: `DeterministicWorkoutGenerator` grava `slot.rir` (RIR alvo, "por
+  papel", ARCH #26) em `WorkoutExerciseDto.rir`. O que NÃO sobrevive é o `role`/`Papel` em si
+  (nem a faixa de reps — só o `WorkoutSetDto.reps` resolvido, um número, não a faixa) — ninguém
+  grava `SlotRole` em lugar nenhum do contrato ou da persistência.
+
+**Isto muda a pergunta 2.** Não é "liga o v3 ou não" — é mais barato: **persistir o `role` que a
+produção JÁ calcula**, independente de qual motor gera (v3 dormente continua dormente). Dá pra
+desacoplar esta fatia da decisão de troca de produção inteira.
+
+**Pergunta 2 revisada, pra decidir com o Rafael antes de codar:**
+- `WorkoutExerciseDto` ganha um campo novo (`papel`? reaproveitar o nome `Papel` do v3, ou um
+  nome próprio da produção, já que `SlotRole` e `Papel` são conceitos gêmeos mas de módulos
+  diferentes — mesclar os dois enums ou manter dois e mapear na borda?), preenchido por
+  `DeterministicWorkoutGenerator` a partir de `slot.role`, da mesma forma que `rir` já é hoje.
+- Falta decidir se vale a pena já sair com `SlotRole`→`Papel` unificado (um enum só, movido pra
+  `core`/`contract`, os dois motores apontando pra ele) ou se é cedo pra essa unificação e cada
+  motor mantém o seu, convertendo na borda do `record()`.
+
+## Decisões tomadas com o Rafael (2026-11-05, antes de codar)
+
+- **Unificar `Papel`/`SlotRole` num enum só**, movido pra `shared-contract` (onde `WorkoutExerciseDto`
+  já mora) — os dois motores (v3 e produção) passam a apontar pro mesmo tipo. Nome: `Papel`
+  (não `SlotRole`) — é o nome que `Progressao.decidir()`/`calibrar()` já consomem, e não tocar a
+  assinatura deles evita custo de regerar o oráculo. Mapeamento ao apagar `SlotRole`:
+  `COMPOSTO_PESADO → COMPOSTO`, `COMPOSTO_ACESSORIO → ACESSORIO`, `ISOLAMENTO → ISOLAMENTO`.
+  Checado antes de propor: os três papéis da produção (`VolumeModel.kt`: COMPOSTO_PESADO
+  5-8/RIR2, COMPOSTO_ACESSORIO 8-12/RIR1, ISOLAMENTO 12-15/RIR1) são a MESMA classificação
+  estrutural das faixas do v3 (COMPOSTO 6-9/RIR2, ACESSORIO 8-12/RIR1, ISOLAMENTO 12-16/RIR1) —
+  pequena diferença de calibração numérica entre os dois motores, mas o mesmo papel. Isso não
+  precisa igualar: `decidir()`/`calibrar()` usam a FAIXA PRÓPRIA do v3 (`PrescricaoV3`) pra
+  avaliar abaixo/no-alvo/topo, não a faixa que a produção prescreveu — o `Papel` é só o rótulo
+  que escolhe qual faixa consultar. A produção continua livre pra calibrar os PRÓPRIOS números
+  de reps/descanso/RIR por `Papel`, sem acoplar ao v3.
+- **Bi-set/vaga duplicada: só a 1ª ocorrência do exercício na sessão conta** pra `registrar()`.
+  Sem mudança de schema (PK de `progression_event` continua `usuário, exercício, sessão`). As
+  ocorrências seguintes do mesmo exercício na mesma sessão são ignoradas pela progressão (ainda
+  contam normalmente pra tudo o resto — XP, histórico de execução, etc.).
+- **RIR por série**, não só a 1ª — mesmo padrão de `repsDone`/`weight` na tela de execução.
+  `decidir()`/`calibrar()` usam RIR de todas as séries; a Regra 4 (`reducaoIntrasessao`) continua
+  usando só a 1ª, sem mudança nela.
+
+## Desenho final (Backend → Contrato → Cliente)
+
+### Servidor
+1. `Papel` nasce em `shared-contract` (novo arquivo, `@Serializable`), com o KDoc explicando a
+   origem dupla (v3 + produção) e por que os valores não mudam (contrato com o oráculo).
+2. `v3/SessionComposition.kt`: `Papel` deixa de ser `enum class` local, passa a importar do
+   contrato. Nenhum uso interno muda de nome.
+3. `VolumeModel.kt`/`StructureEngine.kt`/`SlotFiller.kt`/`DeterministicWorkoutGenerator.kt`:
+   `SlotRole` apagado, trocado por `Papel` (import do contrato) nos três pontos acima.
+4. `WorkoutExerciseDto` ganha `val papel: Papel? = null` — nullable (treino manual, sem
+   prescrição automática, não tem papel). `DeterministicWorkoutGenerator` passa a mandar
+   `papel = slot.role` (já renomeado) junto do `rir` que já manda hoje.
+5. Persistência do treino (tabela de `workout_exercises` ou equivalente — **checar o schema
+   antes de assumir coluna nova**, mesmo padrão de toda migration aditiva do projeto): nova
+   coluna pro `papel`, nullable.
+6. `SessionService.record()`, depois de `repository.save(session)` (mesmo `also` de
+   `avaliarConquistas`): por exercício ÚNICO da sessão (1ª ocorrência só, decisão acima), ler
+   `papel` do `WorkoutExercise` do treino de origem + `incremento`/`barraLivre`/`cargaInvertida`
+   do catálogo (`ExerciseRepository`, já existem desde a V74) + `Estado` anterior
+   (`ProgressaoRepository.buscar`), chamar `calibrar()` (1ª exposição) ou `decidir()` (demais),
+   `ProgressaoRepository.registrar(...)`.
+7. `SessionRepositoryImpl.save()`: `it[rir] = setLog.rir` no insert de `SessionSetLogsTable`
+   (coluna já existe desde V69, nunca escrita).
+
+### Contrato
+- `SetLogDto` ganha `val rir: Int? = null`.
+- `WorkoutExerciseDto` ganha `val papel: Papel? = null` (acima).
+
+### Cliente
+- `SetEntry` ganha `val rir: String = ""`; `SessionEvent.RirChanged(index, value)`; `finish()`
+  manda `rir = e.rir.toIntOrNull()`.
+- UI de execução: campo de RIR por série (mesma forma de `repsDone`/`weight`).
+- Checar se há tabela/cache local de log de sessão antes de assumir que basta mandar no DTO —
+  **não inspecionado ainda, primeiro passo ao abrir o cliente**.
+
+## Porte da fatia — fora do tamanho de uma sessão só
+
+Esta investigação (sem codar nada) já cobriu: unificação de enum tocando DOIS motores
+(v3 + produção), DTO novo em dois lugares, persistência nova em pelo menos duas tabelas, o fio
+`record()` → `decidir()`/`calibrar()`/`registrar()`, e a UI de captura de RIR no cliente. É
+Backend → Contrato → Cliente com migration em cada ponta — maior que qualquer fatia fechada
+nesta sessão (catálogo V74 foi só servidor; login-sem-backend foi só cliente). Recomendação:
+abrir em sessão nova, com este plano pronto, começando pela etapa 1–4 do servidor (unificação do
+enum + `WorkoutExerciseDto.papel`) como primeiro commit/teste verde, antes de tocar
+`SessionService.record()`.
