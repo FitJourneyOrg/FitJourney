@@ -1,5 +1,6 @@
 package dev.rafael.server.features.exercise.engine
 
+import dev.rafael.contract.workout.Papel
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
@@ -115,7 +116,7 @@ class StructureEngineTest {
     @Test
     fun `composto pesado vem primeiro e descansa mais que isolamento`() {
         val upper = engine.buildSkeleton(Goal.GAIN_MUSCLE, Level.INTERMEDIATE, 4, emptySet()).days[0]
-        assertEquals(SlotRole.COMPOSTO_PESADO, upper.slots.first().role, "composto pesado abre o dia")
+        assertEquals(Papel.COMPOSTO, upper.slots.first().role, "composto pesado abre o dia")
         assertTrue(
             upper.slots.first().restSeconds >= upper.slots.last().restSeconds,
             "composto pesado descansa >= isolamento",

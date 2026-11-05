@@ -2,6 +2,7 @@ package dev.rafael.server.features.exercise.engine
 
 import dev.rafael.contract.exercise.ExerciseCategory
 import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.workout.Papel
 import dev.rafael.server.features.exercise.models.Exercise
 import dev.rafael.server.features.exercise.models.MovementPattern
 import kotlin.random.Random
@@ -43,8 +44,8 @@ class SlotFiller(seed: Long) {
     private fun candidatesFor(slot: Slot, pool: List<Exercise>): List<Exercise> {
         val byMuscle = pool.filter { matchesTarget(it, slot.target) }
         return when (slot.role) {
-            SlotRole.COMPOSTO_PESADO, SlotRole.COMPOSTO_ACESSORIO -> byMuscle.filter { it.isCompound == true }
-            SlotRole.ISOLAMENTO -> byMuscle.filter { it.isCompound == false }
+            Papel.COMPOSTO, Papel.ACESSORIO -> byMuscle.filter { it.isCompound == true }
+            Papel.ISOLAMENTO -> byMuscle.filter { it.isCompound == false }
         }
     }
 
@@ -83,7 +84,7 @@ class SlotFiller(seed: Long) {
         var s = 0.0
         if (ex.primaryMuscles.any { it.name in focusMuscles }) s += 4.0
         if (ex.level?.name == userLevel) s += 2.0
-        if (slot.role != SlotRole.ISOLAMENTO && ex.isCompound == true) s += 2.0
+        if (slot.role != Papel.ISOLAMENTO && ex.isCompound == true) s += 2.0
         s += equipmentWeight(ex.equipment)
         return s
     }

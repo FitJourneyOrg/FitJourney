@@ -3,7 +3,7 @@ package dev.rafael.server.features.exercise.engine.v3
 import dev.rafael.contract.profile.Level
 import dev.rafael.server.features.exercise.engine.TargetMuscle
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Decisao
-import dev.rafael.server.features.exercise.engine.v3.SessionComposition.Papel
+import dev.rafael.contract.workout.Papel
 
 /**
  * Onde a pessoa está no mesociclo. `numero` é o que entra como `mesocicloAtual` no

@@ -1,7 +1,7 @@
 package dev.rafael.server.features.exercise.engine.v3
 
 import dev.rafael.contract.profile.Goal
-import dev.rafael.server.features.exercise.engine.v3.SessionComposition.Papel
+import dev.rafael.contract.workout.Papel
 import kotlin.math.ceil
 import kotlin.math.floor
 

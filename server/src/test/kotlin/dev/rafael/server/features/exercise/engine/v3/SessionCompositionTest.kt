@@ -1,7 +1,7 @@
 package dev.rafael.server.features.exercise.engine.v3
 
 import dev.rafael.server.features.exercise.engine.TargetMuscle
-import dev.rafael.server.features.exercise.engine.v3.SessionComposition.Papel
+import dev.rafael.contract.workout.Papel
 import dev.rafael.server.features.exercise.engine.v3.SessionComposition.Vaga
 import kotlin.test.Test
 import kotlin.test.assertEquals

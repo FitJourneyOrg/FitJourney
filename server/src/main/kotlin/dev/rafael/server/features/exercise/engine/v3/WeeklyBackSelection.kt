@@ -1,5 +1,6 @@
 package dev.rafael.server.features.exercise.engine.v3
 
+import dev.rafael.contract.workout.Papel
 import dev.rafael.server.features.exercise.engine.TargetMuscle
 import dev.rafael.server.features.exercise.models.Exercise
 import dev.rafael.server.features.exercise.models.MovementPattern
@@ -58,8 +59,8 @@ object WeeklyBackSelection {
         data class Candidata(val diaIdx: Int, val vagaIdx: Int, val escolha: Exercise)
 
         val escolhasPorVaga = vagasBack.mapNotNull { (diaIdx, vagaIdx, vp) ->
-            val querComposto = vp.vaga.papel == SessionComposition.Papel.COMPOSTO ||
-                vp.vaga.papel == SessionComposition.Papel.ACESSORIO
+            val querComposto = vp.vaga.papel == Papel.COMPOSTO ||
+                vp.vaga.papel == Papel.ACESSORIO
             var cands = candidatos.filter {
                 it.volumeTarget != null && TargetMuscle.valueOf(it.volumeTarget!!) == TargetMuscle.BACK &&
                     it.isCompound == querComposto &&

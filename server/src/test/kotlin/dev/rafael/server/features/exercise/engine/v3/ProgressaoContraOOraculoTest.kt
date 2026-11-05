@@ -7,7 +7,7 @@ import dev.rafael.server.features.exercise.engine.v3.PromocaoDeNivel.Diagnostico
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Decisao
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Estado
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Serie
-import dev.rafael.server.features.exercise.engine.v3.SessionComposition.Papel
+import dev.rafael.contract.workout.Papel
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals

@@ -4,7 +4,7 @@ import dev.rafael.contract.profile.Goal
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Decisao
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Estado
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Serie
-import dev.rafael.server.features.exercise.engine.v3.SessionComposition.Papel
+import dev.rafael.contract.workout.Papel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith

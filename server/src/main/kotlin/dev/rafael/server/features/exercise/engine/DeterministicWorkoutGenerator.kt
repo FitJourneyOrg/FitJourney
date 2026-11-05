@@ -101,6 +101,7 @@ private fun FilledExercise.toExerciseDto(orderIndex: Int): WorkoutExerciseDto {
         orderIndex = orderIndex,
         restSeconds = slot.restSeconds,
         rir = slot.rir,
+        papel = slot.role,
         sets = (0 until slot.sets).map { WorkoutSetDto(reps = reps, orderIndex = it) },
     )
 }

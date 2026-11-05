@@ -5,6 +5,7 @@ import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitCatalog
 import dev.rafael.contract.profile.SplitType
+import dev.rafael.contract.workout.Papel
 import kotlin.math.roundToInt
 
 /**
@@ -153,14 +154,14 @@ class StructureEngine {
     }
 
     /** Posição do exercício dentro do músculo → papel. */
-    private fun roleFor(target: TargetMuscle, index: Int): SlotRole = when (target) {
+    private fun roleFor(target: TargetMuscle, index: Int): Papel = when (target) {
         // Isolamento puro (não tem composto-âncora confiável no nosso modelo).
         TargetMuscle.CALVES,
-        TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS -> SlotRole.ISOLAMENTO
+        TargetMuscle.BICEPS, TargetMuscle.TRICEPS, TargetMuscle.FOREARMS -> Papel.ISOLAMENTO
         else -> when (index) {
-            0 -> SlotRole.COMPOSTO_PESADO
-            1 -> SlotRole.COMPOSTO_ACESSORIO
-            else -> SlotRole.ISOLAMENTO
+            0 -> Papel.COMPOSTO
+            1 -> Papel.ACESSORIO
+            else -> Papel.ISOLAMENTO
         }
     }
 

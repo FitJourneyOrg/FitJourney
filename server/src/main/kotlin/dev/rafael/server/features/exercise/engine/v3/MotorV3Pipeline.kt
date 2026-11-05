@@ -1,5 +1,6 @@
 package dev.rafael.server.features.exercise.engine.v3
 
+import dev.rafael.contract.workout.Papel
 import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
@@ -38,7 +39,7 @@ object MotorV3Pipeline {
         val sessoes: List<Pair<String, List<CatalogFiller.VagaPreenchida>>>,
         val entregue: Map<TargetMuscle, Int>,
         val compostosSemana: Map<TargetMuscle, Int>,
-        val vagasVazias: List<Triple<String, TargetMuscle, SessionComposition.Papel>>,
+        val vagasVazias: List<Triple<String, TargetMuscle, Papel>>,
     )
 
     data class Resultado(
@@ -85,7 +86,7 @@ object MotorV3Pipeline {
         val resultado = PontoFixoIndireto.iterar<Estado> { indireto ->
             val disparos = mutableMapOf<String, Int>()
             if (modoConservador) disparos["modo_conservador_ativo"] = 1
-            val vazias = mutableListOf<Triple<String, TargetMuscle, SessionComposition.Papel>>()
+            val vazias = mutableListOf<Triple<String, TargetMuscle, Papel>>()
 
             // Piso direto (Fatia 8 / D-1): entra na demanda ANTES da alocação, para que o
             // orçamento seja disputado com ele dentro — nunca somado depois.

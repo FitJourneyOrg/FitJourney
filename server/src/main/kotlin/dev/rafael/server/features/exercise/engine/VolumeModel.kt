@@ -3,6 +3,7 @@ package dev.rafael.server.features.exercise.engine
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.workout.Papel
 
 /**
  * Modelo de volume por músculo (ARCH #26, Fatia A). Substitui o raciocínio antigo
@@ -23,9 +24,6 @@ import dev.rafael.contract.profile.MuscleGroup
  * `docs/regras/01-motor-de-geracao.md`.
  */
 enum class TargetMuscle { CHEST, BACK, SHOULDERS, BICEPS, TRICEPS, FOREARMS, QUADS, POSTERIOR, CALVES, GLUTES }
-
-/** Papel do exercício → define reps/descanso/RIR (ARCH #26 §3.2). */
-enum class SlotRole { COMPOSTO_PESADO, COMPOSTO_ACESSORIO, ISOLAMENTO }
 
 /**
  * Faixa etária → calibragem do motor (ARCH #24). Além do gate de menor, a idade é VARIÁVEL do
@@ -98,15 +96,15 @@ object RoleParams {
     data class P(val repRange: String, val restSeconds: Int, val rir: Int)
 
     /** Iniciante, GENERAL_HEALTH e IDOSO (60+): RIR-piso 3 (cue "deixe no tanque", nunca falha). */
-    fun paramsFor(role: SlotRole, level: Level, goal: Goal, age: Int? = null): P {
+    fun paramsFor(role: Papel, level: Level, goal: Goal, age: Int? = null): P {
         val conservative = goal == Goal.GENERAL_HEALTH || level == Level.BEGINNER ||
             ageBandOf(age) == AgeBand.SENIOR
         return when (role) {
-            SlotRole.COMPOSTO_PESADO ->
+            Papel.COMPOSTO ->
                 if (conservative) P("6-10", 150, 3) else P("5-8", 150, 2)
-            SlotRole.COMPOSTO_ACESSORIO ->
+            Papel.ACESSORIO ->
                 if (conservative) P("8-12", 105, 3) else P("8-12", 105, 1)
-            SlotRole.ISOLAMENTO ->
+            Papel.ISOLAMENTO ->
                 if (conservative) P("10-15", 75, 3) else P("12-15", 75, 1)
         }
     }
