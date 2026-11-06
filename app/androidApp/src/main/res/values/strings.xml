@@ -1232,6 +1232,10 @@
     <string name="sessao_diminuir_peso">Diminuir peso</string>
     <string name="sessao_aumentar_reps">Aumentar repetições</string>
     <string name="sessao_diminuir_reps">Diminuir repetições</string>
+    <string name="sessao_rir_rotulo">RIR</string>
+    <string name="sessao_aumentar_rir">Aumentar RIR</string>
+    <string name="sessao_diminuir_rir">Diminuir RIR</string>
+    <string name="sessao_rir_explicacao">RIR: quantas repetições você ainda teria. Pode deixar em branco.</string>
     <string name="sessao_iniciar_descanso">Iniciar descanso</string>
     <string name="sessao_pausar_descanso">Pausar descanso</string>
     <string name="sessao_retomar_descanso">Retomar descanso</string>

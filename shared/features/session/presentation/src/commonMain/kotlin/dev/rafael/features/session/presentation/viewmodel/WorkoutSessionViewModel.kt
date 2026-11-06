@@ -49,7 +49,7 @@ class WorkoutSessionViewModel(
      * celular fica no bolso.
      */
     private fun contarOTempoDaSessao() {
-        viewModelScope.launch {
+        tempoJob = viewModelScope.launch {
             while (true) {
                 _state.update { it.copy(segundosDaSessao = ((nowMs() - inicioMs) / 1000).toInt()) }
                 delay(1_000)
@@ -61,6 +61,7 @@ class WorkoutSessionViewModel(
         when (event) {
             is SessionEvent.RepsChanged -> updateEntry(event.index) { it.copy(repsDone = event.value.filter { c -> c.isDigit() }) }
             is SessionEvent.WeightChanged -> updateEntry(event.index) { it.copy(weight = event.value.filter { c -> c.isDigit() || c == '.' }) }
+            is SessionEvent.RirChanged -> updateEntry(event.index) { it.copy(rir = event.value.filter { c -> c.isDigit() }) }
             is SessionEvent.ToggleDone -> {
                 val marcando = _state.value.entries.getOrNull(event.index)?.done == false
                 updateEntry(event.index) { it.copy(done = !it.done) }
@@ -165,6 +166,14 @@ class WorkoutSessionViewModel(
     private var restEndsAt: Long? = null
     private var restJob: Job? = null
 
+    /**
+     * Guardado só pra poder cancelar (ver [onCleared]): `contarOTempoDaSessao()` é um
+     * `while (true)` que nunca termina por conta própria. Em produção, `ViewModel.clear()` do
+     * Android cancela o `viewModelScope` inteiro de qualquer forma -- isto é redundante lá, mas é
+     * o que torna o laço cancelável num teste que nunca passa pelo ciclo de vida do Android.
+     */
+    private var tempoJob: Job? = null
+
     private fun startRest(seconds: Int) {
         if (seconds <= 0) return
         restEndsAt = nowMs() + seconds * 1000L
@@ -206,8 +215,15 @@ class WorkoutSessionViewModel(
         _state.update { it.copy(restRemaining = null, restPausado = false) }
     }
 
-    override fun onCleared() {
+    /**
+     * `public`, não `protected` (o padrão de `override`): o teste constrói este ViewModel direto,
+     * sem `ViewModelStore`, então é ele quem precisa chamar isto pra parar `tempoJob`/`restJob` --
+     * sem isso, o `while (true)` de `contarOTempoDaSessao()` continua rodando depois que o teste
+     * termina, e trava o processo de teste esperando uma corrotina que nunca acaba.
+     */
+    public override fun onCleared() {
         restJob?.cancel()
+        tempoJob?.cancel()
         super.onCleared()
     }
 
@@ -266,6 +282,7 @@ class WorkoutSessionViewModel(
                     repsDone = e.repsDone.toIntOrNull() ?: 0,
                     weightKg = e.weight.toDoubleOrNull(),
                     done = e.done,
+                    rir = e.rir.toIntOrNull(),
                 )
             },
         )

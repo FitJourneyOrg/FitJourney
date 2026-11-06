@@ -213,6 +213,16 @@ fun WorkoutSessionScreen(
                             serie = serie,
                             onPeso = { viewModel.onEvent(SessionEvent.AjustarPeso(it)) },
                             onReps = { viewModel.onEvent(SessionEvent.AjustarReps(it)) },
+                            onRir = { delta ->
+                                val atual = serie.entrada.rir.toIntOrNull() ?: 0
+                                val novo = (atual + delta).coerceAtLeast(0)
+                                viewModel.onEvent(SessionEvent.RirChanged(serie.indice, novo.toString()))
+                            },
+                        )
+                        Text(
+                            stringResource(R.string.sessao_rir_explicacao),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         FileiraDeSeries(
                             exercicio = exercicio,
@@ -438,6 +448,7 @@ private fun CartaoDeNumeros(
     serie: SerieEmExecucao,
     onPeso: (Double) -> Unit,
     onReps: (Int) -> Unit,
+    onRir: (Int) -> Unit,
 ) {
     Card(Modifier.fillMaxWidth()) {
         Row(Modifier.padding(vertical = 16.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -458,6 +469,17 @@ private fun CartaoDeNumeros(
                 descricaoMais = stringResource(R.string.sessao_aumentar_reps),
                 onMenos = { onReps(-1) },
                 onMais = { onReps(1) },
+                modifier = Modifier.weight(1f),
+            )
+            VerticalDivider(Modifier.height(96.dp))
+            Numero(
+                // Em branco = não informado (D-3); só mostra "0" quando a pessoa de fato zerou.
+                valor = serie.entrada.rir.ifBlank { "?" },  // símbolo de UI, não precisa de tradução
+                rotulo = stringResource(R.string.sessao_rir_rotulo),
+                descricaoMenos = stringResource(R.string.sessao_diminuir_rir),
+                descricaoMais = stringResource(R.string.sessao_aumentar_rir),
+                onMenos = { onRir(-1) },
+                onMais = { onRir(1) },
                 modifier = Modifier.weight(1f),
             )
         }
@@ -516,6 +538,14 @@ private fun FileiraDeSeries(
                 leadingIcon = if (serie.entrada.done) {
                     { Icon(Icons.Default.Check, contentDescription = null, Modifier.size(16.dp)) }
                 } else null,
+                // Seleção é TONAL COM SIGNIFICADO, então pede a cor explicitamente (ver a [REGRA] no
+                // `secondaryContainer` do `Theme.kt`). O neutro do slot genérico deixaria "onde você
+                // está" quase igual a "onde você não está", que é a única coisa que esta fileira faz.
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ),
             )
         }
     }
@@ -527,10 +557,13 @@ private fun BotaoSerieFeita(feita: Boolean, onToggle: () -> Unit) {
     Button(
         onClick = onToggle,
         modifier = Modifier.fillMaxWidth().height(56.dp),
+        // Feito é o MESMO azul em tom escuro, e não outra família: registrar a série é a ação da
+        // tela, e o que mudou foi o tempo verbal, não o assunto. O neutro do slot genérico leria
+        // como desabilitado, e era `secondaryContainer` (o roxo de IA) até 2026-11-03.
         colors = if (feita) {
             ButtonDefaults.buttonColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             )
         } else {
             ButtonDefaults.buttonColors()

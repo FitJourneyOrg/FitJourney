@@ -756,6 +756,10 @@
     <string name="sessao_diminuir_peso">Decrease weight</string>
     <string name="sessao_aumentar_reps">Increase reps</string>
     <string name="sessao_diminuir_reps">Decrease reps</string>
+    <string name="sessao_rir_rotulo">RIR</string>
+    <string name="sessao_aumentar_rir">Increase RIR</string>
+    <string name="sessao_diminuir_rir">Decrease RIR</string>
+    <string name="sessao_rir_explicacao">RIR: how many more reps you would still have. You can leave it blank.</string>
     <string name="sessao_iniciar_descanso">Start rest</string>
     <string name="sessao_pausar_descanso">Pause rest</string>
     <string name="sessao_retomar_descanso">Resume rest</string>
