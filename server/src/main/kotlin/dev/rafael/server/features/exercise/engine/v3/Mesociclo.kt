@@ -119,10 +119,27 @@ object AncoraDoIniciante {
 
     enum class Situacao { PROGREDINDO, DELOAD, AGUARDANDO_RETOMADA, RETOMOU, DIAGNOSTICO_PENDENTE, TROCA_AUTORIZADA }
 
-    /** Um evento do histórico da âncora: uma decisão de carga ou o marcador do deload. */
+    /**
+     * Um evento do histórico da âncora: uma decisão de carga, uma decisão de REPETIÇÃO (fatia
+     * "progressao-por-repeticao", 2026-11-06 -- `ProgressaoPorRepeticao`, exercícios `BODYWEIGHT`
+     * sem `incremento`) ou o marcador do deload.
+     *
+     * **Decisão do Rafael (2026-11-06): os dois eixos contam IGUAL pro contador de estagnação** --
+     * "estagnação é ausência de progressão de estímulo, independente da variável que gerou esse
+     * estímulo". [subiu] é o ponto único que [semSubirNoFim]/[situacao] consultam; nenhum dos dois
+     * sabe ou precisa saber que existem dois motores.
+     */
     sealed interface Evento {
         data class Carga(val decisao: Decisao) : Evento
+        data class Repeticao(val decisao: ProgressaoPorRepeticao.Decisao) : Evento
         data object Deload : Evento
+
+        /** `true` só pra uma decisão de SOBE, de qualquer um dos dois motores. */
+        val subiu: Boolean get() = when (this) {
+            is Carga -> decisao == Decisao.SOBE
+            is Repeticao -> decisao == ProgressaoPorRepeticao.Decisao.SOBE
+            Deload -> false
+        }
     }
 
     // internal (nao private): reaproveitado por PromocaoDeNivel.diagnosticoIniciante (Fatia 11),
@@ -130,7 +147,7 @@ object AncoraDoIniciante {
     internal fun semSubirNoFim(eventos: List<Evento>): Int {
         var n = 0
         for (e in eventos.asReversed()) {
-            if (e is Evento.Carga && e.decisao == Decisao.SOBE) break
+            if (e.subiu) break
             n++
         }
         return n
@@ -142,7 +159,7 @@ object AncoraDoIniciante {
             return if (semSubirNoFim(historico) >= ESTAGNACAO_SESSOES) Situacao.DELOAD else Situacao.PROGREDINDO
         }
         val depois = historico.subList(ultimoDeload + 1, historico.size)
-        if (depois.any { it is Evento.Carga && it.decisao == Decisao.SOBE }) {
+        if (depois.any { it.subiu }) {
             return if (semSubirNoFim(depois) < ESTAGNACAO_SESSOES) Situacao.RETOMOU else Situacao.DELOAD
         }
         if (depois.size < RETOMADA_SESSOES) return Situacao.AGUARDANDO_RETOMADA

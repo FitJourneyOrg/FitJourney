@@ -17,6 +17,14 @@ object ExerciseProgressionTable : Table("exercise_progression") {
     val umRmKg = double("um_rm_kg").nullable()
     val semSubir = integer("sem_subir")
 
+    /**
+     * V76, fatia "progressao-por-repeticao". `null` nos dois = o exercício progride por carga
+     * (ou nunca foi feito); uma linha só usa ESTE par OU `cargaKg`/`umRmKg`/`posSalto`, nunca os
+     * dois -- `incremento` do catálogo é fixo por exercício, não muda em runtime.
+     */
+    val repsMin = integer("reps_min").nullable()
+    val repsMax = integer("reps_max").nullable()
+
     /** Relógio do SERVIDOR. */
     val updatedAt = datetime("updated_at")
     override val primaryKey = PrimaryKey(userId, exerciseId)
@@ -38,7 +46,7 @@ object ProgressionEventTable : Table("progression_event") {
     val exerciseId = uuid("exercise_id").references(ExercisesTable.id)
     val sessionId = uuid("session_id").references(WorkoutSessionsTable.id)
 
-    /** `SOBE` | `MANTEM` | `DESCE` | `DELOAD`. */
+    /** `SOBE` | `MANTEM` | `DESCE` | `DELOAD` | `SOBE_REP` | `MANTEM_REP` | `DESCE_REP` (V76). */
     val tipo = text("tipo")
     val createdAt = datetime("created_at")
 

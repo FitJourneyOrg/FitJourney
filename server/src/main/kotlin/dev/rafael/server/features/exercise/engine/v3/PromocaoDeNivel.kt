@@ -32,12 +32,12 @@ object PromocaoDeNivel {
         if (ultimoDeload < 0) return null
         val depois = historico.subList(ultimoDeload + 1, historico.size)
         if (AncoraDoIniciante.semSubirNoFim(depois) < AncoraDoIniciante.ESTAGNACAO_SESSOES) return null
-        if (depois.any { it is Evento.Carga && it.decisao == Decisao.SOBE }) return Diagnostico.PROMOVER
+        if (depois.any { it.subiu }) return Diagnostico.PROMOVER
         val antes = historico.subList(0, ultimoDeload)
         val penultimoDeload = antes.indexOfLast { it is Evento.Deload }
         if (penultimoDeload >= 0) {
             val entre = antes.subList(penultimoDeload + 1, antes.size)
-            if (entre.none { it is Evento.Carga && it.decisao == Decisao.SOBE }) {
+            if (entre.none { it.subiu }) {
                 // nenhuma retomada entre os dois deloads mais recentes -- "consecutivos SEM retomada"
                 return Diagnostico.RECUPERACAO_SEM_RETOMADA
             }

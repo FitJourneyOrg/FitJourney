@@ -8,6 +8,7 @@ import dev.rafael.server.features.exercise.engine.v3.AncoraDoIniciante.Evento
 import dev.rafael.server.features.exercise.engine.v3.Mesociclo
 import dev.rafael.server.features.exercise.engine.v3.Progressao
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Decisao
+import dev.rafael.server.features.exercise.engine.v3.ProgressaoPorRepeticao
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
@@ -27,13 +28,19 @@ private fun agora() = Clock.System.now().toLocalDateTime(TimeZone.currentSystemD
 
 private const val DELOAD = "DELOAD"
 
+private const val SUFIXO_REP = "_REP"
+
 internal fun Evento.nome(): String = when (this) {
     is Evento.Carga -> decisao.name
+    is Evento.Repeticao -> decisao.name + SUFIXO_REP
     Evento.Deload -> DELOAD
 }
 
-internal fun eventoDe(nome: String): Evento =
-    if (nome == DELOAD) Evento.Deload else Evento.Carga(Decisao.valueOf(nome))
+internal fun eventoDe(nome: String): Evento = when {
+    nome == DELOAD -> Evento.Deload
+    nome.endsWith(SUFIXO_REP) -> Evento.Repeticao(ProgressaoPorRepeticao.Decisao.valueOf(nome.removeSuffix(SUFIXO_REP)))
+    else -> Evento.Carga(Decisao.valueOf(nome))
+}
 
 class ProgressaoRepositoryImpl : ProgressaoRepository {
 
@@ -47,6 +54,14 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
 
     override suspend fun salvar(usuarioId: Uuid, exercicioId: Uuid, estado: Progressao.Estado): AppResult<Unit> = dbQuery {
         transaction { gravar(usuarioId, exercicioId, estado) }
+    }
+
+    override suspend fun buscarPorRepeticao(usuarioId: Uuid, exercicioId: Uuid): AppResult<ProgressaoPorRepeticao.Estado?> = dbQuery {
+        transaction {
+            ExerciseProgressionTable.selectAll()
+                .where { (ExerciseProgressionTable.userId eq usuarioId) and (ExerciseProgressionTable.exerciseId eq exercicioId) }
+                .singleOrNull()?.let(::estadoRepeticaoDe)
+        }
     }
 
     override suspend fun registrar(
@@ -74,6 +89,33 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
                 false
             } else {
                 gravar(usuarioId, exercicioId, estado)
+                true
+            }
+        }
+    }
+
+    override suspend fun registrarPorRepeticao(
+        usuarioId: Uuid,
+        exercicioId: Uuid,
+        sessaoId: Uuid,
+        estado: ProgressaoPorRepeticao.Estado,
+        evento: Evento,
+        mesociclo: Int,
+    ): AppResult<Boolean> = dbQuery {
+        transaction {
+            val inseridos = ProgressionEventTable.insertIgnore {
+                it[userId] = usuarioId
+                it[exerciseId] = exercicioId
+                it[sessionId] = sessaoId
+                it[tipo] = evento.nome()
+                it[createdAt] = agora()
+                it[ProgressionEventTable.mesociclo] = mesociclo
+                // sem 1RM no eixo de repeticao -- umRmKg fica null, mesmo piso de evento pre-V72
+            }.insertedCount
+            if (inseridos == 0) {
+                false
+            } else {
+                gravarRepeticao(usuarioId, exercicioId, estado)
                 true
             }
         }
@@ -148,6 +190,29 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
             it[semSubir] = estado.semSubir
             it[updatedAt] = agora()
         }
+    }
+
+    private fun gravarRepeticao(usuarioId: Uuid, exercicioId: Uuid, estado: ProgressaoPorRepeticao.Estado) {
+        ExerciseProgressionTable.upsert {
+            it[userId] = usuarioId
+            it[exerciseId] = exercicioId
+            it[repsMin] = estado.repsMin
+            it[repsMax] = estado.repsMax
+            it[exposicoes] = estado.exposicoes
+            it[semSubir] = estado.semSubir
+            it[updatedAt] = agora()
+        }
+    }
+
+    private fun estadoRepeticaoDe(linha: org.jetbrains.exposed.v1.core.ResultRow): ProgressaoPorRepeticao.Estado? {
+        val min = linha[ExerciseProgressionTable.repsMin] ?: return null
+        val max = linha[ExerciseProgressionTable.repsMax] ?: return null
+        return ProgressaoPorRepeticao.Estado(
+            repsMin = min,
+            repsMax = max,
+            exposicoes = linha[ExerciseProgressionTable.exposicoes],
+            semSubir = linha[ExerciseProgressionTable.semSubir],
+        )
     }
 
     private fun estadoDe(linha: org.jetbrains.exposed.v1.core.ResultRow) = Progressao.Estado(

@@ -20,11 +20,13 @@ import kotlin.uuid.Uuid
 class FakeProgressaoRepository : ProgressaoRepository {
 
     private val estados = mutableMapOf<Pair<Uuid, Uuid>, Progressao.Estado>()
+    private val estadosRepeticao = mutableMapOf<Pair<Uuid, Uuid>, ProgressaoPorRepeticao.Estado>()
 
     /** Liga o caminho de falha: toda chamada devolve `AppError.Unexpected`, e NADA é gravado. */
     var falhar: Boolean = false
 
     val linhas: Int get() = estados.size
+    val linhasRepeticao: Int get() = estadosRepeticao.size
 
     /** Eventos por `(usuário, exercício, sessão)` — a MESMA chave da PK de `progression_event` (D-2). */
     private val eventos = linkedMapOf<Triple<Uuid, Uuid, Uuid>, AncoraDoIniciante.Evento>()
@@ -46,6 +48,11 @@ class FakeProgressaoRepository : ProgressaoRepository {
         return Unit.asSuccess()
     }
 
+    override suspend fun buscarPorRepeticao(usuarioId: Uuid, exercicioId: Uuid): AppResult<ProgressaoPorRepeticao.Estado?> {
+        if (falhar) return caiu()
+        return estadosRepeticao[usuarioId to exercicioId].asSuccess()
+    }
+
     override suspend fun registrar(
         usuarioId: Uuid,
         exercicioId: Uuid,
@@ -61,6 +68,24 @@ class FakeProgressaoRepository : ProgressaoRepository {
         mesociclos[chave] = mesociclo
         umRms[chave] = estado.umRm
         estados[usuarioId to exercicioId] = estado
+        return true.asSuccess()
+    }
+
+    override suspend fun registrarPorRepeticao(
+        usuarioId: Uuid,
+        exercicioId: Uuid,
+        sessaoId: Uuid,
+        estado: ProgressaoPorRepeticao.Estado,
+        evento: AncoraDoIniciante.Evento,
+        mesociclo: Int,
+    ): AppResult<Boolean> {
+        if (falhar) return caiu()
+        val chave = Triple(usuarioId, exercicioId, sessaoId)
+        if (chave in eventos) return false.asSuccess()
+        eventos[chave] = evento
+        mesociclos[chave] = mesociclo
+        umRms[chave] = null   // eixo de repeticao nao tem 1RM
+        estadosRepeticao[usuarioId to exercicioId] = estado
         return true.asSuccess()
     }
 

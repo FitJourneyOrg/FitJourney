@@ -58,26 +58,35 @@ atacar aquela, não a mesma fatia.
 
 ## Desenho
 
-### Servidor
+### Servidor — FEITO (falta rodar `:server:test` e, pra Tier 3, Testcontainers/Docker)
 
-- `ProgressaoPorRepeticao` (novo, `engine/v3/`) — Tier 1 puro, espelha `Progressao.decidir()` no
-  eixo de reps. `Estado(repsMin, repsMax, exposicoes, semSubir)`; SOBE/DESCE andam ±1 nos dois
-  limites; piso é a `PrescricaoV3.Faixa` original do papel/objetivo; teto fixo em 20 reps
-  (`TETO_REPETICOES`). **Feito, teste Tier 1 escrito — falta rodar (`:server:test`).**
-- Falta (próximo passo): `ProgressaoAplicadaService.aplicarExercicio()` hoje tem
-  `val incremento = cat.incremento ?: return` — pula o exercício inteiro. Precisa de um branch:
-  `incremento != null` → `Progressao` (como já é); `incremento == null` e exercício é
-  `BODYWEIGHT` → `ProgressaoPorRepeticao`; `incremento == null` e não é `BODYWEIGHT` (BAND/
-  HAND_GRIP) → continua pulando, sem mudança.
-- Falta: persistência do novo `Estado` — `ProgressaoRepository` hoje serializa
-  `Progressao.Estado` (tem `carga`). Precisa de uma tabela/coluna nova pro estado por repetição
-  (schema a desenhar), já que não é o mesmo formato.
+- `ProgressaoPorRepeticao` (novo, `engine/v3/`) — Tier 1 puro. `Estado(repsMin, repsMax,
+  exposicoes, semSubir)`; SOBE/DESCE ±1 nos dois limites; piso na `PrescricaoV3.Faixa` original;
+  teto 20 reps.
+- `ExercicioParaProgressao.equipment` (novo campo, cru do catálogo) — é o que decide, com
+  `incremento == null`, se o exercício é `BODYWEIGHT` (motor de repetição) ou BAND/HAND_GRIP
+  (continua sem progressão, débito separado).
+- `ProgressaoAplicadaService.aplicarExercicio()` — branch em `incremento == null`; novo método
+  `aplicarExercicioPorRepeticao()`. **Sem calibração**: a faixa original já é o estado válido da
+  1ª exposição (diferente do eixo de carga, que precisa descobrir um peso que não existe).
+- **Decisão do Rafael (2026-11-06), achada ao implementar**: `AncoraDoIniciante.Evento` ganhou um
+  3º caso, `Repeticao(decisao: ProgressaoPorRepeticao.Decisao)`. Sem isso, `semSubirNoFim`
+  (contador de estagnação/DELOAD) e `PromocaoDeNivel.diagnosticoIniciante` (promoção de nível)
+  só reconheciam `Evento.Carga` — quem treina bodyweight cairia em DELOAD falso a cada 3 sessões
+  mesmo progredindo. Resolvido com `Evento.subiu` (true pra SOBE de qualquer um dos dois eixos);
+  os dois lugares que contavam `decisao == Decisao.SOBE` na mão agora usam `.subiu`.
+- `ProgressaoRepository`: `buscarPorRepeticao`/`registrarPorRepeticao`, mesma linha/PK de
+  `exercise_progression` (não é dado duplicado — um exercício usa um eixo OU outro, nunca os
+  dois, porque `incremento` do catálogo é fixo). `progression_event.tipo` ganhou
+  `SOBE_REP`/`MANTEM_REP`/`DESCE_REP` (sufixo pra não colidir com os nomes do outro enum).
+- Migration `V76__progressao_por_repeticao.sql` — aditiva: 2 colunas nullable
+  (`reps_min`/`reps_max`) + CHECK, e o CHECK de `progression_event.tipo` recriado com os 3 tipos
+  novos. Nenhum dado existente apagado ou reescrito.
 
 ### Contrato
 
-- A decidir junto da persistência: o cliente precisa saber a faixa de reps ATUAL (pra mostrar
-  "sua meta hoje é 13–17", não só a prescrição fixa do papel). Hoje `SetLogDto`/`WorkoutExerciseDto`
-  não carregam isso — provavelmente um campo novo no mesmo lugar que expõe a prescrição.
+- Não iniciado. O cliente precisa saber a faixa de reps ATUAL pra mostrar "sua meta hoje é
+  13–17" — hoje nem `SetLogDto` nem `WorkoutExerciseDto` carregam isso. Aviso antes de tocar.
 
 ### Cliente
 
@@ -94,16 +103,23 @@ sem dado de usuário existente para apagar>
 
 | Tier | O que | Onde |
 |---|---|---|
-| 1 — lógica pura | `decidir()` por repetição, espelhando os mesmos critérios de aceite da progressão por carga | `ProgressaoPorRepeticaoTest` (ou nome equivalente) |
-| 2 — serviço/ViewModel com fake | | |
-| 3 — rota/repositório, Testcontainers | | |
+| 1 — lógica pura | `decidir()` por repetição, espelhando os mesmos critérios de aceite da progressão por carga | `ProgressaoPorRepeticaoTest` |
+| 2 — serviço com fake | BODYWEIGHT usa `ProgressaoPorRepeticao` sem calibração; BAND continua pulando (caminho de falha) | `ProgressaoAplicadaServiceTest` |
+| 3 — rota/repositório, Testcontainers | `buscarPorRepeticao`/`registrarPorRepeticao` contra Postgres real, idempotência (D-2) no eixo de reps | **não escrito ainda** |
 
 Cada um inclui ao menos um caminho de falha.
 
 ## Fora de escopo, por decisão
 
-<a confirmar junto das perguntas: BAND/HAND_GRIP se o escopo desta fatia for só BODYWEIGHT; grafo
-de variação de exercício; calibração "derivada do histórico" (mesmo teto do ADR da carga)>
+- **BAND/HAND_GRIP** — sem kit do usuário modelado no perfil; débito separado em `debitos.md`.
+- **Grafo de variação de exercício** ao bater o teto de 20 reps — fica só `MANTEM`, sem sugestão.
+- **Calibração derivada do histórico** — mesmo teto do ADR da carga (`motor-v3-semantica-de-carga.md`).
+- **`ProgressaoRepository.todos()`** devolve `Map<Uuid, Progressao.Estado>` pra TODOS os exercícios
+  do usuário, inclusive os que progridem por repetição (viriam com `carga = null`, indistinguível
+  de "calibração pendente"). Função sem chamador em produção hoje — achado ao revisar o
+  repositório, não corrigido por não ter uso real que quebre. Registrar em `debitos.md` no
+  fechamento.
+- **Tier 3 (Testcontainers)** desta fatia — não escrito; próxima sessão ou antes do fechamento.
 
 ## Ao fechar — promover antes de apagar
 

@@ -14,6 +14,7 @@ import dev.rafael.server.features.exercise.engine.v3.AncoraDoIniciante
 import dev.rafael.server.features.exercise.engine.v3.FakeMesocicloRepository
 import dev.rafael.server.features.exercise.engine.v3.FakeProgressaoRepository
 import dev.rafael.server.features.exercise.engine.v3.Progressao
+import dev.rafael.server.features.exercise.engine.v3.ProgressaoPorRepeticao
 import dev.rafael.server.features.profile.db.ProfileRepository
 import dev.rafael.server.features.profile.models.Profile
 import dev.rafael.server.features.session.models.SetLog
@@ -91,7 +92,7 @@ class ProgressaoAplicadaServiceTest {
     )
 
     private val catalogoCompostoIncremento25 =
-        mapOf(exercicioId to ExercicioParaProgressao(incremento = 2.5, barraLivre = false, cargaInvertida = false))
+        mapOf(exercicioId to ExercicioParaProgressao(incremento = 2.5, barraLivre = false, cargaInvertida = false, equipment = "BARBELL"))
 
     private fun servico(
         exerciseRepo: ExerciseRepository = FakeExerciseRepository(catalogoCompostoIncremento25),
@@ -190,5 +191,41 @@ class ProgressaoAplicadaServiceTest {
         val estado = (progressao.buscar(userId, exercicioId) as AppResult.Success).value!!
         assertTrue(estado.carga!! < 100.0, "só a vaga 0 (peso 40) deveria ter entrado na calibração")
         assertEquals(1, progressao.linhas)
+    }
+
+    // ------------------------------------------------------------------------- progressao-por-repeticao
+
+    @Test
+    fun `BODYWEIGHT sem incremento usa ProgressaoPorRepeticao, sem calibracao`() = runBlocking {
+        val progressao = FakeProgressaoRepository()
+        val catalogo = mapOf(exercicioId to ExercicioParaProgressao(incremento = null, barraLivre = false, cargaInvertida = false, equipment = "BODYWEIGHT"))
+        val svc = servico(
+            exerciseRepo = FakeExerciseRepository(catalogo),
+            progressaoRepo = progressao,
+            workoutRepo = FakeWorkoutRepository(workoutComVaga(Papel.ISOLAMENTO)),
+        )
+        // GAIN_MUSCLE + ISOLAMENTO: faixa 12-16, RIR alvo 1 -- bate o topo, sobe.
+        val sets = listOf(SetLog(exercicioId, orderIndex = 0, setIndex = 1, targetReps = 16, repsDone = 16, weightKg = null, done = true, rir = 1))
+
+        svc.aplicar(sessao(sets))
+
+        val estado = (progressao.buscarPorRepeticao(userId, exercicioId) as AppResult.Success).value
+        assertTrue(estado != null, "1ª exposicao ja e estado valido -- nao existe calibracao por reps")
+        assertEquals(13, estado!!.repsMin)
+        assertEquals(17, estado.repsMax)
+        assertEquals(1, progressao.linhasRepeticao)
+        assertEquals(0, progressao.linhas, "evento de repeticao nao deve ir pro mapa de carga")
+    }
+
+    @Test
+    fun `BAND sem incremento continua sem progressao automatica -- caminho de falha (nao registra nada)`() = runBlocking {
+        val progressao = FakeProgressaoRepository()
+        val catalogo = mapOf(exercicioId to ExercicioParaProgressao(incremento = null, barraLivre = false, cargaInvertida = false, equipment = "BAND"))
+        val svc = servico(exerciseRepo = FakeExerciseRepository(catalogo), progressaoRepo = progressao)
+        val sets = listOf(SetLog(exercicioId, orderIndex = 0, setIndex = 1, targetReps = 15, repsDone = 15, weightKg = null, done = true, rir = 1))
+
+        svc.aplicar(sessao(sets))
+
+        assertEquals(0, progressao.linhas)
     }
 }

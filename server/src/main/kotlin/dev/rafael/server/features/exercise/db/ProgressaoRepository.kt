@@ -4,6 +4,7 @@ import dev.rafael.core.result.AppResult
 import dev.rafael.server.features.exercise.engine.v3.AncoraDoIniciante
 import dev.rafael.server.features.exercise.engine.v3.Mesociclo
 import dev.rafael.server.features.exercise.engine.v3.Progressao
+import dev.rafael.server.features.exercise.engine.v3.ProgressaoPorRepeticao
 import kotlin.uuid.Uuid
 
 /**
@@ -17,12 +18,18 @@ import kotlin.uuid.Uuid
  * pausa acima de 28 dias.
  *
  * O repositório não decide nada: lê e grava o [Progressao.Estado] que o núcleo puro
- * ([Progressao.decidir], [Progressao.calibrar]) devolveu.
+ * ([Progressao.decidir], [Progressao.calibrar]) devolveu. Desde a fatia "progressao-por-repeticao"
+ * (V76), a MESMA linha (mesma PK) também pode guardar um [ProgressaoPorRepeticao.Estado] — nunca
+ * os dois pro mesmo exercício, já que `incremento` do catálogo decide o eixo de uma vez só. Os
+ * métodos `*PorRepeticao` são o eixo de repetição; os demais continuam só carga.
  */
 interface ProgressaoRepository {
 
     /** O estado do exercício, ou `null` se a pessoa nunca o fez (a calibração é obrigatória). */
     suspend fun buscar(usuarioId: Uuid, exercicioId: Uuid): AppResult<Progressao.Estado?>
+
+    /** Equivalente a [buscar] no eixo de repetição — `null` se a pessoa nunca fez o exercício. */
+    suspend fun buscarPorRepeticao(usuarioId: Uuid, exercicioId: Uuid): AppResult<ProgressaoPorRepeticao.Estado?>
 
     /**
      * Grava (substitui) o estado do exercício, **sem** passar por uma sessão — o caso do retorno após
@@ -51,6 +58,16 @@ interface ProgressaoRepository {
          * resolver o mesociclo antes de registrar, o mesmo motivo do `idioma` sem default no
          * `ExerciseRepository`.
          */
+        mesociclo: Int,
+    ): AppResult<Boolean>
+
+    /** Equivalente a [registrar] no eixo de repetição — mesma idempotência (D-2), mesma PK de evento. */
+    suspend fun registrarPorRepeticao(
+        usuarioId: Uuid,
+        exercicioId: Uuid,
+        sessaoId: Uuid,
+        estado: ProgressaoPorRepeticao.Estado,
+        evento: AncoraDoIniciante.Evento,
         mesociclo: Int,
     ): AppResult<Boolean>
 

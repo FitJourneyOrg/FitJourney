@@ -121,6 +121,7 @@ class ExerciseRepositoryImpl : ExerciseRepository {
                         incremento = row[ExercisesTable.incremento],
                         barraLivre = row[ExercisesTable.barraLivre],
                         cargaInvertida = row[ExercisesTable.cargaInvertida],
+                        equipment = row[ExercisesTable.equipment],
                     )
                 }
         }
