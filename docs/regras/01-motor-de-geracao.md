@@ -826,6 +826,35 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
 - **Curar por equipamento é paliativo DECLARADO**, não solução: põe leg press e pec deck no mesmo
   número. ADR em `arch/motor-v3-semantica-de-carga.md`.
 
+### Motor v3 — PROGRESSÃO POR REPETIÇÃO (fatia "progressao-por-repeticao", 2026-11-06)
+
+- **[REGRA]** `incremento == null` **e** `equipment == 'BODYWEIGHT'` → o motor é
+  `ProgressaoPorRepeticao`, não `Progressao`. O sinal de esforço vira a FAIXA de repetições (não a
+  carga): bate o topo da faixa ATUAL com RIR no alvo → sobe `repsMin`/`repsMax` em **+1** nos dois;
+  abaixo do mínimo → desce **−1** nos dois, nunca abaixo da `PrescricaoV3.Faixa` original do
+  papel/objetivo. `incremento == null` e NÃO é `BODYWEIGHT` (BAND/HAND_GRIP) continua sem
+  progressão nenhuma — débito separado (`docs/fontes/debitos.md`), falta modelar o kit do usuário.
+- **[REGRA]** Teto absoluto em **20 repetições**, independente de papel/objetivo. Ao bater: só
+  `MANTEM`, sem alarme nem "dado insuficiente" — sugerir variação mais difícil do exercício ao
+  bater o teto é débito registrado, não resolvido aqui (exigiria grafo de progressão no catálogo).
+- **[REGRA]** Sem calibração no eixo de repetição: a `PrescricaoV3.Faixa` original já é o estado
+  válido da 1ª exposição — diferente do eixo de carga, que precisa DESCOBRIR um peso que não
+  existe pra quem nunca fez o exercício. A 1ª sessão de um exercício BODYWEIGHT pode sair SOBE,
+  MANTEM ou DESCE normalmente, nunca um `MANTEM` artificial de calibração.
+- **[REGRA]** Decisão do Rafael (2026-11-06): **os dois eixos (carga e repetição) contam IGUAL
+  pro contador de estagnação/DELOAD** — "estagnação é ausência de progressão de estímulo,
+  independente da variável que gerou esse estímulo". `AncoraDoIniciante.Evento` ganhou
+  `Repeticao(decisao: ProgressaoPorRepeticao.Decisao)`; `Evento.subiu` (true pra SOBE de
+  qualquer um dos dois) é o único ponto que `semSubirNoFim`/`situacao`/
+  `PromocaoDeNivel.diagnosticoIniciante` consultam — nenhum dos três sabe que existem dois
+  motores. Sem isso, bodyweight cairia em DELOAD falso a cada 3 sessões mesmo progredindo.
+- **[REGRA]** `exercise_progression` reaproveita a MESMA linha/PK `(usuário, exercício)` pros
+  dois eixos — nunca os dois ao mesmo tempo (`incremento` do catálogo é fixo por exercício).
+  `progression_event.tipo` ganhou `SOBE_REP`/`MANTEM_REP`/`DESCE_REP` (V76).
+- **[PROPOSTA]** Nenhum dos dois eixos expõe a sugestão de progressão pro cliente hoje — nem
+  rota, nem campo no contrato. É feature inteira ausente (débito, não resolvido aqui), não
+  particularidade do eixo de repetição.
+
 ### Motor v3 — DUAS LEIS da progressão dupla, medidas (fatia do catálogo, 2026-11-05)
 
 Instrumento: `tools/motor_sim/sim_incremento.py` (port fiel do `Progressao.kt`; o motor é exato, o

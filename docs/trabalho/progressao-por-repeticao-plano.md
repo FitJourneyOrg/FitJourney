@@ -58,7 +58,7 @@ atacar aquela, não a mesma fatia.
 
 ## Desenho
 
-### Servidor — FEITO (falta rodar `:server:test` e, pra Tier 3, Testcontainers/Docker)
+### Servidor — FEITO (Tier 1/2/3 verdes; fatia fecha aqui, sem Contrato/Cliente -- ver abaixo)
 
 - `ProgressaoPorRepeticao` (novo, `engine/v3/`) — Tier 1 puro. `Estado(repsMin, repsMax,
   exposicoes, semSubir)`; SOBE/DESCE ±1 nos dois limites; piso na `PrescricaoV3.Faixa` original;
@@ -83,14 +83,17 @@ atacar aquela, não a mesma fatia.
   (`reps_min`/`reps_max`) + CHECK, e o CHECK de `progression_event.tipo` recriado com os 3 tipos
   novos. Nenhum dado existente apagado ou reescrito.
 
-### Contrato
+### Contrato / Cliente -- FORA DE ESCOPO (achado ao revisar, não é débito de repetição)
 
-- Não iniciado. O cliente precisa saber a faixa de reps ATUAL pra mostrar "sua meta hoje é
-  13–17" — hoje nem `SetLogDto` nem `WorkoutExerciseDto` carregam isso. Aviso antes de tocar.
-
-### Cliente
-
-- Não iniciado.
+- Checado antes de tocar: o eixo de CARGA também não expõe nada ao cliente hoje -- não há rota
+  `GET` nem campo em `WorkoutExerciseDto`/`SetLogDto` mostrando carga ou faixa sugerida. O motor
+  roda só como registro invisível (SOBE/MANTEM/DESCE em background, alimenta deload/promoção);
+  quem treina com carga também não vê alvo na tela.
+- "Expor a faixa de reps pro cliente" não é paridade -- é feature NOVA, que afeta os dois eixos
+  igualmente, maior que esta fatia. Fazer só pra bodyweight seria inconsistente. Fica pra uma
+  fatia futura ("mostrar sugestão de progressão na execução"), registrada em `debitos.md`, não
+  como algo específico de repetição.
+- **A fatia fecha no SERVIDOR**, em paridade real com o que já existe pro eixo de carga.
 
 > Ordem de implementação: Backend → Contrato → Cliente. Dependências apontam para o `Domain`.
 
@@ -119,7 +122,9 @@ Cada um inclui ao menos um caminho de falha.
   de "calibração pendente"). Função sem chamador em produção hoje — achado ao revisar o
   repositório, não corrigido por não ter uso real que quebre. Registrar em `debitos.md` no
   fechamento.
-- **Tier 3 (Testcontainers)** desta fatia — não escrito; próxima sessão ou antes do fechamento.
+- **Tier 3 (Testcontainers)** desta fatia — feito, verde (`:server:integrationTest`).
+- **Mostrar sugestão de progressão (carga OU reps) na tela de execução** — não existe pra NENHUM
+  dos dois eixos hoje; fatia futura própria, não nasce aqui.
 
 ## Ao fechar — promover antes de apagar
 
