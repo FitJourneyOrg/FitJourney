@@ -27,6 +27,7 @@ import dev.rafael.server.features.exercise.engine.StructureEngine
 import dev.rafael.server.features.exercise.engine.WorkoutGenerator
 import dev.rafael.server.features.exercise.services.ExerciseService
 import dev.rafael.server.features.exercise.services.ProgressaoAplicadaService
+import dev.rafael.server.features.exercise.services.SugestaoDeProgressaoService
 import dev.rafael.server.features.wiki.db.WikiRepository
 import dev.rafael.server.features.wiki.db.WikiRepositoryImpl
 import dev.rafael.server.features.wiki.services.WikiService
@@ -185,6 +186,7 @@ val appModule = module {
     // já tem `Progressao`/`ProgressaoRepository`/`MesocicloRepository`); `session` só injeta a
     // porta estreita.
     single { ProgressaoAplicadaService(get(), get(), get(), get(), get(), get()) }
+    single { SugestaoDeProgressaoService(get(), get(), get(), get()) }
     single {
         SessionService(
             userService = get(),

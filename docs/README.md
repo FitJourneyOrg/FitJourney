@@ -35,6 +35,8 @@ docs/
 │
 ├── ESTADO.md               ← "onde paramos". O ÚNICO de leitura obrigatória (~95 linhas)
 ├── CONVENCOES.md           ← o que vale em toda sessão e não muda por fatia
+├── DESIGN_SYSTEM.md        ← cor, tipografia, componentes, ícones e os FLUXOS do usuário;
+│                             diz o que é lei e o que é livre num redesenho
 │
 ├── fontes/                 ← .md EDITADOS À MÃO. É aqui que se escreve
 │   ├── contrato-api.md          ← rotas, DTOs, enums, códigos de erro

@@ -54,6 +54,7 @@ import dev.rafael.app.ui.NetworkImage
 import dev.rafael.app.ui.ShimmerContent
 import dev.rafael.core.network.MediaUrls
 import dev.rafael.features.session.presentation.state.ExercicioEmExecucao
+import dev.rafael.features.session.presentation.viewmodel.formatarPeso
 import dev.rafael.features.session.presentation.state.SerieEmExecucao
 import dev.rafael.features.session.presentation.state.SessionEvent
 import dev.rafael.features.session.presentation.state.WorkoutSessionState
@@ -367,6 +368,23 @@ private fun CartaoDoExercicio(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            // fatia "sugestao-de-progressao" (2026-11-06): só leitura, nada interativo. Os três
+            // campos nulos (manual, calibração pendente, ou eixo BAND/HAND_GRIP) -> nada aqui.
+            val metaCarga = exercicio.cargaSugeridaKg
+            val metaRepsMin = exercicio.repsMinSugerido
+            val metaRepsMax = exercicio.repsMaxSugerido
+            when {
+                metaCarga != null -> Text(
+                    stringResource(R.string.sessao_meta_carga, formatarPeso(metaCarga)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                metaRepsMin != null && metaRepsMax != null -> Text(
+                    stringResource(R.string.sessao_meta_reps, metaRepsMin, metaRepsMax),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             Spacer(Modifier.height(6.dp))
             if (onAlternarTecnica != null) AssistChip(
                 onClick = onAlternarTecnica,

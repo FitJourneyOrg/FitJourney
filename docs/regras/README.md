@@ -35,6 +35,7 @@
 | `12-analise-de-progressao.md` | Gráficos de progresso, 1RM, janelas, paywall | fatia J |
 | `13-idioma.md` | pt-BR/en, fallback, o que traduz e o que não | fatia G, #37 |
 | `14-privacidade-e-seguranca.md` | O que o perfil público expõe, PII | #34 |
+| `15-design-e-cor.md` | Hierarquia de cor, slot tonal, caixa alta, insets, estado | #16, #37 |
 
 ## Convenção pra manter isto útil
 

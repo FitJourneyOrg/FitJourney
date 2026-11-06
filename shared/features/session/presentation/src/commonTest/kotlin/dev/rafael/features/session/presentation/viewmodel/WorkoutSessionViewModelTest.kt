@@ -114,6 +114,42 @@ class WorkoutSessionViewModelTest {
     }
 
     @Test
+    fun `load propaga a sugestao de progressao do WorkoutExercise pro state`() = runTest(dispatcher) {
+        val workoutComSugestao = workoutDeUmaSerie().copy(
+            exercises = listOf(
+                WorkoutExercise(
+                    exerciseId = "ex-1", orderIndex = 0, restSeconds = 90,
+                    sets = listOf(WorkoutSet(reps = 10, orderIndex = 0)),
+                    cargaSugeridaKg = 62.5,
+                ),
+            ),
+        )
+        val vm = WorkoutSessionViewModel(
+            workoutId = "workout-1",
+            workouts = FakeWorkoutRepository(workoutComSugestao),
+            lookup = FakeExerciseLookup(),
+            sync = FakeHistoricoDeSessoes(),
+        )
+        dispatcher.scheduler.runCurrent()
+
+        assertEquals(62.5, vm.state.value.exercicio?.cargaSugeridaKg)
+        assertNull(vm.state.value.exercicio?.repsMinSugerido)
+        vm.onCleared()
+    }
+
+    @Test
+    fun `sem sugestao -- caminho de falha -- state fica com os tres campos nulos`() = runTest(dispatcher) {
+        val sync = FakeHistoricoDeSessoes()
+        val vm = criarViewModel(sync)   // workoutDeUmaSerie() não seta sugestão nenhuma
+        dispatcher.scheduler.runCurrent()
+
+        assertNull(vm.state.value.exercicio?.cargaSugeridaKg)
+        assertNull(vm.state.value.exercicio?.repsMinSugerido)
+        assertNull(vm.state.value.exercicio?.repsMaxSugerido)
+        vm.onCleared()
+    }
+
+    @Test
     fun `rir em branco chega como null no DTO -- nao informado, nao zero`() = runTest(dispatcher) {
         // Caminho de falha: D-3 exige que "não respondeu" e "respondeu 0" sejam coisas
         // diferentes. Se `finish()` trocasse `""` por `0`, a progressão trataria quem não

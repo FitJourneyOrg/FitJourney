@@ -1220,6 +1220,12 @@
     <!-- Execução do treino, redesenho de 2026-10-01: um exercício por vez. Caixa alta de
          "Peso"/"Reps"/"Descanso" é decisão de DESENHO e fica na tela, não no texto. -->
     <string name="sessao_serie_de">Série %1$d de %2$d</string>
+    <!-- Meta de progressão sugerida pelo motor (carga OU reps, nunca os dois): fatia
+         "sugestao-de-progressao" (2026-11-06). Só leitura; nenhum campo quando o motor não
+         decidiu nada ainda (calibração pendente) ou o eixo não tem motor (BAND/HAND_GRIP). -->
+    <string name="sessao_meta_carga">Meta: %1$s kg</string>
+    <string name="sessao_meta_reps">Meta: %1$d-%2$d reps</string>
+    <!-- Resto da execução do treino (retomado do comentário acima). -->
     <string name="sessao_serie_curta">S%1$d</string>
     <string name="sessao_serie_feita">Série feita</string>
     <string name="sessao_ver_tecnica">Ver técnica</string>

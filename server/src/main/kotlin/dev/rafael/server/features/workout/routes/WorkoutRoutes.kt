@@ -10,6 +10,7 @@ import dev.rafael.server.auth.FirebaseUser
 import dev.rafael.server.error.respondResult
 import dev.rafael.server.features.profile.services.ProfileService
 import dev.rafael.server.features.program.services.ProgramService
+import dev.rafael.server.features.exercise.services.SugestaoDeProgressaoService
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.workout.models.comOrigem
 import dev.rafael.server.features.workout.services.WorkoutService
@@ -31,6 +32,7 @@ fun Route.workoutRoutes(
     userService: UserService,
     profileService: ProfileService,
     programService: ProgramService,
+    sugestaoDeProgressaoService: SugestaoDeProgressaoService,
 ) {
     authenticate(FIREBASE_AUTH) {
 
@@ -73,9 +75,12 @@ fun Route.workoutRoutes(
                 service.get(p.uid, p.email, id).notFoundIfNull().flatMap { treino ->
                     val pid = treino.programId?.let { runCatching { Uuid.parse(it) }.getOrNull() }
                     // Treino avulso (sem programa) não tem trava de entitlement.
-                    if (pid == null) treino.asSuccess()
+                    val comOrigem = if (pid == null) treino.asSuccess()
                     else programService.requireReadable(user.id, pid, id, user.isPremium)
                         .flatMap { programService.completarOrigem(user.id, treino) }
+                    // fatia "sugestao-de-progressao" (2026-11-06): enriquecimento, nunca falha
+                    // o GET (ver KDoc do serviço) — por isso fora do AppResult de erro acima.
+                    comOrigem.flatMap { sugestaoDeProgressaoService.completarSugestoes(user.id, it).asSuccess() }
                 }
             }
             call.respondResult(result)

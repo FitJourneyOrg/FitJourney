@@ -222,6 +222,10 @@ class CatalogoEmInglesTest {
             // `PR` (personal record / recorde pessoal) é a mesma sigla nas duas línguas na
             // cultura de treino — igual "RIR" acima. O resto da frase é só os dois placeholders.
             "progresso_detalhe_pr",
+            // RIR na tela de EXECUÇÃO (fatia "rir-chega-e-registra", 2026-11-05) — mesma sigla
+            // de `treino_detalhe_rir` acima, achado ao fechar a fatia "sugestao-de-progressao"
+            // (2026-11-06): a allowlist nunca tinha sido atualizada quando este rótulo nasceu.
+            "sessao_rir_rotulo",
         )
 
         val porChaveEn = en.entradas.associate { it.chave to it.valor }

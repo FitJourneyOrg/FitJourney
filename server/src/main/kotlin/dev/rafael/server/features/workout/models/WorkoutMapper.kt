@@ -5,6 +5,7 @@ import dev.rafael.contract.workout.WorkoutExerciseDto
 import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.contract.workout.WorkoutSetDto
 import dev.rafael.contract.workout.WorkoutSummaryDto
+import dev.rafael.server.features.exercise.engine.v3.SugestaoDeProgressao
 import kotlin.uuid.Uuid
 
 
@@ -50,6 +51,17 @@ fun WorkoutSummary.toDto(isActive: Boolean = false): WorkoutSummaryDto = Workout
  */
 fun WorkoutDto.comOrigem(origin: WorkoutOrigin?): WorkoutDto =
     if (origin == null) this else copy(origin = origin)
+
+/**
+ * Preenche a sugestão de progressão de UM exercício (ver [SugestaoDeProgressao]). `Sugestao.VAZIA`
+ * (sem papel, calibração pendente, ou eixo sem motor) deixa os três campos `null` — mesmo default
+ * do DTO, então não precisa de `if` especial aqui.
+ */
+fun WorkoutExerciseDto.comSugestao(sugestao: SugestaoDeProgressao.Sugestao): WorkoutExerciseDto = copy(
+    cargaSugeridaKg = sugestao.cargaKg,
+    repsMinSugerido = sugestao.repsMin,
+    repsMaxSugerido = sugestao.repsMax,
+)
 
 // ---- domínio -> DTO (resposta) ----
 fun Workout.toDto(): WorkoutDto = WorkoutDto(

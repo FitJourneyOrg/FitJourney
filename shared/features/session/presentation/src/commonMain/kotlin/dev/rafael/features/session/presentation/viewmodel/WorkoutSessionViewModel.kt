@@ -252,6 +252,9 @@ class WorkoutSessionViewModel(
                                 restSeconds = ex.restSeconds,     // prescrição do motor
                                 thumbRef = refs[ex.exerciseId]?.thumbRef,
                                 videoRef = refs[ex.exerciseId]?.videoRef,
+                                cargaSugeridaKg = ex.cargaSugeridaKg,
+                                repsMinSugerido = ex.repsMinSugerido,
+                                repsMaxSugerido = ex.repsMaxSugerido,
                             )
                         }
                     }
@@ -318,7 +321,9 @@ class WorkoutSessionViewModel(
  * tem teste próprio -- é a parte que erra em silêncio (somar 2,5 dez vezes em `Double` não dá
  * exatamente 25).
  */
-internal fun formatarPeso(kg: Double): String {
+/** Pública (fatia "sugestao-de-progressao", 2026-11-06): a tela de execução reusa pra formatar
+ * `cargaSugeridaKg` -- mesmo arredondamento, sem duplicar a lógica num módulo Android-only. */
+fun formatarPeso(kg: Double): String {
     val arredondado = kotlin.math.round(kg * 10) / 10.0
     val inteiro = arredondado.toLong()
     val decimo = kotlin.math.round((arredondado - inteiro) * 10).toInt()

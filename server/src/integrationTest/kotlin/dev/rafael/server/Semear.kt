@@ -152,7 +152,7 @@ object Semear {
             ExercisesTable.insert {
                 it[ExercisesTable.id] = id
                 it[name] = nome
-                it[category] = "STRENGTH"
+                it[category] = "CORE"   // precisa ser um ExerciseCategory REAL — valueOf() não é defensivo (ver ExerciseRepositoryImpl.toExercise). "STRENGTH" não existe há tempos; achado só agora porque nenhum teste lia category por aqui (2026-11-06).
                 it[videoRef] = "teste/$id.webm"
                 it[thumbRef] = "teste/$id.webp"
                 it[isBase] = true

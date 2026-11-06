@@ -18,6 +18,11 @@ data class WorkoutExercise(
     val restSeconds: Int = 90,   // <- NOVO
     val rir: Int? = null,        // ARCH #26 — preservado no round-trip (senão editar apaga o RIR)
     val sets: List<WorkoutSet>,
+    // fatia "sugestao-de-progressao" (2026-11-06) — SÓ LEITURA, nunca escrito de volta no toDto
+    // (ver WorkoutMapper.toDto): o servidor recalcula a cada GET, não lê o que o cliente manda.
+    val cargaSugeridaKg: Double? = null,
+    val repsMinSugerido: Int? = null,
+    val repsMaxSugerido: Int? = null,
 )
 
 data class WorkoutSet(

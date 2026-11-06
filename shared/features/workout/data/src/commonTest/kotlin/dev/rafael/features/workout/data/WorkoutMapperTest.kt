@@ -52,6 +52,22 @@ class WorkoutMapperTest {
     }
 
     @Test
+    fun `toDomain preenche a sugestao de progressao quando o DTO traz`() {
+        val comSugestao = exDto().copy(cargaSugeridaKg = 42.5, repsMinSugerido = null, repsMaxSugerido = null)
+        val d = dto().copy(exercises = listOf(comSugestao)).toDomain()
+        assertEquals(42.5, d.exercises[0].cargaSugeridaKg)
+    }
+
+    @Test
+    fun `sugestao de progressao NAO viaja de volta no toDto -- o servidor recalcula, nao le do cliente`() {
+        val comSugestao = exDto().copy(cargaSugeridaKg = 42.5, repsMinSugerido = 10, repsMaxSugerido = 14)
+        val roundTrip = dto().copy(exercises = listOf(comSugestao)).toDomain().toDto()
+        assertNull(roundTrip.exercises[0].cargaSugeridaKg, "escrever de volta deixaria o cliente parecer autoridade sobre a sugestao")
+        assertNull(roundTrip.exercises[0].repsMinSugerido)
+        assertNull(roundTrip.exercises[0].repsMaxSugerido)
+    }
+
+    @Test
     fun `summary mapeia contagem e nome`() {
         val s = WorkoutSummaryDto(id = "w1", name = "Upper", exerciseCount = 5, updatedAt = "2026-01-01").toDomain()
         assertEquals("w1", s.id)
