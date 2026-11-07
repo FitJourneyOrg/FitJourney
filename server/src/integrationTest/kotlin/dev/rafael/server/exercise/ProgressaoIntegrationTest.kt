@@ -251,6 +251,31 @@ class ProgressaoIntegrationTest {
     }
 
     @Test
+    fun `repeticao - sinalForca viaja pela mesma coluna umRmKg e alimenta buscar() e primeiroUmRmNoMesociclo`() = runBlocking {
+        // fatia "ancoras-avancado-bodyweight" (2026-11-06): sem isto as 4 ancoras do avancado
+        // BODYWEIGHT ficam em DADO INSUFICIENTE pra sempre, mesmo pra quem treina em academia.
+        val eu = Semear.usuario()
+        val barraFixa = Semear.exercicio("Barra Fixa", listOf("BACK"))
+        val estado = ProgressaoPorRepeticao.Estado(repsMin = 6, repsMax = 9, exposicoes = 0, sinalForca = 8.0)
+
+        progressao.registrarPorRepeticao(eu, barraFixa, sessao(eu), estado, Evento.Repeticao(ProgressaoPorRepeticao.Decisao.MANTEM), mesociclo = 1).valor()
+
+        assertEquals(8.0, progressao.buscar(eu, barraFixa).valor()?.umRm, "buscar() le o sinal generico, sem saber de eixo -- o mesmo caminho que PromotionService usa")
+        assertEquals(8.0, progressao.primeiroUmRmNoMesociclo(eu, barraFixa, mesociclo = 1).valor())
+    }
+
+    @Test
+    fun `repeticao - sem RIR nenhuma serie, sinalForca fica null e nao finge dado que nao existe`() = runBlocking {
+        val eu = Semear.usuario()
+        val flexao = Semear.exercicio("Flexao", listOf("CHEST"))
+        val estado = ProgressaoPorRepeticao.Estado(repsMin = 6, repsMax = 9, exposicoes = 0, sinalForca = null)
+
+        progressao.registrarPorRepeticao(eu, flexao, sessao(eu), estado, Evento.Repeticao(ProgressaoPorRepeticao.Decisao.MANTEM), mesociclo = 1).valor()
+
+        assertNull(progressao.buscar(eu, flexao).valor()?.umRm)
+    }
+
+    @Test
     fun `repeticao - o banco recusa reps_min sem reps_max (um dos dois nulo)`() = runBlocking {
         val eu = Semear.usuario()
         val flexao = Semear.exercicio("Flexao", listOf("CHEST"))

@@ -849,11 +849,33 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   `PromocaoDeNivel.diagnosticoIniciante` consultam — nenhum dos três sabe que existem dois
   motores. Sem isso, bodyweight cairia em DELOAD falso a cada 3 sessões mesmo progredindo.
 - **[REGRA]** `exercise_progression` reaproveita a MESMA linha/PK `(usuário, exercício)` pros
-  dois eixos — nunca os dois ao mesmo tempo (`incremento` do catálogo é fixo por exercício).
-  `progression_event.tipo` ganhou `SOBE_REP`/`MANTEM_REP`/`DESCE_REP` (V76).
+  dois eixos — nunca os dois ao mesmo tempo pras colunas de FAIXA (`carga_kg`/`pos_salto` vs
+  `reps_min`/`reps_max`; `incremento` do catálogo é fixo por exercício). `progression_event.tipo`
+  ganhou `SOBE_REP`/`MANTEM_REP`/`DESCE_REP` (V76). **Exceção, fatia "ancoras-avancado-bodyweight"
+  (2026-11-06):** `um_rm_kg` deixou de ser exclusivo do eixo de carga — ver subseção abaixo.
 - **[PROPOSTA]** Nenhum dos dois eixos expõe a sugestão de progressão pro cliente hoje — nem
   rota, nem campo no contrato. É feature inteira ausente (débito, não resolvido aqui), não
   particularidade do eixo de repetição.
+
+### Motor v3 — ÂNCORAS DO AVANÇADO BODYWEIGHT (fatia "ancoras-avancado-bodyweight", 2026-11-06)
+
+- **[REGRA]** `ProgressaoPorRepeticao.estimarSinalDeForca(series, papel)` — mesma restrição do
+  `estimarUmRm` (só `COMPOSTO`/`ACESSORIO`, só séries com RIR informado), mas **não é 1RM em
+  kg**: sem `carga` pra multiplicar, o Epley não se aplica. É só `reps + RIR` da melhor série —
+  comparável entre MESOCICLOS do MESMO exercício, nunca entre exercícios diferentes, e nunca
+  exposto como "1RM" em lugar nenhum da Presentation. Existe só pra alimentar
+  `PromocaoDeNivel.diagnosticoAvancado` nas 4 âncoras do avançado que são `BODYWEIGHT` — sem ele
+  caíam permanentemente em DADO INSUFICIENTE, mesmo pra quem treina em academia.
+- **`[INV]`** O sinal fica em `estado.sinalForca`, grava na MESMA coluna `um_rm_kg` de
+  `exercise_progression`/`progression_event` que o eixo de carga usa pro 1RM real — decisão
+  deliberada (não coluna nova): `ProgressaoRepositoryImpl.buscar()`/`primeiroUmRmNoMesociclo()` já
+  leem essa coluna de qualquer linha, e `PromotionService` já consome `.umRm` sem saber de eixo
+  nenhum — populá-la fecha o circuito com ZERO mudança em `PromotionService`/`PromocaoDeNivel`/
+  contrato/cliente. Mesmo fallback do eixo de carga: sessão sem nenhum RIR mantém o sinal
+  anterior, não apaga.
+- **[PROPOSTA]** Não recalibra `limitePoucasReducoes` nem o limiar de maioria de
+  `diagnosticoAvancadoDoPerfil` — o sinal novo entra na MESMA fórmula já calibrável (débito
+  próprio, já registrado), sem mexer em número nenhum.
 
 ### Motor v3 — DUAS LEIS da progressão dupla, medidas (fatia do catálogo, 2026-11-05)
 

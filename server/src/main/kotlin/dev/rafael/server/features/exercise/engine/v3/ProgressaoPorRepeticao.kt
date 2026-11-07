@@ -1,5 +1,7 @@
 package dev.rafael.server.features.exercise.engine.v3
 
+import dev.rafael.contract.workout.Papel
+
 /**
  * Progressão por REPETIÇÃO — fatia "progressao-por-repeticao" (2026-11-06,
  * `docs/trabalho/progressao-por-repeticao-plano.md`). Paralelo a [Progressao], não uma emenda
@@ -30,7 +32,34 @@ object ProgressaoPorRepeticao {
         val exposicoes: Int = 0,
         /** Sessões consecutivas sem [Decisao.SOBE] — mesmo papel do `semSubir` de [Progressao.Estado]. */
         val semSubir: Int = 0,
+        /**
+         * Sinal de força comparável entre mesociclos, pras 4 âncoras do avançado que são
+         * `BODYWEIGHT` (fatia "ancoras-avancado-bodyweight", 2026-11-06) — ver [estimarSinalDeForca].
+         * Mesmo papel do `Progressao.Estado.umRm`: carrega entre sessões, cai no valor anterior
+         * quando a sessão não tem RIR pra recalcular.
+         */
+        val sinalForca: Double? = null,
     )
+
+    /** Mesmo conjunto de [Progressao] (`COMPOSTOS`) — isolamento não entra na comparação de avançado. */
+    private val COMPOSTOS = setOf(Papel.COMPOSTO, Papel.ACESSORIO)
+
+    /**
+     * Sinal de força comparável ENTRE MESOCICLOS do MESMO exercício — não é 1RM em kg (não há
+     * carga pra multiplicar, [Progressao.umRmEpley] não se aplica), é só `reps + RIR` da melhor
+     * série, crescente com desempenho. Existe só pra alimentar
+     * `PromocaoDeNivel.diagnosticoAvancado` nas 4 âncoras do avançado que são `BODYWEIGHT`
+     * (fatia "ancoras-avancado-bodyweight", 2026-11-06, `docs/fontes/debitos.md`) — sem ele essas
+     * âncoras caíam permanentemente em DADO INSUFICIENTE, mesmo pra quem treina em academia.
+     * Mesma restrição do `estimarUmRm`: só COMPOSTO/ACESSORIO (isolamento não compara 1RM) e só
+     * séries com RIR informado.
+     */
+    fun estimarSinalDeForca(series: List<Serie>, papel: Papel): Double? {
+        if (papel !in COMPOSTOS || series.isEmpty()) return null
+        val comRir = series.filter { it.rir != null }
+        if (comRir.isEmpty()) return null
+        return comRir.maxOf { (it.reps + it.rir!!).toDouble() }
+    }
 
     /**
      * Teto absoluto, independente de papel (decisão do Rafael, 2026-11-06): isolamento já nasce em
@@ -54,23 +83,27 @@ object ProgressaoPorRepeticao {
         estado: Estado,
         series: List<Serie>,
         faixaOriginal: PrescricaoV3.Faixa,
+        papel: Papel,
     ): Pair<Estado, Decisao> {
         require(series.isNotEmpty()) { "sessão sem séries" }
         val exposicoes = estado.exposicoes + 1
         val topo = series.all { it.reps >= estado.repsMax && (it.rir == null || it.rir >= faixaOriginal.rirAlvo) }
         val abaixo = series.any { it.reps < estado.repsMin }
+        // Mesmo fallback do Progressao.decidir: sem RIR na sessão não dá pra recalcular, mantém o
+        // sinal anterior em vez de apagar o dado.
+        val sinalForca = estimarSinalDeForca(series, papel) ?: estado.sinalForca.takeIf { series.none { it.rir != null } }
 
         if (topo) {
             if (estado.repsMax >= TETO_REPETICOES) {
-                return estado.copy(exposicoes = exposicoes, semSubir = estado.semSubir + 1) to Decisao.MANTEM
+                return estado.copy(exposicoes = exposicoes, semSubir = estado.semSubir + 1, sinalForca = sinalForca) to Decisao.MANTEM
             }
-            return Estado(estado.repsMin + 1, estado.repsMax + 1, exposicoes, 0) to Decisao.SOBE
+            return Estado(estado.repsMin + 1, estado.repsMax + 1, exposicoes, 0, sinalForca) to Decisao.SOBE
         }
         if (abaixo) {
             val novoMin = maxOf(estado.repsMin - 1, faixaOriginal.repsMin)
             val novoMax = maxOf(estado.repsMax - 1, faixaOriginal.repsMax)
-            return Estado(novoMin, novoMax, exposicoes, estado.semSubir + 1) to Decisao.DESCE
+            return Estado(novoMin, novoMax, exposicoes, estado.semSubir + 1, sinalForca) to Decisao.DESCE
         }
-        return estado.copy(exposicoes = exposicoes, semSubir = estado.semSubir + 1) to Decisao.MANTEM
+        return estado.copy(exposicoes = exposicoes, semSubir = estado.semSubir + 1, sinalForca = sinalForca) to Decisao.MANTEM
     }
 }

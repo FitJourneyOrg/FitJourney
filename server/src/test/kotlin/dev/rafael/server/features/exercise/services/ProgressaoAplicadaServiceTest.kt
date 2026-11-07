@@ -218,6 +218,26 @@ class ProgressaoAplicadaServiceTest {
     }
 
     @Test
+    fun `BODYWEIGHT composto com RIR grava sinalForca -- ancora do avancado deixa de ficar sem dado`() = runBlocking {
+        // fatia "ancoras-avancado-bodyweight" (2026-11-06): Barra Fixa e afins sao COMPOSTO sem
+        // carga -- sinalForca e o que alimenta diagnosticoAvancadoPorAncora no lugar do umRm.
+        val progressao = FakeProgressaoRepository()
+        val catalogo = mapOf(exercicioId to ExercicioParaProgressao(incremento = null, barraLivre = false, cargaInvertida = false, equipment = "BODYWEIGHT"))
+        val svc = servico(
+            exerciseRepo = FakeExerciseRepository(catalogo),
+            progressaoRepo = progressao,
+            workoutRepo = FakeWorkoutRepository(workoutComVaga(Papel.COMPOSTO)),
+        )
+        val sets = listOf(SetLog(exercicioId, orderIndex = 0, setIndex = 1, targetReps = 6, repsDone = 6, weightKg = null, done = true, rir = 2))
+
+        svc.aplicar(sessao(sets))
+
+        val estado = (progressao.buscarPorRepeticao(userId, exercicioId) as AppResult.Success).value
+        assertTrue(estado?.sinalForca != null, "sem sinalForca a ancora cai em DADO INSUFICIENTE de novo")
+        assertEquals(8.0, estado!!.sinalForca) // 6 reps + 2 RIR
+    }
+
+    @Test
     fun `BAND sem incremento continua sem progressao automatica -- caminho de falha (nao registra nada)`() = runBlocking {
         val progressao = FakeProgressaoRepository()
         val catalogo = mapOf(exercicioId to ExercicioParaProgressao(incremento = null, barraLivre = false, cargaInvertida = false, equipment = "BAND"))

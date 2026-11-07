@@ -174,7 +174,7 @@ class ProgressaoAplicadaService(
             .comLogDeFalha("Não resolvi o estado anterior (repetição) do exercício $exerciseId")
         val estadoBase = estadoAnterior ?: ProgressaoPorRepeticao.Estado(repsMin = faixa.repsMin, repsMax = faixa.repsMax)
 
-        val (novoEstado, decisao) = ProgressaoPorRepeticao.decidir(estadoBase, series, faixa)
+        val (novoEstado, decisao) = ProgressaoPorRepeticao.decidir(estadoBase, series, faixa, papel)
 
         progressaoRepository.registrarPorRepeticao(
             usuarioId, exerciseId, sessaoId, novoEstado, AncoraDoIniciante.Evento.Repeticao(decisao), mesociclo,

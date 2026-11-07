@@ -110,7 +110,10 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
                 it[tipo] = evento.nome()
                 it[createdAt] = agora()
                 it[ProgressionEventTable.mesociclo] = mesociclo
-                // sem 1RM no eixo de repeticao -- umRmKg fica null, mesmo piso de evento pre-V72
+                // Fatia "ancoras-avancado-bodyweight" (2026-11-06): sinal de forca (reps+RIR, nao
+                // 1RM em kg) pras ancoras BODYWEIGHT -- mesma coluna do eixo de carga, PromotionService
+                // le generico por .umRm sem saber de eixo. Fica null quando a sessao nao tem RIR.
+                it[ProgressionEventTable.umRmKg] = estado.sinalForca
             }.insertedCount
             if (inseridos == 0) {
                 false
@@ -200,6 +203,8 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
             it[repsMax] = estado.repsMax
             it[exposicoes] = estado.exposicoes
             it[semSubir] = estado.semSubir
+            // Fatia "ancoras-avancado-bodyweight" (2026-11-06) -- ver nota em registrarPorRepeticao.
+            it[umRmKg] = estado.sinalForca
             it[updatedAt] = agora()
         }
     }
@@ -212,6 +217,7 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
             repsMax = max,
             exposicoes = linha[ExerciseProgressionTable.exposicoes],
             semSubir = linha[ExerciseProgressionTable.semSubir],
+            sinalForca = linha[ExerciseProgressionTable.umRmKg],
         )
     }
 
