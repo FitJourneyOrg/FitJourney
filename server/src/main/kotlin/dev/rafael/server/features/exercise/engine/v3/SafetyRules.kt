@@ -20,16 +20,20 @@ import dev.rafael.server.features.exercise.models.Exercise
 object SafetyRules {
 
     /**
-     * Especificação, "Modo conservador": iniciante, saúde geral ou 60+ no 1º mesociclo. O
-     * gatilho por preferência declarada ("quer começar no modo leve?") fica fora — o campo não
-     * existe em `ProfileDto`/nenhuma migration ainda.
+     * Especificação, "Modo conservador": iniciante, saúde geral, 60+ no 1º mesociclo, OU
+     * preferência explícita ("quer começar no modo leve?", `ProfileDto.preferLightMode`, fatia
+     * 12 resto) -- esta última só vale no 1º mesociclo, igual ao gatilho de idade (mesma regra
+     * "modo leve dura 1 mesociclo", espec.). `preferiuModoLeve` tem default `false` -- aditivo,
+     * nenhum caller existente muda de resultado.
      */
     fun modoConservadorAutomatico(
-        nivel: Level, objetivo: Goal, idade: Int?, mesocicloAtual: Int?, retornoConservador: Boolean = false,
+        nivel: Level, objetivo: Goal, idade: Int?, mesocicloAtual: Int?,
+        retornoConservador: Boolean = false, preferiuModoLeve: Boolean = false,
     ): Boolean =
         nivel == Level.BEGINNER ||
             objetivo == Goal.GENERAL_HEALTH ||
-            (idade != null && idade >= 60 && (CapacityModel.primeiroMesociclo(mesocicloAtual) || retornoConservador))
+            (idade != null && idade >= 60 && (CapacityModel.primeiroMesociclo(mesocicloAtual) || retornoConservador)) ||
+            (preferiuModoLeve && CapacityModel.primeiroMesociclo(mesocicloAtual))
 
     /**
      * Piso de RIR de segurança. Não é a tabela de RIR por semana/objetivo — isto é só o piso

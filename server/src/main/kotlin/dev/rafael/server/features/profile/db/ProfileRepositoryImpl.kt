@@ -45,6 +45,7 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[trainingConsistency] = profile.trainingConsistency?.name
                     it[timeOffTraining] = profile.timeOffTraining?.name
                     it[minutesAvailable] = profile.minutesAvailable?.name
+                    it[preferLightMode] = profile.preferLightMode
                     it[daysPerWeek] = profile.daysPerWeek
                     it[focusAreas] = profile.focusAreas.toJson()
                     it[weightKg] = profile.weightKg
@@ -71,6 +72,7 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[trainingConsistency] = profile.trainingConsistency?.name
                     it[timeOffTraining] = profile.timeOffTraining?.name
                     it[minutesAvailable] = profile.minutesAvailable?.name
+                    it[preferLightMode] = profile.preferLightMode
                     it[daysPerWeek] = profile.daysPerWeek
                     it[focusAreas] = profile.focusAreas.toJson()
                     it[weightKg] = profile.weightKg
@@ -106,6 +108,7 @@ private fun ResultRow.toProfile(): Profile = Profile(
     trainingConsistency = this[ProfilesTable.trainingConsistency]?.let { TrainingConsistency.valueOf(it) },
     timeOffTraining = this[ProfilesTable.timeOffTraining]?.let { TimeOffTraining.valueOf(it) },
     minutesAvailable = this[ProfilesTable.minutesAvailable]?.let { MinutesAvailable.valueOf(it) },
+    preferLightMode = this[ProfilesTable.preferLightMode],
     daysPerWeek = this[ProfilesTable.daysPerWeek],
     focusAreas = this[ProfilesTable.focusAreas].toMuscleGroups(),
     weightKg = this[ProfilesTable.weightKg],

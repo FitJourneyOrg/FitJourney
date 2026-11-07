@@ -37,10 +37,13 @@ gate de idade (#24); é a ÚNICA pré-condição de saúde/idade que recusa a ge
 gate) — não apagados nesta fatia (débito próprio, `fontes/debitos.md`). Não reintroduzir
 nenhuma lógica que leia `.health` ou `.gateSatisfied` fora de código legado/teste.
 
-[PROPOSTA] "Modo leve" (preferência explícita, substitui o PAR-Q como gatilho do modo
-conservador) ainda não tem campo no contrato. `SafetyRules.modoConservadorAutomatico` já
-documenta a lacuna. Fica para quando o motor v3 ligar em produção — sem fiação nenhuma hoje
-(`MotorV3Pipeline.Entrada` não tem caller fora de teste).
+[REGRA] **"Modo leve" (preferência explícita) agora é gatilho do modo conservador.**
+`ProfileDto.preferLightMode: Boolean?` (V80) -- quando `true`, soma-se aos gatilhos de
+`SafetyRules.modoConservadorAutomatico` (`preferiuModoLeve`), mas só vale no 1º mesociclo
+(`CapacityModel.primeiroMesociclo`), igual ao gatilho de idade 60+ -- é a mesma regra "modo leve
+dura 1 mesociclo" da especificação. Default `false`: nenhum caller existente muda de resultado.
+**Ainda dormente** -- `MotorV3Pipeline.Entrada` não tem caller fora de teste; o campo grava e lê,
+mas nada em produção lê `preferLightMode` hoje.
 
 ## Minutos disponíveis → teto de séries
 

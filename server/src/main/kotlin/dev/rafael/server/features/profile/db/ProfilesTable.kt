@@ -10,6 +10,7 @@ object ProfilesTable : Table("profiles") {
     val trainingConsistency = varchar("training_consistency", 32).nullable()   // fatia 12, V78
     val timeOffTraining = varchar("time_off_training", 32).nullable()           // fatia 12, V78
     val minutesAvailable = varchar("minutes_available", 32).nullable()        // fatia 12 (resto), V79
+    val preferLightMode = bool("prefer_light_mode").nullable()                 // fatia 12 (resto), V80
     val daysPerWeek = integer("days_per_week")
     val focusAreas = text("focus_areas")
     val weightKg = double("weight_kg").nullable()

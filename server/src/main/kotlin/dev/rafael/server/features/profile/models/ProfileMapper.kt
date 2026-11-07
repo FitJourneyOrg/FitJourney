@@ -9,6 +9,7 @@ fun Profile.toDto(): ProfileDto = ProfileDto(
     trainingConsistency = trainingConsistency,
     timeOffTraining = timeOffTraining,
     minutesAvailable = minutesAvailable,
+    preferLightMode = preferLightMode,
     daysPerWeek = daysPerWeek,
     splitPreference = splitPreference,
     unavailableDays = unavailableDays,

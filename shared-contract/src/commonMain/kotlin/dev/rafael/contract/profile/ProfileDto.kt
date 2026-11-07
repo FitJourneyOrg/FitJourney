@@ -20,6 +20,9 @@ data class ProfileDto(
     val trainingConsistency: TrainingConsistency? = null,   // fatia 12
     val timeOffTraining: TimeOffTraining? = null,            // fatia 12
     val minutesAvailable: MinutesAvailable? = null,          // fatia 12 (resto) -- teto por tempo, dormente
+    // fatia 12 (resto): "quer comecar no modo leve?" -- preferencia explicita, gatilho extra do
+    // modo conservador (SafetyRules.modoConservadorAutomatico), valida so no 1o mesociclo.
+    val preferLightMode: Boolean? = null,
     val splitPreference: SplitType? = null,   // ARCH #29: escolha do quiz; null = usa o recomendado
     val unavailableDays: List<Int> = emptyList(),   // dias (1=Seg..7=Dom) que NÃO quer treinar; motor evita
     val focusAreas: List<MuscleGroup> = emptyList(),

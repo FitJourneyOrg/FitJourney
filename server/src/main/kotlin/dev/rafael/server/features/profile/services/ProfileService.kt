@@ -105,6 +105,7 @@ class ProfileService(
                 trainingConsistency = dto.trainingConsistency,
                 timeOffTraining = dto.timeOffTraining,
                 minutesAvailable = dto.minutesAvailable,
+                preferLightMode = dto.preferLightMode,
                 daysPerWeek = dto.daysPerWeek,
                 splitPreference = dto.splitPreference,
                 unavailableDays = dto.unavailableDays,
