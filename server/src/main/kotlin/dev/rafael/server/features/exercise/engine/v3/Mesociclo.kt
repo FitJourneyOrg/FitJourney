@@ -122,22 +122,25 @@ object AncoraDoIniciante {
     /**
      * Um evento do histórico da âncora: uma decisão de carga, uma decisão de REPETIÇÃO (fatia
      * "progressao-por-repeticao", 2026-11-06 -- `ProgressaoPorRepeticao`, exercícios `BODYWEIGHT`
-     * sem `incremento`) ou o marcador do deload.
+     * sem `incremento`), uma decisão de NÍVEL (fatia "progressao-por-nivel", 2026-11-06 --
+     * `ProgressaoPorNivel`, `BAND`/`HAND_GRIP` sem `incremento`) ou o marcador do deload.
      *
-     * **Decisão do Rafael (2026-11-06): os dois eixos contam IGUAL pro contador de estagnação** --
+     * **Decisão do Rafael (2026-11-06): os três eixos contam IGUAL pro contador de estagnação** --
      * "estagnação é ausência de progressão de estímulo, independente da variável que gerou esse
-     * estímulo". [subiu] é o ponto único que [semSubirNoFim]/[situacao] consultam; nenhum dos dois
-     * sabe ou precisa saber que existem dois motores.
+     * estímulo". [subiu] é o ponto único que [semSubirNoFim]/[situacao] consultam; nenhum dos três
+     * sabe ou precisa saber que existem três motores.
      */
     sealed interface Evento {
         data class Carga(val decisao: Decisao) : Evento
         data class Repeticao(val decisao: ProgressaoPorRepeticao.Decisao) : Evento
+        data class Nivel(val decisao: ProgressaoPorNivel.Decisao) : Evento
         data object Deload : Evento
 
-        /** `true` só pra uma decisão de SOBE, de qualquer um dos dois motores. */
+        /** `true` só pra uma decisão de SOBE, de qualquer um dos três motores. */
         val subiu: Boolean get() = when (this) {
             is Carga -> decisao == Decisao.SOBE
             is Repeticao -> decisao == ProgressaoPorRepeticao.Decisao.SOBE
+            is Nivel -> decisao == ProgressaoPorNivel.Decisao.SOBE
             Deload -> false
         }
     }

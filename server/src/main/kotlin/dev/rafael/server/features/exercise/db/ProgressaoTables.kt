@@ -25,6 +25,13 @@ object ExerciseProgressionTable : Table("exercise_progression") {
     val repsMin = integer("reps_min").nullable()
     val repsMax = integer("reps_max").nullable()
 
+    /**
+     * V77, fatia "progressao-por-nivel". `null` = o exercício não progride por nível (carga,
+     * reps, ou nunca foi feito). RELATIVO -- sem significado absoluto (não é cor de elástico nem
+     * newton nenhum), só conta trocas de resistência desde que a pessoa começou o exercício.
+     */
+    val nivelAtual = integer("nivel_atual").nullable()
+
     /** Relógio do SERVIDOR. */
     val updatedAt = datetime("updated_at")
     override val primaryKey = PrimaryKey(userId, exerciseId)
@@ -46,7 +53,7 @@ object ProgressionEventTable : Table("progression_event") {
     val exerciseId = uuid("exercise_id").references(ExercisesTable.id)
     val sessionId = uuid("session_id").references(WorkoutSessionsTable.id)
 
-    /** `SOBE` | `MANTEM` | `DESCE` | `DELOAD` | `SOBE_REP` | `MANTEM_REP` | `DESCE_REP` (V76). */
+    /** `SOBE`|`MANTEM`|`DESCE`|`DELOAD`|`SOBE_REP`|`MANTEM_REP`|`DESCE_REP` (V76)|`SOBE_NIVEL`|`MANTEM_NIVEL`|`DESCE_NIVEL` (V77). */
     val tipo = text("tipo")
     val createdAt = datetime("created_at")
 

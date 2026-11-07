@@ -13,6 +13,7 @@ import dev.rafael.server.features.exercise.engine.v3.CicloDoMesociclo
 import dev.rafael.server.features.exercise.engine.v3.PrescricaoV3
 import dev.rafael.server.features.exercise.engine.v3.Progressao
 import dev.rafael.server.features.exercise.engine.v3.ProgressaoPorRepeticao
+import dev.rafael.server.features.exercise.engine.v3.ProgressaoPorNivel
 import dev.rafael.server.features.profile.db.ProfileRepository
 import dev.rafael.server.features.session.models.SetLog
 import dev.rafael.server.features.session.models.WorkoutSession
@@ -111,10 +112,11 @@ class ProgressaoAplicadaService(
         val incremento = cat.incremento
         if (incremento == null) {
             // "progressao-por-repeticao" (2026-11-06): BODYWEIGHT puro progride por reps, nao por
-            // carga. BAND/HAND_GRIP continuam sem progressao automatica -- debito separado, mesmo
-            // piso de antes (`docs/fontes/debitos.md`).
-            if (cat.equipment == "BODYWEIGHT") {
-                aplicarExercicioPorRepeticao(usuarioId, sessaoId, exerciseId, vaga, goal, papel, mesociclo)
+            // carga. "progressao-por-nivel" (2026-11-06, mesmo dia): BAND/HAND_GRIP progridem por
+            // NIVEL relativo (sem modelar o kit do usuario -- docs/fontes/debitos.md, fechado).
+            when (cat.equipment) {
+                "BODYWEIGHT" -> aplicarExercicioPorRepeticao(usuarioId, sessaoId, exerciseId, vaga, goal, papel, mesociclo)
+                "BAND", "HAND_GRIP" -> aplicarExercicioPorNivel(usuarioId, sessaoId, exerciseId, vaga, goal, papel, mesociclo)
             }
             return
         }
@@ -179,6 +181,35 @@ class ProgressaoAplicadaService(
         progressaoRepository.registrarPorRepeticao(
             usuarioId, exerciseId, sessaoId, novoEstado, AncoraDoIniciante.Evento.Repeticao(decisao), mesociclo,
         ).comLogDeFalha("Não registrei progressão (repetição) do exercício $exerciseId na sessão $sessaoId")
+    }
+
+    /**
+     * Eixo de NÍVEL (fatia "progressao-por-nivel", 2026-11-06) -- `BAND`/`HAND_GRIP` sem
+     * `incremento`. Sem calibração, mesmo motivo do eixo de reps. Diferente dele: a faixa
+     * (`PrescricaoV3.Faixa`) fica FIXA a vida toda -- é o `nivelAtual` que sobe/desce, não a
+     * faixa. `Evento.Nivel` conta igual aos outros dois pro contador de estagnação da âncora do
+     * iniciante (mesma decisão do Rafael, 2026-11-06).
+     */
+    private suspend fun aplicarExercicioPorNivel(
+        usuarioId: Uuid,
+        sessaoId: Uuid,
+        exerciseId: Uuid,
+        vaga: Vaga,
+        goal: Goal,
+        papel: Papel,
+        mesociclo: Int,
+    ) {
+        val faixa = PrescricaoV3.de(goal, papel)
+        val series = vaga.series.map { ProgressaoPorNivel.Serie(reps = it.repsDone, rir = it.rir) }
+        val estadoAnterior = progressaoRepository.buscarPorNivel(usuarioId, exerciseId)
+            .comLogDeFalha("Não resolvi o estado anterior (nível) do exercício $exerciseId")
+        val estadoBase = estadoAnterior ?: ProgressaoPorNivel.Estado()
+
+        val (novoEstado, decisao) = ProgressaoPorNivel.decidir(estadoBase, series, faixa)
+
+        progressaoRepository.registrarPorNivel(
+            usuarioId, exerciseId, sessaoId, novoEstado, AncoraDoIniciante.Evento.Nivel(decisao), mesociclo,
+        ).comLogDeFalha("Não registrei progressão (nível) do exercício $exerciseId na sessão $sessaoId")
     }
 
     /** Falha real (erro de banco) vira log e `null`; quem chama já sabe tratar ausência. */

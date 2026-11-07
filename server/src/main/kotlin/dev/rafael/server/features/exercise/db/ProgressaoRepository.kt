@@ -5,6 +5,7 @@ import dev.rafael.server.features.exercise.engine.v3.AncoraDoIniciante
 import dev.rafael.server.features.exercise.engine.v3.Mesociclo
 import dev.rafael.server.features.exercise.engine.v3.Progressao
 import dev.rafael.server.features.exercise.engine.v3.ProgressaoPorRepeticao
+import dev.rafael.server.features.exercise.engine.v3.ProgressaoPorNivel
 import kotlin.uuid.Uuid
 
 /**
@@ -30,6 +31,9 @@ interface ProgressaoRepository {
 
     /** Equivalente a [buscar] no eixo de repetição — `null` se a pessoa nunca fez o exercício. */
     suspend fun buscarPorRepeticao(usuarioId: Uuid, exercicioId: Uuid): AppResult<ProgressaoPorRepeticao.Estado?>
+
+    /** Equivalente a [buscar] no eixo de nível — `null` se a pessoa nunca fez o exercício. */
+    suspend fun buscarPorNivel(usuarioId: Uuid, exercicioId: Uuid): AppResult<ProgressaoPorNivel.Estado?>
 
     /**
      * Grava (substitui) o estado do exercício, **sem** passar por uma sessão — o caso do retorno após
@@ -67,6 +71,16 @@ interface ProgressaoRepository {
         exercicioId: Uuid,
         sessaoId: Uuid,
         estado: ProgressaoPorRepeticao.Estado,
+        evento: AncoraDoIniciante.Evento,
+        mesociclo: Int,
+    ): AppResult<Boolean>
+
+    /** Equivalente a [registrar] no eixo de nível — mesma idempotência (D-2), mesma PK de evento. */
+    suspend fun registrarPorNivel(
+        usuarioId: Uuid,
+        exercicioId: Uuid,
+        sessaoId: Uuid,
+        estado: ProgressaoPorNivel.Estado,
         evento: AncoraDoIniciante.Evento,
         mesociclo: Int,
     ): AppResult<Boolean>

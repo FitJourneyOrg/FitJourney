@@ -237,15 +237,47 @@ class ProgressaoAplicadaServiceTest {
         assertEquals(8.0, estado!!.sinalForca) // 6 reps + 2 RIR
     }
 
+    // ------------------------------------------------------------------------- progressao-por-nivel
+
     @Test
-    fun `BAND sem incremento continua sem progressao automatica -- caminho de falha (nao registra nada)`() = runBlocking {
+    fun `BAND sem incremento usa ProgressaoPorNivel, sem calibracao -- nivel 1 na 1a exposicao`() = runBlocking {
+        // fatia "progressao-por-nivel" (2026-11-06): decisao do Rafael, nivel RELATIVO, sem
+        // modelar o kit do usuario -- BAND/HAND_GRIP deixam de ficar sem progressao nenhuma.
         val progressao = FakeProgressaoRepository()
         val catalogo = mapOf(exercicioId to ExercicioParaProgressao(incremento = null, barraLivre = false, cargaInvertida = false, equipment = "BAND"))
-        val svc = servico(exerciseRepo = FakeExerciseRepository(catalogo), progressaoRepo = progressao)
-        val sets = listOf(SetLog(exercicioId, orderIndex = 0, setIndex = 1, targetReps = 15, repsDone = 15, weightKg = null, done = true, rir = 1))
+        val svc = servico(
+            exerciseRepo = FakeExerciseRepository(catalogo),
+            progressaoRepo = progressao,
+            workoutRepo = FakeWorkoutRepository(workoutComVaga(Papel.ISOLAMENTO)),
+        )
+        // GAIN_MUSCLE + ISOLAMENTO: faixa 12-16, RIR alvo 1 -- bate o topo, sobe de nivel.
+        val sets = listOf(SetLog(exercicioId, orderIndex = 0, setIndex = 1, targetReps = 16, repsDone = 16, weightKg = null, done = true, rir = 1))
 
         svc.aplicar(sessao(sets))
 
-        assertEquals(0, progressao.linhas)
+        val estado = (progressao.buscarPorNivel(userId, exercicioId) as AppResult.Success).value
+        assertTrue(estado != null, "1ª exposicao ja e estado valido -- nao existe calibracao por nivel")
+        assertEquals(2, estado!!.nivelAtual, "bateu o topo -- sobe pro nivel 2")
+        assertEquals(1, progressao.linhasNivel)
+        assertEquals(0, progressao.linhas, "evento de nivel nao deve ir pro mapa de carga")
+    }
+
+    @Test
+    fun `HAND_GRIP sem incremento tambem usa ProgressaoPorNivel, mesmo caminho do BAND`() = runBlocking {
+        val progressao = FakeProgressaoRepository()
+        val catalogo = mapOf(exercicioId to ExercicioParaProgressao(incremento = null, barraLivre = false, cargaInvertida = false, equipment = "HAND_GRIP"))
+        val svc = servico(
+            exerciseRepo = FakeExerciseRepository(catalogo),
+            progressaoRepo = progressao,
+            workoutRepo = FakeWorkoutRepository(workoutComVaga(Papel.ISOLAMENTO)),
+        )
+        // abaixo do minimo (12) -- desce, mas nunca abaixo do nivel 1 (ja comeca nele).
+        val sets = listOf(SetLog(exercicioId, orderIndex = 0, setIndex = 1, targetReps = 12, repsDone = 8, weightKg = null, done = true, rir = 1))
+
+        svc.aplicar(sessao(sets))
+
+        val estado = (progressao.buscarPorNivel(userId, exercicioId) as AppResult.Success).value
+        assertEquals(1, estado!!.nivelAtual, "ja comecava no nivel 1 -- nao existe nivel 0")
+        assertEquals(1, progressao.linhasNivel)
     }
 }

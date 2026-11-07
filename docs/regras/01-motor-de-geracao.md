@@ -877,6 +877,29 @@ Pipeline (sem LLM): ProfileDto → **StructureEngine** (esqueleto: volume por m�
   `diagnosticoAvancadoDoPerfil` — o sinal novo entra na MESMA fórmula já calibrável (débito
   próprio, já registrado), sem mexer em número nenhum.
 
+### Motor v3 — PROGRESSÃO POR NÍVEL (fatia "progressao-por-nivel", 2026-11-06)
+
+- **[REGRA]** `incremento == null` **e** `equipment` em `{BAND, HAND_GRIP}` → o motor é
+  `ProgressaoPorNivel`. Decisão do Rafael: **nível RELATIVO, sem modelar o kit do usuário** —
+  `nivelAtual` não tem significado absoluto (não é "elástico vermelho" nem newton nenhum), só
+  conta trocas de resistência desde que a pessoa começou o exercício. O app nunca pergunta nem
+  sabe qual elástico é, só fala "sobe"/"desce um nível".
+- **[REGRA]** Diferença-chave pro eixo de repetição: ali a FAIXA de reps sobe/desce; aqui a faixa
+  (`PrescricaoV3.Faixa`) fica **FIXA** a vida toda — é o `nivelAtual` que muda. Bate o topo da
+  faixa fixa com RIR no alvo → sobe de nível; cai abaixo do piso → desce, **nunca abaixo do
+  nível 1** (não existe nível 0). RIR nulo não bloqueia o topo (mesma leitura do D-3).
+- **[REGRA]** Sem calibração: `nivelAtual = 1` já é o estado válido da 1ª exposição, mesmo motivo
+  dos outros dois eixos.
+- **[REGRA]** Mesma decisão do Rafael de 2026-11-06 (eixo de reps), agora com TRÊS eixos: `Evento.
+  Nivel` conta igual pro contador de estagnação/DELOAD. `AncoraDoIniciante.Evento.subiu` continua
+  o único ponto que `semSubirNoFim`/`situacao` consultam.
+- **[REGRA]** `exercise_progression` ganha `nivel_atual` (V77) — MESMA linha/PK dos outros dois
+  eixos, nunca mais de um conjunto de colunas de FAIXA ao mesmo tempo (ver exceção do `um_rm_kg`
+  acima, que NÃO se aplica aqui: nenhum BAND é âncora do avançado hoje).
+  `progression_event.tipo` ganha `SOBE_NIVEL`/`MANTEM_NIVEL`/`DESCE_NIVEL`.
+- **[PROPOSTA]** Mostrar a sugestão de nível na tela de execução fica de fora — débito próprio,
+  mesmo padrão do "mostrar sugestão" dos outros dois eixos.
+
 ### Motor v3 — DUAS LEIS da progressão dupla, medidas (fatia do catálogo, 2026-11-05)
 
 Instrumento: `tools/motor_sim/sim_incremento.py` (port fiel do `Progressao.kt`; o motor é exato, o

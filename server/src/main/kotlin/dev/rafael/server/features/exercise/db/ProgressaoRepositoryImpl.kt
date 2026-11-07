@@ -9,6 +9,7 @@ import dev.rafael.server.features.exercise.engine.v3.Mesociclo
 import dev.rafael.server.features.exercise.engine.v3.Progressao
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Decisao
 import dev.rafael.server.features.exercise.engine.v3.ProgressaoPorRepeticao
+import dev.rafael.server.features.exercise.engine.v3.ProgressaoPorNivel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.datetime.TimeZone
@@ -29,15 +30,18 @@ private fun agora() = Clock.System.now().toLocalDateTime(TimeZone.currentSystemD
 private const val DELOAD = "DELOAD"
 
 private const val SUFIXO_REP = "_REP"
+private const val SUFIXO_NIVEL = "_NIVEL"
 
 internal fun Evento.nome(): String = when (this) {
     is Evento.Carga -> decisao.name
     is Evento.Repeticao -> decisao.name + SUFIXO_REP
+    is Evento.Nivel -> decisao.name + SUFIXO_NIVEL
     Evento.Deload -> DELOAD
 }
 
 internal fun eventoDe(nome: String): Evento = when {
     nome == DELOAD -> Evento.Deload
+    nome.endsWith(SUFIXO_NIVEL) -> Evento.Nivel(ProgressaoPorNivel.Decisao.valueOf(nome.removeSuffix(SUFIXO_NIVEL)))
     nome.endsWith(SUFIXO_REP) -> Evento.Repeticao(ProgressaoPorRepeticao.Decisao.valueOf(nome.removeSuffix(SUFIXO_REP)))
     else -> Evento.Carga(Decisao.valueOf(nome))
 }
@@ -61,6 +65,14 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
             ExerciseProgressionTable.selectAll()
                 .where { (ExerciseProgressionTable.userId eq usuarioId) and (ExerciseProgressionTable.exerciseId eq exercicioId) }
                 .singleOrNull()?.let(::estadoRepeticaoDe)
+        }
+    }
+
+    override suspend fun buscarPorNivel(usuarioId: Uuid, exercicioId: Uuid): AppResult<ProgressaoPorNivel.Estado?> = dbQuery {
+        transaction {
+            ExerciseProgressionTable.selectAll()
+                .where { (ExerciseProgressionTable.userId eq usuarioId) and (ExerciseProgressionTable.exerciseId eq exercicioId) }
+                .singleOrNull()?.let(::estadoNivelDe)
         }
     }
 
@@ -119,6 +131,34 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
                 false
             } else {
                 gravarRepeticao(usuarioId, exercicioId, estado)
+                true
+            }
+        }
+    }
+
+    override suspend fun registrarPorNivel(
+        usuarioId: Uuid,
+        exercicioId: Uuid,
+        sessaoId: Uuid,
+        estado: ProgressaoPorNivel.Estado,
+        evento: Evento,
+        mesociclo: Int,
+    ): AppResult<Boolean> = dbQuery {
+        transaction {
+            val inseridos = ProgressionEventTable.insertIgnore {
+                it[userId] = usuarioId
+                it[exerciseId] = exercicioId
+                it[sessionId] = sessaoId
+                it[tipo] = evento.nome()
+                it[createdAt] = agora()
+                it[ProgressionEventTable.mesociclo] = mesociclo
+                // sem 1RM/sinal de forca no eixo de nivel -- fora de escopo desta fatia
+                // ("progressao-por-nivel", 2026-11-06), nenhum BAND e ancora do avancado hoje.
+            }.insertedCount
+            if (inseridos == 0) {
+                false
+            } else {
+                gravarNivel(usuarioId, exercicioId, estado)
                 true
             }
         }
@@ -209,6 +249,17 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
         }
     }
 
+    private fun gravarNivel(usuarioId: Uuid, exercicioId: Uuid, estado: ProgressaoPorNivel.Estado) {
+        ExerciseProgressionTable.upsert {
+            it[userId] = usuarioId
+            it[exerciseId] = exercicioId
+            it[nivelAtual] = estado.nivelAtual
+            it[exposicoes] = estado.exposicoes
+            it[semSubir] = estado.semSubir
+            it[updatedAt] = agora()
+        }
+    }
+
     private fun estadoRepeticaoDe(linha: org.jetbrains.exposed.v1.core.ResultRow): ProgressaoPorRepeticao.Estado? {
         val min = linha[ExerciseProgressionTable.repsMin] ?: return null
         val max = linha[ExerciseProgressionTable.repsMax] ?: return null
@@ -218,6 +269,15 @@ class ProgressaoRepositoryImpl : ProgressaoRepository {
             exposicoes = linha[ExerciseProgressionTable.exposicoes],
             semSubir = linha[ExerciseProgressionTable.semSubir],
             sinalForca = linha[ExerciseProgressionTable.umRmKg],
+        )
+    }
+
+    private fun estadoNivelDe(linha: org.jetbrains.exposed.v1.core.ResultRow): ProgressaoPorNivel.Estado? {
+        val nivel = linha[ExerciseProgressionTable.nivelAtual] ?: return null
+        return ProgressaoPorNivel.Estado(
+            nivelAtual = nivel,
+            exposicoes = linha[ExerciseProgressionTable.exposicoes],
+            semSubir = linha[ExerciseProgressionTable.semSubir],
         )
     }
 

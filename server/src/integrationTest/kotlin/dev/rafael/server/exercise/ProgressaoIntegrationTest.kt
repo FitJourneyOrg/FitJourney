@@ -10,6 +10,7 @@ import dev.rafael.server.features.exercise.engine.v3.Mesociclo
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Decisao
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Estado
 import dev.rafael.server.features.exercise.engine.v3.ProgressaoPorRepeticao
+import dev.rafael.server.features.exercise.engine.v3.ProgressaoPorNivel
 import dev.rafael.server.features.exercise.db.ExerciseProgressionTable
 import dev.rafael.server.features.session.db.SessionSetLogsTable
 import dev.rafael.server.features.session.db.WorkoutSessionsTable
@@ -273,6 +274,73 @@ class ProgressaoIntegrationTest {
         progressao.registrarPorRepeticao(eu, flexao, sessao(eu), estado, Evento.Repeticao(ProgressaoPorRepeticao.Decisao.MANTEM), mesociclo = 1).valor()
 
         assertNull(progressao.buscar(eu, flexao).valor()?.umRm)
+    }
+
+    // ------------------------------------------------------------------------------ V77, eixo de nivel
+
+    @Test
+    fun `nivel - registrar a mesma sessao duas vezes aplica uma so e nao regrava o estado`() = runBlocking {
+        val eu = Semear.usuario()
+        val faixaElastica = Semear.exercicio("Remada com Faixa", listOf("BACK"))
+        val s = sessao(eu)
+        val estadoNivel = ProgressaoPorNivel.Estado(nivelAtual = 2, exposicoes = 1)
+
+        val primeira = progressao.registrarPorNivel(eu, faixaElastica, s, estadoNivel, Evento.Nivel(ProgressaoPorNivel.Decisao.SOBE), mesociclo = 1).valor()
+        val segunda = progressao.registrarPorNivel(
+            eu, faixaElastica, s, estadoNivel.copy(nivelAtual = 3), Evento.Nivel(ProgressaoPorNivel.Decisao.SOBE), mesociclo = 1,
+        ).valor()
+
+        assertTrue(primeira)
+        assertFalse(segunda, "a sessão já estava registrada")
+        assertEquals(estadoNivel, progressao.buscarPorNivel(eu, faixaElastica).valor(), "a 2ª tentativa não pode regravar")
+    }
+
+    @Test
+    fun `nivel - historico guarda SOBE_NIVEL junto de eventos de carga e repeticao, e decodifica de volta certo`() = runBlocking {
+        val eu = Semear.usuario()
+        val faixaElastica = Semear.exercicio("Remada com Faixa", listOf("BACK"))
+        val eventos = listOf(
+            Evento.Nivel(ProgressaoPorNivel.Decisao.SOBE),
+            Evento.Nivel(ProgressaoPorNivel.Decisao.MANTEM),
+            Evento.Deload,
+            Evento.Nivel(ProgressaoPorNivel.Decisao.DESCE),
+        )
+        eventos.forEachIndexed { i, e ->
+            val estado = ProgressaoPorNivel.Estado(nivelAtual = 2, exposicoes = i)
+            progressao.registrarPorNivel(eu, faixaElastica, sessao(eu, i + 1), estado, e, mesociclo = 1).valor()
+        }
+        assertEquals(eventos, progressao.historico(eu, faixaElastica).valor(), "SOBE_NIVEL/MANTEM_NIVEL/DESCE_NIVEL nao colidem com os outros dois eixos")
+    }
+
+    @Test
+    fun `nivel - o estado e por pessoa e por exercicio, igual aos outros dois eixos`() = runBlocking {
+        val eu = Semear.usuario()
+        val outra = Semear.usuario("Outra")
+        val faixaElastica = Semear.exercicio("Remada com Faixa", listOf("BACK"))
+        progressao.registrarPorNivel(eu, faixaElastica, sessao(eu), ProgressaoPorNivel.Estado(nivelAtual = 3, exposicoes = 1), Evento.Nivel(ProgressaoPorNivel.Decisao.SOBE), mesociclo = 1).valor()
+        progressao.registrarPorNivel(outra, faixaElastica, sessao(outra), ProgressaoPorNivel.Estado(nivelAtual = 1, exposicoes = 5), Evento.Nivel(ProgressaoPorNivel.Decisao.MANTEM), mesociclo = 1).valor()
+
+        assertEquals(3, progressao.buscarPorNivel(eu, faixaElastica).valor()!!.nivelAtual)
+        assertEquals(1, progressao.buscarPorNivel(outra, faixaElastica).valor()!!.nivelAtual)
+        assertNull(progressao.buscarPorNivel(eu, Semear.exercicio("Outro", null)).valor(), "nunca fez")
+    }
+
+    @Test
+    fun `nivel - o banco recusa nivel_atual zero ou negativo`() = runBlocking {
+        val eu = Semear.usuario()
+        val faixaElastica = Semear.exercicio("Remada com Faixa", listOf("BACK"))
+        assertThrows<ExposedSQLException> {
+            transaction {
+                ExerciseProgressionTable.insert {
+                    it[userId] = eu
+                    it[exerciseId] = faixaElastica
+                    it[exposicoes] = 0
+                    it[posSalto] = false
+                    it[semSubir] = 0
+                    it[nivelAtual] = 0
+                }
+            }
+        }
     }
 
     @Test
