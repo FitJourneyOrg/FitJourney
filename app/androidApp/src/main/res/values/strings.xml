@@ -1048,7 +1048,7 @@
     <!-- Barra do topo da lista de programas do usuário. -->
     <string name="programa_lista_titulo">Meus programas</string>
     <!-- Estado vazio da lista de programas. -->
-    <string name="programa_lista_vazio">Você ainda não tem nenhum treino.</string>
+    <string name="programa_lista_vazio">Você ainda não tem nenhum programa.</string>
     <!-- Selo do treino/programa em destaque (V60, reverte a V59, ver comentario abaixo).
          Prefixo treino_ativo_, nao conquista_/conquistas_ (reservados pelo catalogo de
          conquistas). treino_ativo_secao_outros/seus/ver_biblioteca sao debito pre-existente de
