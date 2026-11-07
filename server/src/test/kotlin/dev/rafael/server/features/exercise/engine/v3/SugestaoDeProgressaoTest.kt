@@ -91,11 +91,54 @@ class SugestaoDeProgressaoTest {
         assertEquals(Sugestao(repsMin = 12, repsMax = 16), sugestao)
     }
 
+    // ---- fatia "mostrar sugestão de nível" (2026-11-07) ----
+
     @Test
-    fun `incremento nulo e equipment nao-bodyweight -- BAND -- devolve vazia (caminho de falha)`() {
+    fun `eixo nivel (BAND) sempre cai na faixa original -- nao precisa de estado`() {
+        // Acessório, GAIN_MUSCLE: PrescricaoV3.de -> Faixa(8, 12, 90, 1).
         val sugestao = SugestaoDeProgressao.calcular(
             incremento = null,
             equipment = "BAND",
+            papel = Papel.ACESSORIO,
+            goal = Goal.GAIN_MUSCLE,
+            estadoCarga = null,
+            estadoRepeticao = null,
+        )
+        assertEquals(Sugestao(repsMin = 8, repsMax = 12), sugestao)
+    }
+
+    @Test
+    fun `eixo nivel (HAND_GRIP) tambem cai na faixa original`() {
+        val sugestao = SugestaoDeProgressao.calcular(
+            incremento = null,
+            equipment = "HAND_GRIP",
+            papel = Papel.ISOLAMENTO,
+            goal = Goal.GAIN_MUSCLE,
+            estadoCarga = null,
+            estadoRepeticao = null,
+        )
+        assertEquals(Sugestao(repsMin = 12, repsMax = 16), sugestao)
+    }
+
+    /** Caminho de falha do eixo nível: sem papel, mesmo piso de qualquer outro eixo. */
+    @Test
+    fun `eixo nivel sem papel devolve vazia (caminho de falha)`() {
+        val sugestao = SugestaoDeProgressao.calcular(
+            incremento = null,
+            equipment = "BAND",
+            papel = null,
+            goal = Goal.GAIN_MUSCLE,
+            estadoCarga = null,
+            estadoRepeticao = null,
+        )
+        assertEquals(Sugestao.VAZIA, sugestao)
+    }
+
+    @Test
+    fun `incremento nulo e equipment nem bodyweight nem band-hand_grip -- devolve vazia (caminho de falha)`() {
+        val sugestao = SugestaoDeProgressao.calcular(
+            incremento = null,
+            equipment = "MACHINE",
             papel = Papel.ACESSORIO,
             goal = Goal.GAIN_MUSCLE,
             estadoCarga = null,

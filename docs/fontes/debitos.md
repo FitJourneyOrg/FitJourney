@@ -50,11 +50,13 @@
   `nivelAtual` (sem significado absoluto — "sobe"/"desce um nível", nunca exposto como número
   pro usuário). `:server:test`/`:server:integrationTest` verdes. Narrativa em
   `historico/progressao-por-nivel.md`.
-- **Mostrar sugestão de nível (BAND/HAND_GRIP) na tela de execução** — ⚪ aberto (2026-11-06,
-  dividido do item acima, mesmo padrão do "mostrar sugestão" dos outros dois eixos, já fechado
-  pra carga/reps). Precisa estender `SugestaoDeProgressao`/`WorkoutExerciseDto`/
-  `WorkoutSessionViewModel`/`CartaoDoExercicio` com um 3º caso (nível), análogo aos dois que já
-  existem — sem decisão de produto pendente, só não feito ainda
+- ~~**Mostrar sugestão de nível (BAND/HAND_GRIP) na tela de execução**~~ — ✅ fechado
+  (2026-11-07). `SugestaoDeProgressao.calcular` ganhou o 3º eixo: `equipment in {BAND,
+  HAND_GRIP}` devolve `Sugestao(repsMin, repsMax)` direto de `PrescricaoV3.de(goal, papel)` —
+  sem Estado, porque nesse eixo a faixa nunca muda (só `nivelAtual`, abstrato, sobe/desce).
+  `WorkoutExerciseDto`/`WorkoutMapper`/`WorkoutSessionViewModel`/tela já eram genéricos (chave é
+  "qual campo é não-nulo", não o eixo) — não precisaram mudar, só um comentário desatualizado.
+  Sem migration. `:server:test` verde. Narrativa em `historico/sugestao-de-nivel.md`.
 ~~**Mostrar sugestão de progressão (carga OU reps) na tela de execução**~~ — ✅ fechado (2026-11-06, fatia "sugestao-de-progressao"). `GET /workouts/{id}` enriquece cada `WorkoutExerciseDto` com `cargaSugeridaKg`/`repsMinSugerido`/`repsMaxSugerido` (um núcleo puro, `SugestaoDeProgressao`, decide; falha é sempre silenciosa, nunca quebra o `GET`). Tela de execução mostra "Meta: X kg" ou "Meta: X–Y reps" no card do exercício. Sem migration — dado derivado em tempo de leitura; offline funciona porque o cache local serializa o `WorkoutExerciseDto` inteiro em JSON. Narrativa em `historico/sugestao-de-progressao.md`
 - ~~**4 de 26 âncoras do avançado estruturalmente mortas**~~ — ✅ fechado (2026-11-06, fatia
   "ancoras-avancado-bodyweight"). `ProgressaoPorRepeticao.estimarSinalDeForca()` (reps+RIR da

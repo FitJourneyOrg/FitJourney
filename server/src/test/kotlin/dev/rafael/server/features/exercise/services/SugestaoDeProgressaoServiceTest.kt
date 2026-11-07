@@ -73,6 +73,8 @@ class SugestaoDeProgressaoServiceTest {
         mapOf(exercicioId to ExercicioParaProgressao(incremento = 2.5, barraLivre = false, cargaInvertida = false, equipment = "BARBELL"))
     private val catalogoRepeticao =
         mapOf(exercicioId to ExercicioParaProgressao(incremento = null, barraLivre = false, cargaInvertida = false, equipment = "BODYWEIGHT"))
+    private val catalogoNivel =
+        mapOf(exercicioId to ExercicioParaProgressao(incremento = null, barraLivre = false, cargaInvertida = false, equipment = "BAND"))
 
     private fun servico(
         exerciseRepo: ExerciseRepository = FakeExerciseRepository(catalogoCarga),
@@ -106,6 +108,22 @@ class SugestaoDeProgressaoServiceTest {
         assertNull(exercicio.cargaSugeridaKg)
         assertEquals(12, exercicio.repsMinSugerido)
         assertEquals(16, exercicio.repsMaxSugerido)
+    }
+
+    // ---- fatia "mostrar sugestão de nível" (2026-11-07) ----
+
+    @Test
+    fun `eixo nivel (BAND) sugere a faixa original, sem nunca consultar ProgressaoRepository`() = runBlocking {
+        val progressao = FakeProgressaoRepository().apply { falhar = true }   // se for consultado, o teste falha
+        val svc = servico(exerciseRepo = FakeExerciseRepository(catalogoNivel), progressaoRepo = progressao)
+
+        // GAIN_MUSCLE + ACESSORIO: PrescricaoV3.de -> Faixa(8, 12, 90, 1).
+        val resultado = svc.completarSugestoes(userId, treino(Papel.ACESSORIO))
+
+        val exercicio = resultado.exercises.single()
+        assertNull(exercicio.cargaSugeridaKg)
+        assertEquals(8, exercicio.repsMinSugerido)
+        assertEquals(12, exercicio.repsMaxSugerido)
     }
 
     @Test

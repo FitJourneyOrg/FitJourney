@@ -368,8 +368,9 @@ private fun CartaoDoExercicio(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            // fatia "sugestao-de-progressao" (2026-11-06): só leitura, nada interativo. Os três
-            // campos nulos (manual, calibração pendente, ou eixo BAND/HAND_GRIP) -> nada aqui.
+            // fatia "sugestao-de-progressao" (2026-11-06), estendida pro eixo de nível em
+            // 2026-11-07: só leitura, nada interativo. Os três campos nulos (manual ou
+            // calibração pendente do eixo de carga) -> nada aqui.
             val metaCarga = exercicio.cargaSugeridaKg
             val metaRepsMin = exercicio.repsMinSugerido
             val metaRepsMax = exercicio.repsMaxSugerido
