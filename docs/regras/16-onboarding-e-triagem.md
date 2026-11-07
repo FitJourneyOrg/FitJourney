@@ -42,10 +42,18 @@ conservador) ainda não tem campo no contrato. `SafetyRules.modoConservadorAutom
 documenta a lacuna. Fica para quando o motor v3 ligar em produção — sem fiação nenhuma hoje
 (`MotorV3Pipeline.Entrada` não tem caller fora de teste).
 
+## Minutos disponíveis → teto de séries
+
+[REGRA] `ProfileDto.minutesAvailable: MinutesAvailable?` (shared-contract, V79) -- faixas
+`FORTY_FIVE`/`SIXTY`/`SEVENTY_FIVE`/`NINETY_PLUS`, cada uma carregando o minuto representativo
+(`.minutos`) que `CapacityModel.tetoPorTempo(minutos, dias)` consome. **Dormente** -- a coluna
+grava e lê, mas nenhuma rota chama `MotorV3Pipeline.Entrada`/`tetoPorTempo` ainda; fica parada
+até o v3 virar o gerador de produção, igual ao resto do motor v3.
+
 ## O que ainda falta da Fatia 12
 
-Minutos disponíveis → teto de séries (já implementado no `CapacityModel`, dormente no v3),
 `BodyLimitation` remapeado pras 5 regiões da spec (0 dado real medido em 2026-11-07, migration
-livre de risco quando vier), botão "não tenho este equipamento" na academia (`accessories != null`
-já basta como gatilho, decisão tomada), "casa (em breve)" na tela — tudo cliente, nenhuma linha
-ainda. Ver `trabalho/motor-v3-desenho-e-fatias.md` §Fatia 12 e `ESTADO.md`.
+livre de risco quando vier), "modo leve" (preferência explícita, ver `[PROPOSTA]` acima), botão
+"não tenho este equipamento" na academia (`accessories != null` já basta como gatilho, decisão
+tomada), "casa (em breve)" na tela — tudo cliente, nenhuma linha ainda. Ver
+`trabalho/motor-v3-desenho-e-fatias.md` §Fatia 12 e `ESTADO.md`.

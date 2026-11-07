@@ -104,6 +104,7 @@ class ProfileService(
                 level = nivel,
                 trainingConsistency = dto.trainingConsistency,
                 timeOffTraining = dto.timeOffTraining,
+                minutesAvailable = dto.minutesAvailable,
                 daysPerWeek = dto.daysPerWeek,
                 splitPreference = dto.splitPreference,
                 unavailableDays = dto.unavailableDays,
