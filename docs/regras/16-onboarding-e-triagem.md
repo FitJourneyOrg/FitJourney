@@ -22,8 +22,16 @@ alcança pela promoção por histórico (`PromocaoDeNivel`, âncoras congeladas)
 quando `trainingConsistency` E `timeOffTraining` vêm preenchidos no `ProfileDto`. Se qualquer um
 vier `null` (cliente anterior a esta fatia, que ainda pergunta nível livremente), o servidor
 **mantém o `level` que o cliente mandou** — sem isso, o onboarding em produção quebraria no dia
-em que o backend subisse antes do app novo. O fallback só desaparece quando o cliente parar de
-mandar `level` como escolha livre (fatia de cliente, ainda não feita).
+em que o backend subisse antes do app novo.
+
+[REGRA] **Fechado no cliente (2026-11-07):** `LevelStep` saiu do onboarding Android. Em seu
+lugar, `TrainingConsistencyStep`/`TimeOffTrainingStep` (`QuizSteps.kt`) perguntam as duas, e
+`QuizState.levelDerivado` chama o MESMO `nivelDerivado()` do shared-contract para antecipar o
+nível na UI -- o servidor é quem decide de verdade, recalculando sempre. Modo edição
+(`QuizViewModel.startEditing`): quem já tinha perfil salvo ANTES desta fatia tem os dois campos
+`null` e tem que responder de novo, uma vez -- esperado, não é bug. O fallback acima continua
+existindo porque ele protege contra desencontro de deploy (backend novo × app antigo em
+produção), não porque falte cliente.
 
 ## PAR-Q: autoavaliação sem armazenamento, não bloqueia
 
@@ -84,7 +92,10 @@ rota.
 `BodyLimitation` remapeado pras 5 regiões da spec -- **em pausa**: a lógica de SUBSTITUIÇÃO de
 exercício por região (a parte que daria utilidade real ao remap) não existe em nenhum lugar do
 código, e é decisão de produto nova, maior que esta fatia; decisão tomada de não remover o enum
-(ver INV acima). **Cliente inteiro** (as 4 perguntas novas do onboarding: tempo de treino
-consistente, há quanto tempo parou, minutos disponíveis, dor/lesão; e o botão de equipamento na
-tela de academia) -- nenhuma linha ainda. Ver `trabalho/motor-v3-desenho-e-fatias.md` §Fatia 12
-e `ESTADO.md`.
+(ver INV acima). **Cliente, parte feita (2026-11-07):** as duas perguntas que derivam o nível
+(tempo de treino consistente, há quanto tempo parou) -- ver [REGRA] acima. **Cliente, falta
+ainda:** minutos disponíveis (pergunta nova, alimenta `MinutesAvailable`), modo leve
+(preferência explícita, alimenta `preferLightMode`) e o botão "não tenho este equipamento" na
+tela de academia (passo ACCESSORIES já existe para CASA; falta oferecê-lo também pra ACADEMIA).
+Dor/lesão já tinha passo (`LIMITATIONS`), de antes desta fatia. Ver
+`trabalho/motor-v3-desenho-e-fatias.md` §Fatia 12 e `ESTADO.md`.

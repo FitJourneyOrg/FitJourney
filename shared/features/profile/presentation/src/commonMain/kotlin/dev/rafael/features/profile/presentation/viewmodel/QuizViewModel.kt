@@ -27,7 +27,8 @@ class QuizViewModel(
     fun onEvent(event: QuizEvent) {
         when (event) {
             is QuizEvent.GoalSelected -> _state.update { it.copy(goal = event.goal, error = null) }
-            is QuizEvent.LevelSelected -> _state.update { it.copy(level = event.level, error = null) }
+            is QuizEvent.TrainingConsistencySelected -> _state.update { it.copy(trainingConsistency = event.value, error = null) }
+            is QuizEvent.TimeOffTrainingSelected -> _state.update { it.copy(timeOffTraining = event.value, error = null) }
             is QuizEvent.DaysSelected -> _state.update { it.copy(daysPerWeek = event.days, error = null) }
             is QuizEvent.FocusToggled -> toggleFocus(event.muscle)
             is QuizEvent.WeightChanged -> _state.update { it.copy(weightKg = event.value) }
@@ -72,7 +73,11 @@ class QuizViewModel(
                         QuizState(
                             step = QuizStep.GOAL,
                             goal = p.goal,
-                            level = p.level,
+                            // fatia 12: nível deixou de ser campo livre -- quem ainda não respondeu as
+                            // duas perguntas novas (todo usuário existente) tem null aqui e tem que
+                            // responder de novo, uma vez, nesta edição.
+                            trainingConsistency = p.trainingConsistency,
+                            timeOffTraining = p.timeOffTraining,
                             daysPerWeek = p.daysPerWeek,
                             splitPreference = p.splitPreference,
                             unavailableDays = p.unavailableDays,

@@ -17,6 +17,8 @@ import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitType
+import dev.rafael.contract.profile.TimeOffTraining
+import dev.rafael.contract.profile.TrainingConsistency
 import dev.rafael.contract.profile.TrainingEnvironment
 import dev.rafael.contract.wiki.WikiCategory
 
@@ -105,6 +107,27 @@ fun Level.rotulo(): Int = when (this) {
     Level.BEGINNER -> R.string.enum_nivel_beginner
     Level.INTERMEDIATE -> R.string.enum_nivel_intermediate
     Level.ADVANCED -> R.string.enum_nivel_advanced
+}
+
+/**
+ * As duas perguntas novas do onboarding (fatia 12 -- resto) que SUBSTITUEM a escolha livre de
+ * [Level]: o nível passa a ser derivado destas duas respostas por `nivelDerivado()`, no
+ * `shared-contract`, não mais escolhido aqui.
+ */
+@StringRes
+fun TrainingConsistency.rotulo(): Int = when (this) {
+    TrainingConsistency.NEVER_TRAINED -> R.string.enum_consistencia_never_trained
+    TrainingConsistency.LESS_THAN_6_MONTHS -> R.string.enum_consistencia_less_than_6_months
+    TrainingConsistency.SIX_MONTHS_TO_2_YEARS -> R.string.enum_consistencia_6_months_to_2_years
+    TrainingConsistency.MORE_THAN_2_YEARS -> R.string.enum_consistencia_more_than_2_years
+}
+
+@StringRes
+fun TimeOffTraining.rotulo(): Int = when (this) {
+    TimeOffTraining.NONE -> R.string.enum_parado_none
+    TimeOffTraining.UP_TO_1_MONTH -> R.string.enum_parado_up_to_1_month
+    TimeOffTraining.ONE_TO_6_MONTHS -> R.string.enum_parado_1_to_6_months
+    TimeOffTraining.MORE_THAN_6_MONTHS -> R.string.enum_parado_more_than_6_months
 }
 
 @StringRes

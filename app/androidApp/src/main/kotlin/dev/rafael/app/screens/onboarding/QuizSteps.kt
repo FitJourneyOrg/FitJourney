@@ -18,8 +18,9 @@ import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.HealthScreening
-import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.profile.TimeOffTraining
+import dev.rafael.contract.profile.TrainingConsistency
 import dev.rafael.contract.profile.TrainingEnvironment
 import dev.rafael.contract.profile.SplitCatalog
 import dev.rafael.contract.profile.SplitType
@@ -92,17 +93,43 @@ fun GoalStep(selected: Goal?, onSelect: (Goal) -> Unit) {
     }
 }
 
+/**
+ * As duas perguntas novas que substituem a escolha livre de nível (fatia 12 -- resto, cliente):
+ * o `QuizState.levelDerivado` combina as duas pelo `nivelDerivado()` compartilhado. Radio-list,
+ * mesmo estilo do [EnvironmentStep] -- é pergunta de única escolha, não `FilterChip` múltiplo.
+ */
 @Composable
-fun LevelStep(selected: Level?, onSelect: (Level) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.quiz_nivel_titulo), style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(8.dp))
-        Level.entries.forEach { l ->
-            FilterChip(
-                selected = selected == l,
-                onClick = { onSelect(l) },
-                label = { Text(stringResource(l.rotulo())) },
-            )
+fun TrainingConsistencyStep(selected: TrainingConsistency?, onSelect: (TrainingConsistency) -> Unit) {
+    Column {
+        Text(stringResource(R.string.quiz_consistencia_titulo), style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(16.dp))
+        TrainingConsistency.entries.forEach { c ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onSelect(c) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = selected == c, onClick = { onSelect(c) })
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(c.rotulo()))
+            }
+        }
+    }
+}
+
+@Composable
+fun TimeOffTrainingStep(selected: TimeOffTraining?, onSelect: (TimeOffTraining) -> Unit) {
+    Column {
+        Text(stringResource(R.string.quiz_parado_titulo), style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(16.dp))
+        TimeOffTraining.entries.forEach { t ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onSelect(t) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = selected == t, onClick = { onSelect(t) })
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(t.rotulo()))
+            }
         }
     }
 }

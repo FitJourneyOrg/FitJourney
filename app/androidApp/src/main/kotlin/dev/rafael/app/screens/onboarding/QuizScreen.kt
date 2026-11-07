@@ -80,7 +80,12 @@ fun QuizScreen(
             Box(modifier = Modifier.weight(1f)) {
                 when (state.step) {
                     QuizStep.GOAL -> GoalStep(state.goal) { viewModel.onEvent(QuizEvent.GoalSelected(it)) }
-                    QuizStep.LEVEL -> LevelStep(state.level) { viewModel.onEvent(QuizEvent.LevelSelected(it)) }
+                    QuizStep.CONSISTENCY -> TrainingConsistencyStep(state.trainingConsistency) {
+                        viewModel.onEvent(QuizEvent.TrainingConsistencySelected(it))
+                    }
+                    QuizStep.TIME_OFF -> TimeOffTrainingStep(state.timeOffTraining) {
+                        viewModel.onEvent(QuizEvent.TimeOffTrainingSelected(it))
+                    }
                     QuizStep.AGE -> AgeStep(
                         age = state.age,
                         minorSupervised = state.minorSupervised,

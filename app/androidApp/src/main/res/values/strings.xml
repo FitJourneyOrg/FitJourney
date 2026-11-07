@@ -878,8 +878,19 @@
     <!-- Passo OBJETIVO. Os rótulos das opções são `enum_objetivo_*`. -->
     <string name="quiz_objetivo_titulo">Qual seu objetivo principal?</string>
 
-    <!-- Passo NÍVEL. Os rótulos das opções são `enum_nivel_*`. -->
-    <string name="quiz_nivel_titulo">Qual seu nível hoje?</string>
+    <!-- Fatia 12 (resto): nível deixa de ser escolha livre; estas duas perguntas o derivam.
+         Passo CONSISTENCIA. Os rótulos das opções são `enum_consistencia_*`. -->
+    <string name="quiz_consistencia_titulo">Você treina de forma consistente há quanto tempo?</string>
+    <string name="enum_consistencia_never_trained">Nunca treinei</string>
+    <string name="enum_consistencia_less_than_6_months">Menos de 6 meses</string>
+    <string name="enum_consistencia_6_months_to_2_years">De 6 meses a 2 anos</string>
+    <string name="enum_consistencia_more_than_2_years">Mais de 2 anos</string>
+    <!-- Passo PARADO. Os rótulos das opções são `enum_parado_*`. -->
+    <string name="quiz_parado_titulo">Há quanto tempo você está sem treinar?</string>
+    <string name="enum_parado_none">Não parei, continuo treinando</string>
+    <string name="enum_parado_up_to_1_month">Até 1 mês</string>
+    <string name="enum_parado_1_to_6_months">De 1 a 6 meses</string>
+    <string name="enum_parado_more_than_6_months">Mais de 6 meses</string>
 
     <!-- Passo IDADE. -->
     <string name="quiz_idade_titulo">Qual sua idade?</string>

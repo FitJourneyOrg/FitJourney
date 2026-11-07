@@ -6,6 +6,8 @@ import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.ProfileDto
 import dev.rafael.contract.profile.SplitType
+import dev.rafael.contract.profile.TimeOffTraining
+import dev.rafael.contract.profile.TrainingConsistency
 import dev.rafael.contract.profile.TrainingEnvironment
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -75,5 +77,26 @@ class ProfileMapperTest {
     @Test
     fun `accessories nao informado fica nulo, nao vazio`() {
         assertNull(dto().toDomain().accessories)
+    }
+
+    // ---- fatia 12 (resto, cliente): trainingConsistency e timeOffTraining sobrevivem ao DTO<->dominio ----
+
+    @Test
+    fun `trainingConsistency e timeOffTraining sobrevivem ao round-trip`() {
+        val d = dto().copy(
+            trainingConsistency = TrainingConsistency.SIX_MONTHS_TO_2_YEARS,
+            timeOffTraining = TimeOffTraining.UP_TO_1_MONTH,
+        )
+        val rt = d.toDomain().toDto()
+        assertEquals(TrainingConsistency.SIX_MONTHS_TO_2_YEARS, rt.trainingConsistency)
+        assertEquals(TimeOffTraining.UP_TO_1_MONTH, rt.timeOffTraining)
+    }
+
+    /** Caminho de falha: quem ainda não respondeu as perguntas novas fica nulo nos dois campos. */
+    @Test
+    fun `trainingConsistency e timeOffTraining nao informados ficam nulos`() {
+        val d = dto().toDomain()
+        assertNull(d.trainingConsistency)
+        assertNull(d.timeOffTraining)
     }
 }

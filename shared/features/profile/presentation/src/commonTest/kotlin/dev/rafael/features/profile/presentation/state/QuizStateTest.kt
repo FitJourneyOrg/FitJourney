@@ -3,6 +3,8 @@ package dev.rafael.features.profile.presentation.state
 import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
+import dev.rafael.contract.profile.TimeOffTraining
+import dev.rafael.contract.profile.TrainingConsistency
 import dev.rafael.contract.profile.TrainingEnvironment
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -20,7 +22,8 @@ class QuizStateTest {
     private fun completo(environment: TrainingEnvironment?, accessories: List<Accessory> = listOf(Accessory.ELEVATED_SURFACE)) =
         QuizState(
             goal = Goal.GAIN_MUSCLE,
-            level = Level.INTERMEDIATE,
+            trainingConsistency = TrainingConsistency.SIX_MONTHS_TO_2_YEARS,
+            timeOffTraining = TimeOffTraining.NONE,
             daysPerWeek = 3,
             age = 30,
             environment = environment,
@@ -77,5 +80,55 @@ class QuizStateTest {
         val semObjetivo = completo(TrainingEnvironment.CASA).copy(goal = null)
 
         assertNull(semObjetivo.toProfileOrNull())
+    }
+
+    // ---- fatia 12 (resto, cliente): nível deixa de ser escolha livre -- vira levelDerivado ----
+
+    @Test
+    fun `nunca treinou deriva iniciante mesmo sem ter parado`() {
+        val estado = completo(TrainingEnvironment.CASA).copy(
+            trainingConsistency = TrainingConsistency.NEVER_TRAINED,
+            timeOffTraining = TimeOffTraining.NONE,
+        )
+
+        assertEquals(Level.BEGINNER, estado.levelDerivado)
+    }
+
+    @Test
+    fun `consistente e sem parar ha muito deriva intermediario`() {
+        val estado = completo(TrainingEnvironment.CASA).copy(
+            trainingConsistency = TrainingConsistency.MORE_THAN_2_YEARS,
+            timeOffTraining = TimeOffTraining.UP_TO_1_MONTH,
+        )
+
+        assertEquals(Level.INTERMEDIATE, estado.levelDerivado)
+    }
+
+    /** Caminho de falha: faltando qualquer uma das duas perguntas, levelDerivado é nulo. */
+    @Test
+    fun `levelDerivado nulo enquanto uma das duas perguntas nao foi respondida`() {
+        val semConsistencia = completo(TrainingEnvironment.CASA).copy(trainingConsistency = null)
+        val semTempoParado = completo(TrainingEnvironment.CASA).copy(timeOffTraining = null)
+
+        assertNull(semConsistencia.levelDerivado)
+        assertNull(semTempoParado.levelDerivado)
+    }
+
+    /** toProfileOrNull não avança sem o nível derivado -- mesma regra dos outros obrigatórios. */
+    @Test
+    fun `sem levelDerivado toProfileOrNull devolve nulo`() {
+        val semConsistencia = completo(TrainingEnvironment.CASA).copy(trainingConsistency = null)
+
+        assertNull(semConsistencia.toProfileOrNull())
+    }
+
+    @Test
+    fun `toProfileOrNull manda o nivel derivado, nao um escolhido livremente`() {
+        val estado = completo(TrainingEnvironment.CASA).copy(
+            trainingConsistency = TrainingConsistency.NEVER_TRAINED,
+            timeOffTraining = TimeOffTraining.NONE,
+        )
+
+        assertEquals(Level.BEGINNER, estado.toProfileOrNull()?.level)
     }
 }

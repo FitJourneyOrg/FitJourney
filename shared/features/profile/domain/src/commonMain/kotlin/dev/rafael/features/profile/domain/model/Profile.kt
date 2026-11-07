@@ -7,11 +7,15 @@ import dev.rafael.contract.profile.HealthScreening
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitType
+import dev.rafael.contract.profile.TrainingConsistency
+import dev.rafael.contract.profile.TimeOffTraining
 import dev.rafael.contract.profile.TrainingEnvironment
 
 data class Profile(
     val goal: Goal,
     val level: Level,
+    val trainingConsistency: TrainingConsistency? = null,   // fatia 12
+    val timeOffTraining: TimeOffTraining? = null,             // fatia 12
     val daysPerWeek: Int,
     val splitPreference: SplitType? = null,   // ARCH #29
     val unavailableDays: List<Int> = emptyList(),   // dias off (1=Seg..7=Dom); motor evita

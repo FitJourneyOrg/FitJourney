@@ -7,6 +7,8 @@ import dev.rafael.features.profile.domain.model.Profile
 fun ProfileDto.toDomain(): Profile = Profile(
     goal = goal,
     level = level,
+    trainingConsistency = trainingConsistency,
+    timeOffTraining = timeOffTraining,
     daysPerWeek = daysPerWeek,
     splitPreference = splitPreference,
     unavailableDays = unavailableDays,
@@ -26,6 +28,8 @@ fun ProfileDto.toDomain(): Profile = Profile(
 fun Profile.toDto(): ProfileDto = ProfileDto(
     goal = goal,
     level = level,
+    trainingConsistency = trainingConsistency,
+    timeOffTraining = timeOffTraining,
     daysPerWeek = daysPerWeek,
     splitPreference = splitPreference,
     unavailableDays = unavailableDays,

@@ -526,7 +526,16 @@
     <string name="quiz_concluir">Finish</string>
 
     <string name="quiz_objetivo_titulo">What\'s your main goal?</string>
-    <string name="quiz_nivel_titulo">What\'s your level today?</string>
+    <string name="quiz_consistencia_titulo">How long have you been training consistently?</string>
+    <string name="enum_consistencia_never_trained">Never trained</string>
+    <string name="enum_consistencia_less_than_6_months">Less than 6 months</string>
+    <string name="enum_consistencia_6_months_to_2_years">6 months to 2 years</string>
+    <string name="enum_consistencia_more_than_2_years">More than 2 years</string>
+    <string name="quiz_parado_titulo">How long have you been off training?</string>
+    <string name="enum_parado_none">Haven\'t stopped, still training</string>
+    <string name="enum_parado_up_to_1_month">Up to 1 month</string>
+    <string name="enum_parado_1_to_6_months">1 to 6 months</string>
+    <string name="enum_parado_more_than_6_months">More than 6 months</string>
 
     <string name="quiz_idade_titulo">How old are you?</string>
     <string name="quiz_idade_campo">Age</string>
