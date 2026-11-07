@@ -3,6 +3,7 @@ package dev.rafael.features.profile.data
 import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
+import dev.rafael.contract.profile.MinutesAvailable
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.ProfileDto
 import dev.rafael.contract.profile.SplitType
@@ -98,5 +99,18 @@ class ProfileMapperTest {
         val d = dto().toDomain()
         assertNull(d.trainingConsistency)
         assertNull(d.timeOffTraining)
+    }
+
+    // ---- fatia 12 (resto, cliente): minutesAvailable sobrevive ao DTO<->dominio ----
+
+    @Test
+    fun `minutesAvailable sobrevive ao round-trip`() {
+        val rt = dto().copy(minutesAvailable = MinutesAvailable.SEVENTY_FIVE).toDomain().toDto()
+        assertEquals(MinutesAvailable.SEVENTY_FIVE, rt.minutesAvailable)
+    }
+
+    @Test
+    fun `minutesAvailable nao informado fica nulo`() {
+        assertNull(dto().toDomain().minutesAvailable)
     }
 }

@@ -3,6 +3,7 @@ package dev.rafael.features.profile.presentation.state
 import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
+import dev.rafael.contract.profile.MinutesAvailable
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.profile.TimeOffTraining
@@ -14,6 +15,7 @@ sealed interface QuizEvent {
     data class TrainingConsistencySelected(val value: TrainingConsistency) : QuizEvent   // fatia 12
     data class TimeOffTrainingSelected(val value: TimeOffTraining) : QuizEvent             // fatia 12
     data class DaysSelected(val days: Int) : QuizEvent
+    data class MinutesAvailableSelected(val value: MinutesAvailable) : QuizEvent   // fatia 12 (resto)
     data class SplitSelected(val split: SplitType) : QuizEvent   // ARCH #29
     data class RestDayToggled(val dayOfWeek: Int) : QuizEvent     // Estágio 2: liga/desliga dia off
     data class FocusToggled(val muscle: MuscleGroup) : QuizEvent

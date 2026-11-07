@@ -5,6 +5,7 @@ import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.HealthScreening
 import dev.rafael.contract.profile.Level
+import dev.rafael.contract.profile.MinutesAvailable
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.profile.TimeOffTraining
@@ -15,13 +16,14 @@ import dev.rafael.core.result.AppError
 import dev.rafael.features.profile.domain.model.Profile
 
 /** Os passos do quiz, em ordem. REST_DAYS (Estágio 2) após DAYS; SPLIT (ARCH #29) após ENVIRONMENT. */
-enum class QuizStep { GOAL, CONSISTENCY, TIME_OFF, AGE, DAYS, REST_DAYS, FOCUS, BODY, ENVIRONMENT, ACCESSORIES, SPLIT, HEALTH, LIMITATIONS }
+enum class QuizStep { GOAL, CONSISTENCY, TIME_OFF, AGE, DAYS, MINUTES, REST_DAYS, FOCUS, BODY, ENVIRONMENT, ACCESSORIES, SPLIT, HEALTH, LIMITATIONS }
 data class QuizState(
     val step: QuizStep = QuizStep.GOAL,
     val goal: Goal? = null,
     val trainingConsistency: TrainingConsistency? = null,   // fatia 12 -- substitui a escolha livre de nível
     val timeOffTraining: TimeOffTraining? = null,             // fatia 12
     val daysPerWeek: Int? = null,
+    val minutesAvailable: MinutesAvailable? = null,           // fatia 12 (resto)
     val splitPreference: SplitType? = null,   // ARCH #29: null = usa o recomendado
     val unavailableDays: List<Int> = emptyList(),   // dias (1=Seg..7=Dom) que NÃO quer treinar
     val focusAreas: List<MuscleGroup> = emptyList(),
@@ -79,6 +81,7 @@ data class QuizState(
             // #24: idade obrigatória e válida; menor de 18 só passa com o aceite de supervisão.
             QuizStep.AGE -> age != null && age in 5..120 && (age >= 18 || minorSupervised)
             QuizStep.DAYS -> daysPerWeek != null
+            QuizStep.MINUTES -> minutesAvailable != null
             QuizStep.REST_DAYS -> hasEnoughFreeDays        // não pode marcar dias off demais
             QuizStep.FOCUS -> true
             QuizStep.BODY -> true
@@ -105,6 +108,7 @@ data class QuizState(
             level = l,
             trainingConsistency = trainingConsistency,   // fatia 12
             timeOffTraining = timeOffTraining,             // fatia 12
+            minutesAvailable = minutesAvailable,           // fatia 12 (resto)
             daysPerWeek = d,
             splitPreference = splitPreference,   // ARCH #29 (null = recomendado)
             unavailableDays = unavailableDays,   // Estágio 2: dias que não quer treinar

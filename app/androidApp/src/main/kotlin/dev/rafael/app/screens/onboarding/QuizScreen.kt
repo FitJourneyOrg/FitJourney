@@ -93,6 +93,9 @@ fun QuizScreen(
                         onToggleSupervised = { viewModel.onEvent(QuizEvent.SupervisedToggled) },
                     )
                     QuizStep.DAYS -> DaysStep(state.daysPerWeek) { viewModel.onEvent(QuizEvent.DaysSelected(it)) }
+                    QuizStep.MINUTES -> MinutesAvailableStep(state.minutesAvailable) {
+                        viewModel.onEvent(QuizEvent.MinutesAvailableSelected(it))
+                    }
                     QuizStep.REST_DAYS -> RestDaysStep(
                         selected = state.unavailableDays,
                         daysPerWeek = state.daysPerWeek ?: 0,

@@ -544,6 +544,11 @@
     <string name="quiz_idade_aviso_idoso">Over 69: we recommend regular medical supervision.</string>
 
     <string name="quiz_dias_titulo">How many days a week?</string>
+    <string name="quiz_minutos_titulo">How many minutes do you have per session?</string>
+    <string name="enum_minutos_forty_five">About 45 minutes</string>
+    <string name="enum_minutos_sixty">About 60 minutes</string>
+    <string name="enum_minutos_seventy_five">About 75 minutes</string>
+    <string name="enum_minutos_ninety_plus">90 minutes or more</string>
 
     <string name="quiz_foco_titulo">Want to focus on a muscle?</string>
     <string name="quiz_foco_ajuda">Pick up to 2 groups (or leave it empty = balanced).</string>

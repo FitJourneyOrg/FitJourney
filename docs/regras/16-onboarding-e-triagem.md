@@ -61,6 +61,11 @@ mas nada em produção lê `preferLightMode` hoje.
 grava e lê, mas nenhuma rota chama `MotorV3Pipeline.Entrada`/`tetoPorTempo` ainda; fica parada
 até o v3 virar o gerador de produção, igual ao resto do motor v3.
 
+[REGRA] **Fechado no cliente (2026-11-07):** `MinutesAvailableStep` (`QuizSteps.kt`,
+radio-list) pergunta no passo `QuizStep.MINUTES`, logo depois de DAYS. Continua dormente do
+mesmo jeito -- o campo grava e lê de ponta a ponta, só não tem rota que leia pra calcular o
+teto ainda.
+
 ## "Não tenho este equipamento" (academia)
 
 [REGRA] **`Accessory.paraAmbiente` agora respeita declaração explícita também na ACADEMIA.**
@@ -93,9 +98,9 @@ rota.
 exercício por região (a parte que daria utilidade real ao remap) não existe em nenhum lugar do
 código, e é decisão de produto nova, maior que esta fatia; decisão tomada de não remover o enum
 (ver INV acima). **Cliente, parte feita (2026-11-07):** as duas perguntas que derivam o nível
-(tempo de treino consistente, há quanto tempo parou) -- ver [REGRA] acima. **Cliente, falta
-ainda:** minutos disponíveis (pergunta nova, alimenta `MinutesAvailable`), modo leve
-(preferência explícita, alimenta `preferLightMode`) e o botão "não tenho este equipamento" na
-tela de academia (passo ACCESSORIES já existe para CASA; falta oferecê-lo também pra ACADEMIA).
-Dor/lesão já tinha passo (`LIMITATIONS`), de antes desta fatia. Ver
-`trabalho/motor-v3-desenho-e-fatias.md` §Fatia 12 e `ESTADO.md`.
+(tempo de treino consistente, há quanto tempo parou) -- ver [REGRA] acima; minutos disponíveis
+-- ver [REGRA] acima. **Cliente, falta ainda:** modo leve (preferência explícita, alimenta
+`preferLightMode`) e o botão "não tenho este equipamento" na tela de academia (passo
+ACCESSORIES já existe para CASA; falta oferecê-lo também pra ACADEMIA). Dor/lesão já tinha
+passo (`LIMITATIONS`), de antes desta fatia. Ver `trabalho/motor-v3-desenho-e-fatias.md`
+§Fatia 12 e `ESTADO.md`.

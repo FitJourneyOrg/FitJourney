@@ -18,6 +18,7 @@ import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.HealthScreening
+import dev.rafael.contract.profile.MinutesAvailable
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.TimeOffTraining
 import dev.rafael.contract.profile.TrainingConsistency
@@ -185,6 +186,26 @@ fun DaysStep(selected: Int?, onSelect: (Int) -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             (2..6).forEach { d ->
                 FilterChip(selected = selected == d, onClick = { onSelect(d) }, label = { Text("$d") })
+            }
+        }
+    }
+}
+
+/** Minutos disponíveis por sessão (fatia 12 -- resto). Radio-list, mesmo estilo das demais
+ * perguntas de única escolha desta fatia. */
+@Composable
+fun MinutesAvailableStep(selected: MinutesAvailable?, onSelect: (MinutesAvailable) -> Unit) {
+    Column {
+        Text(stringResource(R.string.quiz_minutos_titulo), style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(16.dp))
+        MinutesAvailable.entries.forEach { m ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onSelect(m) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = selected == m, onClick = { onSelect(m) })
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(m.rotulo()))
             }
         }
     }

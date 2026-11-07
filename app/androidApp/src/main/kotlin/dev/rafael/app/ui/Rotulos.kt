@@ -15,6 +15,7 @@ import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
+import dev.rafael.contract.profile.MinutesAvailable
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.profile.TimeOffTraining
@@ -128,6 +129,15 @@ fun TimeOffTraining.rotulo(): Int = when (this) {
     TimeOffTraining.UP_TO_1_MONTH -> R.string.enum_parado_up_to_1_month
     TimeOffTraining.ONE_TO_6_MONTHS -> R.string.enum_parado_1_to_6_months
     TimeOffTraining.MORE_THAN_6_MONTHS -> R.string.enum_parado_more_than_6_months
+}
+
+/** Minutos disponíveis por sessão (fatia 12 -- resto): alimenta `CapacityModel.tetoPorTempo`, dormente. */
+@StringRes
+fun MinutesAvailable.rotulo(): Int = when (this) {
+    MinutesAvailable.FORTY_FIVE -> R.string.enum_minutos_forty_five
+    MinutesAvailable.SIXTY -> R.string.enum_minutos_sixty
+    MinutesAvailable.SEVENTY_FIVE -> R.string.enum_minutos_seventy_five
+    MinutesAvailable.NINETY_PLUS -> R.string.enum_minutos_ninety_plus
 }
 
 @StringRes

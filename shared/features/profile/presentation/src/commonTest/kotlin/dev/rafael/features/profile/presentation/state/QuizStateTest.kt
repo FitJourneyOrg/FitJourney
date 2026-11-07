@@ -3,6 +3,7 @@ package dev.rafael.features.profile.presentation.state
 import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
+import dev.rafael.contract.profile.MinutesAvailable
 import dev.rafael.contract.profile.TimeOffTraining
 import dev.rafael.contract.profile.TrainingConsistency
 import dev.rafael.contract.profile.TrainingEnvironment
@@ -25,6 +26,7 @@ class QuizStateTest {
             trainingConsistency = TrainingConsistency.SIX_MONTHS_TO_2_YEARS,
             timeOffTraining = TimeOffTraining.NONE,
             daysPerWeek = 3,
+            minutesAvailable = MinutesAvailable.SIXTY,
             age = 30,
             environment = environment,
             accessories = accessories,
@@ -130,5 +132,23 @@ class QuizStateTest {
         )
 
         assertEquals(Level.BEGINNER, estado.toProfileOrNull()?.level)
+    }
+
+    // ---- fatia 12 (resto, cliente): minutesAvailable ----
+
+    @Test
+    fun `minutes obrigatorio para avancar o passo`() {
+        val semMinutos = completo(TrainingEnvironment.CASA).copy(minutesAvailable = null, step = QuizStep.MINUTES)
+        val comMinutos = semMinutos.copy(minutesAvailable = MinutesAvailable.NINETY_PLUS)
+
+        assertFalse(semMinutos.canAdvance)
+        assertTrue(comMinutos.canAdvance)
+    }
+
+    @Test
+    fun `toProfileOrNull manda o minutesAvailable marcado`() {
+        val estado = completo(TrainingEnvironment.CASA).copy(minutesAvailable = MinutesAvailable.SEVENTY_FIVE)
+
+        assertEquals(MinutesAvailable.SEVENTY_FIVE, estado.toProfileOrNull()?.minutesAvailable)
     }
 }

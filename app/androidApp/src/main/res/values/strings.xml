@@ -906,6 +906,13 @@
     <!-- Passo DIAS POR SEMANA. As opções são os números 2 a 6, que não se traduzem. -->
     <string name="quiz_dias_titulo">Quantos dias por semana?</string>
 
+    <!-- Fatia 12 (resto): passo MINUTOS DISPONIVEIS. Os rótulos das opções são `enum_minutos_*`. -->
+    <string name="quiz_minutos_titulo">Quantos minutos você tem por sessão?</string>
+    <string name="enum_minutos_forty_five">Cerca de 45 minutos</string>
+    <string name="enum_minutos_sixty">Cerca de 60 minutos</string>
+    <string name="enum_minutos_seventy_five">Cerca de 75 minutos</string>
+    <string name="enum_minutos_ninety_plus">90 minutos ou mais</string>
+
     <!-- Passo FOCO. Os rótulos das opções são `enum_musculo_*`. -->
     <string name="quiz_foco_titulo">Quer focar em algum músculo?</string>
     <!-- O 2 é o teto do produto (o servidor recusa mais). "vazio = equilibrado" é a saída padrão. -->
