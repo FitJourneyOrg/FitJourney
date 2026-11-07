@@ -35,8 +35,15 @@ data class QuizState(
     val age: Int? = null,                  // #24
     val minorSupervised: Boolean = false,  // #24
     val environment: TrainingEnvironment? = null,          // <- novo
-    // V66: só pergunta quando environment == CASA. "Apoio firme" vem marcado por padrão --
-    // quase todo mundo tem uma cadeira, e o rótulo explícito é o que torna o default honesto.
+    // Fatia 12 (resto): botão "não tenho este equipamento" também na ACADEMIA (academias de
+    // condomínio). `false` até o usuário marcar -- só então o passo ACCESSORIES aparece pra
+    // ACADEMIA também.
+    val academyMissingEquipment: Boolean = false,
+    // V66: só pergunta quando environment == CASA (ou ACADEMIA + academyMissingEquipment).
+    // "Apoio firme" vem marcado por padrão -- quase todo mundo tem uma cadeira, e o rótulo
+    // explícito é o que torna o default honesto. Quando o botão de equipamento liga o passo
+    // pra ACADEMIA, o `QuizViewModel` reinicia esta lista pros SEIS marcados (assume que tem
+    // tudo, usuário desmarca o que falta) -- ver `AcademyMissingEquipmentToggled`.
     val accessories: List<Accessory> = listOf(Accessory.ELEVATED_SURFACE),
     val limitations: List<BodyLimitation> = emptyList(),
     val health: HealthScreening = HealthScreening(),        // <- novo (não-null, começa tudo false)
@@ -69,8 +76,13 @@ data class QuizState(
     val visibleSteps: List<QuizStep>
         get() = QuizStep.entries.filter {
             (it != QuizStep.FOCUS || focusEligible) &&
-                (it != QuizStep.ACCESSORIES || environment == TrainingEnvironment.CASA)
+                (it != QuizStep.ACCESSORIES || mostraAcessorios)
         }
+
+    /** CASA sempre pergunta; ACADEMIA só depois do botão "não tenho este equipamento". */
+    private val mostraAcessorios: Boolean
+        get() = environment == TrainingEnvironment.CASA ||
+            (environment == TrainingEnvironment.ACADEMIA && academyMissingEquipment)
 
     /** Sobra dia suficiente pra treinar o que o usuário pediu? (7 - dias off >= daysPerWeek) */
     val hasEnoughFreeDays: Boolean
@@ -101,8 +113,10 @@ data class QuizState(
      * ainda falta -- extraído do `QuizViewModel` pra ser testável sem `viewModelScope` (C2 tier 2,
      * plano "acessórios no onboarding" §6: "o que foi marcado chega ao ProfileDto").
      *
-     * É aqui que mora a regra da V66: `accessories` só viaja quando `environment == CASA` --
-     * fora disso vira `null` ("nunca perguntado"), nunca `[]` ("perguntado, nada declarado").
+     * É aqui que mora a regra da V66 (fatia 12 -- resto, estendida): `accessories` só viaja
+     * quando [mostraAcessorios] -- CASA (sempre) ou ACADEMIA com o botão "não tenho este
+     * equipamento" marcado. Fora disso vira `null` ("nunca perguntado"), nunca `[]`
+     * ("perguntado, nada declarado").
      */
     fun toProfileOrNull(): Profile? {
         val g = goal; val l = levelDerivado; val d = daysPerWeek
@@ -123,7 +137,7 @@ data class QuizState(
             age = age,                       // #24
             minorSupervised = minorSupervised,   // #24
             environment = environment,
-            accessories = if (environment == TrainingEnvironment.CASA) accessories else null,
+            accessories = if (mostraAcessorios) accessories else null,
             limitations = limitations,
             health = health,
             onboardingCompleted = false,   // server deriva

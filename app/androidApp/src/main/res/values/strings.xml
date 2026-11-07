@@ -970,12 +970,16 @@
     <string name="quiz_corpo_altura">Altura (cm)</string>
 
     <!-- Passo AMBIENTE. As opções são `enum_ambiente_*_descricao`. `em_breve` marca CASA
-         como indisponível nesta tela (resto da Fatia 12); não desliga quem já usa. -->
+         como indisponível nesta tela (resto da Fatia 12); não desliga quem já usa.
+         `falta_equipamento` (resto da Fatia 12): só aparece com ACADEMIA selecionada; marcar
+         revela o passo de acessórios, igual CASA. -->
     <string name="quiz_ambiente_titulo">Onde você treina?</string>
     <string name="quiz_ambiente_em_breve">(em breve)</string>
+    <string name="quiz_ambiente_falta_equipamento">Minha academia não tem todo o equipamento</string>
 
-    <!-- Passo ACESSÓRIOS (V66). Só aparece quando o ambiente escolhido é CASA; na academia o
-         servidor assume os seis. Os rótulos das opções são `enum_acessorio_*`. -->
+    <!-- Passo ACESSÓRIOS (V66). Aparece quando o ambiente é CASA, ou ACADEMIA com o botão
+         "não tenho este equipamento" marcado (resto da Fatia 12); fora isso, o servidor assume
+         os seis. Os rótulos das opções são `enum_acessorio_*`. -->
     <string name="quiz_acessorios_titulo">O que você tem em casa?</string>
     <string name="quiz_acessorios_ajuda">Além do peso, isso libera mais exercícios pro seu treino. Pode deixar sem marcar nada.</string>
     <string name="enum_acessorio_bench">Banco ajustável</string>

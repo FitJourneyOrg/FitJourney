@@ -338,7 +338,9 @@ private val AMBIENTES_DISPONIVEIS = setOf(TrainingEnvironment.ACADEMIA)
 @Composable
 fun EnvironmentStep(
     selected: TrainingEnvironment?,
+    academyMissingEquipment: Boolean,
     onSelect: (TrainingEnvironment) -> Unit,
+    onToggleMissingEquipment: () -> Unit,
 ) {
     Column {
         Text(stringResource(R.string.quiz_ambiente_titulo), style = MaterialTheme.typography.titleLarge)
@@ -367,6 +369,23 @@ fun EnvironmentStep(
                         stringResource(R.string.quiz_ambiente_em_breve),
                         style = MaterialTheme.typography.labelSmall,
                         color = cor,
+                    )
+                }
+            }
+            // fatia 12 (resto): academias de condomínio às vezes não têm todo o equipamento --
+            // quem marcar aqui ganha o mesmo passo de acessórios de quem treina em CASA.
+            if (env == TrainingEnvironment.ACADEMIA && selected == TrainingEnvironment.ACADEMIA) {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clickable { onToggleMissingEquipment() }
+                        .padding(start = 32.dp, top = 4.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = academyMissingEquipment, onCheckedChange = { onToggleMissingEquipment() })
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.quiz_ambiente_falta_equipamento),
+                        style = MaterialTheme.typography.bodySmall,
                     )
                 }
             }

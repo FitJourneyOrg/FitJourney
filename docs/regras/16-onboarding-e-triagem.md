@@ -99,12 +99,11 @@ rota.
 
 ## O que ainda falta da Fatia 12
 
-`BodyLimitation` remapeado pras 5 regiões da spec -- **em pausa**: a lógica de SUBSTITUIÇÃO de
-exercício por região (a parte que daria utilidade real ao remap) não existe em nenhum lugar do
-código, e é decisão de produto nova, maior que esta fatia; decisão tomada de não remover o enum
-(ver INV acima). **Cliente, parte feita (2026-11-07):** as duas perguntas que derivam o nível
-(tempo de treino consistente, há quanto tempo parou) -- ver [REGRA] acima; minutos disponíveis
-e modo leve -- ver [REGRA] acima dos dois. **Cliente, falta ainda:** o botão "não tenho este
-equipamento" na tela de academia (passo ACCESSORIES já existe para CASA; falta oferecê-lo
-também pra ACADEMIA). Dor/lesão já tinha passo (`LIMITATIONS`), de antes desta fatia. Ver
-`trabalho/motor-v3-desenho-e-fatias.md` §Fatia 12 e `ESTADO.md`.
+**Fatia 12 fechou inteira no cliente em 2026-11-07** -- nível derivado, minutos disponíveis,
+modo leve e o botão "não tenho este equipamento" também na ACADEMIA (`QuizState.
+academyMissingEquipment` revela o passo `ACCESSORIES`, reusando o mesmo campo/passo de CASA;
+detalhe em `historico/botao-de-equipamento-no-cliente.md`). Só resta `BodyLimitation`
+remapeado pras 5 regiões da spec -- **em pausa**: a lógica de SUBSTITUIÇÃO de exercício por
+região (a parte que daria utilidade real ao remap) não existe em nenhum lugar do código, e é
+decisão de produto nova, maior que esta fatia; decisão tomada de não remover o enum (ver INV
+acima). Ver `trabalho/motor-v3-desenho-e-fatias.md` §Fatia 12 e `ESTADO.md`.

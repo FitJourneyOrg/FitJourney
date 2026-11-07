@@ -25,6 +25,9 @@ sealed interface QuizEvent {
     data class AgeChanged(val value: Int?) : QuizEvent            // #24
     data object SupervisedToggled : QuizEvent                     // #24: <18 aceite de supervisão
     data class EnvironmentSelected(val env: TrainingEnvironment) : QuizEvent
+    /** Fatia 12 (resto): botao "nao tenho este equipamento" tambem na ACADEMIA (academias de
+     * condominio). Revela o passo ACCESSORIES pra quem marcar. */
+    data object AcademyMissingEquipmentToggled : QuizEvent
     data class HealthToggled(val field: HealthField) : QuizEvent   // qual pergunta mudou
     data object AcknowledgedRiskToggled : QuizEvent
     data class LimitationToggled(val limitation: BodyLimitation) : QuizEvent

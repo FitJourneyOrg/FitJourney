@@ -105,7 +105,12 @@ fun QuizScreen(
                         onToggle = { viewModel.onEvent(QuizEvent.RestDayToggled(it)) },
                     )
                     QuizStep.FOCUS -> FocusStep(state.focusAreas) { viewModel.onEvent(QuizEvent.FocusToggled(it)) }
-                    QuizStep.ENVIRONMENT -> EnvironmentStep(state.environment) { viewModel.onEvent(QuizEvent.EnvironmentSelected(it)) }
+                    QuizStep.ENVIRONMENT -> EnvironmentStep(
+                        selected = state.environment,
+                        academyMissingEquipment = state.academyMissingEquipment,
+                        onSelect = { viewModel.onEvent(QuizEvent.EnvironmentSelected(it)) },
+                        onToggleMissingEquipment = { viewModel.onEvent(QuizEvent.AcademyMissingEquipmentToggled) },
+                    )
                     QuizStep.ACCESSORIES -> AccessoriesStep(state.accessories) {
                         viewModel.onEvent(QuizEvent.AccessoryToggled(it))
                     }

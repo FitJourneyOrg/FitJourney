@@ -68,12 +68,37 @@ class QuizStateTest {
         assertEquals(emptyList<Accessory>(), perfil?.accessories)
     }
 
-    /** Academia nunca pergunta -- o que sobrou no estado (o default) não pode vazar pro servidor. */
+    /** Academia nunca pergunta por padrão -- o que sobrou no estado (o default) não pode vazar pro servidor. */
     @Test
     fun `academia manda null mesmo com o default marcado no estado`() {
         val perfil = completo(TrainingEnvironment.ACADEMIA).toProfileOrNull()
 
         assertNull(perfil?.accessories)
+    }
+
+    // ---- fatia 12 (resto, cliente): botão "não tenho este equipamento" também na ACADEMIA ----
+
+    @Test
+    fun `academia com o botao de equipamento marcado mostra o passo de acessorios`() {
+        val estado = completo(TrainingEnvironment.ACADEMIA).copy(academyMissingEquipment = true)
+
+        assertTrue(QuizStep.ACCESSORIES in estado.visibleSteps)
+    }
+
+    @Test
+    fun `academia com o botao marcado manda os acessorios declarados, nao null`() {
+        val declarados = listOf(Accessory.BENCH, Accessory.PULLUP_BAR)
+        val estado = completo(TrainingEnvironment.ACADEMIA, declarados).copy(academyMissingEquipment = true)
+
+        assertEquals(declarados, estado.toProfileOrNull()?.accessories)
+    }
+
+    /** Mesmo com o botão marcado, desmarcar tudo manda `[]`, não `null` -- é a resposta real. */
+    @Test
+    fun `academia com o botao marcado e nada declarado manda lista vazia, nao nula`() {
+        val estado = completo(TrainingEnvironment.ACADEMIA, emptyList()).copy(academyMissingEquipment = true)
+
+        assertEquals(emptyList<Accessory>(), estado.toProfileOrNull()?.accessories)
     }
 
     /** Caminho de falha: obrigatório faltando (aqui, `goal`) devolve `null`, nunca um Profile capenga. */
