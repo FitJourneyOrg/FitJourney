@@ -946,8 +946,10 @@
     <string name="quiz_corpo_peso">Peso (kg)</string>
     <string name="quiz_corpo_altura">Altura (cm)</string>
 
-    <!-- Passo AMBIENTE. As opções são `enum_ambiente_*_descricao`. -->
+    <!-- Passo AMBIENTE. As opções são `enum_ambiente_*_descricao`. `em_breve` marca CASA
+         como indisponível nesta tela (resto da Fatia 12); não desliga quem já usa. -->
     <string name="quiz_ambiente_titulo">Onde você treina?</string>
+    <string name="quiz_ambiente_em_breve">(em breve)</string>
 
     <!-- Passo ACESSÓRIOS (V66). Só aparece quando o ambiente escolhido é CASA; na academia o
          servidor assume os seis. Os rótulos das opções são `enum_acessorio_*`. -->

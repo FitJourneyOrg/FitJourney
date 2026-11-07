@@ -69,10 +69,22 @@ dois chamadores de produção) só deixaram de forçar `?: emptyList()` antes de
 armazenar nada de novo sobre limitação do usuário, o enum continua existindo (perfil +
 `Exercise.contraindications`, dado curado). Não propor remoção de novo sem pedir.
 
+## "Casa (em breve)" na tela de onboarding
+
+[REGRA] `EnvironmentStep` (`QuizSteps.kt`) restringe as opções visíveis a
+`AMBIENTES_DISPONIVEIS = {ACADEMIA}` -- especificação: "lançar só com academia; a lista de
+equipamentos é condição de lançamento apenas para o treino em casa". CASA aparece esmaecida, com
+sufixo "(em breve)"/"(coming soon)" (`quiz_ambiente_em_breve`), rádio e row desabilitados. **Só
+UI** -- `TrainingEnvironment.CASA` continua existindo de ponta a ponta sem gate nenhum; o 1
+usuário real medido não é afetado, porque isto só governa a ESCOLHA no onboarding, não nenhuma
+rota.
+
 ## O que ainda falta da Fatia 12
 
 `BodyLimitation` remapeado pras 5 regiões da spec -- **em pausa**: a lógica de SUBSTITUIÇÃO de
 exercício por região (a parte que daria utilidade real ao remap) não existe em nenhum lugar do
 código, e é decisão de produto nova, maior que esta fatia; decisão tomada de não remover o enum
-(ver INV acima). "Casa (em breve)" na tela — cliente, nenhuma linha ainda. Ver
-`trabalho/motor-v3-desenho-e-fatias.md` §Fatia 12 e `ESTADO.md`.
+(ver INV acima). **Cliente inteiro** (as 4 perguntas novas do onboarding: tempo de treino
+consistente, há quanto tempo parou, minutos disponíveis, dor/lesão; e o botão de equipamento na
+tela de academia) -- nenhuma linha ainda. Ver `trabalho/motor-v3-desenho-e-fatias.md` §Fatia 12
+e `ESTADO.md`.

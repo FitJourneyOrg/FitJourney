@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -250,6 +251,15 @@ fun BodyStep(
     }
 }
 
+/**
+ * [REGRA] (resto da Fatia 12): CASA sai desabilitada aqui -- "lançar só com academia; a lista
+ * de equipamentos é condição de lançamento apenas para o treino em casa" (especificação). É
+ * só de UI: não desliga quem já tem `environment = CASA` salvo (1 usuário real, medido em
+ * 2026-11-07) -- o campo continua existindo no contrato/servidor sem gate nenhum, só esta tela
+ * de onboarding não oferece a opção pra quem ainda não escolheu.
+ */
+private val AMBIENTES_DISPONIVEIS = setOf(TrainingEnvironment.ACADEMIA)
+
 @Composable
 fun EnvironmentStep(
     selected: TrainingEnvironment?,
@@ -259,15 +269,31 @@ fun EnvironmentStep(
         Text(stringResource(R.string.quiz_ambiente_titulo), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(16.dp))
         TrainingEnvironment.entries.forEach { env ->
+            val disponivel = env in AMBIENTES_DISPONIVEIS
+            val cor = if (disponivel) {
+                Color.Unspecified
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            }
             Row(
-                Modifier.fillMaxWidth().clickable { onSelect(env) }.padding(vertical = 8.dp),
+                Modifier.fillMaxWidth()
+                    .clickable(enabled = disponivel) { onSelect(env) }
+                    .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                RadioButton(selected = selected == env, onClick = { onSelect(env) })
+                RadioButton(selected = selected == env, onClick = { onSelect(env) }, enabled = disponivel)
                 Spacer(Modifier.width(8.dp))
                 // `env.name` como fallback era rótulo derivado do identificador — o defeito que
                 // esta fatia já achou duas vezes. Agora o catálogo é exaustivo e não há fallback.
-                Text(stringResource(env.descricao()))
+                Text(stringResource(env.descricao()), color = cor)
+                if (!disponivel) {
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        stringResource(R.string.quiz_ambiente_em_breve),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cor,
+                    )
+                }
             }
         }
     }

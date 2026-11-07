@@ -572,6 +572,7 @@
     <string name="quiz_corpo_altura">Height (cm)</string>
 
     <string name="quiz_ambiente_titulo">Where do you train?</string>
+    <string name="quiz_ambiente_em_breve">(coming soon)</string>
 
     <string name="quiz_acessorios_titulo">What do you have at home?</string>
     <string name="quiz_acessorios_ajuda">Besides weight, this unlocks more exercises for your workout. You can leave everything unchecked.</string>
