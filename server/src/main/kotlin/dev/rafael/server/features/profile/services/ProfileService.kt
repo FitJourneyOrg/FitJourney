@@ -14,6 +14,7 @@ import dev.rafael.server.features.profile.models.Profile
 import dev.rafael.server.features.profile.models.toDto
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.contract.error.ErrorCodes
+import dev.rafael.contract.profile.nivelDerivado
 
 class ProfileService(
     private val userService: UserService,
@@ -85,11 +86,24 @@ class ProfileService(
                 code = ErrorCodes.DIAS_LIVRES_INSUFICIENTES,
             ).asFailure()
         }
+        // fatia 12 (docs/regras/16-onboarding-e-triagem.md): nível deixa de ser autodeclarado
+        // quando as duas perguntas novas vêm preenchidas -- o servidor recalcula e ignora
+        // o `level` que o cliente mandou. Cliente que ainda não pergunta as duas (pré-fatia-12)
+        // cai no fallback: `dto.level` continua valendo, exatamente como hoje.
+        val consistencia = dto.trainingConsistency
+        val tempoParado = dto.timeOffTraining
+        val nivel = if (consistencia != null && tempoParado != null) {
+            nivelDerivado(consistencia, tempoParado)
+        } else {
+            dto.level
+        }
         return userService.findOrCreate(firebaseUid, email).flatMap { user ->
             val profile = Profile(
                 userId = user.id,
                 goal = dto.goal,
-                level = dto.level,
+                level = nivel,
+                trainingConsistency = dto.trainingConsistency,
+                timeOffTraining = dto.timeOffTraining,
                 daysPerWeek = dto.daysPerWeek,
                 splitPreference = dto.splitPreference,
                 unavailableDays = dto.unavailableDays,

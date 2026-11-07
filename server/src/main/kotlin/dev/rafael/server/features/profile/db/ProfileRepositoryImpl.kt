@@ -8,6 +8,8 @@ import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.profile.TrainingEnvironment
+import dev.rafael.contract.profile.TrainingConsistency
+import dev.rafael.contract.profile.TimeOffTraining
 import dev.rafael.server.features.profile.models.Profile
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -39,6 +41,8 @@ class ProfileRepositoryImpl : ProfileRepository {
                 ProfilesTable.update({ ProfilesTable.userId eq profile.userId }) {
                     it[goal] = profile.goal.name
                     it[level] = profile.level.name
+                    it[trainingConsistency] = profile.trainingConsistency?.name
+                    it[timeOffTraining] = profile.timeOffTraining?.name
                     it[daysPerWeek] = profile.daysPerWeek
                     it[focusAreas] = profile.focusAreas.toJson()
                     it[weightKg] = profile.weightKg
@@ -62,6 +66,8 @@ class ProfileRepositoryImpl : ProfileRepository {
                     it[userId] = profile.userId
                     it[goal] = profile.goal.name
                     it[level] = profile.level.name
+                    it[trainingConsistency] = profile.trainingConsistency?.name
+                    it[timeOffTraining] = profile.timeOffTraining?.name
                     it[daysPerWeek] = profile.daysPerWeek
                     it[focusAreas] = profile.focusAreas.toJson()
                     it[weightKg] = profile.weightKg
@@ -94,6 +100,8 @@ private fun ResultRow.toProfile(): Profile = Profile(
     userId = this[ProfilesTable.userId],
     goal = Goal.valueOf(this[ProfilesTable.goal]),
     level = Level.valueOf(this[ProfilesTable.level]),
+    trainingConsistency = this[ProfilesTable.trainingConsistency]?.let { TrainingConsistency.valueOf(it) },
+    timeOffTraining = this[ProfilesTable.timeOffTraining]?.let { TimeOffTraining.valueOf(it) },
     daysPerWeek = this[ProfilesTable.daysPerWeek],
     focusAreas = this[ProfilesTable.focusAreas].toMuscleGroups(),
     weightKg = this[ProfilesTable.weightKg],

@@ -36,6 +36,7 @@
 | `13-idioma.md` | pt-BR/en, fallback, o que traduz e o que não | fatia G, #37 |
 | `14-privacidade-e-seguranca.md` | O que o perfil público expõe, PII | #34 |
 | `15-design-e-cor.md` | Hierarquia de cor, slot tonal, caixa alta, insets, estado | #16, #37 |
+| `16-onboarding-e-triagem.md` | Nível derivado, PAR-Q sem armazenamento, gate de `/programs/generate` | Fatia 12 |
 
 ## Convenção pra manter isto útil
 

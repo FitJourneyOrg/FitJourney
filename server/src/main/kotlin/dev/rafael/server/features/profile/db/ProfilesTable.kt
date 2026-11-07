@@ -7,6 +7,8 @@ object ProfilesTable : Table("profiles") {
     val userId = uuid("user_id")
     val goal = varchar("goal", 32)
     val level = varchar("level", 32)
+    val trainingConsistency = varchar("training_consistency", 32).nullable()   // fatia 12, V78
+    val timeOffTraining = varchar("time_off_training", 32).nullable()           // fatia 12, V78
     val daysPerWeek = integer("days_per_week")
     val focusAreas = text("focus_areas")
     val weightKg = double("weight_kg").nullable()

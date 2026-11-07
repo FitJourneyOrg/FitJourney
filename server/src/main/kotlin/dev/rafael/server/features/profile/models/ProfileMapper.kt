@@ -6,6 +6,8 @@ import dev.rafael.contract.profile.ProfileDto
 fun Profile.toDto(): ProfileDto = ProfileDto(
     goal = goal,
     level = level,
+    trainingConsistency = trainingConsistency,
+    timeOffTraining = timeOffTraining,
     daysPerWeek = daysPerWeek,
     splitPreference = splitPreference,
     unavailableDays = unavailableDays,
