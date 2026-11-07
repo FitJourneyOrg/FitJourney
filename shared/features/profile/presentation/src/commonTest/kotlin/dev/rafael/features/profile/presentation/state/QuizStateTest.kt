@@ -151,4 +151,22 @@ class QuizStateTest {
 
         assertEquals(MinutesAvailable.SEVENTY_FIVE, estado.toProfileOrNull()?.minutesAvailable)
     }
+
+    // ---- fatia 12 (resto, cliente): preferLightMode ("quer comecar no modo leve?") ----
+
+    /** Pulável -- quem não toca no passo segue com "não" marcado, nunca trava o avanço. */
+    @Test
+    fun `light mode nao bloqueia o avanco mesmo sem tocar`() {
+        val estado = completo(TrainingEnvironment.CASA).copy(step = QuizStep.LIGHT_MODE)
+
+        assertTrue(estado.canAdvance)
+        assertFalse(estado.preferLightMode)
+    }
+
+    @Test
+    fun `toProfileOrNull manda o preferLightMode marcado`() {
+        val estado = completo(TrainingEnvironment.CASA).copy(preferLightMode = true)
+
+        assertEquals(true, estado.toProfileOrNull()?.preferLightMode)
+    }
 }

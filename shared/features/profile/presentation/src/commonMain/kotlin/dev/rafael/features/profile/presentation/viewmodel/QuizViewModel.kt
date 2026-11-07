@@ -29,6 +29,7 @@ class QuizViewModel(
             is QuizEvent.GoalSelected -> _state.update { it.copy(goal = event.goal, error = null) }
             is QuizEvent.TrainingConsistencySelected -> _state.update { it.copy(trainingConsistency = event.value, error = null) }
             is QuizEvent.TimeOffTrainingSelected -> _state.update { it.copy(timeOffTraining = event.value, error = null) }
+            is QuizEvent.LightModeSelected -> _state.update { it.copy(preferLightMode = event.value, error = null) }
             is QuizEvent.DaysSelected -> _state.update { it.copy(daysPerWeek = event.days, error = null) }
             is QuizEvent.MinutesAvailableSelected -> _state.update { it.copy(minutesAvailable = event.value, error = null) }
             is QuizEvent.FocusToggled -> toggleFocus(event.muscle)
@@ -79,6 +80,7 @@ class QuizViewModel(
                             // responder de novo, uma vez, nesta edição.
                             trainingConsistency = p.trainingConsistency,
                             timeOffTraining = p.timeOffTraining,
+                            preferLightMode = p.preferLightMode ?: false,
                             minutesAvailable = p.minutesAvailable,
                             daysPerWeek = p.daysPerWeek,
                             splitPreference = p.splitPreference,

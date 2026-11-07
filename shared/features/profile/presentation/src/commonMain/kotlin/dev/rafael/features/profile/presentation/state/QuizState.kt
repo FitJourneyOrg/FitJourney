@@ -16,12 +16,15 @@ import dev.rafael.core.result.AppError
 import dev.rafael.features.profile.domain.model.Profile
 
 /** Os passos do quiz, em ordem. REST_DAYS (Estágio 2) após DAYS; SPLIT (ARCH #29) após ENVIRONMENT. */
-enum class QuizStep { GOAL, CONSISTENCY, TIME_OFF, AGE, DAYS, MINUTES, REST_DAYS, FOCUS, BODY, ENVIRONMENT, ACCESSORIES, SPLIT, HEALTH, LIMITATIONS }
+enum class QuizStep { GOAL, CONSISTENCY, TIME_OFF, LIGHT_MODE, AGE, DAYS, MINUTES, REST_DAYS, FOCUS, BODY, ENVIRONMENT, ACCESSORIES, SPLIT, HEALTH, LIMITATIONS }
 data class QuizState(
     val step: QuizStep = QuizStep.GOAL,
     val goal: Goal? = null,
     val trainingConsistency: TrainingConsistency? = null,   // fatia 12 -- substitui a escolha livre de nível
     val timeOffTraining: TimeOffTraining? = null,             // fatia 12
+    // fatia 12 (resto): "quer comecar no modo leve?" -- sempre respondida (default nao), nunca
+    // nula no cliente; o passo ja chega com uma escolha marcada, igual ao padrao de accessories.
+    val preferLightMode: Boolean = false,
     val daysPerWeek: Int? = null,
     val minutesAvailable: MinutesAvailable? = null,           // fatia 12 (resto)
     val splitPreference: SplitType? = null,   // ARCH #29: null = usa o recomendado
@@ -78,6 +81,7 @@ data class QuizState(
             QuizStep.GOAL -> goal != null
             QuizStep.CONSISTENCY -> trainingConsistency != null
             QuizStep.TIME_OFF -> timeOffTraining != null
+            QuizStep.LIGHT_MODE -> true   // pulável -- já chega com "não" marcado
             // #24: idade obrigatória e válida; menor de 18 só passa com o aceite de supervisão.
             QuizStep.AGE -> age != null && age in 5..120 && (age >= 18 || minorSupervised)
             QuizStep.DAYS -> daysPerWeek != null
@@ -108,6 +112,7 @@ data class QuizState(
             level = l,
             trainingConsistency = trainingConsistency,   // fatia 12
             timeOffTraining = timeOffTraining,             // fatia 12
+            preferLightMode = preferLightMode,             // fatia 12 (resto)
             minutesAvailable = minutesAvailable,           // fatia 12 (resto)
             daysPerWeek = d,
             splitPreference = splitPreference,   // ARCH #29 (null = recomendado)

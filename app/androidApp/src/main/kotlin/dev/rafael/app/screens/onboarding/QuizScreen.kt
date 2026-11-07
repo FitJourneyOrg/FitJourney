@@ -86,6 +86,9 @@ fun QuizScreen(
                     QuizStep.TIME_OFF -> TimeOffTrainingStep(state.timeOffTraining) {
                         viewModel.onEvent(QuizEvent.TimeOffTrainingSelected(it))
                     }
+                    QuizStep.LIGHT_MODE -> LightModeStep(state.preferLightMode) {
+                        viewModel.onEvent(QuizEvent.LightModeSelected(it))
+                    }
                     QuizStep.AGE -> AgeStep(
                         age = state.age,
                         minorSupervised = state.minorSupervised,

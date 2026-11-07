@@ -18,6 +18,7 @@ data class Profile(
     val trainingConsistency: TrainingConsistency? = null,   // fatia 12
     val timeOffTraining: TimeOffTraining? = null,             // fatia 12
     val minutesAvailable: MinutesAvailable? = null,           // fatia 12 (resto)
+    val preferLightMode: Boolean? = null,                     // fatia 12 (resto); "quer comecar no modo leve?"
     val daysPerWeek: Int,
     val splitPreference: SplitType? = null,   // ARCH #29
     val unavailableDays: List<Int> = emptyList(),   // dias off (1=Seg..7=Dom); motor evita

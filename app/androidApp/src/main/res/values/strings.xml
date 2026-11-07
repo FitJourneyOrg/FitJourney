@@ -891,6 +891,11 @@
     <string name="enum_parado_up_to_1_month">Até 1 mês</string>
     <string name="enum_parado_1_to_6_months">De 1 a 6 meses</string>
     <string name="enum_parado_more_than_6_months">Mais de 6 meses</string>
+    <!-- Passo MODO LEVE: preferência explícita, não condição de saúde; vale por 1 mesociclo. -->
+    <string name="quiz_modo_leve_titulo">Quer começar no modo leve?</string>
+    <string name="quiz_modo_leve_ajuda">Reps mais fáceis por um tempo. Vale por um mesociclo, e depois perguntamos se você quer continuar.</string>
+    <string name="quiz_modo_leve_sim">Sim, prefiro começar leve</string>
+    <string name="quiz_modo_leve_nao">Não, pode ir no ritmo normal</string>
 
     <!-- Passo IDADE. -->
     <string name="quiz_idade_titulo">Qual sua idade?</string>

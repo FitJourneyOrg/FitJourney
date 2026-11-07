@@ -536,6 +536,10 @@
     <string name="enum_parado_up_to_1_month">Up to 1 month</string>
     <string name="enum_parado_1_to_6_months">1 to 6 months</string>
     <string name="enum_parado_more_than_6_months">More than 6 months</string>
+    <string name="quiz_modo_leve_titulo">Want to start in light mode?</string>
+    <string name="quiz_modo_leve_ajuda">Easier reps for a while. It lasts one mesocycle, then we ask if you want to keep going.</string>
+    <string name="quiz_modo_leve_sim">Yes, I prefer to start light</string>
+    <string name="quiz_modo_leve_nao">No, normal pace is fine</string>
 
     <string name="quiz_idade_titulo">How old are you?</string>
     <string name="quiz_idade_campo">Age</string>

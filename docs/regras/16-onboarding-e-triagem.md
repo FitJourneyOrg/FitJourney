@@ -53,6 +53,11 @@ dura 1 mesociclo" da especificação. Default `false`: nenhum caller existente m
 **Ainda dormente** -- `MotorV3Pipeline.Entrada` não tem caller fora de teste; o campo grava e lê,
 mas nada em produção lê `preferLightMode` hoje.
 
+[REGRA] **Fechado no cliente (2026-11-07):** `LightModeStep` (`QuizSteps.kt`) pergunta no
+passo `QuizStep.LIGHT_MODE`, logo depois de TIME_OFF -- sim/não, com texto de ajuda sobre o
+mesociclo. É preferência, não condição: diferente das perguntas de nível, o passo nunca
+bloqueia o avanço (default "não"). Continua dormente do mesmo jeito do servidor.
+
 ## Minutos disponíveis → teto de séries
 
 [REGRA] `ProfileDto.minutesAvailable: MinutesAvailable?` (shared-contract, V79) -- faixas
@@ -99,8 +104,7 @@ exercício por região (a parte que daria utilidade real ao remap) não existe e
 código, e é decisão de produto nova, maior que esta fatia; decisão tomada de não remover o enum
 (ver INV acima). **Cliente, parte feita (2026-11-07):** as duas perguntas que derivam o nível
 (tempo de treino consistente, há quanto tempo parou) -- ver [REGRA] acima; minutos disponíveis
--- ver [REGRA] acima. **Cliente, falta ainda:** modo leve (preferência explícita, alimenta
-`preferLightMode`) e o botão "não tenho este equipamento" na tela de academia (passo
-ACCESSORIES já existe para CASA; falta oferecê-lo também pra ACADEMIA). Dor/lesão já tinha
-passo (`LIMITATIONS`), de antes desta fatia. Ver `trabalho/motor-v3-desenho-e-fatias.md`
-§Fatia 12 e `ESTADO.md`.
+e modo leve -- ver [REGRA] acima dos dois. **Cliente, falta ainda:** o botão "não tenho este
+equipamento" na tela de academia (passo ACCESSORIES já existe para CASA; falta oferecê-lo
+também pra ACADEMIA). Dor/lesão já tinha passo (`LIMITATIONS`), de antes desta fatia. Ver
+`trabalho/motor-v3-desenho-e-fatias.md` §Fatia 12 e `ESTADO.md`.

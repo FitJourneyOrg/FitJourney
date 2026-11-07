@@ -113,4 +113,17 @@ class ProfileMapperTest {
     fun `minutesAvailable nao informado fica nulo`() {
         assertNull(dto().toDomain().minutesAvailable)
     }
+
+    // ---- fatia 12 (resto, cliente): preferLightMode sobrevive ao DTO<->dominio ----
+
+    @Test
+    fun `preferLightMode sobrevive ao round-trip`() {
+        val rt = dto().copy(preferLightMode = true).toDomain().toDto()
+        assertEquals(true, rt.preferLightMode)
+    }
+
+    @Test
+    fun `preferLightMode nao informado fica nulo`() {
+        assertNull(dto().toDomain().preferLightMode)
+    }
 }

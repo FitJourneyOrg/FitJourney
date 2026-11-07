@@ -14,6 +14,7 @@ sealed interface QuizEvent {
     data class GoalSelected(val goal: Goal) : QuizEvent
     data class TrainingConsistencySelected(val value: TrainingConsistency) : QuizEvent   // fatia 12
     data class TimeOffTrainingSelected(val value: TimeOffTraining) : QuizEvent             // fatia 12
+    data class LightModeSelected(val value: Boolean) : QuizEvent   // fatia 12 (resto): "quer comecar no modo leve?"
     data class DaysSelected(val days: Int) : QuizEvent
     data class MinutesAvailableSelected(val value: MinutesAvailable) : QuizEvent   // fatia 12 (resto)
     data class SplitSelected(val split: SplitType) : QuizEvent   // ARCH #29

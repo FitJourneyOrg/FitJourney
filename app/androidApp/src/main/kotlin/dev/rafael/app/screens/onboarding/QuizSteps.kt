@@ -191,6 +191,33 @@ fun DaysStep(selected: Int?, onSelect: (Int) -> Unit) {
     }
 }
 
+/**
+ * "Quer começar no modo leve?" (fatia 12 -- resto, especificação 3ª rodada). Pergunta de
+ * PREFERÊNCIA, não condição -- por isso sim/não em vez de checklist, e por isso o passo nunca
+ * trava o avanço (`canAdvance` sempre `true`): quem não toca segue com "não" marcado.
+ */
+@Composable
+fun LightModeStep(selected: Boolean, onSelect: (Boolean) -> Unit) {
+    Column {
+        Text(stringResource(R.string.quiz_modo_leve_titulo), style = MaterialTheme.typography.headlineSmall)
+        Text(
+            stringResource(R.string.quiz_modo_leve_ajuda),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(Modifier.height(16.dp))
+        listOf(true to R.string.quiz_modo_leve_sim, false to R.string.quiz_modo_leve_nao).forEach { (valor, rotulo) ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onSelect(valor) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = selected == valor, onClick = { onSelect(valor) })
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(rotulo))
+            }
+        }
+    }
+}
+
 /** Minutos disponíveis por sessão (fatia 12 -- resto). Radio-list, mesmo estilo das demais
  * perguntas de única escolha desta fatia. */
 @Composable
