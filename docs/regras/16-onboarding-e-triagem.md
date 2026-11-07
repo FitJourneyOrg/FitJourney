@@ -53,10 +53,26 @@ mas nada em produção lê `preferLightMode` hoje.
 grava e lê, mas nenhuma rota chama `MotorV3Pipeline.Entrada`/`tetoPorTempo` ainda; fica parada
 até o v3 virar o gerador de produção, igual ao resto do motor v3.
 
+## "Não tenho este equipamento" (academia)
+
+[REGRA] **`Accessory.paraAmbiente` agora respeita declaração explícita também na ACADEMIA.**
+Antes: `ambiente == ACADEMIA` sempre devolvia os seis, ignorando qualquer lista declarada. Agora:
+`null` continua assumindo os seis (nunca perguntado -- nenhum perfil de academia de hoje manda
+outra coisa, fallback aditivo); uma lista explícita, mesmo vazia, é respeitada nos dois
+ambientes -- é o que o botão "não tenho este equipamento" (especificação -- resolve as academias
+de condomínio) declara. **Sem campo novo no contrato** -- reusa `ProfileDto.accessories` (V66),
+decisão tomada antes de codar. `DeterministicWorkoutGenerator`/`ExerciseRoutes.alternatives` (os
+dois chamadores de produção) só deixaram de forçar `?: emptyList()` antes de chamar
+`paraAmbiente` -- a distinção null/lista agora atravessa até lá.
+
+[INV] `Rafael decidiu NÃO remover `BodyLimitation` do código (2026-11-07) -- mesmo sem
+armazenar nada de novo sobre limitação do usuário, o enum continua existindo (perfil +
+`Exercise.contraindications`, dado curado). Não propor remoção de novo sem pedir.
+
 ## O que ainda falta da Fatia 12
 
-`BodyLimitation` remapeado pras 5 regiões da spec (0 dado real medido em 2026-11-07, migration
-livre de risco quando vier), "modo leve" (preferência explícita, ver `[PROPOSTA]` acima), botão
-"não tenho este equipamento" na academia (`accessories != null` já basta como gatilho, decisão
-tomada), "casa (em breve)" na tela — tudo cliente, nenhuma linha ainda. Ver
+`BodyLimitation` remapeado pras 5 regiões da spec -- **em pausa**: a lógica de SUBSTITUIÇÃO de
+exercício por região (a parte que daria utilidade real ao remap) não existe em nenhum lugar do
+código, e é decisão de produto nova, maior que esta fatia; decisão tomada de não remover o enum
+(ver INV acima). "Casa (em breve)" na tela — cliente, nenhuma linha ainda. Ver
 `trabalho/motor-v3-desenho-e-fatias.md` §Fatia 12 e `ESTADO.md`.

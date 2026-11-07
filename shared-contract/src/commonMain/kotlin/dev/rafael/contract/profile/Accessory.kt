@@ -23,6 +23,13 @@ import kotlinx.serialization.Serializable
  * expansão. Quem declara só BENCH não recebe exercícios que exigem só ELEVATED_SURFACE, mesmo
  * que um banco sirva fisicamente como apoio elevado. Se algum dia implementarmos essa implicação
  * no filtro, documentar aqui e promover a regra em docs/regras/01-motor-de-geracao.md.
+ *
+ * [REGRA] **Fatia 12 (resto): academia também pode declarar.** O botão "não tenho este
+ * equipamento" (especificação -- resolve as academias de condomínio) usa o MESMO campo
+ * `ProfileDto.accessories`, sem campo novo no contrato (decisão já tomada). `null` continua
+ * sendo "nunca perguntado" (assume os seis -- nenhum perfil de academia de hoje manda outra
+ * coisa, fallback aditivo); uma lista explícita (mesmo vazia) agora É RESPEITADA mesmo na
+ * ACADEMIA -- é o que o botão declara.
  */
 @Serializable
 enum class Accessory {
@@ -35,8 +42,16 @@ enum class Accessory {
     ;
 
     companion object {
-        /** Academia tem tudo; em casa vale o que o usuário declarou. */
-        fun paraAmbiente(ambiente: TrainingEnvironment?, declarados: List<Accessory>): Set<Accessory> =
-            if (ambiente == TrainingEnvironment.ACADEMIA) entries.toSet() else declarados.toSet()
+        /**
+         * `null` = nunca perguntado -- academia assume os seis, casa assume nenhum (pré-fatia-12
+         * resto, fallback aditivo). Lista explícita (mesmo vazia) é respeitada nos dois ambientes
+         * -- é o que o botão "não tenho este equipamento" declara na academia.
+         */
+        fun paraAmbiente(ambiente: TrainingEnvironment?, declarados: List<Accessory>?): Set<Accessory> =
+            if (ambiente == TrainingEnvironment.ACADEMIA && declarados == null) {
+                entries.toSet()
+            } else {
+                declarados.orEmpty().toSet()
+            }
     }
 }

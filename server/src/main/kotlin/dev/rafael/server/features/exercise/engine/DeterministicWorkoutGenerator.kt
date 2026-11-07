@@ -55,7 +55,7 @@ class DeterministicWorkoutGenerator(
         // `environment` vem do chamador e pode diferir de profile.environment (geração avulsa num
         // ambiente escolhido na hora); os acessórios seguem esse mesmo ambiente, não o do perfil.
         val pool: List<Exercise> = preFilter.poolFor(
-            environment, profile.level, Accessory.paraAmbiente(environment, profile.accessories ?: emptyList()),
+            environment, profile.level, Accessory.paraAmbiente(environment, profile.accessories),
         )
 
         // 3. PREENCHER (F.4) — pontuação + rotação, sem repetir no programa.

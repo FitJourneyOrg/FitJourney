@@ -400,8 +400,9 @@ internal object Oraculo {
             dias = p[2].removeSuffix("d").toInt(), minutos = p[3].removeSuffix("m").toInt(),
             idade = p[4].removeSuffix("a").toInt(), mesocicloAtual = null,
             ambiente = ambiente,
-            // Mesma regra do produto: academia tem tudo, casa vale o que foi declarado (nada).
-            acessorios = Accessory.paraAmbiente(ambiente, emptyList()),
+            // Mesma regra do produto: academia tem tudo (ninguem declarou -- null), casa vale
+            // o que foi declarado (nada, no pior caso da matriz -- ver nota do oraculo Python).
+            acessorios = Accessory.paraAmbiente(ambiente, null),
             foco = foco,
         )
     }

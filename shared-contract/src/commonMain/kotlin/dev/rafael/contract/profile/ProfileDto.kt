@@ -36,9 +36,12 @@ data class ProfileDto(
     // não quebrar cliente que ainda manda; ver débito "coluna health_screening morta".
     val health: HealthScreening? = null,
     val limitations: List<BodyLimitation> = emptyList(),
-    // V66: o que o usuário tem além da carga. Só perguntado quando environment = CASA;
-    // na academia o server assume os seis. null = nunca perguntado; lista vazia = perguntado e
-    // nada declarado. Distinção vive de ponta a ponta (DTO -> Profile -> coluna nullable).
+    // V66: o que o usuário tem além da carga. Perguntado quando environment = CASA; na
+    // ACADEMIA fica null por padrão (server assume os seis) ATE o usuário tocar "não tenho este
+    // equipamento" (fatia 12, resto -- Accessory.paraAmbiente) e mandar uma lista explícita, que
+    // passa a ser respeitada nos dois ambientes. null = nunca perguntado/declarado; lista vazia
+    // = perguntado e nada declarado. Distinção vive de ponta a ponta (DTO -> Profile -> coluna
+    // nullable).
     val accessories: List<Accessory>? = null,
     val onboardingCompleted: Boolean = false,
 )

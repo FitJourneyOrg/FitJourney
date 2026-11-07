@@ -6,24 +6,35 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * `Accessory.paraAmbiente` puro (tier 1 do plano "acessórios no onboarding", §6) -- o
- * `AcessoriosIntegrationTest` já trava o catálogo contra Postgres; aqui é só a regra em si,
- * sem banco: ACADEMIA sempre os seis, CASA exatamente o declarado.
+ * `Accessory.paraAmbiente` puro (tier 1 do plano "acessórios no onboarding", §6; atualizado na
+ * fatia "não tenho este equipamento", resto da Fatia 12) -- o `AcessoriosIntegrationTest` já
+ * trava o catálogo contra Postgres; aqui é só a regra em si, sem banco. `null` = nunca
+ * perguntado (ACADEMIA assume os seis, CASA assume nenhum); lista explícita (mesmo vazia) é
+ * respeitada nos dois ambientes.
  */
 class AccessoryTest {
 
     @Test
-    fun `academia devolve os seis mesmo com lista vazia`() {
+    fun `academia sem ninguem ter perguntado (null) devolve os seis`() {
         assertEquals(
             Accessory.entries.toSet(),
-            Accessory.paraAmbiente(TrainingEnvironment.ACADEMIA, emptyList()),
+            Accessory.paraAmbiente(TrainingEnvironment.ACADEMIA, null),
         )
     }
 
+    /**
+     * Fatia "não tenho este equipamento": na academia, uma lista EXPLÍCITA agora é respeitada --
+     * mesmo vazia (botão "não tenho nada disso"). Antes desta fatia, academia sempre ignorava o
+     * declarado; isto é o caminho de falha do teste anterior, agora o comportamento esperado.
+     */
     @Test
-    fun `academia devolve os seis mesmo ignorando o que foi declarado`() {
+    fun `academia com lista explicita (mesmo vazia) respeita o declarado`() {
         assertEquals(
-            Accessory.entries.toSet(),
+            emptySet(),
+            Accessory.paraAmbiente(TrainingEnvironment.ACADEMIA, emptyList()),
+        )
+        assertEquals(
+            setOf(Accessory.BENCH),
             Accessory.paraAmbiente(TrainingEnvironment.ACADEMIA, listOf(Accessory.BENCH)),
         )
     }

@@ -71,7 +71,7 @@ fun Route.exerciseRoutes(service: ExerciseService, profileService: ProfileServic
                     val env = p.environment
                     if (env == null) AppError.Validation("Ambiente de treino não definido", code = ErrorCodes.AMBIENTE_NAO_DEFINIDO).asFailure()
                     else service.alternatives(id, env, p.level,
-                        Accessory.paraAmbiente(env, p.accessories ?: emptyList()), call.idiomaPedido())
+                        Accessory.paraAmbiente(env, p.accessories), call.idiomaPedido())
                 }
             }
             call.respondResult(result)
