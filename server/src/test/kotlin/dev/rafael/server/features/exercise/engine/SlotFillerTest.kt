@@ -3,6 +3,7 @@ package dev.rafael.server.features.exercise.engine
 import dev.rafael.contract.exercise.ExerciseCategory
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.workout.Papel
 import dev.rafael.server.features.exercise.models.Exercise
 import dev.rafael.server.features.exercise.models.MovementPattern
 import kotlin.test.Test
@@ -54,11 +55,16 @@ class SlotFillerTest {
         familia = null,
         acessorios = emptySet(),
         rirMinimoSeguranca = false,
+        // V74: o SlotFiller (motor antigo) não lê nenhum dos três. Coerentes com equipment = null,
+        // que é o que o chk_exercises_barra_livre exige: sem equipamento, barra livre é false.
+        incremento = null,
+        barraLivre = false,
+        cargaInvertida = false,
     )
 
     private fun slot(
         target: TargetMuscle = TargetMuscle.CHEST,
-        role: SlotRole = SlotRole.COMPOSTO_PESADO,
+        role: Papel = Papel.COMPOSTO,
     ) = Slot(target, role, sets = 3, repRange = "5-8", restSeconds = 150, rir = 2)
 
     private fun fill(pool: List<Exercise>, vararg slots: Slot) =
@@ -98,7 +104,7 @@ class SlotFillerTest {
         val composto = ex("Supino", compound = true)
         val isolamento = ex("Crucifixo", compound = false)
 
-        val out = fill(listOf(composto, isolamento), slot(role = SlotRole.ISOLAMENTO))
+        val out = fill(listOf(composto, isolamento), slot(role = Papel.ISOLAMENTO))
 
         assertEquals(1, out.size)
         assertFalse(out.first().exercise.isCompound == true, "slot de isolamento só pega não-composto")

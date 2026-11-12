@@ -63,6 +63,25 @@ class AgrupamentoDaSessaoTest {
     }
 
     @Test
+    fun `sugestao de progressao vem da PRIMEIRA serie do exercicio -- demais ficam so no SetEntry`() {
+        val comSugestao = estado.copy(
+            entries = estado.entries.map {
+                if (it.exerciseId == "ex-0") it.copy(cargaSugeridaKg = 60.0) else it
+            },
+        )
+        assertEquals(60.0, comSugestao.exercicios.first { it.nome == "Supino" }.cargaSugeridaKg)
+        assertEquals(null, comSugestao.exercicios.first { it.nome == "Remada" }.cargaSugeridaKg)
+    }
+
+    @Test
+    fun `sem sugestao -- caminho de falha -- os tres campos ficam nulos, sem quebrar o agrupamento`() {
+        val exercicio = estado.exercicios.first()
+        assertEquals(null, exercicio.cargaSugeridaKg)
+        assertEquals(null, exercicio.repsMinSugerido)
+        assertEquals(null, exercicio.repsMaxSugerido)
+    }
+
+    @Test
     fun `lista vazia nao quebra a projecao`() {
         // Caminho de falha: o state nasce vazio (isLoading) e a tela lê `exercicio` nesse instante.
         val vazio = WorkoutSessionState()

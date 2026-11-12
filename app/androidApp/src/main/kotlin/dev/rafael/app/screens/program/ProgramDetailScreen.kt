@@ -23,8 +23,11 @@ import dev.rafael.app.ui.ErroDeTela
 import dev.rafael.app.ui.SeloDeSync
 import dev.rafael.app.ui.nomeDoPrograma
 import dev.rafael.app.ui.rationaleDoPrograma
+import dev.rafael.app.ui.rotuloDaCausaDeAviso
 import dev.rafael.app.ui.rotuloDoDiaDaSemana
+import dev.rafael.app.ui.rotuloDoMusculoAlvo
 import dev.rafael.app.R
+import dev.rafael.features.program.domain.model.ProgramAviso
 import dev.rafael.features.program.presentation.state.ProgramDetailEvent
 import dev.rafael.features.program.presentation.viewmodel.ProgramDetailViewModel
 import dev.rafael.app.ui.ShimmerContent
@@ -182,6 +185,14 @@ fun ProgramDetailScreen(
                                 }
                             }
                         }
+                        // Fatia "declaracao-de-custo-do-motor" (2026-10-31): o motor avisa
+                        // (ProgramAudit.avisos) e declara o custo da fase de ênfase
+                        // (VolumeTargets.custoDoFoco) -- dormente até o v3 virar o gerador de
+                        // produção, então hoje as duas listas vêm vazias (ver KDoc de
+                        // `Program.avisos`). Some sozinho: nada a esconder, nada a mostrar.
+                        state.program
+                            ?.takeIf { it.avisos.isNotEmpty() || it.grupamentosReduzidosPeloFoco.isNotEmpty() }
+                            ?.let { p -> item { AvisosDoPrograma(p.avisos, p.grupamentosReduzidosPeloFoco) } }
                         val workouts = state.program?.workouts.orEmpty()
                         // Agendar por dia só em programa que você edita (não trancado).
                         val canSchedule = !readOnly
@@ -301,6 +312,62 @@ fun ProgramDetailScreen(
 }
 
 /** "Semana Y de X" + barra de progresso; ao concluir a janela, banner com as 2 ações de novo programa. */
+/**
+ * O card da fatia "declaracao-de-custo-do-motor" (2026-10-31): os quatro sinais que o motor já
+ * calcula e o app não mostrava. Duas listas, cada uma some se vazia -- quem chama (`let` com
+ * `takeIf`, acima) já garante que ao menos uma tem algo, então o card nunca aparece em branco.
+ *
+ * [avisos] vem ordenado por gravidade (`ProgramAudit.avisos`, do servidor); aqui é só desenhado
+ * na ordem em que chega, uma linha por músculo. [grupamentosReduzidosPeloFoco] é a lista
+ * separada (ver KDoc de `ProgramAviso` e de `Program.grupamentosReduzidosPeloFoco`): é um fato
+ * ESTRUTURAL sobre qual alvo está em uso, não um aviso de entrega.
+ */
+@Composable
+private fun AvisosDoPrograma(
+    avisos: List<ProgramAviso>,
+    grupamentosReduzidosPeloFoco: List<String>,
+) {
+    Surface(
+        tonalElevation = 2.dp,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (avisos.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.programa_detalhe_avisos_titulo),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                avisos.forEach { aviso ->
+                    val causaRes = rotuloDaCausaDeAviso(aviso.causa)
+                    if (causaRes != null) {
+                        val musculo = rotuloDoMusculoAlvo(aviso.musculo)?.let { stringResource(it) } ?: aviso.musculo
+                        Text(
+                            "$musculo: " + stringResource(causaRes),
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+            }
+            if (grupamentosReduzidosPeloFoco.isNotEmpty()) {
+                Text(
+                    stringResource(R.string.programa_detalhe_foco_custo_titulo),
+                    style = MaterialTheme.typography.titleSmall,
+                )
+                // `joinToString` nao e inline (ao contrario de `forEach`/`map`): o lambda
+                // dele perde o contexto @Composable, e `stringResource` dentro dele nao
+                // compila. Resolve os rotulos com `map` (inline) primeiro, junta depois.
+                Text(
+                    grupamentosReduzidosPeloFoco
+                        .map { chave -> rotuloDoMusculoAlvo(chave)?.let { stringResource(it) } ?: chave }
+                        .joinToString(", "),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+    }
+}
+
 @Composable
 private fun WeekProgress(
     currentWeek: Int,

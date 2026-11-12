@@ -11,6 +11,8 @@ data class SetLog(
     val repsDone: Int,
     val weightKg: Double?,
     val done: Boolean,
+    // V69/fatia "rir-chega-e-registra" — null = não informado.
+    val rir: Int? = null,
 )
 
 /** Sessão executada como o server a conhece (snapshot auto-contido). */

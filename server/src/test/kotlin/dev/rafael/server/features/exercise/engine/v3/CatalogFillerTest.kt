@@ -1,5 +1,6 @@
 package dev.rafael.server.features.exercise.engine.v3
 
+import dev.rafael.contract.workout.Papel
 import dev.rafael.server.features.exercise.engine.TargetMuscle
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -21,11 +22,11 @@ class CatalogFillerTest {
             exercicioV3("Crucifixo halteres", TargetMuscle.CHEST, composto = false, equipamento = "DUMBBELL", familia = "crucifixo", prioridade = 1, relevancia = 1),
         )
         val vagas = listOf(
-            SessionComposition.Vaga(TargetMuscle.CHEST, SessionComposition.Papel.COMPOSTO, 4),
-            SessionComposition.Vaga(TargetMuscle.CHEST, SessionComposition.Papel.ISOLAMENTO, 2),
+            SessionComposition.Vaga(TargetMuscle.CHEST, Papel.COMPOSTO, 4),
+            SessionComposition.Vaga(TargetMuscle.CHEST, Papel.ISOLAMENTO, 2),
         )
         val disparos = mutableMapOf<String, Int>()
-        val vazias = mutableListOf<Triple<String, TargetMuscle, SessionComposition.Papel>>()
+        val vazias = mutableListOf<Triple<String, TargetMuscle, Papel>>()
         val resultado = CatalogFiller.preencher(listOf("Dia" to vagas), catalogo, disparos, vazias)
 
         val preenchidas = resultado.single().second
@@ -43,8 +44,8 @@ class CatalogFillerTest {
             exercicioV3("Desenvolvimento maquina", TargetMuscle.SHOULDERS, composto = true, equipamento = "MACHINE", familia = "desenvolvimento_maq", prioridade = 2, relevancia = 2),
         )
         val vagas = listOf(
-            SessionComposition.Vaga(TargetMuscle.BACK, SessionComposition.Papel.COMPOSTO, 4),
-            SessionComposition.Vaga(TargetMuscle.SHOULDERS, SessionComposition.Papel.COMPOSTO, 3),
+            SessionComposition.Vaga(TargetMuscle.BACK, Papel.COMPOSTO, 4),
+            SessionComposition.Vaga(TargetMuscle.SHOULDERS, Papel.COMPOSTO, 3),
         )
         val disparos = mutableMapOf<String, Int>()
         val resultado = CatalogFiller.preencher(listOf("Dia" to vagas), catalogo, disparos)
@@ -63,8 +64,8 @@ class CatalogFillerTest {
             exercicioV3("Elevacao lateral halteres", TargetMuscle.SHOULDERS, composto = false, equipamento = "DUMBBELL", familia = "elevacao_lateral"),
         )
         val vagas = listOf(
-            SessionComposition.Vaga(TargetMuscle.TRICEPS, SessionComposition.Papel.ISOLAMENTO, 3),
-            SessionComposition.Vaga(TargetMuscle.SHOULDERS, SessionComposition.Papel.COMPOSTO, 3),
+            SessionComposition.Vaga(TargetMuscle.TRICEPS, Papel.ISOLAMENTO, 3),
+            SessionComposition.Vaga(TargetMuscle.SHOULDERS, Papel.COMPOSTO, 3),
         )
         val disparos = mutableMapOf<String, Int>()
         val resultado = CatalogFiller.preencher(listOf("Dia" to vagas), catalogo, disparos)
@@ -82,12 +83,12 @@ class CatalogFillerTest {
     @Test
     fun `vaga vazia so quando nao ha candidato nenhum, nem invertido`() {
         val catalogo = listOf(exercicioV3("Supino reto barra", TargetMuscle.CHEST, composto = true))
-        val vagas = listOf(SessionComposition.Vaga(TargetMuscle.BACK, SessionComposition.Papel.COMPOSTO, 4))
-        val vazias = mutableListOf<Triple<String, TargetMuscle, SessionComposition.Papel>>()
+        val vagas = listOf(SessionComposition.Vaga(TargetMuscle.BACK, Papel.COMPOSTO, 4))
+        val vazias = mutableListOf<Triple<String, TargetMuscle, Papel>>()
         val resultado = CatalogFiller.preencher(listOf("Dia" to vagas), catalogo, vaziasOut = vazias)
 
         assertNull(resultado.single().second.single().exercicio)
-        assertEquals(listOf(Triple("Dia", TargetMuscle.BACK, SessionComposition.Papel.COMPOSTO)), vazias)
+        assertEquals(listOf(Triple("Dia", TargetMuscle.BACK, Papel.COMPOSTO)), vazias)
     }
 
     @Test
@@ -99,8 +100,8 @@ class CatalogFillerTest {
             exercicioV3("Elevacao lateral halteres", TargetMuscle.SHOULDERS, composto = false, familia = "elevacao_lateral"),
         )
         val vagas = listOf(
-            SessionComposition.Vaga(TargetMuscle.SHOULDERS, SessionComposition.Papel.ISOLAMENTO, 3),
-            SessionComposition.Vaga(TargetMuscle.TRICEPS, SessionComposition.Papel.ISOLAMENTO, 3),
+            SessionComposition.Vaga(TargetMuscle.SHOULDERS, Papel.ISOLAMENTO, 3),
+            SessionComposition.Vaga(TargetMuscle.TRICEPS, Papel.ISOLAMENTO, 3),
         )
         val resultado = CatalogFiller.preencher(listOf("Dia" to vagas), catalogo)
 
@@ -115,7 +116,7 @@ class CatalogFillerTest {
             exercicioV3("Alfa push", TargetMuscle.CHEST, composto = true, familia = "f2", prioridade = 1),
             exercicioV3("Beta push", TargetMuscle.CHEST, composto = true, familia = "f3", prioridade = 1),
         )
-        val vagas = listOf(SessionComposition.Vaga(TargetMuscle.CHEST, SessionComposition.Papel.COMPOSTO, 4))
+        val vagas = listOf(SessionComposition.Vaga(TargetMuscle.CHEST, Papel.COMPOSTO, 4))
 
         val saida1 = CatalogFiller.preencher(listOf("Dia" to vagas), catalogo).single().second.single().exercicio?.name
         val saida2 = CatalogFiller.preencher(listOf("Dia" to vagas), catalogo.reversed()).single().second.single().exercicio?.name
@@ -136,7 +137,7 @@ class CatalogFillerTest {
             exercicioV3("Mergulho sentado na maquina", TargetMuscle.TRICEPS, composto = true, equipamento = "MACHINE", familia = "MERGULHO", prioridade = 1, relevancia = 1),
             exercicioV3("Supino fechado barra", TargetMuscle.TRICEPS, composto = true, equipamento = "BARBELL", familia = "SUPINO_FECHADO", prioridade = 9, relevancia = 2),
         )
-        val vagas = listOf(SessionComposition.Vaga(TargetMuscle.TRICEPS, SessionComposition.Papel.ISOLAMENTO, 2))
+        val vagas = listOf(SessionComposition.Vaga(TargetMuscle.TRICEPS, Papel.ISOLAMENTO, 2))
         val disparos = mutableMapOf<String, Int>()
         val resultado = CatalogFiller.preencher(listOf("Dia" to vagas), catalogo, disparos)
 
@@ -153,9 +154,9 @@ class CatalogFillerTest {
         val catalogo = listOf(
             exercicioV3("Mergulho no banco", TargetMuscle.TRICEPS, composto = true, equipamento = "BODYWEIGHT", familia = "MERGULHO", prioridade = 10, relevancia = 2),
         )
-        val vagas = listOf(SessionComposition.Vaga(TargetMuscle.TRICEPS, SessionComposition.Papel.ISOLAMENTO, 2))
+        val vagas = listOf(SessionComposition.Vaga(TargetMuscle.TRICEPS, Papel.ISOLAMENTO, 2))
         val disparos = mutableMapOf<String, Int>()
-        val vazias = mutableListOf<Triple<String, TargetMuscle, SessionComposition.Papel>>()
+        val vazias = mutableListOf<Triple<String, TargetMuscle, Papel>>()
         val resultado = CatalogFiller.preencher(listOf("Dia" to vagas), catalogo, disparos, vazias)
 
         assertEquals("Mergulho no banco", resultado.single().second.single().exercicio?.name)
@@ -173,7 +174,7 @@ class CatalogFillerTest {
             exercicioV3("Triceps frances sentado com halter", TargetMuscle.TRICEPS, composto = false, equipamento = "DUMBBELL", familia = "TRICEPS_FRANCES", prioridade = 1, relevancia = 2),
             exercicioV3("Triceps pulley com barra", TargetMuscle.TRICEPS, composto = false, equipamento = "CABLE", familia = "TRICEPS_PULLEY", prioridade = 9, relevancia = 1),
         )
-        val vagas = listOf(SessionComposition.Vaga(TargetMuscle.TRICEPS, SessionComposition.Papel.ISOLAMENTO, 2))
+        val vagas = listOf(SessionComposition.Vaga(TargetMuscle.TRICEPS, Papel.ISOLAMENTO, 2))
         val disparos = mutableMapOf<String, Int>()
         val resultado = CatalogFiller.preencher(listOf("Dia" to vagas), catalogo, disparos)
 

@@ -4,7 +4,7 @@ import dev.rafael.contract.profile.Goal
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Decisao
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Estado
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Serie
-import dev.rafael.server.features.exercise.engine.v3.SessionComposition.Papel
+import dev.rafael.contract.workout.Papel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
@@ -156,6 +156,57 @@ class ProgressaoTest {
         // caminho de falha 2: topo de repetições, mas mais perto da falha que o alvo (RIR 1 < 2)
         val (e3, d3) = Progressao.decidir(base, sessao(9, 1), Papel.COMPOSTO, Goal.GAIN_MUSCLE, 2.5, true)
         assertEquals(Decisao.MANTEM to 100.0, d3 to e3.carga)
+    }
+
+    /**
+     * Fatia "rir-chega-e-registra" (2026-11-05), item BLOQUEANTE do `rir-plano.md`: a Barra Fixa
+     * Assistida e exercícios parecidos têm `cargaInvertida = true` (mais peso É MAIS ajuda). SOBE
+     * (ficou fácil, pede mais dificuldade) tem que REDUZIR a carga/assistência — sem a troca de
+     * sinal, o motor faria `carga + incremento` e a assistida regrediria calada em produção.
+     * Caminho de falha: o MESMO cenário sem `cargaInvertida` tem que SUBIR, não descer — prova que
+     * o sinal não foi trocado para todo mundo.
+     */
+    @Test
+    fun `cargaInvertida - SOBE reduz a carga, nao aumenta (caso bloqueante do rir-plano)`() {
+        val base = Estado(carga = 100.0, exposicoes = 10)
+        val (invertida, dInv) = Progressao.decidir(
+            base, sessao(9, 2), Papel.COMPOSTO, Goal.GAIN_MUSCLE, 2.5, true, cargaInvertida = true,
+        )
+        assertEquals(Decisao.SOBE, dInv)
+        assertTrue(invertida.carga!! < 100.0, "invertido: SOBE tem que reduzir a carga")
+        assertEquals(97.5, invertida.carga)
+        // caminho de falha: o mesmo cenário sem cargaInvertida sobe, não desce
+        val (normal, dNormal) = Progressao.decidir(base, sessao(9, 2), Papel.COMPOSTO, Goal.GAIN_MUSCLE, 2.5, true)
+        assertEquals(Decisao.SOBE, dNormal)
+        assertTrue(normal.carga!! > 100.0, "normal: SOBE tem que aumentar a carga")
+    }
+
+    @Test
+    fun `cargaInvertida - DESCE aumenta a carga (mais assistencia)`() {
+        val base = Estado(carga = 100.0, exposicoes = 10)
+        val (invertida, dInv) = Progressao.decidir(
+            base, listOf(Serie(1, 0)), Papel.COMPOSTO, Goal.GAIN_MUSCLE, 2.5, true, cargaInvertida = true,
+        )
+        assertEquals(Decisao.DESCE, dInv)
+        assertTrue(invertida.carga!! > 100.0, "invertido: DESCE tem que aumentar a carga")
+    }
+
+    @Test
+    fun `cargaInvertida - calibracao puxa a carga pra baixo com RIR alto`() {
+        val normal = Progressao.passoCalibracao(10.0, 9, 1, 2, false, 2.5)
+        assertTrue(normal.carga > 10.0)
+        val invertida = Progressao.passoCalibracao(10.0, 9, 1, 2, false, 2.5, cargaInvertida = true)
+        assertTrue(invertida.carga < 10.0)
+    }
+
+    @Test
+    fun `cargaInvertida - regra 4 aumenta a carga em vez de reduzir`() {
+        val (novaNormal, anuladaNormal) = Progressao.reducaoIntrasessao(100.0, 1, 2, 2.5)
+        assertTrue(novaNormal < 100.0)
+        assertEquals(false, anuladaNormal)
+        val (novaInv, anuladaInv) = Progressao.reducaoIntrasessao(100.0, 1, 2, 2.5, cargaInvertida = true)
+        assertTrue(novaInv > 100.0)
+        assertEquals(false, anuladaInv)
     }
 
     @Test

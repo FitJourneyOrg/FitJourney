@@ -200,4 +200,85 @@ class PromocaoDeNivelTest {
     fun `mesmo mesociclo da recusa nao pode`() {
         assertFalse(PromocaoDeNivel.podeSugerirDeNovo(mesocicloAtual = 4, mesocicloNaRecusa = 4))
     }
+
+    // --------------------------------------------------- agregação do avançado (maioria estrita)
+
+    @Test
+    fun `sem nenhum diagnostico no avancado nao ha nada a reportar`() {
+        assertNull(PromocaoDeNivel.diagnosticoAvancadoDoPerfil(emptyList()))
+        assertNull(PromocaoDeNivel.diagnosticoAvancadoDoPerfil(listOf(null, null)))
+    }
+
+    @Test
+    fun `com uma unica ancora no avancado ela sozinha basta -- maioria de 1 e 1`() {
+        assertEquals(Diagnostico.PROMOVER, PromocaoDeNivel.diagnosticoAvancadoDoPerfil(listOf(Diagnostico.PROMOVER)))
+        assertEquals(Diagnostico.RECUPERACAO, PromocaoDeNivel.diagnosticoAvancadoDoPerfil(listOf(Diagnostico.RECUPERACAO)))
+    }
+
+    @Test
+    fun `duas ancoras, 1 PROMOVER nao basta -- maioria de 2 e 2`() {
+        assertNull(
+            PromocaoDeNivel.diagnosticoAvancadoDoPerfil(listOf(Diagnostico.PROMOVER, null)),
+            "maioria estrita de 2 ancoras exige as DUAS -- diferente do limiar fixo do iniciante",
+        )
+    }
+
+    @Test
+    fun `duas ancoras, as duas em PROMOVER promove`() {
+        assertEquals(
+            Diagnostico.PROMOVER,
+            PromocaoDeNivel.diagnosticoAvancadoDoPerfil(listOf(Diagnostico.PROMOVER, Diagnostico.PROMOVER)),
+        )
+    }
+
+    @Test
+    fun `quatro ancoras, 3 de 4 em PROMOVER promove -- maioria de 4 e 3`() {
+        assertEquals(
+            Diagnostico.PROMOVER,
+            PromocaoDeNivel.diagnosticoAvancadoDoPerfil(
+                listOf(Diagnostico.PROMOVER, Diagnostico.PROMOVER, Diagnostico.PROMOVER, null),
+            ),
+        )
+    }
+
+    @Test
+    fun `quatro ancoras, so 2 de 4 em PROMOVER nao basta`() {
+        assertNull(
+            PromocaoDeNivel.diagnosticoAvancadoDoPerfil(
+                listOf(Diagnostico.PROMOVER, Diagnostico.PROMOVER, null, null),
+            ),
+        )
+    }
+
+    @Test
+    fun `sem maioria em PROMOVER, RECUPERACAO ainda assim e reportada`() {
+        assertEquals(
+            Diagnostico.RECUPERACAO,
+            PromocaoDeNivel.diagnosticoAvancadoDoPerfil(listOf(Diagnostico.PROMOVER, Diagnostico.RECUPERACAO, null)),
+            "1 de 3 em PROMOVER nao fecha a maioria (precisa de 2), mas ha RECUPERACAO pra reportar",
+        )
+    }
+
+    /**
+     * `[INV]` verificado estruturalmente (não é taxa de disparo, é CONTAGEM de âncoras
+     * disponíveis — ver `regras/01`). Se isto cair abaixo de 2, a exceção de tamanho que o
+     * iniciante precisou ([diagnosticoDoPerfil], ramo `limite=1`) deixa de ser hipotética também
+     * pro avançado — investigar, não só atualizar o número.
+     */
+    @Test
+    fun `nenhum intermediate da matriz de 720 tem menos de 2 ancoras avancadas (compostos relevancia 1)`() {
+        val catalogo = Oraculo.catalogo().associateBy { it.name }
+        val contagens = Oraculo.referencia()
+            .filter { it.id.contains("-INTERMEDIATE-") }
+            .map { ref ->
+                ref.vagas.map { it.exercicio }.filter { it.isNotEmpty() }.toSet()
+                    .count { nome -> catalogo[nome]?.let { it.isCompound == true && it.relevancia == 1 } == true }
+            }
+        assertEquals(240, contagens.size)
+        assertTrue(
+            contagens.min() >= 2,
+            "se isto cair abaixo de 2, a maioria estrita do avancado ganhou caso vivo de tamanho 1 -- nao e so numero novo",
+        )
+        assertEquals(5, contagens.sorted()[contagens.size / 2], "mediana medida em 2026-10-31")
+    }
 }

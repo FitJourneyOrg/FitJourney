@@ -1,6 +1,7 @@
 -- Programas e agenda (tabelas `program` e `program_schedule`).
 -- Schema: 2.sqm + 4.sqm (split virou chave do enum e ficou nullable; rationale saiu;
--- focusMuscles entrou -- fatia "rationale derivado", 2026-09-22).
+-- focusMuscles entrou -- fatia "rationale derivado", 2026-09-22) + 10.sqm (avisos e
+-- grupamentosReduzidosPeloFoco -- fatia "declaracao-de-custo-do-motor", 2026-10-31).
 -- [REGRA] toda query filtra por uid.
 
 -- ---------- escrita (sync) ----------
@@ -8,8 +9,9 @@
 salvarPrograma:
 INSERT OR REPLACE INTO program(
     id, uid, name, origin, daysPerWeek, split, focusMuscles,
+    avisos, grupamentosReduzidosPeloFoco,
     locked, isActive, durationWeeks, startedAt, currentWeek, updatedAt
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
 
 salvarAgenda:
 INSERT OR REPLACE INTO program_schedule(programId, workoutId, uid, dayOfWeek)

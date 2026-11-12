@@ -5,6 +5,7 @@ import dev.rafael.contract.workout.WorkoutExerciseDto
 import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.contract.workout.WorkoutSetDto
 import dev.rafael.contract.workout.WorkoutSummaryDto
+import dev.rafael.server.features.exercise.engine.v3.SugestaoDeProgressao
 import kotlin.uuid.Uuid
 
 
@@ -16,6 +17,7 @@ fun WorkoutExercise.toDto(): WorkoutExerciseDto = WorkoutExerciseDto(
     orderIndex = orderIndex,
     restSeconds = restSeconds,   // <- ERA O QUE FALTAVA (saía sempre 90)
     rir = rir,
+    papel = papel,
     sets = sets.map { WorkoutSetDto(reps = it.reps, orderIndex = it.orderIndex) },
 )
 // DTO -> domínio (entrada): ESCREVER o campo
@@ -25,6 +27,7 @@ fun WorkoutExerciseDto.toDomain(): WorkoutExercise = WorkoutExercise(
     orderIndex = orderIndex,
     restSeconds = restSeconds,   // <- ERA O QUE FALTAVA (valor do cliente morria aqui)
     rir = rir,
+    papel = papel,
     sets = sets.map { WorkoutSet(id = Uuid.NIL, reps = it.reps, orderIndex = it.orderIndex) },
 )
 
@@ -48,6 +51,17 @@ fun WorkoutSummary.toDto(isActive: Boolean = false): WorkoutSummaryDto = Workout
  */
 fun WorkoutDto.comOrigem(origin: WorkoutOrigin?): WorkoutDto =
     if (origin == null) this else copy(origin = origin)
+
+/**
+ * Preenche a sugestão de progressão de UM exercício (ver [SugestaoDeProgressao]). `Sugestao.VAZIA`
+ * (sem papel, calibração pendente, ou eixo sem motor) deixa os três campos `null` — mesmo default
+ * do DTO, então não precisa de `if` especial aqui.
+ */
+fun WorkoutExerciseDto.comSugestao(sugestao: SugestaoDeProgressao.Sugestao): WorkoutExerciseDto = copy(
+    cargaSugeridaKg = sugestao.cargaKg,
+    repsMinSugerido = sugestao.repsMin,
+    repsMaxSugerido = sugestao.repsMax,
+)
 
 // ---- domínio -> DTO (resposta) ----
 fun Workout.toDto(): WorkoutDto = WorkoutDto(

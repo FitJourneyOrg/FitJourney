@@ -2,6 +2,7 @@ package dev.rafael.server.features.program.models
 
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitType
+import dev.rafael.contract.program.ProgramAvisoDto
 import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.server.features.workout.models.Workout
 import kotlin.uuid.Uuid
@@ -22,6 +23,11 @@ data class Program(
     val daysPerWeek: Int,
     val split: SplitType?,              // null = MANUAL (shell sem motor)
     val focusMuscles: List<MuscleGroup>,   // snapshot da geração; NULL no banco em linhas de antes desta fatia
+    // V73 (débito (c)/(d) de "o motor sabe, o app não mostra"): snapshot da geração, mesmo
+    // padrão de focusMuscles acima. Vazio tanto pra legado quanto pro motor que não calcula
+    // ainda (StructureEngine, produção hoje -- dormente até o v3 virar o WorkoutGenerator).
+    val avisos: List<ProgramAvisoDto>,
+    val grupamentosReduzidosPeloFoco: List<String>,
     val locked: Boolean,
     val workouts: List<Workout>,
     val createdAt: LocalDateTime,

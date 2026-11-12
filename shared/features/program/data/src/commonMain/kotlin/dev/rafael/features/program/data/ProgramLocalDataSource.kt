@@ -4,6 +4,7 @@ import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitType
+import dev.rafael.contract.program.ProgramAvisoDto
 import dev.rafael.contract.program.ProgramDto
 import dev.rafael.contract.program.ScheduleEntry
 import dev.rafael.contract.workout.WorkoutDto
@@ -18,6 +19,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.Json
 
 /**
@@ -44,6 +46,8 @@ class ProgramLocalDataSource(
     private val json = Json { ignoreUnknownKeys = true }
     private val exerciciosSerializer = ListSerializer(WorkoutExerciseDto.serializer())
     private val focoSerializer = ListSerializer(MuscleGroup.serializer())
+    private val avisosSerializer = ListSerializer(ProgramAvisoDto.serializer())
+    private val gruposReduzidosSerializer = ListSerializer(String.serializer())
 
     private suspend fun uid(): String = tokenProvider.currentUid() ?: ""
 
@@ -89,6 +93,8 @@ class ProgramLocalDataSource(
                     daysPerWeek = p.daysPerWeek.toLong(),
                     split = p.split?.name,
                     focusMuscles = json.encodeToString(focoSerializer, p.focusMuscles),
+                    avisos = json.encodeToString(avisosSerializer, p.avisos),
+                    grupamentosReduzidosPeloFoco = json.encodeToString(gruposReduzidosSerializer, p.grupamentosReduzidosPeloFoco),
                     locked = if (p.locked) 1L else 0L,
                     // V60: cache do ponteiro que o GET /programs respondeu -- so leitura, nao
                     // passa pelo outbox (ver ProgramRepositoryImpl.activateProgram).
@@ -165,6 +171,8 @@ class ProgramLocalDataSource(
             daysPerWeek = dto.daysPerWeek.toLong(),
             split = dto.split?.name,
             focusMuscles = json.encodeToString(focoSerializer, dto.focusMuscles),
+            avisos = json.encodeToString(avisosSerializer, dto.avisos),
+            grupamentosReduzidosPeloFoco = json.encodeToString(gruposReduzidosSerializer, dto.grupamentosReduzidosPeloFoco),
             locked = if (dto.locked) 1L else 0L,
             isActive = if (dto.isActive) 1L else 0L,   // recém-criado: nunca vem ativo do servidor
             durationWeeks = dto.durationWeeks.toLong(),
@@ -241,6 +249,12 @@ class ProgramLocalDataSource(
             split = p.split?.let { runCatching { SplitType.valueOf(it) }.getOrNull() },
             focusMuscles = p.focusMuscles?.let {
                 runCatching { json.decodeFromString(focoSerializer, it) }.getOrDefault(emptyList())
+            } ?: emptyList(),
+            avisos = p.avisos?.let {
+                runCatching { json.decodeFromString(avisosSerializer, it) }.getOrDefault(emptyList())
+            } ?: emptyList(),
+            grupamentosReduzidosPeloFoco = p.grupamentosReduzidosPeloFoco?.let {
+                runCatching { json.decodeFromString(gruposReduzidosSerializer, it) }.getOrDefault(emptyList())
             } ?: emptyList(),
             locked = p.locked == 1L,
             isActive = p.isActive == 1L,

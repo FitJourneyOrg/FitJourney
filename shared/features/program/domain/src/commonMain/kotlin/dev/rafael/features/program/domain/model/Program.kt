@@ -21,6 +21,12 @@ data class Program(
     // derivado", 2026-09-22) -- mesma razao do split acima pra ficar String em vez do enum.
     // Vazio = sem foco, ou programa anterior a esta fatia (legado, sem snapshot).
     val focusMuscles: List<String> = emptyList(),
+    // Débito (c)/(d) de "o motor sabe, o app não mostra" (2026-10-31, V73): declaração de
+    // custo do motor. Chave String (TargetMuscle.name), não enum -- domain não conhece
+    // contrato. Vazio = legado OU motor atual (StructureEngine), que ainda não calcula isto
+    // -- dormente até o v3 virar o gerador de produção.
+    val avisos: List<ProgramAviso> = emptyList(),
+    val grupamentosReduzidosPeloFoco: List<String> = emptyList(),
     val locked: Boolean,
     // V60 (reverte a V59): true pro programa marcado como ativo (ponteiro exclusivo,
     // autoridade do servidor).
@@ -51,4 +57,14 @@ data class ProgramWorkout(
 data class ProgramScheduleEntry(
     val workoutId: String,
     val dayOfWeek: Int,
+)
+
+/**
+ * Um aviso de honestidade por músculo. `musculo` é a chave `TargetMuscle` do motor (não
+ * `MuscleGroup`); `causa` é a chave de `CausaAvisoDto`/`ProgramAudit.Causa`. A camada de
+ * app/ui.android traduz as duas via `Rotulos.kt`, mesmo padrão do `split` acima.
+ */
+data class ProgramAviso(
+    val musculo: String,
+    val causa: String,
 )

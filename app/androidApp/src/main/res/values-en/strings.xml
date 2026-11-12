@@ -82,6 +82,8 @@
     <string name="enum_musculo_legs">Legs</string>
     <string name="enum_musculo_glutes">Glutes</string>
     <string name="enum_musculo_core">Core</string>
+    <string name="enum_musculo_alvo_quads">Quads</string>
+    <string name="enum_musculo_alvo_posterior">Hamstrings</string>
 
     <string name="enum_nivel_beginner">Beginner</string>
     <string name="enum_nivel_intermediate">Intermediate</string>
@@ -524,7 +526,20 @@
     <string name="quiz_concluir">Finish</string>
 
     <string name="quiz_objetivo_titulo">What\'s your main goal?</string>
-    <string name="quiz_nivel_titulo">What\'s your level today?</string>
+    <string name="quiz_consistencia_titulo">How long have you been training consistently?</string>
+    <string name="enum_consistencia_never_trained">Never trained</string>
+    <string name="enum_consistencia_less_than_6_months">Less than 6 months</string>
+    <string name="enum_consistencia_6_months_to_2_years">6 months to 2 years</string>
+    <string name="enum_consistencia_more_than_2_years">More than 2 years</string>
+    <string name="quiz_parado_titulo">How long have you been off training?</string>
+    <string name="enum_parado_none">Haven\'t stopped, still training</string>
+    <string name="enum_parado_up_to_1_month">Up to 1 month</string>
+    <string name="enum_parado_1_to_6_months">1 to 6 months</string>
+    <string name="enum_parado_more_than_6_months">More than 6 months</string>
+    <string name="quiz_modo_leve_titulo">Want to start in light mode?</string>
+    <string name="quiz_modo_leve_ajuda">Easier reps for a while. It lasts one mesocycle, then we ask if you want to keep going.</string>
+    <string name="quiz_modo_leve_sim">Yes, I prefer to start light</string>
+    <string name="quiz_modo_leve_nao">No, normal pace is fine</string>
 
     <string name="quiz_idade_titulo">How old are you?</string>
     <string name="quiz_idade_campo">Age</string>
@@ -533,6 +548,11 @@
     <string name="quiz_idade_aviso_idoso">Over 69: we recommend regular medical supervision.</string>
 
     <string name="quiz_dias_titulo">How many days a week?</string>
+    <string name="quiz_minutos_titulo">How many minutes do you have per session?</string>
+    <string name="enum_minutos_forty_five">About 45 minutes</string>
+    <string name="enum_minutos_sixty">About 60 minutes</string>
+    <string name="enum_minutos_seventy_five">About 75 minutes</string>
+    <string name="enum_minutos_ninety_plus">90 minutes or more</string>
 
     <string name="quiz_foco_titulo">Want to focus on a muscle?</string>
     <string name="quiz_foco_ajuda">Pick up to 2 groups (or leave it empty = balanced).</string>
@@ -570,6 +590,8 @@
     <string name="quiz_corpo_altura">Height (cm)</string>
 
     <string name="quiz_ambiente_titulo">Where do you train?</string>
+    <string name="quiz_ambiente_em_breve">(coming soon)</string>
+    <string name="quiz_ambiente_falta_equipamento">My gym doesn\'t have all the equipment</string>
 
     <string name="quiz_acessorios_titulo">What do you have at home?</string>
     <string name="quiz_acessorios_ajuda">Besides weight, this unlocks more exercises for your workout. You can leave everything unchecked.</string>
@@ -617,7 +639,7 @@
     <!-- ============================ Program list ============================ -->
 
     <string name="programa_lista_titulo">My programs</string>
-    <string name="programa_lista_vazio">You don\'t have any workouts yet.</string>
+    <string name="programa_lista_vazio">You don\'t have any programs yet.</string>
     <string name="treino_ativo_badge">Active</string>
     <string name="programa_ativar_botao">Activate program</string>
     <string name="programa_ativar_confirmar_titulo">Activate this program?</string>
@@ -674,6 +696,12 @@
     <string name="programa_detalhe_excluir_pergunta">Delete program?</string>
     <string name="programa_detalhe_excluir_texto">This deletes the program and every workout inside it. It can\'t be undone.</string>
     <string name="programa_detalhe_renomear_titulo">Rename program</string>
+    <string name="programa_detalhe_avisos_titulo">Program notices</string>
+    <string name="programa_detalhe_aviso_nao_treinado">No stimulus at all this week.</string>
+    <string name="programa_detalhe_aviso_abaixo_do_piso">Below the recommended minimum for this muscle.</string>
+    <string name="programa_detalhe_aviso_piso_direto_negado">Indirect work hit the minimum, but there was no direct exercise this week.</string>
+    <string name="programa_detalhe_aviso_manutencao">Past the minimum, but short of your level\'s target.</string>
+    <string name="programa_detalhe_foco_custo_titulo">Reduced to the minimum while the focus is active</string>
 
     <string name="programa_rationale_base">%2$s split over %1$d days: %3$s</string>
     <string name="programa_rationale_foco">Since you prioritized %1$s, the program adds extra volume for those muscles.</string>
@@ -736,6 +764,8 @@
     <!-- ============================ Workout session ============================ -->
 
     <string name="sessao_serie_de">Set %1$d of %2$d</string>
+    <string name="sessao_meta_carga">Target: %1$s kg</string>
+    <string name="sessao_meta_reps">Target: %1$d-%2$d reps</string>
     <string name="sessao_serie_curta">S%1$d</string>
     <string name="sessao_serie_feita">Set done</string>
     <string name="sessao_ver_tecnica">View technique</string>
@@ -748,6 +778,10 @@
     <string name="sessao_diminuir_peso">Decrease weight</string>
     <string name="sessao_aumentar_reps">Increase reps</string>
     <string name="sessao_diminuir_reps">Decrease reps</string>
+    <string name="sessao_rir_rotulo">RIR</string>
+    <string name="sessao_aumentar_rir">Increase RIR</string>
+    <string name="sessao_diminuir_rir">Decrease RIR</string>
+    <string name="sessao_rir_explicacao">RIR: how many more reps you would still have. You can leave it blank.</string>
     <string name="sessao_iniciar_descanso">Start rest</string>
     <string name="sessao_pausar_descanso">Pause rest</string>
     <string name="sessao_retomar_descanso">Resume rest</string>

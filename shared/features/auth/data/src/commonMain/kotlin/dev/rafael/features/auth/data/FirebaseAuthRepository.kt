@@ -73,12 +73,24 @@ class FirebaseAuthRepository(
     override suspend fun fetchMe(): AppResult<AuthUser> =
         httpResult { meDataSource.getMe().let { AuthUser(uid = it.id, email = it.email) } }
 
-    private fun mapAuthError(e: Throwable): AppResult<AuthUser> = when {
-        e is FirebaseAuthException -> AppError.Unauthorized("Credenciais inválidas").asFailure()
-        // offline no 1º login: Firebase lança erro de rede. Não dá p/ validar credenciais sem internet.
-        (e.message ?: "").contains("network", ignoreCase = true) ->
-            AppError.Connection("O primeiro login precisa de internet.", e).asFailure()
-        else -> AppError.Unexpected("Falha na autenticação. Verifique sua conexão.", e).asFailure()
+    /**
+     * `suspend` por causa do `auth.signOut()` abaixo — reproduzido no aparelho
+     * (login-sem-backend, 2026-11-05): offline + credencial correta faz `signIn()`/`signUp()`
+     * lançar (rede), mas o SDK pode deixar `auth.currentUser` não-nulo mesmo assim. Login que o
+     * app relata como FALHA não pode deixar sessão viva -- o próximo `isLoggedIn()` (gate da
+     * Splash, que não bate rede) voltaria `true` e abriria a Home sem o usuário ter "entrado" de
+     * verdade. `signOut()` aqui é defensivo e idempotente: seguro mesmo quando não havia sessão
+     * nenhuma para limpar, e cobre os dois únicos chamadores (`signIn`/`signUp`) num só lugar.
+     */
+    private suspend fun mapAuthError(e: Throwable): AppResult<AuthUser> {
+        runCatching { auth.signOut() }
+        return when {
+            e is FirebaseAuthException -> AppError.Unauthorized("Credenciais inválidas").asFailure()
+            // offline no 1º login: Firebase lança erro de rede. Não dá p/ validar credenciais sem internet.
+            (e.message ?: "").contains("network", ignoreCase = true) ->
+                AppError.Connection("O primeiro login precisa de internet.", e).asFailure()
+            else -> AppError.Unexpected("Falha na autenticação. Verifique sua conexão.", e).asFailure()
+        }
     }
 }
 

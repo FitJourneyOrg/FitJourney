@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.HealthScreening
 import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.profile.TrainingEnvironment
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.features.profile.domain.repository.ProfileRepository
@@ -27,14 +28,26 @@ class QuizViewModel(
     fun onEvent(event: QuizEvent) {
         when (event) {
             is QuizEvent.GoalSelected -> _state.update { it.copy(goal = event.goal, error = null) }
-            is QuizEvent.LevelSelected -> _state.update { it.copy(level = event.level, error = null) }
+            is QuizEvent.TrainingConsistencySelected -> _state.update { it.copy(trainingConsistency = event.value, error = null) }
+            is QuizEvent.TimeOffTrainingSelected -> _state.update { it.copy(timeOffTraining = event.value, error = null) }
+            is QuizEvent.LightModeSelected -> _state.update { it.copy(preferLightMode = event.value, error = null) }
             is QuizEvent.DaysSelected -> _state.update { it.copy(daysPerWeek = event.days, error = null) }
+            is QuizEvent.MinutesAvailableSelected -> _state.update { it.copy(minutesAvailable = event.value, error = null) }
             is QuizEvent.FocusToggled -> toggleFocus(event.muscle)
             is QuizEvent.WeightChanged -> _state.update { it.copy(weightKg = event.value) }
             is QuizEvent.HeightChanged -> _state.update { it.copy(heightCm = event.value) }
             is QuizEvent.AgeChanged -> _state.update { it.copy(age = event.value, error = null) }
             QuizEvent.SupervisedToggled -> _state.update { it.copy(minorSupervised = !it.minorSupervised) }
             is QuizEvent.EnvironmentSelected -> _state.update { it.copy(environment = event.env, error = null) }
+            QuizEvent.AcademyMissingEquipmentToggled -> _state.update { s ->
+                val ligando = !s.academyMissingEquipment
+                s.copy(
+                    academyMissingEquipment = ligando,
+                    // liga: começa com tudo marcado (mesmo default do onboarding de CASA);
+                    // desliga: mantém o que tiver -- toProfileOrNull() já ignora isso (manda null).
+                    accessories = if (ligando) Accessory.entries.toList() else s.accessories,
+                )
+            }
             is QuizEvent.SplitSelected -> _state.update { it.copy(splitPreference = event.split, error = null) }
             is QuizEvent.RestDayToggled -> _state.update { s ->
                 val cur = s.unavailableDays
@@ -72,7 +85,13 @@ class QuizViewModel(
                         QuizState(
                             step = QuizStep.GOAL,
                             goal = p.goal,
-                            level = p.level,
+                            // fatia 12: nível deixou de ser campo livre -- quem ainda não respondeu as
+                            // duas perguntas novas (todo usuário existente) tem null aqui e tem que
+                            // responder de novo, uma vez, nesta edição.
+                            trainingConsistency = p.trainingConsistency,
+                            timeOffTraining = p.timeOffTraining,
+                            preferLightMode = p.preferLightMode ?: false,
+                            minutesAvailable = p.minutesAvailable,
                             daysPerWeek = p.daysPerWeek,
                             splitPreference = p.splitPreference,
                             unavailableDays = p.unavailableDays,
@@ -82,6 +101,10 @@ class QuizViewModel(
                             age = p.age,
                             minorSupervised = p.minorSupervised,
                             environment = p.environment,
+                            // fatia 12 (resto): se já tinha lista declarada na ACADEMIA, reabre com o
+                            // botão marcado e a lista salva -- senão o passo de acessórios fica escondido
+                            // e a edição parece ter "esquecido" o que a pessoa já tinha respondido.
+                            academyMissingEquipment = p.environment == TrainingEnvironment.ACADEMIA && p.accessories != null,
                             accessories = p.accessories ?: listOf(Accessory.ELEVATED_SURFACE),
                             limitations = p.limitations,
                             health = p.health ?: HealthScreening(),

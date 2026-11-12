@@ -15,5 +15,13 @@ data class WorkoutExerciseDto(
     val orderIndex: Int,
     val restSeconds: Int = 90,       // NOVO — descanso entre séries (F.2)
     val rir: Int? = null,            // ARCH #26 — RIR alvo (por papel); null = manual não prescreve
+    val papel: Papel? = null,        // fatia "rir-chega-e-registra" — null = manual, sem prescrição
     val sets: List<WorkoutSetDto>,
+    // fatia "sugestao-de-progressao" (2026-11-06) — RESPOSTA, servidor só lê no POST/PUT.
+    // Nunca os dois eixos juntos: incremento do catálogo decide carga XOR reps (ver
+    // ExerciseRepository.paraProgressao). null em ambos = sem sugestão (manual, calibração
+    // pendente, ou eixo BAND/HAND_GRIP ainda sem motor).
+    val cargaSugeridaKg: Double? = null,
+    val repsMinSugerido: Int? = null,
+    val repsMaxSugerido: Int? = null,
 )

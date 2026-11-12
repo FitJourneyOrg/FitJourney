@@ -1,5 +1,6 @@
 package dev.rafael.server.features.exercise.engine.v3
 
+import dev.rafael.contract.workout.Papel
 import dev.rafael.server.features.exercise.engine.TargetMuscle
 
 /**
@@ -18,8 +19,6 @@ import dev.rafael.server.features.exercise.engine.TargetMuscle
  * (Decisão B) passa a existir de verdade.
  */
 object SessionComposition {
-
-    enum class Papel { COMPOSTO, ACESSORIO, ISOLAMENTO }
 
     data class Vaga(val alvo: TargetMuscle, val papel: Papel, val series: Int)
 

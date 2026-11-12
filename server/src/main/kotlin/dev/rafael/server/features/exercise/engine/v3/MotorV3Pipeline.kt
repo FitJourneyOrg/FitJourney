@@ -1,5 +1,6 @@
 package dev.rafael.server.features.exercise.engine.v3
 
+import dev.rafael.contract.workout.Papel
 import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
@@ -38,7 +39,7 @@ object MotorV3Pipeline {
         val sessoes: List<Pair<String, List<CatalogFiller.VagaPreenchida>>>,
         val entregue: Map<TargetMuscle, Int>,
         val compostosSemana: Map<TargetMuscle, Int>,
-        val vagasVazias: List<Triple<String, TargetMuscle, SessionComposition.Papel>>,
+        val vagasVazias: List<Triple<String, TargetMuscle, Papel>>,
     )
 
     data class Resultado(
@@ -50,6 +51,10 @@ object MotorV3Pipeline {
         val iteracoes: Int,
         /** Etapa [7]: o que cada músculo de fato recebeu, e se basta. Ver [ProgramAudit]. */
         val auditoria: Map<TargetMuscle, ProgramAudit.Musculo>,
+        /** Etapa [8] (2026-10-31): um [ProgramAudit.Aviso] por músculo que merece fala. Ver [ProgramAudit.avisos]. */
+        val avisos: List<ProgramAudit.Aviso>,
+        /** Etapa [8]: músculos fora do foco ativo, reduzidos ao piso. Ver [VolumeTargets.custoDoFoco]. */
+        val custoDoFoco: Set<TargetMuscle>,
     )
 
     fun gerar(entrada: Entrada, catalogoCompleto: List<Exercise>): Resultado {
@@ -81,7 +86,7 @@ object MotorV3Pipeline {
         val resultado = PontoFixoIndireto.iterar<Estado> { indireto ->
             val disparos = mutableMapOf<String, Int>()
             if (modoConservador) disparos["modo_conservador_ativo"] = 1
-            val vazias = mutableListOf<Triple<String, TargetMuscle, SessionComposition.Papel>>()
+            val vazias = mutableListOf<Triple<String, TargetMuscle, Papel>>()
 
             // Piso direto (Fatia 8 / D-1): entra na demanda ANTES da alocação, para que o
             // orçamento seja disputado com ele dentro — nunca somado depois.
@@ -107,14 +112,17 @@ object MotorV3Pipeline {
         val backSelecionado = WeeklyBackSelection.aplicar(resultado.estado.sessoes, candidatos, resultado.disparos)
         val estadoFinal = resultado.estado.copy(sessoes = backSelecionado.sessoes)
 
+        val auditoria = ProgramAudit.auditar(
+            alvo = alvo, entregue = resultado.estado.entregue,
+            indireto = resultado.indireto, treinaveis = treinaveis,
+            objetivo = entrada.objetivo, pisoDiretoDe = pisoDiretoDe,
+        )
         return Resultado(
             divisao, capacidade, estadoFinal, resultado.indireto, backSelecionado.disparos,
             resultado.iteracoes,
-            auditoria = ProgramAudit.auditar(
-                alvo = alvo, entregue = resultado.estado.entregue,
-                indireto = resultado.indireto, treinaveis = treinaveis,
-                objetivo = entrada.objetivo, pisoDiretoDe = pisoDiretoDe,
-            ),
+            auditoria = auditoria,
+            avisos = ProgramAudit.avisos(auditoria),
+            custoDoFoco = VolumeTargets.custoDoFoco(entrada.nivel, entrada.objetivo, entrada.foco),
         )
     }
 

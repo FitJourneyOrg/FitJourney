@@ -1,5 +1,6 @@
 package dev.rafael.server.features.workout.models
 
+import dev.rafael.contract.workout.Papel
 import kotlinx.datetime.LocalDateTime
 import kotlin.uuid.Uuid
 
@@ -26,6 +27,7 @@ data class WorkoutExercise(
     val orderIndex: Int,
     val restSeconds: Int,        // <- NOVO (sem default: força passar em todo ponto de construção)
     val rir: Int?,               // ARCH #26 — RIR alvo (null no manual). Sem default: compilador cobra.
+    val papel: Papel?,           // V75 — papel do exercício (null no manual). Sem default: compilador cobra.
     val sets: List<WorkoutSet>,
 )
 

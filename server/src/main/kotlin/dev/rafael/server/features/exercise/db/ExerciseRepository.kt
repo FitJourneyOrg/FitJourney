@@ -58,7 +58,45 @@ interface ExerciseRepository {
     suspend fun paraAnalise(ids: List<Uuid>): AppResult<Map<Uuid, ExercicioParaAnalise>>
 
     suspend fun nomesTraduzidos(ids: List<Uuid>, idioma: Idioma): AppResult<Map<Uuid, String>>
+
+    /**
+     * V72/fatia da promoção do avançado. Dos [ids] dados (já filtrados por quem chama — tipicamente
+     * [dev.rafael.server.features.exercise.db.ProgressaoRepository.exerciciosComEventoNoMesociclo]),
+     * devolve só os que são COMPOSTOS com `relevancia = 1` — a âncora do diagnóstico
+     * `PromocaoDeNivel.diagnosticoAvancado` (decisão de 2026-10-29: derivada da curadoria, sem
+     * coluna nova). `relevancia`/`is_compound` são nullable no catálogo não-curado — ambos NULL
+     * nunca casa (`relevancia = 1`), então exercício sem curadoria simplesmente não é âncora do
+     * avançado, sem precisar de tratamento especial para o NULL.
+     */
+    suspend fun ancorasAvancadas(ids: List<Uuid>): AppResult<List<Uuid>>
+
+    /**
+     * Leitura CRUA pra progressão (fatia "rir-chega-e-registra"): `incremento`/`barraLivre`/
+     * `cargaInvertida` (V74), **sem `idioma`** — mesmo motivo do [paraAnalise]: quem decide não
+     * traduz. `ProgressaoAplicadaService` é o único chamador.
+     *
+     * `equipment` entrou na fatia "progressao-por-repeticao" (2026-11-06): é o que decide, pra um
+     * exercício com `incremento == null`, se o motor de REPETIÇÃO se aplica (`BODYWEIGHT`) ou se
+     * continua sem progressão automática (`BAND`/`HAND_GRIP` — débito separado).
+     *
+     * Id sem linha no catálogo (não deveria acontecer — `exerciseId` vem de um `WorkoutExercise`
+     * já validado na criação do treino) fica fora do mapa; quem chama trata ausência como "não dá
+     * pra progredir este exercício", mesmo piso do `incremento == null`.
+     */
+    suspend fun paraProgressao(ids: List<Uuid>): AppResult<Map<Uuid, ExercicioParaProgressao>>
 }
+
+/**
+ * Projecao minima do catalogo pra DECIDIR a progressao (fatia "rir-chega-e-registra").
+ * `incremento == null` = sem carga externa em kg; quem chama nao invoca `decidir()`/`calibrar()`.
+ */
+data class ExercicioParaProgressao(
+    val incremento: Double?,
+    val barraLivre: Boolean,
+    val cargaInvertida: Boolean,
+    /** `exercises.equipment` crua (ex.: "BODYWEIGHT", "BAND") — ver KDoc de [ExerciseRepository.paraProgressao]. */
+    val equipment: String?,
+)
 
 /** Projecao minima do catalogo para a analise de progressao (J.2). */
 data class ExercicioParaAnalise(

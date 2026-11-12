@@ -118,10 +118,13 @@ object ProgramAudit {
      * POR QUE o aviso do usuário é diferente para cada causa — o texto acionável depende do que
      * aconteceu, não só de "ficou abaixo": [NAO_TREINADO] pede mais dias/tempo ou mais equipamento;
      * [ABAIXO_DO_PISO] pede mais tempo por sessão; [PISO_DIRETO_NEGADO] não é falta de estímulo
-     * (o piso de volume foi batido pelo indireto) e sim falta de exercício direto na semana.
+     * (o piso de volume foi batido pelo indireto) e sim falta de exercício direto na semana;
+     * [MANUTENCAO] (2026-10-31, débito (c)/(d) de "o motor sabe, o app não mostra") não é falta
+     * de nada -- passou do piso, só não bateu o alvo do nível; é a mais branda das quatro, por
+     * isso entra DEPOIS de [PISO_DIRETO_NEGADO] na ordem de gravidade de [avisos].
      * O domínio só diz a CAUSA; a frase mora no i18n (Presentation), e o idioma é do cliente.
      */
-    enum class Causa { NAO_TREINADO, ABAIXO_DO_PISO, PISO_DIRETO_NEGADO }
+    enum class Causa { NAO_TREINADO, ABAIXO_DO_PISO, PISO_DIRETO_NEGADO, MANUTENCAO }
 
     data class Aviso(val musculo: TargetMuscle, val causa: Causa, val efetivo: Double, val minimo: Double)
 
@@ -137,6 +140,7 @@ object ProgramAudit {
                 m.minimo > 0.0 && m.efetivo <= EPS -> Causa.NAO_TREINADO
                 m.minimo > 0.0 && !m.atingiuMinimo -> Causa.ABAIXO_DO_PISO
                 m.pisoDiretoNegado -> Causa.PISO_DIRETO_NEGADO
+                m.status == Status.MANUTENCAO -> Causa.MANUTENCAO
                 else -> null
             }
             causa?.let { Aviso(m.musculo, it, m.efetivo, m.minimo) }

@@ -17,6 +17,21 @@ object ExerciseProgressionTable : Table("exercise_progression") {
     val umRmKg = double("um_rm_kg").nullable()
     val semSubir = integer("sem_subir")
 
+    /**
+     * V76, fatia "progressao-por-repeticao". `null` nos dois = o exercício progride por carga
+     * (ou nunca foi feito); uma linha só usa ESTE par OU `cargaKg`/`umRmKg`/`posSalto`, nunca os
+     * dois -- `incremento` do catálogo é fixo por exercício, não muda em runtime.
+     */
+    val repsMin = integer("reps_min").nullable()
+    val repsMax = integer("reps_max").nullable()
+
+    /**
+     * V77, fatia "progressao-por-nivel". `null` = o exercício não progride por nível (carga,
+     * reps, ou nunca foi feito). RELATIVO -- sem significado absoluto (não é cor de elástico nem
+     * newton nenhum), só conta trocas de resistência desde que a pessoa começou o exercício.
+     */
+    val nivelAtual = integer("nivel_atual").nullable()
+
     /** Relógio do SERVIDOR. */
     val updatedAt = datetime("updated_at")
     override val primaryKey = PrimaryKey(userId, exerciseId)
@@ -38,7 +53,7 @@ object ProgressionEventTable : Table("progression_event") {
     val exerciseId = uuid("exercise_id").references(ExercisesTable.id)
     val sessionId = uuid("session_id").references(WorkoutSessionsTable.id)
 
-    /** `SOBE` | `MANTEM` | `DESCE` | `DELOAD`. */
+    /** `SOBE`|`MANTEM`|`DESCE`|`DELOAD`|`SOBE_REP`|`MANTEM_REP`|`DESCE_REP` (V76)|`SOBE_NIVEL`|`MANTEM_NIVEL`|`DESCE_NIVEL` (V77). */
     val tipo = text("tipo")
     val createdAt = datetime("created_at")
 
@@ -51,6 +66,16 @@ object ProgressionEventTable : Table("progression_event") {
      * snapshot de 1RM por mesociclo. `null` = evento anterior à V71, sem backfill.
      */
     val mesociclo = integer("mesociclo").nullable()
+
+    /**
+     * V72. Snapshot do 1RM estimado (`Progressao.Estado.umRm`) NO MOMENTO deste evento --
+     * o estado pós-decisão que `Progressao.decidir()`/`calibrar()` já calcula e só não era
+     * persistido por evento. `null` = evento anterior à V72, sem snapshot recuperável (só o
+     * ATUAL sobrevive em `exercise_progression`, que não é o mesmo dado). Fonte de
+     * "1RM no início do mesociclo N" pro diagnóstico de promoção do avançado
+     * (`PromocaoDeNivel.diagnosticoAvancado`), sem tabela de snapshot separada.
+     */
+    val umRmKg = double("um_rm_kg").nullable()
     override val primaryKey = PrimaryKey(userId, exerciseId, sessionId)
 }
 

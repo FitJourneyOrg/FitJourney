@@ -304,7 +304,8 @@ class ProgramServiceTest {
         }
         repo.store[pid] = Program(
             id = pid, userId = user, name = "P", origin = WorkoutOrigin.AI, daysPerWeek = workoutIds.size,
-            split = SplitType.FULL_BODY, focusMuscles = emptyList(), locked = false, workouts = workouts, createdAt = ts, updatedAt = ts,
+            split = SplitType.FULL_BODY, focusMuscles = emptyList(), avisos = emptyList(),
+            grupamentosReduzidosPeloFoco = emptyList(), locked = false, workouts = workouts, createdAt = ts, updatedAt = ts,
             durationWeeks = 8, startedAt = ts,
         )
         return pid

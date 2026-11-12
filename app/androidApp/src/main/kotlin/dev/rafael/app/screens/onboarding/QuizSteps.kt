@@ -6,6 +6,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -17,8 +18,10 @@ import dev.rafael.contract.profile.Accessory
 import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.HealthScreening
-import dev.rafael.contract.profile.Level
+import dev.rafael.contract.profile.MinutesAvailable
 import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.profile.TimeOffTraining
+import dev.rafael.contract.profile.TrainingConsistency
 import dev.rafael.contract.profile.TrainingEnvironment
 import dev.rafael.contract.profile.SplitCatalog
 import dev.rafael.contract.profile.SplitType
@@ -91,17 +94,43 @@ fun GoalStep(selected: Goal?, onSelect: (Goal) -> Unit) {
     }
 }
 
+/**
+ * As duas perguntas novas que substituem a escolha livre de nível (fatia 12 -- resto, cliente):
+ * o `QuizState.levelDerivado` combina as duas pelo `nivelDerivado()` compartilhado. Radio-list,
+ * mesmo estilo do [EnvironmentStep] -- é pergunta de única escolha, não `FilterChip` múltiplo.
+ */
 @Composable
-fun LevelStep(selected: Level?, onSelect: (Level) -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(stringResource(R.string.quiz_nivel_titulo), style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(8.dp))
-        Level.entries.forEach { l ->
-            FilterChip(
-                selected = selected == l,
-                onClick = { onSelect(l) },
-                label = { Text(stringResource(l.rotulo())) },
-            )
+fun TrainingConsistencyStep(selected: TrainingConsistency?, onSelect: (TrainingConsistency) -> Unit) {
+    Column {
+        Text(stringResource(R.string.quiz_consistencia_titulo), style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(16.dp))
+        TrainingConsistency.entries.forEach { c ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onSelect(c) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = selected == c, onClick = { onSelect(c) })
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(c.rotulo()))
+            }
+        }
+    }
+}
+
+@Composable
+fun TimeOffTrainingStep(selected: TimeOffTraining?, onSelect: (TimeOffTraining) -> Unit) {
+    Column {
+        Text(stringResource(R.string.quiz_parado_titulo), style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(16.dp))
+        TimeOffTraining.entries.forEach { t ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onSelect(t) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = selected == t, onClick = { onSelect(t) })
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(t.rotulo()))
+            }
         }
     }
 }
@@ -157,6 +186,53 @@ fun DaysStep(selected: Int?, onSelect: (Int) -> Unit) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             (2..6).forEach { d ->
                 FilterChip(selected = selected == d, onClick = { onSelect(d) }, label = { Text("$d") })
+            }
+        }
+    }
+}
+
+/**
+ * "Quer começar no modo leve?" (fatia 12 -- resto, especificação 3ª rodada). Pergunta de
+ * PREFERÊNCIA, não condição -- por isso sim/não em vez de checklist, e por isso o passo nunca
+ * trava o avanço (`canAdvance` sempre `true`): quem não toca segue com "não" marcado.
+ */
+@Composable
+fun LightModeStep(selected: Boolean, onSelect: (Boolean) -> Unit) {
+    Column {
+        Text(stringResource(R.string.quiz_modo_leve_titulo), style = MaterialTheme.typography.headlineSmall)
+        Text(
+            stringResource(R.string.quiz_modo_leve_ajuda),
+            style = MaterialTheme.typography.bodySmall,
+        )
+        Spacer(Modifier.height(16.dp))
+        listOf(true to R.string.quiz_modo_leve_sim, false to R.string.quiz_modo_leve_nao).forEach { (valor, rotulo) ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onSelect(valor) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = selected == valor, onClick = { onSelect(valor) })
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(rotulo))
+            }
+        }
+    }
+}
+
+/** Minutos disponíveis por sessão (fatia 12 -- resto). Radio-list, mesmo estilo das demais
+ * perguntas de única escolha desta fatia. */
+@Composable
+fun MinutesAvailableStep(selected: MinutesAvailable?, onSelect: (MinutesAvailable) -> Unit) {
+    Column {
+        Text(stringResource(R.string.quiz_minutos_titulo), style = MaterialTheme.typography.headlineSmall)
+        Spacer(Modifier.height(16.dp))
+        MinutesAvailable.entries.forEach { m ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onSelect(m) }.padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = selected == m, onClick = { onSelect(m) })
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(m.rotulo()))
             }
         }
     }
@@ -250,24 +326,68 @@ fun BodyStep(
     }
 }
 
+/**
+ * [REGRA] (resto da Fatia 12): CASA sai desabilitada aqui -- "lançar só com academia; a lista
+ * de equipamentos é condição de lançamento apenas para o treino em casa" (especificação). É
+ * só de UI: não desliga quem já tem `environment = CASA` salvo (1 usuário real, medido em
+ * 2026-11-07) -- o campo continua existindo no contrato/servidor sem gate nenhum, só esta tela
+ * de onboarding não oferece a opção pra quem ainda não escolheu.
+ */
+private val AMBIENTES_DISPONIVEIS = setOf(TrainingEnvironment.ACADEMIA)
+
 @Composable
 fun EnvironmentStep(
     selected: TrainingEnvironment?,
+    academyMissingEquipment: Boolean,
     onSelect: (TrainingEnvironment) -> Unit,
+    onToggleMissingEquipment: () -> Unit,
 ) {
     Column {
         Text(stringResource(R.string.quiz_ambiente_titulo), style = MaterialTheme.typography.titleLarge)
         Spacer(Modifier.height(16.dp))
         TrainingEnvironment.entries.forEach { env ->
+            val disponivel = env in AMBIENTES_DISPONIVEIS
+            val cor = if (disponivel) {
+                Color.Unspecified
+            } else {
+                MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+            }
             Row(
-                Modifier.fillMaxWidth().clickable { onSelect(env) }.padding(vertical = 8.dp),
+                Modifier.fillMaxWidth()
+                    .clickable(enabled = disponivel) { onSelect(env) }
+                    .padding(vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                RadioButton(selected = selected == env, onClick = { onSelect(env) })
+                RadioButton(selected = selected == env, onClick = { onSelect(env) }, enabled = disponivel)
                 Spacer(Modifier.width(8.dp))
                 // `env.name` como fallback era rótulo derivado do identificador — o defeito que
                 // esta fatia já achou duas vezes. Agora o catálogo é exaustivo e não há fallback.
-                Text(stringResource(env.descricao()))
+                Text(stringResource(env.descricao()), color = cor)
+                if (!disponivel) {
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        stringResource(R.string.quiz_ambiente_em_breve),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = cor,
+                    )
+                }
+            }
+            // fatia 12 (resto): academias de condomínio às vezes não têm todo o equipamento --
+            // quem marcar aqui ganha o mesmo passo de acessórios de quem treina em CASA.
+            if (env == TrainingEnvironment.ACADEMIA && selected == TrainingEnvironment.ACADEMIA) {
+                Row(
+                    Modifier.fillMaxWidth()
+                        .clickable { onToggleMissingEquipment() }
+                        .padding(start = 32.dp, top = 4.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = academyMissingEquipment, onCheckedChange = { onToggleMissingEquipment() })
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        stringResource(R.string.quiz_ambiente_falta_equipamento),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
         }
     }

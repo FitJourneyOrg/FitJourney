@@ -15,10 +15,12 @@ Formato, uma linha por caso, campos separados por `|` (vazio = ausente; booleano
 casas -- o Kotlin compara com tolerancia). O primeiro campo diz o que e:
     PI|x|incremento|resultado                                  para_incremento
     SF|excesso|barraLivre|salto                                salto_da_faixa
-    PC|carga|rir|serieN|alvo|barraLivre|inc|cargaNova|terminou passo_calibracao
-    RI|carga|rirPrimeira|alvo|inc|cargaNova|anulada            reducao_intrasessao
+    PC|carga|rir|serieN|alvo|barraLivre|inc|cargaInvertida|cargaNova|terminou  passo_calibracao
+    RI|carga|rirPrimeira|alvo|inc|cargaInvertida|cargaNova|anulada           reducao_intrasessao
     RM|carga|reps|rir|papel|um_rm                              estimar_um_rm (1 serie)
-    DE|objetivo|papel|inc|barra|c|exp|pos|sem|series|decisao|c'|exp'|pos'|umrm'|sem'     decidir
+    DE|objetivo|papel|inc|barra|cargaInvertida|c|exp|pos|sem|series|decisao|c'|exp'|pos'|umrm'|sem'   decidir
+    (cargaInvertida, 2026-11-05: mais peso = mais ajuda, ex. Barra Fixa Assistida -- inverte o
+    sinal de SOBE/DESCE/salto/Regra 4, fatia "rir-chega-e-registra", item BLOQUEANTE)
     SD|base|deload|series                                      series_do_dia
     DP|nivel|numero|semana|deload                              deload_programado
     IN|historico|diagnostico|situacao                          situacao_iniciante
@@ -108,27 +110,27 @@ def linhas() -> list:
     for ex, barra in itertools.product(range(-2, 9), (False, True)):
         out.append("SF|%d|%s|%s" % (ex, _b(barra), _f(P.salto_da_faixa(ex, barra))))
     # --- calibracao
-    for carga, rir, n, alvo, barra, inc in itertools.product(
-            (10.0, 20.0), list(range(0, 11)) + [None], (1, 2, 3), (1, 2, 3), (False, True), (1.0, 2.5)):
-        p = P.passo_calibracao(carga, rir, n, alvo, barra, inc)
-        out.append("PC|%s|%s|%d|%d|%s|%s|%s|%s" % (_f(carga), _r(rir), n, alvo, _b(barra), _f(inc), _f(p.carga), _b(p.terminou)))
+    for carga, rir, n, alvo, barra, inc, inv in itertools.product(
+            (10.0, 20.0), list(range(0, 11)) + [None], (1, 2, 3), (1, 2, 3), (False, True), (1.0, 2.5), (False, True)):
+        p = P.passo_calibracao(carga, rir, n, alvo, barra, inc, inv)
+        out.append("PC|%s|%s|%d|%d|%s|%s|%s|%s|%s" % (_f(carga), _r(rir), n, alvo, _b(barra), _f(inc), _b(inv), _f(p.carga), _b(p.terminou)))
     # --- reducao no dia
-    for carga, rir, alvo, inc in itertools.product((8.0, 10.0, 20.0, 60.0, 100.0, 102.5), list(range(0, 6)) + [None], (1, 2, 3), (1.0, 2.0, 2.5, 5.0)):
-        nova, anulada = P.reducao_intrasessao(carga, rir, alvo, inc)
-        out.append("RI|%s|%s|%d|%s|%s|%s" % (_f(carga), _r(rir), alvo, _f(inc), _f(nova), _b(anulada)))
+    for carga, rir, alvo, inc, inv in itertools.product((8.0, 10.0, 20.0, 60.0, 100.0, 102.5), list(range(0, 6)) + [None], (1, 2, 3), (1.0, 2.0, 2.5, 5.0), (False, True)):
+        nova, anulada = P.reducao_intrasessao(carga, rir, alvo, inc, inv)
+        out.append("RI|%s|%s|%d|%s|%s|%s|%s" % (_f(carga), _r(rir), alvo, _f(inc), _b(inv), _f(nova), _b(anulada)))
     # --- 1RM
     for carga, reps, rir, papel in itertools.product((20.0, 100.0), (5, 8, 12), (0, 2, 4, None), PAPEIS):
         out.append("RM|%s|%d|%s|%s|%s" % (_f(carga), reps, _r(rir), papel,
                                           _f(P.estimar_um_rm(carga, [Serie(reps, rir)], papel))))
     # --- decisao entre sessoes
-    for objetivo, papel, barra in itertools.product(OBJETIVOS, PAPEIS, (False, True)):
+    for objetivo, papel, barra, inv in itertools.product(OBJETIVOS, PAPEIS, (False, True), (False, True)):
         lo, hi, _, alvo = P.prescricao(objetivo, papel)
         for (carga, inc), exp, pos, sem in itertools.product(((8.0, 2.0), (60.0, 2.5)), (1, 3, 4), (False, True), (0, 2)):
             for ss in padroes(lo, hi, alvo):
                 e = Estado(carga, exp, pos, None, sem)
-                n, d = P.decidir(e, ss, papel, objetivo, inc, barra)
-                out.append("DE|%s|%s|%s|%s|%s|%d|%s|%d|%s|%s|%s|%d|%s|%s|%d" % (
-                    objetivo, papel, _f(inc), _b(barra), _f(carga), exp, _b(pos), sem, _series(ss), d,
+                n, d = P.decidir(e, ss, papel, objetivo, inc, barra, inv)
+                out.append("DE|%s|%s|%s|%s|%s|%s|%d|%s|%d|%s|%s|%s|%d|%s|%s|%d" % (
+                    objetivo, papel, _f(inc), _b(barra), _b(inv), _f(carga), exp, _b(pos), sem, _series(ss), d,
                     _f(n.carga), n.exposicoes, _b(n.pos_salto), _f(n.um_rm), n.sem_subir))
     # --- mesociclo
     for base, deload in itertools.product(range(1, 9), (False, True)):

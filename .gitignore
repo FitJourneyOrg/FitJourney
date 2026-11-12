@@ -52,7 +52,10 @@ google-services.json
 GoogleService-Info.plist
 firebase-service-account*.json
 *-service-account*.json
-
+README.atualizado.md
+README_MUDANCAS.md
+README_OFICIAL.md
+README_PENDENTE.md
 # ===== Logs / OS =====
 *.log
 .DS_Store
@@ -71,6 +74,7 @@ Thumbs.db
 #
 # Fica fora só o que é GERADO (sai de `python3 docs/geradores/gen_tudo.py` em um comando) e o
 # resíduo de backup manual:
+/docs
 docs/pdf/
 docs/gerados/
 docs/**/*.bak-*

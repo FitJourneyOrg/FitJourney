@@ -1,5 +1,6 @@
 package dev.rafael.server.features.program.db
 
+import dev.rafael.contract.workout.Papel
 import dev.rafael.contract.profile.SplitType
 import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.core.result.AppError
@@ -144,6 +145,8 @@ class ProgramRepositoryImpl : ProgramRepository {
             it[daysPerWeek] = program.daysPerWeek
             it[split] = program.split?.name
             it[focusMuscles] = program.focusMuscles.toJson()
+            it[avisos] = program.avisos.toJson()
+            it[grupamentosReduzidosPeloFoco] = program.grupamentosReduzidosPeloFoco.gruposReduzidosToJson()
             it[locked] = program.locked
             it[createdAt] = ts
             it[updatedAt] = ts
@@ -181,6 +184,7 @@ class ProgramRepositoryImpl : ProgramRepository {
                 it[orderIndex] = ex.orderIndex
                 it[restSeconds] = ex.restSeconds
                 it[rir] = ex.rir
+                it[papel] = ex.papel?.name
             }
             ex.sets.forEach { s ->
                 WorkoutSetsTable.insert {
@@ -234,6 +238,7 @@ class ProgramRepositoryImpl : ProgramRepository {
             orderIndex = this[WorkoutExercisesTable.orderIndex],
             restSeconds = this[WorkoutExercisesTable.restSeconds],
             rir = this[WorkoutExercisesTable.rir],
+            papel = this[WorkoutExercisesTable.papel]?.let { Papel.valueOf(it) },
             sets = sets,
         )
     }
@@ -246,6 +251,8 @@ class ProgramRepositoryImpl : ProgramRepository {
         daysPerWeek = this[ProgramsTable.daysPerWeek],
         split = this[ProgramsTable.split]?.let { SplitType.valueOf(it) },
         focusMuscles = this[ProgramsTable.focusMuscles]?.toMuscleGroups() ?: emptyList(),
+        avisos = this[ProgramsTable.avisos]?.toAvisos() ?: emptyList(),
+        grupamentosReduzidosPeloFoco = this[ProgramsTable.grupamentosReduzidosPeloFoco]?.toGruposReduzidos() ?: emptyList(),
         locked = this[ProgramsTable.locked],
         workouts = workouts,
         createdAt = this[ProgramsTable.createdAt],

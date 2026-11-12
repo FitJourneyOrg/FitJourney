@@ -47,4 +47,35 @@ data class Exercise(
     // movementPattern/equipment (ver docs/trabalho/motor-v3-fatia-7.md). O motor não lê
     // contraindications em tempo de execução.
     val rirMinimoSeguranca: Boolean,
+
+    // --- V74: semântica de carga, exigida por `Progressao.decidir()`/`calibrar()`.
+    /**
+     * Granularidade física de carga em kg: a menor carga alcançável naquele equipamento.
+     *
+     * `null` = não se aplica (sem carga externa em kg, como peso do corpo e faixa elástica) e o
+     * chamador **não invoca o motor de progressão** para este exercício: `decidir()`/`calibrar()`
+     * exigem `Double` não-nulo e não existe fallback por repetição (débito aberto).
+     *
+     * Hoje é derivado de [equipment] na V74 (paliativo declarado: põe leg press e pec deck no
+     * mesmo número); o destino é calibração pelo histórico do usuário.
+     */
+    val incremento: Double?,
+    /**
+     * Peso livre sobre barra. Limita o salto proporcional da calibração ao teto de 25%
+     * (`Progressao.CALIBRACAO_TETO_BARRA_LIVRE`). `SMITH` é false (trilho guiado) e `LANDMINE`
+     * também (arco travado pela ponta fixa).
+     *
+     * `[INV]` enquanto for derivável, nunca discorda de `equipment IN (BARBELL, TRAP_BAR)` —
+     * garantido pelo `chk_exercises_barra_livre` (V74), não por código.
+     */
+    val barraLivre: Boolean,
+    /**
+     * Mais peso = exercício mais **fácil** (máquina assistida: a carga é contrapeso). O motor tem
+     * de **trocar o sinal** da decisão — `SOBE` significa DIMINUIR a carga.
+     *
+     * São 4 no catálogo, 1 na lista principal (Barra Fixa Assistida na Máquina). A troca de sinal
+     * em `decidir()` ainda NÃO existe: é item que bloqueia o fechamento da fatia do RIR, porque
+     * ligar o fio sem ela faz a assistida regredir calada.
+     */
+    val cargaInvertida: Boolean,
 )

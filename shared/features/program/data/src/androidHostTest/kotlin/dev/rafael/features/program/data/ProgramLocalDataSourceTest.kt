@@ -1,6 +1,8 @@
 package dev.rafael.features.program.data
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
+import dev.rafael.contract.program.ProgramAvisoDto
+import dev.rafael.contract.program.CausaAvisoDto
 import dev.rafael.contract.program.ProgramDto
 import dev.rafael.contract.workout.WorkoutOrigin
 import dev.rafael.core.database.FitJourneyDatabase
@@ -153,5 +155,40 @@ class ProgramLocalDataSourceTest {
         ds.criarPrograma(dto)
 
         assertNull(ds.lerPrograma("p4")?.startedAt)
+    }
+
+    /**
+     * Fatia "declaracao-de-custo-do-motor" (2026-10-31), migration 10.sqm (`ADD COLUMN`,
+     * mesmo padrão da 5/6/7) -- mesmo raciocínio do teste de `durationWeeks` acima: o
+     * `ProgramMapperTest` prova DTO↔domínio, mas só este aqui atravessa o SQLDelight real contra
+     * o schema das `.sqm`, que é onde uma migration poderia estar errada sem quebrar o mapper.
+     */
+    @Test
+    fun `avisos e grupamentosReduzidosPeloFoco sobrevivem ao round-trip local`() = runTest {
+        val dto = programaOffline(id = "p5", nome = "Com avisos").copy(
+            avisos = listOf(
+                ProgramAvisoDto(musculo = "CHEST", causa = CausaAvisoDto.MANUTENCAO),
+                ProgramAvisoDto(musculo = "BACK", causa = CausaAvisoDto.NAO_TREINADO),
+            ),
+            grupamentosReduzidosPeloFoco = listOf("SHOULDERS", "BICEPS"),
+        )
+
+        ds.criarPrograma(dto)
+        val lido = ds.lerPrograma("p5")
+
+        assertEquals(dto.avisos, lido?.avisos)
+        assertEquals(dto.grupamentosReduzidosPeloFoco, lido?.grupamentosReduzidosPeloFoco)
+    }
+
+    /** Caminho de falha: sem avisos (motor atual, dormente) grava e lê as duas listas vazias,
+     *  nunca null -- mesmo raciocínio do `ProgramAvisosJson.kt` do servidor (V73). */
+    @Test
+    fun `sem avisos (motor atual, dormente) o round-trip local devolve listas vazias`() = runTest {
+        ds.criarPrograma(programaOffline(id = "p6", nome = "Sem avisos"))
+
+        val lido = ds.lerPrograma("p6")
+
+        assertEquals(emptyList<ProgramAvisoDto>(), lido?.avisos)
+        assertEquals(emptyList<String>(), lido?.grupamentosReduzidosPeloFoco)
     }
 }

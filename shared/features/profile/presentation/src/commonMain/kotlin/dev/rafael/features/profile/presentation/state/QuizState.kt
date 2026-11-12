@@ -5,19 +5,28 @@ import dev.rafael.contract.profile.BodyLimitation
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.HealthScreening
 import dev.rafael.contract.profile.Level
+import dev.rafael.contract.profile.MinutesAvailable
 import dev.rafael.contract.profile.MuscleGroup
 import dev.rafael.contract.profile.SplitType
+import dev.rafael.contract.profile.TimeOffTraining
+import dev.rafael.contract.profile.TrainingConsistency
 import dev.rafael.contract.profile.TrainingEnvironment
+import dev.rafael.contract.profile.nivelDerivado
 import dev.rafael.core.result.AppError
 import dev.rafael.features.profile.domain.model.Profile
 
 /** Os passos do quiz, em ordem. REST_DAYS (Estágio 2) após DAYS; SPLIT (ARCH #29) após ENVIRONMENT. */
-enum class QuizStep { GOAL, LEVEL, AGE, DAYS, REST_DAYS, FOCUS, BODY, ENVIRONMENT, ACCESSORIES, SPLIT, HEALTH, LIMITATIONS }
+enum class QuizStep { GOAL, CONSISTENCY, TIME_OFF, LIGHT_MODE, AGE, DAYS, MINUTES, REST_DAYS, FOCUS, BODY, ENVIRONMENT, ACCESSORIES, SPLIT, HEALTH, LIMITATIONS }
 data class QuizState(
     val step: QuizStep = QuizStep.GOAL,
     val goal: Goal? = null,
-    val level: Level? = null,
+    val trainingConsistency: TrainingConsistency? = null,   // fatia 12 -- substitui a escolha livre de nível
+    val timeOffTraining: TimeOffTraining? = null,             // fatia 12
+    // fatia 12 (resto): "quer comecar no modo leve?" -- sempre respondida (default nao), nunca
+    // nula no cliente; o passo ja chega com uma escolha marcada, igual ao padrao de accessories.
+    val preferLightMode: Boolean = false,
     val daysPerWeek: Int? = null,
+    val minutesAvailable: MinutesAvailable? = null,           // fatia 12 (resto)
     val splitPreference: SplitType? = null,   // ARCH #29: null = usa o recomendado
     val unavailableDays: List<Int> = emptyList(),   // dias (1=Seg..7=Dom) que NÃO quer treinar
     val focusAreas: List<MuscleGroup> = emptyList(),
@@ -26,8 +35,15 @@ data class QuizState(
     val age: Int? = null,                  // #24
     val minorSupervised: Boolean = false,  // #24
     val environment: TrainingEnvironment? = null,          // <- novo
-    // V66: só pergunta quando environment == CASA. "Apoio firme" vem marcado por padrão --
-    // quase todo mundo tem uma cadeira, e o rótulo explícito é o que torna o default honesto.
+    // Fatia 12 (resto): botão "não tenho este equipamento" também na ACADEMIA (academias de
+    // condomínio). `false` até o usuário marcar -- só então o passo ACCESSORIES aparece pra
+    // ACADEMIA também.
+    val academyMissingEquipment: Boolean = false,
+    // V66: só pergunta quando environment == CASA (ou ACADEMIA + academyMissingEquipment).
+    // "Apoio firme" vem marcado por padrão -- quase todo mundo tem uma cadeira, e o rótulo
+    // explícito é o que torna o default honesto. Quando o botão de equipamento liga o passo
+    // pra ACADEMIA, o `QuizViewModel` reinicia esta lista pros SEIS marcados (assume que tem
+    // tudo, usuário desmarca o que falta) -- ver `AcademyMissingEquipmentToggled`.
     val accessories: List<Accessory> = listOf(Accessory.ELEVATED_SURFACE),
     val limitations: List<BodyLimitation> = emptyList(),
     val health: HealthScreening = HealthScreening(),        // <- novo (não-null, começa tudo false)
@@ -42,16 +58,31 @@ data class QuizState(
 ) {
 
 
+    /**
+     * Nível deixou de ser escolha livre (fatia 12): deriva por [nivelDerivado] das duas
+     * perguntas novas -- nulo até ambas serem respondidas.
+     */
+    val levelDerivado: Level?
+        get() {
+            val c = trainingConsistency; val t = timeOffTraining
+            return if (c != null && t != null) nivelDerivado(c, t) else null
+        }
+
     /** Foco só faz sentido p/ INTER/ADVANCED e não p/ saúde geral — espelha o motor (#26/#24). */
     val focusEligible: Boolean
-        get() = level != Level.BEGINNER && goal != Goal.GENERAL_HEALTH
+        get() = levelDerivado != null && levelDerivado != Level.BEGINNER && goal != Goal.GENERAL_HEALTH
 
     /** Passos visíveis: iniciante (ou saúde geral) não veem o passo de FOCO. */
     val visibleSteps: List<QuizStep>
         get() = QuizStep.entries.filter {
             (it != QuizStep.FOCUS || focusEligible) &&
-                (it != QuizStep.ACCESSORIES || environment == TrainingEnvironment.CASA)
+                (it != QuizStep.ACCESSORIES || mostraAcessorios)
         }
+
+    /** CASA sempre pergunta; ACADEMIA só depois do botão "não tenho este equipamento". */
+    private val mostraAcessorios: Boolean
+        get() = environment == TrainingEnvironment.CASA ||
+            (environment == TrainingEnvironment.ACADEMIA && academyMissingEquipment)
 
     /** Sobra dia suficiente pra treinar o que o usuário pediu? (7 - dias off >= daysPerWeek) */
     val hasEnoughFreeDays: Boolean
@@ -60,10 +91,13 @@ data class QuizState(
     val canAdvance: Boolean
         get() = when (step) {
             QuizStep.GOAL -> goal != null
-            QuizStep.LEVEL -> level != null
+            QuizStep.CONSISTENCY -> trainingConsistency != null
+            QuizStep.TIME_OFF -> timeOffTraining != null
+            QuizStep.LIGHT_MODE -> true   // pulável -- já chega com "não" marcado
             // #24: idade obrigatória e válida; menor de 18 só passa com o aceite de supervisão.
             QuizStep.AGE -> age != null && age in 5..120 && (age >= 18 || minorSupervised)
             QuizStep.DAYS -> daysPerWeek != null
+            QuizStep.MINUTES -> minutesAvailable != null
             QuizStep.REST_DAYS -> hasEnoughFreeDays        // não pode marcar dias off demais
             QuizStep.FOCUS -> true
             QuizStep.BODY -> true
@@ -79,15 +113,21 @@ data class QuizState(
      * ainda falta -- extraído do `QuizViewModel` pra ser testável sem `viewModelScope` (C2 tier 2,
      * plano "acessórios no onboarding" §6: "o que foi marcado chega ao ProfileDto").
      *
-     * É aqui que mora a regra da V66: `accessories` só viaja quando `environment == CASA` --
-     * fora disso vira `null` ("nunca perguntado"), nunca `[]` ("perguntado, nada declarado").
+     * É aqui que mora a regra da V66 (fatia 12 -- resto, estendida): `accessories` só viaja
+     * quando [mostraAcessorios] -- CASA (sempre) ou ACADEMIA com o botão "não tenho este
+     * equipamento" marcado. Fora disso vira `null` ("nunca perguntado"), nunca `[]`
+     * ("perguntado, nada declarado").
      */
     fun toProfileOrNull(): Profile? {
-        val g = goal; val l = level; val d = daysPerWeek
+        val g = goal; val l = levelDerivado; val d = daysPerWeek
         if (g == null || l == null || d == null) return null
         return Profile(
             goal = g,
             level = l,
+            trainingConsistency = trainingConsistency,   // fatia 12
+            timeOffTraining = timeOffTraining,             // fatia 12
+            preferLightMode = preferLightMode,             // fatia 12 (resto)
+            minutesAvailable = minutesAvailable,           // fatia 12 (resto)
             daysPerWeek = d,
             splitPreference = splitPreference,   // ARCH #29 (null = recomendado)
             unavailableDays = unavailableDays,   // Estágio 2: dias que não quer treinar
@@ -97,7 +137,7 @@ data class QuizState(
             age = age,                       // #24
             minorSupervised = minorSupervised,   // #24
             environment = environment,
-            accessories = if (environment == TrainingEnvironment.CASA) accessories else null,
+            accessories = if (mostraAcessorios) accessories else null,
             limitations = limitations,
             health = health,
             onboardingCompleted = false,   // server deriva

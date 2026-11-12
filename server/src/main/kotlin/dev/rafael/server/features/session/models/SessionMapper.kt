@@ -25,6 +25,7 @@ private fun SetLogDto.toDomain() = SetLog(
     repsDone = repsDone,
     weightKg = weightKg,
     done = done,
+    rir = rir,
 )
 
 fun WorkoutSession.toDto(): WorkoutSessionDto = WorkoutSessionDto(
@@ -45,4 +46,5 @@ private fun SetLog.toDto() = SetLogDto(
     repsDone = repsDone,
     weightKg = weightKg,
     done = done,
+    rir = rir,
 )

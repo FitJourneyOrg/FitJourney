@@ -27,6 +27,9 @@ private fun WorkoutExerciseDto.toDomain() = WorkoutExercise(
     restSeconds = restSeconds,   // lê o campo do DTO
     rir = rir,
     sets = sets.map { it.toDomain() },
+    cargaSugeridaKg = cargaSugeridaKg,
+    repsMinSugerido = repsMinSugerido,
+    repsMaxSugerido = repsMaxSugerido,
 )
 private fun WorkoutSetDto.toDomain() = WorkoutSet(reps, orderIndex)
 

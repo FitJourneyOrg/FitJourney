@@ -7,7 +7,7 @@ import dev.rafael.server.features.exercise.engine.v3.PromocaoDeNivel.Diagnostico
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Decisao
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Estado
 import dev.rafael.server.features.exercise.engine.v3.Progressao.Serie
-import dev.rafael.server.features.exercise.engine.v3.SessionComposition.Papel
+import dev.rafael.contract.workout.Papel
 import kotlin.math.abs
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -56,14 +56,14 @@ class ProgressaoContraOOraculoTest {
             setOf("PI", "SF", "PC", "RI", "RM", "DE", "SD", "CS", "DP", "IN", "RE", "AR", "PD", "PP", "PA", "PN"),
             tipos.keys,
         )
-        assertEquals(6912, tipos["DE"])
+        assertEquals(13824, tipos["DE"])
         assertEquals(2730, tipos["IN"])
         assertTrue(Oraculo.linhasDaProgressao().size > 10_000, "a referência da progressão quase não tem casos")
     }
 
     @Test
     fun `as tres decisoes aparecem na grade, senao ela nao exercita o desfecho`() {
-        val decisoes = Oraculo.linhasDaProgressao().filter { it.startsWith("DE|") }.map { it.split("|")[10] }.toSet()
+        val decisoes = Oraculo.linhasDaProgressao().filter { it.startsWith("DE|") }.map { it.split("|")[11] }.toSet()
         assertEquals(Decisao.entries.map { it.name }.toSet(), decisoes)
     }
 
@@ -73,7 +73,7 @@ class ProgressaoContraOOraculoTest {
         val linha = Oraculo.linhasDaProgressao().first { it.startsWith("DE|") }
         assertEquals(null, confere(linha), "linha de base: o primeiro caso tem de bater")
         val campos = linha.split("|").toMutableList()
-        campos[11] = "999.000000"
+        campos[12] = "999.000000"
         assertTrue(confere(campos.joinToString("|"))!!.startsWith("DE"))
 
         val piErrado = Oraculo.linhasDaProgressao().first { it.startsWith("PI|") }.split("|").toMutableList()
@@ -124,14 +124,16 @@ class ProgressaoContraOOraculoTest {
             "PI" -> { exige(4); falha(d(c[3]) to Progressao.paraIncremento(d(c[1])!!, d(c[2])!!)) }
             "SF" -> { exige(4); falha(d(c[3]) to Progressao.saltoDaFaixa(c[1].toInt(), b(c[2]))) }
             "PC" -> {
-                exige(9)
-                val p = Progressao.passoCalibracao(d(c[1])!!, r(c[2]), c[3].toInt(), c[4].toInt(), b(c[5]), d(c[6])!!)
-                falha(d(c[7]) to p.carga, b(c[8]) to p.terminou)
+                exige(10)
+                val p = Progressao.passoCalibracao(
+                    d(c[1])!!, r(c[2]), c[3].toInt(), c[4].toInt(), b(c[5]), d(c[6])!!, b(c[7]),
+                )
+                falha(d(c[8]) to p.carga, b(c[9]) to p.terminou)
             }
             "RI" -> {
-                exige(7)
-                val (nova, anulada) = Progressao.reducaoIntrasessao(d(c[1])!!, r(c[2]), c[3].toInt(), d(c[4])!!)
-                falha(d(c[5]) to nova, b(c[6]) to anulada)
+                exige(8)
+                val (nova, anulada) = Progressao.reducaoIntrasessao(d(c[1])!!, r(c[2]), c[3].toInt(), d(c[4])!!, b(c[5]))
+                falha(d(c[6]) to nova, b(c[7]) to anulada)
             }
             "RM" -> {
                 exige(6)
@@ -139,14 +141,14 @@ class ProgressaoContraOOraculoTest {
                 falha(d(c[5]) to um)
             }
             "DE" -> {
-                exige(16)
-                val estado = Estado(d(c[5]), c[6].toInt(), b(c[7]), null, c[8].toInt())
+                exige(17)
+                val estado = Estado(d(c[6]), c[7].toInt(), b(c[8]), null, c[9].toInt())
                 val (novo, decisao) = Progressao.decidir(
-                    estado, series(c[9]), Papel.valueOf(c[2]), Goal.valueOf(c[1]), d(c[3])!!, b(c[4]),
+                    estado, series(c[10]), Papel.valueOf(c[2]), Goal.valueOf(c[1]), d(c[3])!!, b(c[4]), b(c[5]),
                 )
                 falha(
-                    c[10] to decisao.name, d(c[11]) to novo.carga, c[12].toInt() to novo.exposicoes,
-                    b(c[13]) to novo.posSalto, d(c[14]) to novo.umRm, c[15].toInt() to novo.semSubir,
+                    c[11] to decisao.name, d(c[12]) to novo.carga, c[13].toInt() to novo.exposicoes,
+                    b(c[14]) to novo.posSalto, d(c[15]) to novo.umRm, c[16].toInt() to novo.semSubir,
                 )
             }
             "SD" -> { exige(4); falha(c[3].toInt() to CicloDoMesociclo.seriesDoDia(c[1].toInt(), b(c[2]))) }

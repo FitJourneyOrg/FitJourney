@@ -54,5 +54,14 @@ object ExercisesTable : Table("exercises") {
     // --- V67 (fatia 7): RIR minimo por propriedade, aprovado por nome. NOT NULL DEFAULT false.
     val rirMinimoSeguranca = bool("rir_minimo_seguranca").default(false)
 
+    // --- V74: semântica de carga que `Progressao` exige. Só do servidor, não vai ao DTO.
+    // `incremento` é granularidade física em kg (NULL = sem carga externa; o chamador então NÃO
+    // invoca o motor, que exige Double não-nulo). `barraLivre` tem [INV] no banco: nunca discorda
+    // de equipment IN (BARBELL, TRAP_BAR) — ver chk_exercises_barra_livre. `cargaInvertida` =
+    // mais peso é mais FÁCIL (máquina assistida), e o motor tem de trocar o sinal da decisão.
+    val incremento = double("incremento").nullable()
+    val barraLivre = bool("barra_livre").default(false)
+    val cargaInvertida = bool("carga_invertida").default(false)
+
     override val primaryKey = PrimaryKey(id)
 }

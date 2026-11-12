@@ -4,6 +4,8 @@ import dev.rafael.core.result.AppResult
 import dev.rafael.server.features.exercise.engine.v3.AncoraDoIniciante
 import dev.rafael.server.features.exercise.engine.v3.Mesociclo
 import dev.rafael.server.features.exercise.engine.v3.Progressao
+import dev.rafael.server.features.exercise.engine.v3.ProgressaoPorRepeticao
+import dev.rafael.server.features.exercise.engine.v3.ProgressaoPorNivel
 import kotlin.uuid.Uuid
 
 /**
@@ -17,12 +19,21 @@ import kotlin.uuid.Uuid
  * pausa acima de 28 dias.
  *
  * O repositório não decide nada: lê e grava o [Progressao.Estado] que o núcleo puro
- * ([Progressao.decidir], [Progressao.calibrar]) devolveu.
+ * ([Progressao.decidir], [Progressao.calibrar]) devolveu. Desde a fatia "progressao-por-repeticao"
+ * (V76), a MESMA linha (mesma PK) também pode guardar um [ProgressaoPorRepeticao.Estado] — nunca
+ * os dois pro mesmo exercício, já que `incremento` do catálogo decide o eixo de uma vez só. Os
+ * métodos `*PorRepeticao` são o eixo de repetição; os demais continuam só carga.
  */
 interface ProgressaoRepository {
 
     /** O estado do exercício, ou `null` se a pessoa nunca o fez (a calibração é obrigatória). */
     suspend fun buscar(usuarioId: Uuid, exercicioId: Uuid): AppResult<Progressao.Estado?>
+
+    /** Equivalente a [buscar] no eixo de repetição — `null` se a pessoa nunca fez o exercício. */
+    suspend fun buscarPorRepeticao(usuarioId: Uuid, exercicioId: Uuid): AppResult<ProgressaoPorRepeticao.Estado?>
+
+    /** Equivalente a [buscar] no eixo de nível — `null` se a pessoa nunca fez o exercício. */
+    suspend fun buscarPorNivel(usuarioId: Uuid, exercicioId: Uuid): AppResult<ProgressaoPorNivel.Estado?>
 
     /**
      * Grava (substitui) o estado do exercício, **sem** passar por uma sessão — o caso do retorno após
@@ -54,6 +65,26 @@ interface ProgressaoRepository {
         mesociclo: Int,
     ): AppResult<Boolean>
 
+    /** Equivalente a [registrar] no eixo de repetição — mesma idempotência (D-2), mesma PK de evento. */
+    suspend fun registrarPorRepeticao(
+        usuarioId: Uuid,
+        exercicioId: Uuid,
+        sessaoId: Uuid,
+        estado: ProgressaoPorRepeticao.Estado,
+        evento: AncoraDoIniciante.Evento,
+        mesociclo: Int,
+    ): AppResult<Boolean>
+
+    /** Equivalente a [registrar] no eixo de nível — mesma idempotência (D-2), mesma PK de evento. */
+    suspend fun registrarPorNivel(
+        usuarioId: Uuid,
+        exercicioId: Uuid,
+        sessaoId: Uuid,
+        estado: ProgressaoPorNivel.Estado,
+        evento: AncoraDoIniciante.Evento,
+        mesociclo: Int,
+    ): AppResult<Boolean>
+
     /**
      * Os últimos [limite] eventos do exercício, do mais antigo ao mais novo — a entrada de
      * [AncoraDoIniciante.situacao]. A ordem é a de REGISTRO no servidor (a sessão pode ter sido
@@ -77,6 +108,27 @@ interface ProgressaoRepository {
      * mesociclo: o diagnóstico precisa do deload anterior, que pode estar em outra janela).
      */
     suspend fun exerciciosComEventoNoMesociclo(usuarioId: Uuid, mesociclo: Int): AppResult<List<Uuid>>
+
+    /**
+     * V72. O `um_rm_kg` do PRIMEIRO evento do exercício com [mesociclo] exato — "o 1RM que era no
+     * início do mesociclo N", sem tabela de snapshot (decisão do Rafael, 2026-10-30: o log vira
+     * autodescritivo). `null` se não houver evento do exercício naquele mesociclo, OU se o único
+     * evento existente for anterior à V72 (sem snapshot gravado) — os dois casos são "não há
+     * início medido para este mesociclo", e quem chama ([dev.rafael.server.features.exercise.
+     * services.PromotionService]) precisa tratar isso como DADO INSUFICIENTE, não como "sem
+     * promoção a sugerir": são coisas diferentes, e o período cego logo após esta migration
+     * (~2 mesociclos sem dado recuperável) é esperado, não falha.
+     */
+    suspend fun primeiroUmRmNoMesociclo(usuarioId: Uuid, exercicioId: Uuid, mesociclo: Int): AppResult<Double?>
+
+    /**
+     * V72. Quantos eventos `DESCE` o exercício teve a partir do mesociclo [desde] (inclusive) até
+     * agora — o "poucas reduções promovem, muitas indicam recuperação" de
+     * [dev.rafael.server.features.exercise.engine.v3.PromocaoDeNivel.diagnosticoAvancado].
+     * Eventos com `mesociclo IS NULL` (anteriores à V71) nunca entram — são de antes da janela
+     * poder ser medida.
+     */
+    suspend fun reducoesDesde(usuarioId: Uuid, exercicioId: Uuid, desde: Int): AppResult<Int>
 }
 
 /**

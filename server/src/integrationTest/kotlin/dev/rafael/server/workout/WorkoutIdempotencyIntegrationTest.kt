@@ -97,6 +97,7 @@ class WorkoutIdempotencyIntegrationTest {
                 orderIndex = 0,
                 restSeconds = 90,
                 rir = 2,
+                papel = null,
                 sets = listOf(WorkoutSet(Uuid.NIL, reps = 10, orderIndex = 0)),
             ),
         ),

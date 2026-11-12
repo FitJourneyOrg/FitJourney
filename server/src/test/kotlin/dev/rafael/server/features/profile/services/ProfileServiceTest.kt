@@ -7,11 +7,14 @@ import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.ProfileDto
 import dev.rafael.contract.i18n.Idioma
 import dev.rafael.contract.profile.TrainingEnvironment
+import dev.rafael.contract.profile.TrainingConsistency
+import dev.rafael.contract.profile.TimeOffTraining
 import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.server.features.profile.db.ProfileRepository
 import dev.rafael.server.features.profile.models.Profile
 import dev.rafael.server.features.user.db.UserRepository
+import dev.rafael.server.features.user.models.User
 import dev.rafael.server.features.user.services.UserService
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
@@ -44,12 +47,28 @@ class ProfileServiceTest {
         override suspend fun updateIdioma(userId: kotlin.uuid.Uuid, idioma: Idioma) =
             error("não deveria ser chamado")
     }
+    private var perfilGravado: Profile? = null
     private val stubProfileRepo = object : ProfileRepository {
         override suspend fun findByUserId(userId: Uuid): AppResult<Profile?> = error("não deveria ser chamado")
-        override suspend fun upsert(profile: Profile): AppResult<Profile> = error("não deveria ser chamado")
+        override suspend fun upsert(profile: Profile): AppResult<Profile> {
+            perfilGravado = profile
+            return AppResult.Success(profile)
+        }
     }
 
     private fun service() = ProfileService(UserService(stubUserRepo), stubProfileRepo)
+
+    /** Só pros dois testes abaixo, que PRECISAM passar do guard e tocar o repositório. */
+    private fun servicoComUsuarioExistente(): ProfileService {
+        val usuario = User(
+            id = Uuid.random(), firebaseUid = "uid", email = null, isPremium = false,
+            displayName = "Teste", code = "ABCD1234", activeProgramId = null,
+        )
+        val userRepo = object : UserRepository by stubUserRepo {
+            override suspend fun findByFirebaseUid(firebaseUid: String) = AppResult.Success(usuario)
+        }
+        return ProfileService(UserService(userRepo), stubProfileRepo)
+    }
 
     private fun dto(days: Int = 3, off: List<Int> = emptyList()) = ProfileDto(
         goal = Goal.GAIN_MUSCLE,
@@ -121,5 +140,30 @@ class ProfileServiceTest {
 
         val erro = (r as AppResult.Failure).error as AppError.Validation
         assertEquals(ErrorCodes.DIAS_INDISPONIVEIS_INVALIDOS, erro.fieldErrors[ErrorFields.UNAVAILABLE_DAYS])
+    }
+
+    // ---- fatia "nível derivado e fim do gate de saúde" ----
+
+    @Test
+    fun `com as duas perguntas novas preenchidas, o nivel gravado e o derivado -- ignora o level enviado`() = runBlocking {
+        val comPerguntasNovas = dto().copy(
+            level = Level.ADVANCED,   // enviado pelo cliente, deve ser ignorado
+            trainingConsistency = TrainingConsistency.LESS_THAN_6_MONTHS,
+            timeOffTraining = TimeOffTraining.NONE,
+        )
+
+        servicoComUsuarioExistente().saveProfile("uid", null, comPerguntasNovas)
+
+        assertEquals(Level.BEGINNER, perfilGravado?.level)
+    }
+
+    /** Caminho de falha do fallback: cliente antigo (pré-fatia-12) não manda as duas -- level enviado continua valendo. */
+    @Test
+    fun `sem as duas perguntas novas (cliente antigo), o level enviado continua valendo -- fallback`() = runBlocking {
+        val semAsPerguntasNovas = dto().copy(level = Level.ADVANCED)
+
+        servicoComUsuarioExistente().saveProfile("uid", null, semAsPerguntasNovas)
+
+        assertEquals(Level.ADVANCED, perfilGravado?.level)
     }
 }

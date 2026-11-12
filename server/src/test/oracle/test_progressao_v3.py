@@ -132,6 +132,47 @@ class ProgressaoDupla(unittest.TestCase):
         e, d = P.decidir(base, sessao(9, 1), "COMPOSTO", "GAIN_MUSCLE", 2.5, True)
         self.assertEqual((MANTEM, 100.0), (d, e.carga))
 
+    def test_carga_invertida_sobe_reduz_a_carga_nao_aumenta(self):
+        """Fatia rir-chega-e-registra (2026-11-05), item BLOQUEANTE: Barra Fixa Assistida e
+        exercicios parecidos tem cargaInvertida=True (mais peso = mais ajuda). SOBE (ficou facil,
+        pede mais dificuldade) tem que REDUZIR a carga/assistencia, nao aumentar -- o contrario do
+        exercicio normal no MESMO cenario (caminho de falha: cargaInvertida=False tem que subir)."""
+        base = Estado(carga=100.0, exposicoes=10)
+        e_inv, d_inv = P.decidir(base, sessao(9, 2), "COMPOSTO", "GAIN_MUSCLE", 2.5, True, carga_invertida=True)
+        self.assertEqual(SOBE, d_inv)
+        self.assertLess(e_inv.carga, 100.0, "invertido: SOBE tem que reduzir a carga")
+        self.assertEqual(97.5, e_inv.carga)
+        # caminho de falha: o MESMO cenario sem cargaInvertida tem que subir, nao descer
+        e_normal, d_normal = P.decidir(base, sessao(9, 2), "COMPOSTO", "GAIN_MUSCLE", 2.5, True)
+        self.assertEqual(SOBE, d_normal)
+        self.assertGreater(e_normal.carga, 100.0, "normal: SOBE tem que aumentar a carga")
+
+    def test_carga_invertida_desce_aumenta_a_carga(self):
+        """Simetrico ao SOBE: DESCE (ficou dificil) pede MENOS dificuldade -- num assistido, isso e
+        MAIS carga (mais ajuda), nao menos."""
+        base = Estado(carga=100.0, exposicoes=10)
+        e_inv, d_inv = P.decidir(base, sessao(1, 0), "COMPOSTO", "GAIN_MUSCLE", 2.5, True, carga_invertida=True)
+        self.assertEqual(DESCE, d_inv)
+        self.assertGreater(e_inv.carga, 100.0, "invertido: DESCE tem que aumentar a carga")
+
+    def test_carga_invertida_calibracao_puxa_pra_baixo(self):
+        """RIR alto na calibracao (ficou facil) tem que puxar a carga pra BAIXO quando invertida --
+        mesma logica do SOBE em decidir()."""
+        passo_normal = P.passo_calibracao(10.0, 9, 1, 2, False, 2.5)
+        self.assertGreater(passo_normal.carga, 10.0)
+        passo_inv = P.passo_calibracao(10.0, 9, 1, 2, False, 2.5, carga_invertida=True)
+        self.assertLess(passo_inv.carga, 10.0)
+
+    def test_carga_invertida_regra_4_aumenta_em_vez_de_reduzir(self):
+        """Regra 4 (reducao_intrasessao): 1a serie mais dificil que o alvo. Invertido, precisar de
+        mais assistencia e a carga SUBIR, nao descer."""
+        nova_normal, anulada_normal = P.reducao_intrasessao(100.0, 1, 2, 2.5)
+        self.assertLess(nova_normal, 100.0)
+        self.assertFalse(anulada_normal)
+        nova_inv, anulada_inv = P.reducao_intrasessao(100.0, 1, 2, 2.5, carga_invertida=True)
+        self.assertGreater(nova_inv, 100.0)
+        self.assertFalse(anulada_inv)
+
     def test_regra_2_o_aumento_e_o_menor_incremento_depois_das_tres_primeiras_exposicoes(self):
         # RIR 6 (4 acima do alvo) pediria +25% se fosse uma das tres primeiras
         e, d = P.decidir(Estado(carga=100.0, exposicoes=3), sessao(9, 6), "COMPOSTO", "GAIN_MUSCLE", 2.5, False)
@@ -591,13 +632,13 @@ class ReferenciaDaProgressao(unittest.TestCase):
             {"PI", "SF", "PC", "RI", "RM", "DE", "SD", "CS", "DP", "IN", "RE", "AR", "PD", "PP", "PA", "PN"},
             set(tipos),
         )
-        self.assertEqual(6912, tipos["DE"])
+        self.assertEqual(13824, tipos["DE"])
         self.assertEqual(2730, tipos["IN"])
         self.assertTrue(all(n > 0 for n in tipos.values()))
 
     def test_toda_decisao_da_grade_e_uma_das_tres(self):
         import gerar_referencia_progressao as g
-        vistas = Counter(l.split("|")[10] for l in g.linhas() if l.startswith("DE|"))
+        vistas = Counter(l.split("|")[11] for l in g.linhas() if l.startswith("DE|"))
         self.assertEqual({SOBE, MANTEM, DESCE}, set(vistas), "a grade tem de exercitar as tres decisoes")
 
 class RirNuloAplicaSoRegrasPorRepeticao(unittest.TestCase):

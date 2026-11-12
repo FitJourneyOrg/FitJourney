@@ -94,12 +94,37 @@ object VolumeTargets {
         // contém trabalho de puxar na curadoria, somá-lo como "empurrar" contaria o antídoto
         // como veneno). Sem foco, resultado idêntico ao de antes. Espelha `motor_v3.py::alvos()`.
         val focoAlvos = alvosDoFoco(level, goal, foco)
-        if (focoAlvos.isNotEmpty() && muscle !in focoAlvos) {
-            val isento = muscle == TargetMuscle.BACK &&
-                focoEfetivo(level, goal, foco).any { it in EMPURRAR }
-            if (!isento) valor = minOf(valor, piso(muscle).toDouble())
+        if (focoAlvos.isNotEmpty() && muscle !in focoAlvos && !isentoDoPisoPorFoco(muscle, level, goal, foco)) {
+            valor = minOf(valor, piso(muscle).toDouble())
         }
         return if (v.mrv != null) minOf(valor, v.mrv.toDouble()) else valor
+    }
+
+    /**
+     * A isenção nomeada do BACK ([weeklySets], Fatia 11), extraída pra ser reaproveitada por
+     * [custoDoFoco] (débito (c)/(d) de "o motor sabe, o app não mostra", 2026-10-31) -- as duas
+     * perguntas são "este alvo caiu pro piso por causa do foco?" e "devo DECLARAR isso ao
+     * usuário?", e são a MESMA pergunta. Duplicar a condição numa função paralela arriscaria
+     * descolar da regra real se uma mudasse sem a outra.
+     */
+    private fun isentoDoPisoPorFoco(muscle: TargetMuscle, level: Level, goal: Goal, foco: List<MuscleGroup>): Boolean =
+        muscle == TargetMuscle.BACK && focoEfetivo(level, goal, foco).any { it in EMPURRAR }
+
+    /**
+     * `[REGRA]` (2026-10-31, débito (c)/(d) de "o motor sabe, o app não mostra"): os
+     * [TargetMuscle] que caem pro PISO por causa do foco ativo -- o complemento de
+     * [alvosDoFoco] do foco EFETIVO, menos a isenção do BACK ([isentoDoPisoPorFoco]). Vazio
+     * quando [foco] é vazio ou não efetivo (`focoEfetivo` filtra/limita antes). Puro, sem
+     * efeito colateral -- é o que a tela declara como "custo da fase de ênfase", separado dos
+     * quatro `Causa` de [ProgramAudit.avisos] (que medem ENTREGA contra alvo/piso; isto mede
+     * qual alvo está em uso agora, antes de qualquer entrega).
+     */
+    fun custoDoFoco(level: Level, goal: Goal, foco: List<MuscleGroup>): Set<TargetMuscle> {
+        val focoAlvos = alvosDoFoco(level, goal, foco)
+        if (focoAlvos.isEmpty()) return emptySet()
+        return TargetMuscle.entries.filterTo(mutableSetOf()) {
+            it !in focoAlvos && !isentoDoPisoPorFoco(it, level, goal, foco)
+        }
     }
 
     // ---------------------------------------------------------------------------- foco (Fatia 10)

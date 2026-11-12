@@ -87,6 +87,8 @@ class ProgressServiceTest {
         override suspend fun findByCategory(category: dev.rafael.contract.exercise.ExerciseCategory, idioma: Idioma) = error("não usado")
         override suspend fun findById(id: Uuid, idioma: Idioma) = error("não usado")
         override suspend fun existsByIds(ids: List<Uuid>) = error("não usado")
+        override suspend fun ancorasAvancadas(ids: List<Uuid>) = error("não usado")
+        override suspend fun paraProgressao(ids: List<Uuid>) = error("não usado")
     }
 
     private fun serie(ex: Uuid, kg: Double?, reps: Int = 10, done: Boolean = true, ordem: Int = 0) =
@@ -135,7 +137,8 @@ class ProgressServiceTest {
 
     private fun programa(id: Uuid, inicio: String, semanas: Int = 8) = Program(
         id = id, userId = Uuid.random(), name = "", origin = WorkoutOrigin.AI,
-        daysPerWeek = 4, split = null, focusMuscles = emptyList(), locked = false,
+        daysPerWeek = 4, split = null, focusMuscles = emptyList(), avisos = emptyList(),
+        grupamentosReduzidosPeloFoco = emptyList(), locked = false,
         workouts = emptyList(),
         createdAt = LocalDateTime(2026, 8, 1, 10, 0),
         updatedAt = LocalDateTime(2026, 8, 1, 10, 0),

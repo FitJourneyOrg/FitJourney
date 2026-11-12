@@ -122,6 +122,24 @@ class AcessoriosIntegrationTest {
         )
     }
 
+    /**
+     * Fatia "não tenho este equipamento" (resto da Fatia 12): `Accessory.paraAmbiente` agora
+     * respeita uma declaração explícita também na ACADEMIA (antes, só `null` -- nunca
+     * perguntado -- caía nos seis; a lista em si era ignorada). Prova contra o catálogo real que
+     * o pool da academia encolhe exatamente como o de casa quando alguém declara menos do que
+     * os seis.
+     */
+    @Test
+    fun `academia com declaracao parcial (botao 'nao tenho este equipamento') filtra igual casa`() {
+        val parcial = setOf(Accessory.BENCH)
+
+        val academiaParcial = preFilter.poolFor(TrainingEnvironment.ACADEMIA, Level.ADVANCED, parcial)
+        val academiaCompleta = academia()
+
+        assertTrue(academiaParcial.size < academiaCompleta.size)
+        assertTrue(academiaParcial.all { parcial.containsAll(it.acessorios) })
+    }
+
     // ---------------------------------------------------------------- ambiente
 
     /**

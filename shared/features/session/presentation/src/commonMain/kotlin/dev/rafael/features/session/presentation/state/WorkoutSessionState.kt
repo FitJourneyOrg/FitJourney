@@ -12,11 +12,19 @@ data class SetEntry(
     val targetReps: Int,
     val repsDone: String,
     val weight: String,
+    /** RIR (repetições em reserva) informado na série. Texto livre; `""` = não informado (D-3). */
+    val rir: String = "",
     val done: Boolean,
     val restSeconds: Int,   // prescrito pelo motor (ARCH #26 §3.2)
     /** Mídia do catálogo, pra tela de execução. `null` = catálogo não conhece o id. */
     val thumbRef: String? = null,
     val videoRef: String? = null,
+    // fatia "sugestao-de-progressao" (2026-11-06) — repetido em toda série do MESMO exercício
+    // (mesmo padrão de exerciseName/thumbRef/restSeconds acima); a tela lê de qualquer uma.
+    // Os três `null` = sem sugestão (manual, calibração pendente, ou eixo ainda sem motor).
+    val cargaSugeridaKg: Double? = null,
+    val repsMinSugerido: Int? = null,
+    val repsMaxSugerido: Int? = null,
 )
 
 /** Uma série, com a posição dela em [WorkoutSessionState.entries] — os eventos são por índice. */
@@ -30,6 +38,10 @@ data class ExercicioEmExecucao(
     val videoRef: String?,
     val restSeconds: Int,
     val series: List<SerieEmExecucao>,
+    // fatia "sugestao-de-progressao" (2026-11-06) — ver SetEntry, mesma origem (primeira série).
+    val cargaSugeridaKg: Double? = null,
+    val repsMinSugerido: Int? = null,
+    val repsMaxSugerido: Int? = null,
 ) {
     val concluido: Boolean get() = series.all { it.entrada.done }
 }
@@ -75,7 +87,7 @@ data class WorkoutSessionState(
             .sortedBy { it.key }
             .map { (_, itens) ->
                 val primeira = itens.first().value
-                ExercicioEmExecucao(
+ExercicioEmExecucao(
                     exerciseId = primeira.exerciseId,
                     nome = primeira.exerciseName,
                     thumbRef = primeira.thumbRef,
@@ -84,6 +96,9 @@ data class WorkoutSessionState(
                     series = itens
                         .sortedBy { it.value.setIndex }
                         .map { SerieEmExecucao(indice = it.index, entrada = it.value) },
+                    cargaSugeridaKg = primeira.cargaSugeridaKg,
+                    repsMinSugerido = primeira.repsMinSugerido,
+                    repsMaxSugerido = primeira.repsMaxSugerido,
                 )
             }
 
@@ -103,6 +118,7 @@ data class WorkoutSessionState(
 sealed interface SessionEvent {
     data class RepsChanged(val index: Int, val value: String) : SessionEvent
     data class WeightChanged(val index: Int, val value: String) : SessionEvent
+    data class RirChanged(val index: Int, val value: String) : SessionEvent
     data class ToggleDone(val index: Int) : SessionEvent
     data object Finish : SessionEvent
     // descanso

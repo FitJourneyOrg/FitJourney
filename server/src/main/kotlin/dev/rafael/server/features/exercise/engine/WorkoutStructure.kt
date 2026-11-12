@@ -1,13 +1,14 @@
 package dev.rafael.server.features.exercise.engine
 
 import dev.rafael.contract.profile.SplitType
+import dev.rafael.contract.workout.Papel
 
 /** Estruturas do motor de estrutura (F.2, reescrito no ARCH #26). O esqueleto que a F.4 preenche.
  *  Cada Slot agora carrega o músculo-alvo, o papel (→ reps/descanso/RIR) e o RIR resolvido. */
 
 data class Slot(
     val target: TargetMuscle,
-    val role: SlotRole,
+    val role: Papel,
     val sets: Int,
     val repRange: String,
     val restSeconds: Int,

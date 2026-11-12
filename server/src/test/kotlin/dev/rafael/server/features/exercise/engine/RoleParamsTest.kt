@@ -3,6 +3,7 @@ package dev.rafael.server.features.exercise.engine
 import dev.rafael.contract.profile.Goal
 import dev.rafael.contract.profile.Level
 import dev.rafael.contract.profile.MuscleGroup
+import dev.rafael.contract.workout.Papel
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -17,7 +18,7 @@ class RoleParamsTest {
 
     @Test
     fun `composto pesado usa 5-8 e RIR 2 no intermediario`() {
-        val p = RoleParams.paramsFor(SlotRole.COMPOSTO_PESADO, Level.INTERMEDIATE, Goal.GAIN_MUSCLE)
+        val p = RoleParams.paramsFor(Papel.COMPOSTO, Level.INTERMEDIATE, Goal.GAIN_MUSCLE)
         assertEquals("5-8", p.repRange)
         assertEquals(150, p.restSeconds)
         assertEquals(2, p.rir)
@@ -25,7 +26,7 @@ class RoleParamsTest {
 
     @Test
     fun `isolamento nao passa de 15 reps (fix ARCH #26)`() {
-        val p = RoleParams.paramsFor(SlotRole.ISOLAMENTO, Level.INTERMEDIATE, Goal.GAIN_MUSCLE)
+        val p = RoleParams.paramsFor(Papel.ISOLAMENTO, Level.INTERMEDIATE, Goal.GAIN_MUSCLE)
         assertEquals("12-15", p.repRange)
         assertEquals(75, p.restSeconds)
         assertEquals(1, p.rir)
@@ -33,19 +34,19 @@ class RoleParamsTest {
 
     @Test
     fun `acessorio fica em 8-12`() {
-        val p = RoleParams.paramsFor(SlotRole.COMPOSTO_ACESSORIO, Level.INTERMEDIATE, Goal.GAIN_MUSCLE)
+        val p = RoleParams.paramsFor(Papel.ACESSORIO, Level.INTERMEDIATE, Goal.GAIN_MUSCLE)
         assertEquals("8-12", p.repRange)
     }
 
     @Test
     fun `iniciante usa RIR-piso 3 (conservador)`() {
-        val p = RoleParams.paramsFor(SlotRole.COMPOSTO_PESADO, Level.BEGINNER, Goal.GAIN_MUSCLE)
+        val p = RoleParams.paramsFor(Papel.COMPOSTO, Level.BEGINNER, Goal.GAIN_MUSCLE)
         assertEquals(3, p.rir, "iniciante nunca falha: RIR 3")
     }
 
     @Test
     fun `general health e conservador mesmo em avancado`() {
-        val p = RoleParams.paramsFor(SlotRole.ISOLAMENTO, Level.ADVANCED, Goal.GENERAL_HEALTH)
+        val p = RoleParams.paramsFor(Papel.ISOLAMENTO, Level.ADVANCED, Goal.GENERAL_HEALTH)
         assertEquals(3, p.rir, "saúde geral usa cue conservador")
     }
 

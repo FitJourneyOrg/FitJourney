@@ -39,6 +39,7 @@ import dev.rafael.server.features.user.services.PublicProfileService
 import dev.rafael.server.features.user.services.UserService
 import dev.rafael.server.features.workout.routes.workoutRoutes
 import dev.rafael.server.features.workout.services.WorkoutService
+import dev.rafael.server.features.exercise.services.SugestaoDeProgressaoService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.response.respond
@@ -72,6 +73,7 @@ fun Application.configureRouting() {
     val promotionService = get<PromotionService>()
     val wikiService = get<WikiService>()
     val workoutService = get<WorkoutService>()
+    val sugestaoDeProgressaoService = get<SugestaoDeProgressaoService>()
     val programService = get<ProgramService>()
     val sessionService = get<SessionService>()
     val statsService = get<StatsService>()
@@ -99,7 +101,7 @@ fun Application.configureRouting() {
         exerciseRoutes(exerciseService, profileService)
         promotionRoutes(promotionService)
         wikiRoutes(wikiService)
-        workoutRoutes(workoutService, userService, profileService, programService)
+        workoutRoutes(workoutService, userService, profileService, programService, sugestaoDeProgressaoService)
         programRoutes(userService, profileService, programService)
         sessionRoutes(sessionService)
         statsRoutes(statsService, achievementService, progressService)

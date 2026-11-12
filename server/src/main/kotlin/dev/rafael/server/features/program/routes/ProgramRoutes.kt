@@ -1,7 +1,7 @@
 package dev.rafael.server.features.program.routes
 
 import dev.rafael.contract.error.ErrorCodes
-import dev.rafael.contract.profile.ageGateSatisfied
+import dev.rafael.server.features.program.services.ProgramGerarGate
 import dev.rafael.contract.program.CreateManualProgramRequest
 import dev.rafael.contract.program.RenameProgramRequest
 import dev.rafael.contract.program.SetScheduleRequest
@@ -43,7 +43,7 @@ fun Route.programRoutes(
             val principal = call.principal<FirebaseUser>()!!
 
             val result = userService.findOrCreate(principal.uid, principal.email).flatMap { user ->
-                // 1. GATE DE SAÚDE (§3.2 [INV]) — pré-condição pra gerar, vale p/ todos.
+                // 1. Perfil precisa existir (onboarding completo) antes de qualquer gate.
                 when (val pr = profileService.getProfile(principal.uid, principal.email)) {
                     is AppResult.Failure ->
                         // Desmembrado na G.2: aqui NÃO falta a avaliação de saúde, falta o
@@ -57,18 +57,9 @@ fun Route.programRoutes(
                         else pr
                     is AppResult.Success -> {
                         val profile = pr.value
-                        if (profile.health?.gateSatisfied != true) {
-                            AppError.Forbidden(
-                                "Complete a avaliação de saúde antes de gerar treinos.",
-                                ErrorCodes.HEALTH_GATE_REQUIRED,
-                            ).asFailure()
-                        } else if (!ageGateSatisfied(profile.age, profile.minorSupervised)) {
-                            // GATE DE IDADE (#24) — menor de 18 exige supervisão declarada.
-                            AppError.Forbidden(
-                                "Menor de 18: é preciso o reconhecimento de supervisão de um responsável.",
-                                ErrorCodes.AGE_GATE_REQUIRED,
-                            ).asFailure()
-                        } else {
+                        // GATE DE IDADE (#24). Fatia 12: gate de saúde (PAR-Q) removido daqui
+                        // -- ver ProgramGerarGate.
+                        ProgramGerarGate.avaliar(profile).flatMap {
                             // 2. GATE POR TETO (ARCH #27) — política pura (ProgramLimits).
                             programService.counts(user.id).flatMap { c ->
                                 ProgramLimits.gate(c, user.isPremium)

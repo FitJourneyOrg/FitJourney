@@ -26,6 +26,8 @@ import dev.rafael.server.features.exercise.services.PromotionService
 import dev.rafael.server.features.exercise.engine.StructureEngine
 import dev.rafael.server.features.exercise.engine.WorkoutGenerator
 import dev.rafael.server.features.exercise.services.ExerciseService
+import dev.rafael.server.features.exercise.services.ProgressaoAplicadaService
+import dev.rafael.server.features.exercise.services.SugestaoDeProgressaoService
 import dev.rafael.server.features.wiki.db.WikiRepository
 import dev.rafael.server.features.wiki.db.WikiRepositoryImpl
 import dev.rafael.server.features.wiki.services.WikiService
@@ -158,7 +160,7 @@ val appModule = module {
     single<ProgressaoRepository> { ProgressaoRepositoryImpl() }
     single<MesocicloRepository> { MesocicloRepositoryImpl() }
     single<PromotionDeclineRepository> { PromotionDeclineRepositoryImpl() }
-    single { PromotionService(get(), get(), get(), get(), get()) }
+    single { PromotionService(get(), get(), get(), get(), get(), get()) }
 
     // Aprender / wiki (Fase 8). Read-only: repositório + serviço fino, sem gate de premium.
     single<WikiRepository> { WikiRepositoryImpl() }
@@ -180,6 +182,11 @@ val appModule = module {
 
     // Sessão de treino (Fase 5 — execução).
     single<SessionRepository> { SessionRepositoryImpl() }
+    // Progressão (fatia "rir-chega-e-registra", 2026-11-05): serviço mora em `exercise` (é quem
+    // já tem `Progressao`/`ProgressaoRepository`/`MesocicloRepository`); `session` só injeta a
+    // porta estreita.
+    single { ProgressaoAplicadaService(get(), get(), get(), get(), get(), get()) }
+    single { SugestaoDeProgressaoService(get(), get(), get(), get()) }
     single {
         SessionService(
             userService = get(),
@@ -187,6 +194,8 @@ val appModule = module {
             // Porta estreita para conquistas (débito fechado em 2026-09-24): `session` não
             // importa `stats`/`achievements` diretamente.
             avaliarConquistas = { uid, email -> get<AchievementService>().avaliarAposSessao(uid, email) },
+            // Porta estreita pra progressão — mesmo motivo acima.
+            aplicarProgressao = { session -> get<ProgressaoAplicadaService>().aplicar(session) },
         )
     }
     single { StatsService(get(), get(), get()) }   // userService + sessionRepo + programService (ARCH #16)

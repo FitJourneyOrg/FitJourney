@@ -99,6 +99,33 @@ class ExerciseRepositoryImpl : ExerciseRepository {
                 }
         }
 
+    override suspend fun ancorasAvancadas(ids: List<Uuid>): AppResult<List<Uuid>> =
+        dbQuery {
+            if (ids.isEmpty()) return@dbQuery emptyList()
+            ExercisesTable.selectAll()
+                .where {
+                    (ExercisesTable.id inList ids) and
+                        (ExercisesTable.isCompound eq true) and
+                        (ExercisesTable.relevancia eq 1.toShort())
+                }
+                .map { it[ExercisesTable.id] }
+        }
+
+    override suspend fun paraProgressao(ids: List<Uuid>): AppResult<Map<Uuid, ExercicioParaProgressao>> =
+        dbQuery {
+            if (ids.isEmpty()) return@dbQuery emptyMap()
+            ExercisesTable.selectAll()
+                .where { ExercisesTable.id inList ids }
+                .associate { row ->
+                    row[ExercisesTable.id] to ExercicioParaProgressao(
+                        incremento = row[ExercisesTable.incremento],
+                        barraLivre = row[ExercisesTable.barraLivre],
+                        cargaInvertida = row[ExercisesTable.cargaInvertida],
+                        equipment = row[ExercisesTable.equipment],
+                    )
+                }
+        }
+
     override suspend fun nomesTraduzidos(ids: List<Uuid>, idioma: Idioma): AppResult<Map<Uuid, String>> =
         dbQuery {
             if (ids.isEmpty() || idioma == Idioma.PADRAO) return@dbQuery emptyMap()
@@ -171,4 +198,7 @@ internal fun ResultRow.toExercise(nomeTraduzido: String? = null): Exercise = Exe
         if (this@toExercise[ExercisesTable.requiresAnchorPoint]) add(Accessory.ANCHOR_POINT)
     },
     rirMinimoSeguranca = this[ExercisesTable.rirMinimoSeguranca],
+    incremento = this[ExercisesTable.incremento],
+    barraLivre = this[ExercisesTable.barraLivre],
+    cargaInvertida = this[ExercisesTable.cargaInvertida],
 )

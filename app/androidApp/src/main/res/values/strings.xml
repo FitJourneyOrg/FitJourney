@@ -131,6 +131,17 @@
     <!-- Região abdominal e lombar. "Core" é o termo usado em academia, não se traduz. -->
     <string name="enum_musculo_core">Core</string>
 
+    <!--
+      QUADS e POSTERIOR: os 2 músculos que o `TargetMuscle` do motor distingue dentro de LEGS e
+      que `MuscleGroup` (acima) não separa, e que não tinham rótulo em catálogo nenhum ainda
+      (ver `rotuloDoMusculoAlvo()` em Rotulos.kt). CALVES, o terceiro, reaproveita
+      `enum_categoria_calves` (já existe, mesma palavra "Panturrilhas") em vez de duplicar.
+      Aparecem só no card de avisos do programa, quando o grupo reduzido ao piso ou com
+      estímulo baixo é parte da perna.
+    -->
+    <string name="enum_musculo_alvo_quads">Quadríceps</string>
+    <string name="enum_musculo_alvo_posterior">Posterior de coxa</string>
+
     <!-- Nível de experiência. Escolhido no quiz e exibido no exercício. -->
     <string name="enum_nivel_beginner">Iniciante</string>
     <string name="enum_nivel_intermediate">Intermediário</string>
@@ -867,8 +878,24 @@
     <!-- Passo OBJETIVO. Os rótulos das opções são `enum_objetivo_*`. -->
     <string name="quiz_objetivo_titulo">Qual seu objetivo principal?</string>
 
-    <!-- Passo NÍVEL. Os rótulos das opções são `enum_nivel_*`. -->
-    <string name="quiz_nivel_titulo">Qual seu nível hoje?</string>
+    <!-- Fatia 12 (resto): nível deixa de ser escolha livre; estas duas perguntas o derivam.
+         Passo CONSISTENCIA. Os rótulos das opções são `enum_consistencia_*`. -->
+    <string name="quiz_consistencia_titulo">Você treina de forma consistente há quanto tempo?</string>
+    <string name="enum_consistencia_never_trained">Nunca treinei</string>
+    <string name="enum_consistencia_less_than_6_months">Menos de 6 meses</string>
+    <string name="enum_consistencia_6_months_to_2_years">De 6 meses a 2 anos</string>
+    <string name="enum_consistencia_more_than_2_years">Mais de 2 anos</string>
+    <!-- Passo PARADO. Os rótulos das opções são `enum_parado_*`. -->
+    <string name="quiz_parado_titulo">Há quanto tempo você está sem treinar?</string>
+    <string name="enum_parado_none">Não parei, continuo treinando</string>
+    <string name="enum_parado_up_to_1_month">Até 1 mês</string>
+    <string name="enum_parado_1_to_6_months">De 1 a 6 meses</string>
+    <string name="enum_parado_more_than_6_months">Mais de 6 meses</string>
+    <!-- Passo MODO LEVE: preferência explícita, não condição de saúde; vale por 1 mesociclo. -->
+    <string name="quiz_modo_leve_titulo">Quer começar no modo leve?</string>
+    <string name="quiz_modo_leve_ajuda">Reps mais fáceis por um tempo. Vale por um mesociclo, e depois perguntamos se você quer continuar.</string>
+    <string name="quiz_modo_leve_sim">Sim, prefiro começar leve</string>
+    <string name="quiz_modo_leve_nao">Não, pode ir no ritmo normal</string>
 
     <!-- Passo IDADE. -->
     <string name="quiz_idade_titulo">Qual sua idade?</string>
@@ -883,6 +910,13 @@
 
     <!-- Passo DIAS POR SEMANA. As opções são os números 2 a 6, que não se traduzem. -->
     <string name="quiz_dias_titulo">Quantos dias por semana?</string>
+
+    <!-- Fatia 12 (resto): passo MINUTOS DISPONIVEIS. Os rótulos das opções são `enum_minutos_*`. -->
+    <string name="quiz_minutos_titulo">Quantos minutos você tem por sessão?</string>
+    <string name="enum_minutos_forty_five">Cerca de 45 minutos</string>
+    <string name="enum_minutos_sixty">Cerca de 60 minutos</string>
+    <string name="enum_minutos_seventy_five">Cerca de 75 minutos</string>
+    <string name="enum_minutos_ninety_plus">90 minutos ou mais</string>
 
     <!-- Passo FOCO. Os rótulos das opções são `enum_musculo_*`. -->
     <string name="quiz_foco_titulo">Quer focar em algum músculo?</string>
@@ -935,11 +969,17 @@
     <string name="quiz_corpo_peso">Peso (kg)</string>
     <string name="quiz_corpo_altura">Altura (cm)</string>
 
-    <!-- Passo AMBIENTE. As opções são `enum_ambiente_*_descricao`. -->
+    <!-- Passo AMBIENTE. As opções são `enum_ambiente_*_descricao`. `em_breve` marca CASA
+         como indisponível nesta tela (resto da Fatia 12); não desliga quem já usa.
+         `falta_equipamento` (resto da Fatia 12): só aparece com ACADEMIA selecionada; marcar
+         revela o passo de acessórios, igual CASA. -->
     <string name="quiz_ambiente_titulo">Onde você treina?</string>
+    <string name="quiz_ambiente_em_breve">(em breve)</string>
+    <string name="quiz_ambiente_falta_equipamento">Minha academia não tem todo o equipamento</string>
 
-    <!-- Passo ACESSÓRIOS (V66). Só aparece quando o ambiente escolhido é CASA; na academia o
-         servidor assume os seis. Os rótulos das opções são `enum_acessorio_*`. -->
+    <!-- Passo ACESSÓRIOS (V66). Aparece quando o ambiente é CASA, ou ACADEMIA com o botão
+         "não tenho este equipamento" marcado (resto da Fatia 12); fora isso, o servidor assume
+         os seis. Os rótulos das opções são `enum_acessorio_*`. -->
     <string name="quiz_acessorios_titulo">O que você tem em casa?</string>
     <string name="quiz_acessorios_ajuda">Além do peso, isso libera mais exercícios pro seu treino. Pode deixar sem marcar nada.</string>
     <string name="enum_acessorio_bench">Banco ajustável</string>
@@ -1008,7 +1048,7 @@
     <!-- Barra do topo da lista de programas do usuário. -->
     <string name="programa_lista_titulo">Meus programas</string>
     <!-- Estado vazio da lista de programas. -->
-    <string name="programa_lista_vazio">Você ainda não tem nenhum treino.</string>
+    <string name="programa_lista_vazio">Você ainda não tem nenhum programa.</string>
     <!-- Selo do treino/programa em destaque (V60, reverte a V59, ver comentario abaixo).
          Prefixo treino_ativo_, nao conquista_/conquistas_ (reservados pelo catalogo de
          conquistas). treino_ativo_secao_outros/seus/ver_biblioteca sao debito pre-existente de
@@ -1090,6 +1130,25 @@
     <string name="programa_detalhe_excluir_pergunta">Excluir programa?</string>
     <string name="programa_detalhe_excluir_texto">Isso apaga o programa e todos os treinos dentro dele. Não pode ser desfeito.</string>
     <string name="programa_detalhe_renomear_titulo">Renomear programa</string>
+
+    <!--
+      Card "declaração de custo do motor" (fatia "declaracao-de-custo-do-motor", 2026-10-31):
+      os quatro sinais que `ProgramAudit`/`VolumeTargets` calculam e o app não mostrava
+      ("o motor sabe, o app não mostra", débito P0). Fica dormente (o card não aparece) até o
+      motor v3 virar o gerador de produção, decisão separada, registrada em debitos.md.
+    -->
+    <!-- Título do card, acima da lista de músculos com algum aviso. -->
+    <string name="programa_detalhe_avisos_titulo">Avisos do seu programa</string>
+    <!-- Causa NAO_TREINADO: o músculo não recebeu nenhum estímulo, direto nem indireto. -->
+    <string name="programa_detalhe_aviso_nao_treinado">Sem estímulo nenhum nesta semana.</string>
+    <!-- Causa ABAIXO_DO_PISO: recebeu algo, mas menos que o mínimo fisiológico recomendado. -->
+    <string name="programa_detalhe_aviso_abaixo_do_piso">Abaixo do mínimo recomendado para este músculo.</string>
+    <!-- Causa PISO_DIRETO_NEGADO: o indireto bateu o mínimo, mas não houve exercício direto na semana. -->
+    <string name="programa_detalhe_aviso_piso_direto_negado">O indireto bateu o mínimo, mas não houve exercício direto esta semana.</string>
+    <!-- Causa MANUTENCAO, a mais branda: passou do mínimo, só não chegou ao alvo do nível. -->
+    <string name="programa_detalhe_aviso_manutencao">Passou do mínimo, mas não chegou ao alvo do seu nível.</string>
+    <!-- Título da segunda lista do mesmo card: músculos fora da fase de ênfase, reduzidos ao mínimo. -->
+    <string name="programa_detalhe_foco_custo_titulo">Reduzido ao mínimo enquanto o foco está ativo</string>
 
     <!--
       A frase que explica o programa gerado: split + dias, e o foco quando presente. Usada
@@ -1190,6 +1249,12 @@
     <!-- Execução do treino, redesenho de 2026-10-01: um exercício por vez. Caixa alta de
          "Peso"/"Reps"/"Descanso" é decisão de DESENHO e fica na tela, não no texto. -->
     <string name="sessao_serie_de">Série %1$d de %2$d</string>
+    <!-- Meta de progressão sugerida pelo motor (carga OU reps, nunca os dois): fatia
+         "sugestao-de-progressao" (2026-11-06). Só leitura; nenhum campo quando o motor não
+         decidiu nada ainda (calibração pendente) ou o eixo não tem motor (BAND/HAND_GRIP). -->
+    <string name="sessao_meta_carga">Meta: %1$s kg</string>
+    <string name="sessao_meta_reps">Meta: %1$d-%2$d reps</string>
+    <!-- Resto da execução do treino (retomado do comentário acima). -->
     <string name="sessao_serie_curta">S%1$d</string>
     <string name="sessao_serie_feita">Série feita</string>
     <string name="sessao_ver_tecnica">Ver técnica</string>
@@ -1202,6 +1267,10 @@
     <string name="sessao_diminuir_peso">Diminuir peso</string>
     <string name="sessao_aumentar_reps">Aumentar repetições</string>
     <string name="sessao_diminuir_reps">Diminuir repetições</string>
+    <string name="sessao_rir_rotulo">RIR</string>
+    <string name="sessao_aumentar_rir">Aumentar RIR</string>
+    <string name="sessao_diminuir_rir">Diminuir RIR</string>
+    <string name="sessao_rir_explicacao">RIR: quantas repetições você ainda teria. Pode deixar em branco.</string>
     <string name="sessao_iniciar_descanso">Iniciar descanso</string>
     <string name="sessao_pausar_descanso">Pausar descanso</string>
     <string name="sessao_retomar_descanso">Retomar descanso</string>

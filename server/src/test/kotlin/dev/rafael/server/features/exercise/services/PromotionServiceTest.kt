@@ -7,6 +7,7 @@ import dev.rafael.core.result.AppError
 import dev.rafael.core.result.AppResult
 import dev.rafael.core.result.asFailure
 import dev.rafael.core.result.asSuccess
+import dev.rafael.server.features.exercise.db.ExerciseRepository
 import dev.rafael.server.features.exercise.db.PromotionDeclineRepository
 import dev.rafael.server.features.exercise.engine.v3.AncoraDoIniciante.Evento
 import dev.rafael.server.features.exercise.engine.v3.FakeMesocicloRepository
@@ -68,6 +69,19 @@ class PromotionServiceTest {
         }
     }
 
+    /** Marca, dos ids pedidos, quais são "compostos com relevancia=1" -- sem banco de verdade. */
+    private class FakeExerciseRepository(private val ancorasAvancadas: Set<Uuid> = emptySet()) : ExerciseRepository {
+        override suspend fun ancorasAvancadas(ids: List<Uuid>): AppResult<List<Uuid>> =
+            ids.filter { it in ancorasAvancadas }.asSuccess()
+        override suspend fun findAll(idioma: dev.rafael.contract.i18n.Idioma) = error("não usado")
+        override suspend fun findByCategory(category: dev.rafael.contract.exercise.ExerciseCategory, idioma: dev.rafael.contract.i18n.Idioma) = error("não usado")
+        override suspend fun findById(id: Uuid, idioma: dev.rafael.contract.i18n.Idioma) = error("não usado")
+        override suspend fun existsByIds(ids: List<Uuid>) = error("não usado")
+        override suspend fun paraAnalise(ids: List<Uuid>) = error("não usado")
+        override suspend fun nomesTraduzidos(ids: List<Uuid>, idioma: dev.rafael.contract.i18n.Idioma) = error("não usado")
+        override suspend fun paraProgressao(ids: List<Uuid>) = error("não usado")
+    }
+
     private fun perfil(level: Level) = Profile(
         userId = userId, goal = Goal.GAIN_MUSCLE, level = level, daysPerWeek = 3,
         splitPreference = null, unavailableDays = emptyList(), focusAreas = emptyList(),
@@ -88,9 +102,21 @@ class PromotionServiceTest {
     private fun service(
         profile: Profile?,
         progressao: FakeProgressaoRepository = FakeProgressaoRepository(),
+        exercicios: ExerciseRepository = FakeExerciseRepository(),
         mesociclo: FakeMesocicloRepository = FakeMesocicloRepository(),
         recusa: PromotionDeclineRepository = FakePromotionDeclineRepository(),
-    ) = PromotionService(UserService(userRepo), FakeProfileRepository(profile), progressao, mesociclo, recusa)
+    ) = PromotionService(UserService(userRepo), FakeProfileRepository(profile), progressao, exercicios, mesociclo, recusa)
+
+    /** Um evento no mesociclo [mesociclo], com o snapshot de 1RM [umRm] (V72) -- base dos testes do avançado. */
+    private suspend fun semearEvento(
+        progressao: FakeProgressaoRepository,
+        exercicioId: Uuid,
+        mesociclo: Int,
+        umRm: Double,
+        decisao: Decisao = Decisao.MANTEM,
+    ) {
+        progressao.registrar(userId, exercicioId, Uuid.random(), Progressao.Estado(umRm = umRm), Evento.Carga(decisao), mesociclo)
+    }
 
     @Test
     fun `sem perfil nao sugere nada`() = runBlocking {
@@ -99,8 +125,76 @@ class PromotionServiceTest {
     }
 
     @Test
-    fun `nivel ja nao e BEGINNER nao sugere nada (avancado e debito, nao esta fatia)`() = runBlocking {
+    fun `nivel ADVANCED nao tenta diagnostico nenhum`() = runBlocking {
+        val resultado = service(profile = perfil(Level.ADVANCED)).status(firebaseUid, null)
+        assertNull((resultado as AppResult.Success).value.suggestion)
+    }
+
+    @Test
+    fun `INTERMEDIATE sem mesociclo anterior e dado insuficiente, nao diagnostico negativo`() = runBlocking {
+        // mesocicloAtual = 1 (sem estado salvo) -- nao ha mesociclo ANTERIOR pra comparar 1RM.
         val resultado = service(profile = perfil(Level.INTERMEDIATE)).status(firebaseUid, null)
+        assertNull((resultado as AppResult.Success).value.suggestion)
+    }
+
+    @Test
+    fun `INTERMEDIATE sem ancora composta de relevancia 1 nao sugere nada`() = runBlocking {
+        val progressao = FakeProgressaoRepository()
+        // evento existe no mesociclo atual, mas o ExerciseRepository (padrao, sem ancoras avancadas
+        // marcadas) nao reconhece este exercicio como composto-relevancia-1.
+        semearEvento(progressao, exercicioId, mesociclo = 2, umRm = 100.0)
+        val mesociclo = FakeMesocicloRepository()
+        mesociclo.salvar(userId, Mesociclo(numero = 2))
+        val resultado = service(profile = perfil(Level.INTERMEDIATE), progressao = progressao, mesociclo = mesociclo)
+            .status(firebaseUid, null)
+        assertNull((resultado as AppResult.Success).value.suggestion)
+    }
+
+    @Test
+    fun `avancado, 1 ancora, sem ganho e poucas reducoes -- maioria de 1 e 1, sugere ADVANCED`() = runBlocking {
+        val progressao = FakeProgressaoRepository()
+        semearEvento(progressao, exercicioId, mesociclo = 1, umRm = 100.0)   // inicio do mesociclo anterior
+        semearEvento(progressao, exercicioId, mesociclo = 2, umRm = 100.0)   // atual: sem ganho
+        val mesociclo = FakeMesocicloRepository()
+        mesociclo.salvar(userId, Mesociclo(numero = 2))
+        val exercicios = FakeExerciseRepository(ancorasAvancadas = setOf(exercicioId))
+        val resultado = service(
+            profile = perfil(Level.INTERMEDIATE), progressao = progressao, exercicios = exercicios, mesociclo = mesociclo,
+        ).status(firebaseUid, null)
+        assertEquals(Level.ADVANCED, (resultado as AppResult.Success).value.suggestion?.nivelProposto)
+    }
+
+    @Test
+    fun `avancado, 2 ancoras, so 1 em PROMOVER -- maioria de 2 e 2, nao sugere`() = runBlocking {
+        val ancora2 = Uuid.random()
+        val progressao = FakeProgressaoRepository()
+        semearEvento(progressao, exercicioId, mesociclo = 1, umRm = 100.0)
+        semearEvento(progressao, exercicioId, mesociclo = 2, umRm = 100.0)       // sem ganho -> PROMOVER
+        semearEvento(progressao, ancora2, mesociclo = 1, umRm = 50.0)
+        semearEvento(progressao, ancora2, mesociclo = 2, umRm = 60.0)            // ganhou -> null, nao RECUPERACAO
+        val mesociclo = FakeMesocicloRepository()
+        mesociclo.salvar(userId, Mesociclo(numero = 2))
+        val exercicios = FakeExerciseRepository(ancorasAvancadas = setOf(exercicioId, ancora2))
+        val resultado = service(
+            profile = perfil(Level.INTERMEDIATE), progressao = progressao, exercicios = exercicios, mesociclo = mesociclo,
+        ).status(firebaseUid, null)
+        assertNull((resultado as AppResult.Success).value.suggestion)
+    }
+
+    @Test
+    fun `avancado recusado neste mesociclo nao sugere de novo`() = runBlocking {
+        val progressao = FakeProgressaoRepository()
+        semearEvento(progressao, exercicioId, mesociclo = 2, umRm = 100.0)
+        semearEvento(progressao, exercicioId, mesociclo = 3, umRm = 100.0)
+        val mesociclo = FakeMesocicloRepository()
+        mesociclo.salvar(userId, Mesociclo(numero = 3))
+        val exercicios = FakeExerciseRepository(ancorasAvancadas = setOf(exercicioId))
+        val recusa = FakePromotionDeclineRepository()
+        recusa.registrarRecusa(userId, Level.ADVANCED, mesocicloAtual = 3)
+        val resultado = service(
+            profile = perfil(Level.INTERMEDIATE), progressao = progressao, exercicios = exercicios,
+            mesociclo = mesociclo, recusa = recusa,
+        ).status(firebaseUid, null)
         assertNull((resultado as AppResult.Success).value.suggestion)
     }
 

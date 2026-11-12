@@ -23,7 +23,27 @@ private val FitJourneyDark = darkColorScheme(
 
     secondary = AiPurple,
     onSecondary = TextHigh,
-    secondaryContainer = AiPurpleDark,
+
+    /*
+     * ⚠️ [REGRA] `secondaryContainer` NÃO é o roxo de IA, e inverter isto já custou caro.
+     *
+     * O Material 3 usa este slot como a cor TONAL GENÉRICA: `FilledTonalIconButton`, `FilterChip`
+     * selecionado e a trilha do `LinearProgressIndicator` vão todos buscar aqui sem ninguém pedir.
+     * Enquanto ele valia `AiPurpleDark`, o roxo de IA aparecia nos `-`/`+` de peso e reps, no chip da
+     * série selecionada e na trilha de progresso, onde não há IA nenhuma — 13 arquivos herdavam dele.
+     *
+     * O defeito já tinha sido achado UMA VEZ e remendado na tela errada: o `AchievementsScreen` passou
+     * a declarar `trackColor` à mão porque *"o resultado lido de relance era o inverso do real: 11 de 30
+     * parecia 90%"*. O slot continuou roxo, e o mesmo defeito seguiu vivo nas outras doze.
+     *
+     * > **Cor que o Material pede emprestada para tudo tem de ser neutra. Quem quer significado pede
+     * > a cor explicitamente.**
+     *
+     * A regra que sai daqui: tonal genérico é NEUTRO; tonal com significado usa `primaryContainer`
+     * (o tom escuro da ação), declarado no componente. O roxo volta a significar uma coisa só, e
+     * `secondary` continua sendo ele, para quem desenha IA de verdade (ver `ProgramOfferScreen`).
+     */
+    secondaryContainer = Ink3,
     onSecondaryContainer = TextHigh,
 
     tertiary = Volt,                 // recompensa (XP/nível/streak)

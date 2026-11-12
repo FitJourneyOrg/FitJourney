@@ -50,6 +50,29 @@ class SafetyRulesTest {
         )
     }
 
+    @Test
+    fun `dispara por preferencia explicita de modo leve, so no 1o mesociclo (inclusive nulo)`() {
+        assertTrue(
+            SafetyRules.modoConservadorAutomatico(
+                Level.INTERMEDIATE, Goal.GAIN_MUSCLE, idade = 30, mesocicloAtual = null, preferiuModoLeve = true,
+            ),
+        )
+        assertTrue(
+            SafetyRules.modoConservadorAutomatico(
+                Level.ADVANCED, Goal.GAIN_MUSCLE, idade = 30, mesocicloAtual = 1, preferiuModoLeve = true,
+            ),
+        )
+    }
+
+    @Test
+    fun `preferencia de modo leve nao dispara fora do 1o mesociclo (caminho de falha)`() {
+        assertFalse(
+            SafetyRules.modoConservadorAutomatico(
+                Level.INTERMEDIATE, Goal.GAIN_MUSCLE, idade = 30, mesocicloAtual = 2, preferiuModoLeve = true,
+            ),
+        )
+    }
+
     // -------------------------------------------------------------------------------- rirMinimo
 
     @Test

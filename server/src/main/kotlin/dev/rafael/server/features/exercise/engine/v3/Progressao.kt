@@ -1,7 +1,7 @@
 package dev.rafael.server.features.exercise.engine.v3
 
 import dev.rafael.contract.profile.Goal
-import dev.rafael.server.features.exercise.engine.v3.SessionComposition.Papel
+import dev.rafael.contract.workout.Papel
 import kotlin.math.ceil
 import kotlin.math.floor
 
@@ -133,9 +133,18 @@ object Progressao {
         return 0.0
     }
 
-    /** Nunca menos que UM incremento acima: um salto que arredonda para a mesma carga travaria a calibração. */
-    fun cargaAposSalto(carga: Double, pct: Double, incremento: Double): Double =
-        maxOf(paraIncremento(carga * (1.0 + pct), incremento), carga + incremento)
+    /**
+     * Nunca menos que UM incremento acima: um salto que arredonda para a mesma carga travaria a
+     * calibração. **Invertido** (`cargaInvertida`, ex.: Barra Fixa Assistida — mais peso é mais
+     * ajuda): RIR alto na calibração significa "ficou fácil, precisa de menos assistência", então
+     * o salto puxa a carga pra BAIXO, com o mesmo piso (nunca menos que um incremento).
+     */
+    fun cargaAposSalto(carga: Double, pct: Double, incremento: Double, cargaInvertida: Boolean = false): Double =
+        if (cargaInvertida) {
+            minOf(paraIncremento(carga * (1.0 - pct), incremento), carga - incremento).coerceAtLeast(incremento)
+        } else {
+            maxOf(paraIncremento(carga * (1.0 + pct), incremento), carga + incremento)
+        }
 
     /**
      * Uma série de calibração (`serieN` é 1-based). RIR informado ≥ 4 sobe NA HORA e a pessoa faz outra
@@ -144,23 +153,25 @@ object Progressao {
      */
     fun passoCalibracao(
         carga: Double, rirInformado: Int?, serieN: Int, rirAlvo: Int, barraLivre: Boolean, incremento: Double,
+        cargaInvertida: Boolean = false,
     ): PassoCalibracao {
         // RIR nulo: a calibração é feita de RIR, então não age (D-3)
         if (rirInformado == null || rirInformado < CALIBRACAO_RIR_MINIMO) return PassoCalibracao(carga, true)
         val pct = saltoDaFaixa(rirInformado - rirAlvo, barraLivre)
         if (pct == 0.0) return PassoCalibracao(carga, true)
-        val nova = cargaAposSalto(carga, pct, incremento)
+        val nova = cargaAposSalto(carga, pct, incremento, cargaInvertida)
         return PassoCalibracao(nova, serieN >= CALIBRACAO_MAX_SERIES)
     }
 
     /** Conveniência: roda os passos e devolve o [Estado] depois da 1ª exposição. Lista vazia falha alto. */
     fun calibrar(
         cargaInicial: Double, rirsInformados: List<Int?>, rirAlvo: Int, barraLivre: Boolean, incremento: Double,
+        cargaInvertida: Boolean = false,
     ): Estado {
         require(rirsInformados.isNotEmpty()) { "calibração sem nenhum RIR informado" }
         var carga = cargaInicial
         for ((i, rir) in rirsInformados.withIndex()) {
-            val passo = passoCalibracao(carga, rir, i + 1, rirAlvo, barraLivre, incremento)
+            val passo = passoCalibracao(carga, rir, i + 1, rirAlvo, barraLivre, incremento, cargaInvertida)
             carga = passo.carga
             if (passo.terminou) break
         }
@@ -180,6 +191,15 @@ object Progressao {
      */
     fun decidir(
         estado: Estado, series: List<Serie>, papel: Papel, objetivo: Goal, incremento: Double, barraLivre: Boolean,
+        /**
+         * **Fatia "rir-chega-e-registra" (2026-11-05), item BLOQUEANTE**: exercícios como a Barra
+         * Fixa Assistida têm `cargaInvertida` = mais peso É MAIS ajuda, não mais dificuldade. Sem
+         * trocar o sinal aqui, o `SOBE` faria `carga + incremento` — a assistida regrediria calada
+         * no dia em que este fio ligasse em produção. Invertido: `SOBE` reduz a carga (menos
+         * assistência = mais difícil) e `DESCE` aumenta (mais assistência = mais fácil), com o
+         * mesmo piso de "nunca menos que um incremento" que protegia o `DESCE` normal.
+         */
+        cargaInvertida: Boolean = false,
     ): Pair<Estado, Decisao> {
         val carga = requireNotNull(estado.carga) { "sem carga: a calibração vem antes da progressão" }
         require(series.isNotEmpty()) { "sessão sem séries" }
@@ -199,11 +219,15 @@ object Progressao {
             } else {
                 0.0
             }
-            val nova = if (pct != 0.0) cargaAposSalto(carga, pct, incremento) else carga + incremento
+            val nova = when {
+                pct != 0.0 -> cargaAposSalto(carga, pct, incremento, cargaInvertida)
+                cargaInvertida -> maxOf(carga - incremento, incremento)
+                else -> carga + incremento
+            }
             return Estado(nova, exposicoes, true, umRm, 0) to Decisao.SOBE
         }
         if (abaixo && !(estado.posSalto && rirNoAlvo)) {
-            val nova = maxOf(carga - incremento, incremento)
+            val nova = if (cargaInvertida) carga + incremento else maxOf(carga - incremento, incremento)
             return Estado(nova, exposicoes, false, umRm, estado.semSubir + 1) to Decisao.DESCE
         }
         // Fica. A tolerância só continua se foi ela que segurou a carga; entrar na faixa a encerra.
@@ -217,13 +241,20 @@ object Progressao {
      * 2 kg): a carga fica e o chamador sabe que a regra não agiu — não existe carga menor carregável.
      */
     fun reducaoIntrasessao(
-        carga: Double, rirPrimeiraSerie: Int?, rirAlvo: Int, incremento: Double,
+        carga: Double, rirPrimeiraSerie: Int?, rirAlvo: Int, incremento: Double, cargaInvertida: Boolean = false,
     ): Pair<Double, Boolean> {
         // RIR nulo: a regra 4 não age e NÃO é "anulada" (não havia o que medir)
         if (rirPrimeiraSerie == null) return carga to false
         val falta = rirAlvo - rirPrimeiraSerie
         if (falta <= 0) return carga to false
-        val nova = maxOf(paraIncremento(carga * (1.0 - REDUCAO_POR_PONTO_RIR * falta), incremento), incremento)
+        // Invertido: "mais difícil" num assistido pede MAIS assistência — a carga sobe, não desce.
+        val fator = 1.0 + (if (cargaInvertida) 1.0 else -1.0) * REDUCAO_POR_PONTO_RIR * falta
+        val candidata = paraIncremento(carga * fator, incremento)
+        if (cargaInvertida) {
+            if (candidata <= carga + EPS) return carga to true
+            return candidata to false
+        }
+        val nova = maxOf(candidata, incremento)
         if (nova >= carga - EPS) return carga to true
         return nova to false
     }

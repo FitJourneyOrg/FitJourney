@@ -1,5 +1,6 @@
 package dev.rafael.server.features.exercise.engine.v3
 
+import dev.rafael.contract.workout.Papel
 import dev.rafael.server.features.exercise.engine.TargetMuscle
 import dev.rafael.server.features.exercise.models.Exercise
 
@@ -38,7 +39,7 @@ object CatalogFiller {
         sessoes: List<Pair<String, List<SessionComposition.Vaga>>>,
         candidatos: List<Exercise>,
         disparos: MutableMap<String, Int> = mutableMapOf(),
-        vaziasOut: MutableList<Triple<String, TargetMuscle, SessionComposition.Papel>> = mutableListOf(),
+        vaziasOut: MutableList<Triple<String, TargetMuscle, Papel>> = mutableListOf(),
         // --- Fatia 7: calculado uma vez pelo chamador (MotorV3Pipeline), mesmo gatilho do
         // oráculo (`modo_conservador_automatico`). false por padrão só para não quebrar quem
         // ainda chama preencher() sem passar isto (testes existentes).
@@ -60,8 +61,8 @@ object CatalogFiller {
                         e.isCompound == composto &&
                         e.name !in usadosDia
 
-                val querComposto = v.papel == SessionComposition.Papel.COMPOSTO ||
-                    v.papel == SessionComposition.Papel.ACESSORIO
+                val querComposto = v.papel == Papel.COMPOSTO ||
+                    v.papel == Papel.ACESSORIO
                 var cands = candidatos.filter { serve(it, querComposto) }
                 if (cands.isEmpty()) {
                     // [REGRA] fallback: inverte o tipo nos dois sentidos, disparo papel_trocado.
@@ -102,7 +103,7 @@ object CatalogFiller {
                 // esvaziava o pool — 471/471 vagas em 2 exercícios, com TRICEPS_PULLEY
                 // (relevância 1, prioridade 1) inalcançável nos 720 perfis. Motor decide QUANTO;
                 // curadoria decide QUAL. Virou `[PROPOSTA]` em `docs/fontes/debitos.md`.
-                if (v.alvo == TargetMuscle.TRICEPS && v.papel == SessionComposition.Papel.ISOLAMENTO) {
+                if (v.alvo == TargetMuscle.TRICEPS && v.papel == Papel.ISOLAMENTO) {
                     val comExtensao = cands.filter { (it.familia ?: "") !in TRICEPS_SEM_EXTENSAO }
                     cands = if (comExtensao.isNotEmpty()) {
                         comExtensao

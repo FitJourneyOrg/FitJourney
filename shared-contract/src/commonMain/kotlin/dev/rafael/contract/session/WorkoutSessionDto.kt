@@ -15,6 +15,10 @@ data class SetLogDto(
     val repsDone: Int,
     val weightKg: Double? = null,
     val done: Boolean,
+    // Fatia "rir-chega-e-registra" (2026-11-05) — RIR informado pelo usuário nesta série.
+    // null = não informado (D-3: a progressão aplica só as regras por repetição). Coluna
+    // session_set_logs.rir existe desde a V69 mas nunca era escrita até esta fatia.
+    val rir: Int? = null,
 )
 
 /**
